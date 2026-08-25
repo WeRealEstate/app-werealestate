@@ -1,0 +1,3 @@
+# Claude Code local skills/config — no se versionan, son herramientas del asistente
+.claude/
+skills-lock.json

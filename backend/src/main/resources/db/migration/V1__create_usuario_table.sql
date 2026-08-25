@@ -1,0 +1,10 @@
+CREATE TABLE usuario (
+    id BIGSERIAL PRIMARY KEY,
+    nombre VARCHAR(150) NOT NULL,
+    email VARCHAR(150) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    rol VARCHAR(30) NOT NULL,
+    area_id BIGINT,
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+    fecha_ingreso TIMESTAMP NOT NULL DEFAULT now()
+);
