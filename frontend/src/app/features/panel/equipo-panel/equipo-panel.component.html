@@ -1,0 +1,31 @@
+<div>
+  <h1 class="font-heading text-2xl font-semibold text-we-dark">
+    Hola, {{ user()?.nombre }} 👋
+  </h1>
+  <p class="mt-1 text-sm text-we-text/60">
+    @if (esLider()) {
+      Este es tu panel de líder de área.
+    } @else {
+      Este es tu panel de equipo interno.
+    }
+  </p>
+
+  <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div class="rounded-xl border border-we-secondary/60 bg-white p-5">
+      <h2 class="font-heading font-semibold text-we-dark text-sm">Mis tareas</h2>
+      <p class="mt-1 text-xs text-we-text/55">Tareas asignadas y su estado — próximamente.</p>
+    </div>
+
+    <div class="rounded-xl border border-we-secondary/60 bg-white p-5">
+      <h2 class="font-heading font-semibold text-we-dark text-sm">Resumen semanal</h2>
+      <p class="mt-1 text-xs text-we-text/55">Lo que has avanzado día con día — próximamente.</p>
+    </div>
+
+    @if (esLider()) {
+      <div class="rounded-xl border border-we-blue-light/60 bg-we-blue-light/10 p-5">
+        <h2 class="font-heading font-semibold text-we-dark text-sm">Asignar tareas al equipo</h2>
+        <p class="mt-1 text-xs text-we-text/55">Solo visible para líderes de área — próximamente.</p>
+      </div>
+    }
+  </div>
+</div>
