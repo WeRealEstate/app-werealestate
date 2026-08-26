@@ -1,0 +1,41 @@
+<div class="min-h-screen bg-we-background font-body text-we-text">
+  <header class="sticky top-0 z-10 border-b border-we-secondary/60 bg-white/95 backdrop-blur">
+    <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+      <div class="flex items-center gap-2.5">
+        <div class="h-8 w-8 rounded-lg bg-we-primary flex items-center justify-center">
+          <span class="font-heading font-bold text-white text-xs">We</span>
+        </div>
+        <span class="font-heading font-semibold text-we-dark text-sm">We Real Estate</span>
+      </div>
+
+      @if (user(); as u) {
+        <div class="flex items-center gap-3">
+          <div class="hidden sm:flex flex-col items-end leading-tight">
+            <span class="text-sm font-medium text-we-dark">{{ u.nombre }}</span>
+            <span class="text-xs text-we-primary font-medium">{{ roleLabel() }}</span>
+          </div>
+          <div
+            class="h-9 w-9 rounded-full bg-we-blue-light/25 border border-we-blue-light/60 flex items-center justify-center
+                   font-heading font-semibold text-we-primary text-sm"
+            aria-hidden="true"
+          >
+            {{ u.nombre.charAt(0) }}
+          </div>
+          <button
+            type="button"
+            (click)="logout()"
+            class="rounded-lg border border-we-secondary px-3 py-2 text-xs font-medium text-we-text/70
+                   hover:border-we-primary hover:text-we-primary transition-colors
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[36px]"
+          >
+            Cerrar sesión
+          </button>
+        </div>
+      }
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+    <router-outlet />
+  </main>
+</div>

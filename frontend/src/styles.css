@@ -1,3 +1,30 @@
 /* You can add global styles to this file, and also import other style files */
 
 @import 'tailwindcss';
+
+@theme {
+  --color-we-primary: #243fb8;
+  --color-we-blue-light: #81b3f0;
+  --color-we-secondary: #d6d6d6;
+  --color-we-background: #ffffff;
+  --color-we-text: #0b132b;
+  --color-we-dark: #0b132b;
+
+  --font-heading: 'Lexend', 'Segoe UI', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Source Sans 3', 'Segoe UI', ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--color-we-text);
+  background: var(--color-we-background);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+}
