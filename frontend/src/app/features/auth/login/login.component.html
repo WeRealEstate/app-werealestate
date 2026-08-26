@@ -1,164 +1,129 @@
-<div class="min-h-screen w-full flex bg-we-background font-body text-we-text">
-  <!-- Panel de marca (oculto en mobile) -->
-  <aside class="hidden lg:flex lg:w-[44%] relative overflow-hidden bg-we-dark">
-    <svg
-      class="absolute inset-0 h-full w-full"
-      viewBox="0 0 600 900"
-      preserveAspectRatio="xMidYMid slice"
-      aria-hidden="true"
-    >
-      <defs>
-        <linearGradient id="brandGradient" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#243fb8" />
-          <stop offset="100%" stop-color="#0b132b" />
-        </linearGradient>
-      </defs>
-      <rect width="600" height="900" fill="url(#brandGradient)" />
-      <path d="M0 620 C 140 560, 260 690, 420 630 C 500 600, 560 640, 600 610 L600 900 L0 900 Z"
-            fill="#1b2a66" opacity="0.7" />
-      <path d="M0 700 C 160 660, 280 760, 440 700 C 510 675, 560 705, 600 690 L600 900 L0 900 Z"
-            fill="#81b3f0" opacity="0.18" />
-      <path d="M0 780 C 150 745, 300 820, 460 770 C 520 750, 560 775, 600 765 L600 900 L0 900 Z"
-            fill="#81b3f0" opacity="0.28" />
-    </svg>
+<div class="relative min-h-screen w-full overflow-hidden bg-we-dark font-body flex items-center justify-center px-4 py-10">
+  <!-- Fondo: coloca tu foto en frontend/public/login-bg.jpg (se sirve en /login-bg.jpg). -->
+  <!-- Mientras no exista el archivo, se ve este degradado de marca como respaldo. -->
+  <div
+    class="absolute inset-0 bg-cover bg-center"
+    style="background-image: linear-gradient(160deg, #243fb8 0%, #0b132b 60%, #0b132b 100%), url('/login-bg.jpg'); background-blend-mode: overlay;"
+    aria-hidden="true"
+  ></div>
+  <div class="absolute inset-0 bg-we-dark/35" aria-hidden="true"></div>
 
-    <div class="relative z-10 flex flex-col justify-between p-12 text-white">
-      <div class="flex items-center gap-2">
-        <div class="h-9 w-9 rounded-lg bg-we-blue-light/90 flex items-center justify-center">
-          <span class="font-heading font-bold text-we-dark text-sm">We</span>
-        </div>
-        <span class="font-heading font-semibold tracking-wide">We Real Estate</span>
+  <!-- Tarjeta de cristal -->
+  <div class="relative z-10 w-full max-w-sm rounded-3xl border border-white/25 bg-white/10 p-8 shadow-2xl backdrop-blur-xl sm:p-10">
+    <div class="flex flex-col items-center text-center">
+      <div class="h-11 w-11 rounded-xl bg-white/15 border border-white/25 flex items-center justify-center">
+        <span class="font-heading font-bold text-white text-sm">We</span>
       </div>
-
-      <div class="max-w-sm">
-        <h1 class="font-heading text-3xl font-semibold leading-tight mb-3">
-          Panel interno de asesores y equipo
-        </h1>
-        <p class="text-white/70 text-sm leading-relaxed">
-          Seguimiento de leads, tareas y desempeño para Samai y Nanuu, en un solo lugar.
-        </p>
-      </div>
-
-      <p class="text-white/40 text-xs">© {{ currentYear }} We Real Estate · Costa de Oaxaca</p>
+      <h1 class="mt-4 font-heading text-2xl font-bold text-white">Iniciar sesión</h1>
+      <p class="mt-1.5 text-sm text-white/70">Accede con tu correo y contraseña de We Real Estate.</p>
     </div>
-  </aside>
 
-  <!-- Formulario -->
-  <main class="flex-1 flex items-center justify-center px-6 py-12 sm:px-10">
-    <div class="w-full max-w-sm">
-      <!-- Marca visible solo en mobile -->
-      <div class="mb-8 flex items-center gap-2 lg:hidden">
-        <div class="h-9 w-9 rounded-lg bg-we-primary flex items-center justify-center">
-          <span class="font-heading font-bold text-white text-sm">We</span>
-        </div>
-        <span class="font-heading font-semibold text-we-dark">We Real Estate</span>
-      </div>
-
-      <h2 class="font-heading text-2xl font-semibold text-we-dark">Inicia sesión</h2>
-      <p class="mt-1 text-sm text-we-text/60">Accede con tu correo y contraseña de We Real Estate.</p>
-
-      <form class="mt-8 space-y-5" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
-        <!-- Email -->
-        <div>
-          <label for="email" class="block text-sm font-medium text-we-dark mb-1.5">Correo electrónico</label>
+    <form class="mt-8 space-y-4" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+      <!-- Email -->
+      <div>
+        <label for="email" class="sr-only">Correo electrónico</label>
+        <div class="relative">
           <input
             id="email"
             type="email"
             formControlName="email"
             autocomplete="username"
-            placeholder="tu.nombre@weinversiones.com"
-            class="block w-full rounded-lg border px-3.5 py-2.5 text-sm text-we-dark placeholder:text-we-text/35
-                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary transition-colors"
-            [class.border-we-secondary]="!(email.invalid && email.touched)"
-            [class.border-red-400]="email.invalid && email.touched"
+            placeholder="Correo electrónico"
+            class="block w-full rounded-full border bg-white/10 px-5 py-3 pr-11 text-sm text-white placeholder:text-white/55
+                   focus:outline-none focus:ring-2 focus:ring-we-blue-light/70 focus:border-white/50 transition-colors"
+            [class.border-white/25]="!(email.invalid && email.touched)"
+            [class.border-red-300]="email.invalid && email.touched"
             [attr.aria-invalid]="email.invalid && email.touched"
             aria-describedby="email-error"
           />
-          @if (email.invalid && email.touched) {
-            <p id="email-error" class="mt-1.5 text-xs text-red-600" role="alert">
-              @if (email.hasError('required')) {
-                Ingresa tu correo electrónico.
-              } @else if (email.hasError('email')) {
-                Ingresa un correo electrónico válido.
-              }
-            </p>
-          }
+          <svg class="absolute inset-y-0 right-4 my-auto h-4 w-4 text-white/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Z" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="m22 6-10 7L2 6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
         </div>
-
-        <!-- Password -->
-        <div>
-          <div class="flex items-center justify-between mb-1.5">
-            <label for="password" class="block text-sm font-medium text-we-dark">Contraseña</label>
-          </div>
-          <div class="relative">
-            <input
-              id="password"
-              [type]="showPassword() ? 'text' : 'password'"
-              formControlName="password"
-              autocomplete="current-password"
-              placeholder="••••••••"
-              class="block w-full rounded-lg border px-3.5 py-2.5 pr-11 text-sm text-we-dark placeholder:text-we-text/35
-                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary transition-colors"
-              [class.border-we-secondary]="!(password.invalid && password.touched)"
-              [class.border-red-400]="password.invalid && password.touched"
-              [attr.aria-invalid]="password.invalid && password.touched"
-              aria-describedby="password-error"
-            />
-            <button
-              type="button"
-              (click)="togglePasswordVisibility()"
-              class="absolute inset-y-0 right-0 flex items-center px-3 text-we-text/50 hover:text-we-primary
-                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 rounded-r-lg"
-              [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-            >
-              @if (showPassword()) {
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                  <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a20.6 20.6 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a20.6 20.6 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M1 1l22 22" stroke-linecap="round"/>
-                </svg>
-              } @else {
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" stroke-linecap="round" stroke-linejoin="round"/>
-                  <circle cx="12" cy="12" r="3"/>
-                </svg>
-              }
-            </button>
-          </div>
-          @if (password.invalid && password.touched) {
-            <p id="password-error" class="mt-1.5 text-xs text-red-600" role="alert">Ingresa tu contraseña.</p>
-          }
-        </div>
-
-        <!-- Error del servidor -->
-        @if (errorMessage()) {
-          <div class="rounded-lg bg-red-50 border border-red-200 px-3.5 py-2.5 text-sm text-red-700" role="alert" aria-live="assertive">
-            {{ errorMessage() }}
-          </div>
+        @if (email.invalid && email.touched) {
+          <p id="email-error" class="mt-1.5 ml-2 text-xs text-red-200" role="alert">
+            @if (email.hasError('required')) {
+              Ingresa tu correo electrónico.
+            } @else if (email.hasError('email')) {
+              Ingresa un correo electrónico válido.
+            }
+          </p>
         }
+      </div>
 
-        <button
-          type="submit"
-          [disabled]="isLoading()"
-          class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-we-primary px-4 py-2.5
-                 text-sm font-semibold text-white transition-colors hover:bg-we-primary/90
-                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:ring-offset-2
-                 disabled:opacity-60 disabled:cursor-not-allowed min-h-[44px]"
-        >
-          @if (isLoading()) {
-            <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-            </svg>
-            Iniciando sesión…
-          } @else {
-            Iniciar sesión
-          }
-        </button>
-      </form>
+      <!-- Password -->
+      <div>
+        <label for="password" class="sr-only">Contraseña</label>
+        <div class="relative">
+          <input
+            id="password"
+            [type]="showPassword() ? 'text' : 'password'"
+            formControlName="password"
+            autocomplete="current-password"
+            placeholder="Contraseña"
+            class="block w-full rounded-full border bg-white/10 px-5 py-3 pr-11 text-sm text-white placeholder:text-white/55
+                   focus:outline-none focus:ring-2 focus:ring-we-blue-light/70 focus:border-white/50 transition-colors"
+            [class.border-white/25]="!(password.invalid && password.touched)"
+            [class.border-red-300]="password.invalid && password.touched"
+            [attr.aria-invalid]="password.invalid && password.touched"
+            aria-describedby="password-error"
+          />
+          <button
+            type="button"
+            (click)="togglePasswordVisibility()"
+            class="absolute inset-y-0 right-2 flex items-center px-2.5 text-white/60 hover:text-white
+                   focus:outline-none focus:ring-2 focus:ring-we-blue-light/70 rounded-full"
+            [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+          >
+            @if (showPassword()) {
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a20.6 20.6 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a20.6 20.6 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M1 1l22 22" stroke-linecap="round"/>
+              </svg>
+            } @else {
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            }
+          </button>
+        </div>
+        @if (password.invalid && password.touched) {
+          <p id="password-error" class="mt-1.5 ml-2 text-xs text-red-200" role="alert">Ingresa tu contraseña.</p>
+        }
+      </div>
 
-      <p class="mt-8 text-center text-xs text-we-text/40">
-        ¿Problemas para entrar? Contacta a tu administrador.
-      </p>
-    </div>
-  </main>
+      <!-- Error del servidor -->
+      @if (errorMessage()) {
+        <div class="rounded-2xl bg-red-500/15 border border-red-300/40 px-4 py-2.5 text-sm text-red-100" role="alert" aria-live="assertive">
+          {{ errorMessage() }}
+        </div>
+      }
+
+      <button
+        type="submit"
+        [disabled]="isLoading()"
+        class="w-full inline-flex items-center justify-center gap-2 rounded-full px-4 py-3 mt-2
+               text-sm font-semibold text-white transition-opacity hover:opacity-90
+               focus:outline-none focus:ring-2 focus:ring-white/70 focus:ring-offset-2 focus:ring-offset-we-dark
+               disabled:opacity-60 disabled:cursor-not-allowed min-h-[46px]"
+        style="background: linear-gradient(90deg, #243fb8, #81b3f0);"
+      >
+        @if (isLoading()) {
+          <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+          </svg>
+          Iniciando sesión…
+        } @else {
+          Iniciar sesión
+        }
+      </button>
+    </form>
+
+    <p class="mt-7 text-center text-xs text-white/50">
+      ¿Problemas para entrar? Contacta a tu administrador.
+    </p>
+  </div>
 </div>
