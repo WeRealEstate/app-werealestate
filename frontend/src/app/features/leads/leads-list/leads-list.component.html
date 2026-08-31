@@ -51,14 +51,13 @@
     />
     @if (esAdmin() && asesoresDisponibles().length > 1) {
       <select
-        [value]="asesorId() ?? ''"
         (change)="asesorId.set($any($event.target).value === '' ? null : +$any($event.target).value)"
         class="w-full max-w-xs rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
                focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
       >
-        <option value="">Todos los asesores</option>
+        <option value="" [selected]="asesorId() === null">Todos los asesores</option>
         @for (a of asesoresDisponibles(); track a.id) {
-          <option [value]="a.id">{{ a.nombre }}</option>
+          <option [value]="a.id" [selected]="a.id === asesorId()">{{ a.nombre }}</option>
         }
       </select>
     }
