@@ -2,6 +2,7 @@ package com.werealestate.backend.service;
 
 import com.werealestate.backend.dto.UsuarioCreateRequest;
 import com.werealestate.backend.dto.UsuarioDto;
+import com.werealestate.backend.dto.UsuarioResetPasswordRequest;
 import com.werealestate.backend.dto.UsuarioUpdateRequest;
 import com.werealestate.backend.exception.ConflictException;
 import com.werealestate.backend.exception.ForbiddenOperationException;
@@ -66,6 +67,16 @@ public class UsuarioService {
         usuario.setRol(request.rol());
         usuario.setActivo(request.activo());
         return UsuarioDto.from(usuarioRepository.save(usuario));
+    }
+
+    /** Solo un admin puede fijar la contraseña de cualquier usuario (incluida la propia). Los usuarios no la cambian ellos mismos. */
+    public void restablecerPassword(Long id, UsuarioResetPasswordRequest request) {
+        exigirAdmin();
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+
+        usuario.setPassword(passwordEncoder.encode(request.password()));
+        usuarioRepository.save(usuario);
     }
 
     private Usuario exigirAdmin() {

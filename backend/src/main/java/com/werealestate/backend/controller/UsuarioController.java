@@ -2,10 +2,12 @@ package com.werealestate.backend.controller;
 
 import com.werealestate.backend.dto.UsuarioCreateRequest;
 import com.werealestate.backend.dto.UsuarioDto;
+import com.werealestate.backend.dto.UsuarioResetPasswordRequest;
 import com.werealestate.backend.dto.UsuarioUpdateRequest;
 import com.werealestate.backend.service.UsuarioService;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -37,5 +39,12 @@ public class UsuarioController {
     @PutMapping("/{id}")
     public UsuarioDto actualizar(@PathVariable Long id, @Valid @RequestBody UsuarioUpdateRequest request) {
         return usuarioService.actualizar(id, request);
+    }
+
+    @PutMapping("/{id}/password")
+    public ResponseEntity<Void> restablecerPassword(
+            @PathVariable Long id, @Valid @RequestBody UsuarioResetPasswordRequest request) {
+        usuarioService.restablecerPassword(id, request);
+        return ResponseEntity.noContent().build();
     }
 }

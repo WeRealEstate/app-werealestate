@@ -20,4 +20,8 @@ export class UsuariosService {
   actualizar(id: number, request: UsuarioUpdateRequest): Promise<Usuario> {
     return firstValueFrom(this.http.put<Usuario>(`${this.baseUrl}/${id}`, request));
   }
+
+  restablecerPassword(id: number, password: string): Promise<void> {
+    return firstValueFrom(this.http.put<void>(`${this.baseUrl}/${id}/password`, { password }));
+  }
 }

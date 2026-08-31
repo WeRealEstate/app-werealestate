@@ -25,6 +25,11 @@ export class UsuariosListComponent {
   readonly errorMessage = signal<string | null>(null);
   readonly savingId = signal<number | null>(null);
 
+  readonly resetId = signal<number | null>(null);
+  readonly nuevaPassword = signal('');
+  readonly resetError = signal<string | null>(null);
+  readonly resetOkId = signal<number | null>(null);
+
   constructor() {
     this.cargar();
   }
@@ -58,6 +63,40 @@ export class UsuariosListComponent {
       this.usuarios.update((lista) => lista.map((u) => (u.id === actualizado.id ? actualizado : u)));
     } catch {
       this.errorMessage.set('No se pudo actualizar el usuario. Intenta de nuevo.');
+    } finally {
+      this.savingId.set(null);
+    }
+  }
+
+  abrirReset(usuario: Usuario): void {
+    this.resetId.set(usuario.id);
+    this.nuevaPassword.set('');
+    this.resetError.set(null);
+    this.resetOkId.set(null);
+  }
+
+  cancelarReset(): void {
+    this.resetId.set(null);
+    this.nuevaPassword.set('');
+    this.resetError.set(null);
+  }
+
+  async confirmarReset(usuario: Usuario): Promise<void> {
+    const password = this.nuevaPassword();
+    if (password.length < 8) {
+      this.resetError.set('Debe tener al menos 8 caracteres.');
+      return;
+    }
+
+    this.savingId.set(usuario.id);
+    this.resetError.set(null);
+    try {
+      await this.usuariosService.restablecerPassword(usuario.id, password);
+      this.resetId.set(null);
+      this.nuevaPassword.set('');
+      this.resetOkId.set(usuario.id);
+    } catch {
+      this.resetError.set('No se pudo restablecer la contraseña. Intenta de nuevo.');
     } finally {
       this.savingId.set(null);
     }

@@ -29,6 +29,7 @@
             <th class="px-4 py-3">Nombre</th>
             <th class="px-4 py-3">Rol</th>
             <th class="px-4 py-3">Estado</th>
+            <th class="px-4 py-3">Contraseña</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-border bg-surface">
@@ -72,7 +73,61 @@
                   {{ u.activo ? 'Activo' : 'Inactivo' }}
                 </button>
               </td>
+              <td class="px-4 py-3">
+                @if (resetId() !== u.id) {
+                  <button
+                    type="button"
+                    (click)="abrirReset(u)"
+                    class="text-sm font-medium text-we-blue-light hover:underline"
+                  >
+                    Restablecer
+                  </button>
+                  @if (resetOkId() === u.id) {
+                    <span class="ml-2 text-xs text-green-600 dark:text-green-400">Actualizada ✓</span>
+                  }
+                }
+              </td>
             </tr>
+            @if (resetId() === u.id) {
+              <tr class="bg-surface-2">
+                <td colspan="4" class="px-4 py-3">
+                  <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <label [for]="'nueva-password-' + u.id" class="text-xs font-medium text-ink-muted whitespace-nowrap">
+                      Nueva contraseña para {{ u.nombre }}
+                    </label>
+                    <input
+                      [id]="'nueva-password-' + u.id"
+                      type="password"
+                      [value]="nuevaPassword()"
+                      (input)="nuevaPassword.set($any($event.target).value)"
+                      placeholder="Mínimo 8 caracteres"
+                      class="w-full max-w-xs rounded-lg border border-border px-3 py-2 text-sm text-ink bg-surface
+                             focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+                    />
+                    <div class="flex gap-2">
+                      <button
+                        type="button"
+                        [disabled]="savingId() === u.id"
+                        (click)="confirmarReset(u)"
+                        class="rounded-lg bg-we-primary px-3.5 py-2 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60"
+                      >
+                        {{ savingId() === u.id ? 'Guardando…' : 'Guardar' }}
+                      </button>
+                      <button
+                        type="button"
+                        (click)="cancelarReset()"
+                        class="rounded-lg border border-border px-3.5 py-2 text-sm font-medium text-ink-muted hover:border-we-primary"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                  @if (resetError()) {
+                    <p class="mt-1.5 text-xs text-red-600 dark:text-red-400">{{ resetError() }}</p>
+                  }
+                </td>
+              </tr>
+            }
           }
         </tbody>
       </table>
