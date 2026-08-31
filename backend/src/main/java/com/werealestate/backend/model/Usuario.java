@@ -60,6 +60,10 @@ public class Usuario {
         return nombre;
     }
 
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
+    }
+
     public String getEmail() {
         return email;
     }
@@ -72,12 +76,20 @@ public class Usuario {
         return rol;
     }
 
+    public void setRol(Role rol) {
+        this.rol = rol;
+    }
+
     public Long getAreaId() {
         return areaId;
     }
 
     public boolean isActivo() {
         return activo;
+    }
+
+    public void setActivo(boolean activo) {
+        this.activo = activo;
     }
 
     public LocalDateTime getFechaIngreso() {

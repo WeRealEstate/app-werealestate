@@ -1,0 +1,82 @@
+<div>
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="font-heading text-2xl font-semibold text-ink">Usuarios</h1>
+      <p class="mt-1 text-sm text-ink-muted">Administra quién tiene acceso al panel y con qué rol.</p>
+    </div>
+    <a
+      routerLink="/panel/usuarios/nuevo"
+      class="inline-flex items-center justify-center gap-2 rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
+             hover:bg-we-primary/90 focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
+    >
+      + Nuevo usuario
+    </a>
+  </div>
+
+  @if (errorMessage()) {
+    <div class="mt-6 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  @if (isLoading()) {
+    <p class="mt-8 text-sm text-ink-muted">Cargando usuarios…</p>
+  } @else {
+    <div class="mt-6 overflow-x-auto rounded-xl border border-border">
+      <table class="min-w-full divide-y divide-border text-sm">
+        <thead class="bg-surface-2">
+          <tr class="text-left text-xs font-medium uppercase tracking-wide text-ink-muted">
+            <th class="px-4 py-3">Nombre</th>
+            <th class="px-4 py-3">Rol</th>
+            <th class="px-4 py-3">Estado</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border bg-surface">
+          @for (u of usuarios(); track u.id) {
+            <tr class="hover:bg-surface-2">
+              <td class="px-4 py-3">
+                <div class="font-medium text-ink">
+                  {{ u.nombre }}
+                  @if (u.id === propioId()) {
+                    <span class="ml-1.5 text-xs font-normal text-ink-muted">(tú)</span>
+                  }
+                </div>
+                <div class="text-xs text-ink-muted">{{ u.email }}</div>
+              </td>
+              <td class="px-4 py-3">
+                <select
+                  [value]="u.rol"
+                  [disabled]="u.id === propioId() || savingId() === u.id"
+                  (change)="cambiarRol(u, $any($event.target).value)"
+                  class="rounded-lg border border-border px-3 py-2 text-sm text-ink bg-surface
+                         focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary disabled:opacity-60"
+                >
+                  @for (r of roles; track r) {
+                    <option [value]="r">{{ roleLabels[r] }}</option>
+                  }
+                </select>
+              </td>
+              <td class="px-4 py-3">
+                <button
+                  type="button"
+                  [disabled]="u.id === propioId() || savingId() === u.id"
+                  (click)="toggleActivo(u)"
+                  class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  [class.bg-green-100]="u.activo"
+                  [class.text-green-700]="u.activo"
+                  [class.dark:bg-green-500/15]="u.activo"
+                  [class.dark:text-green-300]="u.activo"
+                  [class.bg-surface-2]="!u.activo"
+                  [class.text-ink-muted]="!u.activo"
+                >
+                  <span class="h-1.5 w-1.5 rounded-full" [class.bg-green-500]="u.activo" [class.bg-ink-muted]="!u.activo" aria-hidden="true"></span>
+                  {{ u.activo ? 'Activo' : 'Inactivo' }}
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

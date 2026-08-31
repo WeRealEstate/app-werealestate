@@ -48,6 +48,18 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/panel/admin-panel/admin-panel.component').then((m) => m.AdminPanelComponent),
       },
+      {
+        path: 'usuarios',
+        canActivate: [roleGuard(['ADMIN'])],
+        loadComponent: () =>
+          import('./features/usuarios/usuarios-list/usuarios-list.component').then((m) => m.UsuariosListComponent),
+      },
+      {
+        path: 'usuarios/nuevo',
+        canActivate: [roleGuard(['ADMIN'])],
+        loadComponent: () =>
+          import('./features/usuarios/usuario-form/usuario-form.component').then((m) => m.UsuarioFormComponent),
+      },
     ],
   },
   { path: '**', redirectTo: 'login' },

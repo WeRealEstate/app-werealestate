@@ -1,21 +1,14 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
-import { Role } from '../../../core/models/user.model';
+import { ROLE_LABELS, Role } from '../../../core/models/user.model';
 import { ThemeService } from '../../../core/services/theme.service';
 import { ThemeToggleComponent } from '../../../shared/theme-toggle/theme-toggle.component';
-
-const ROLE_LABELS: Record<Role, string> = {
-  ASESOR: 'Asesor',
-  LIDER_AREA: 'Líder de área',
-  EQUIPO_INTERNO: 'Equipo interno',
-  ADMIN: 'Administrador',
-};
 
 interface NavItem {
   label: string;
   route: string;
-  icon: 'home' | 'leads';
+  icon: 'home' | 'leads' | 'usuarios';
 }
 
 const NAV_BY_ROLE: Record<Role, NavItem[]> = {
@@ -31,6 +24,7 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
   ADMIN: [
     { label: 'Inicio', route: '/panel/admin', icon: 'home' },
     { label: 'Leads', route: '/panel/leads', icon: 'leads' },
+    { label: 'Usuarios', route: '/panel/usuarios', icon: 'usuarios' },
   ],
 };
 
