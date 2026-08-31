@@ -16,6 +16,21 @@ export const routes: Routes = [
       import('./features/panel/panel-layout/panel-layout.component').then((m) => m.PanelLayoutComponent),
     children: [
       {
+        path: 'leads',
+        loadComponent: () =>
+          import('./features/leads/leads-list/leads-list.component').then((m) => m.LeadsListComponent),
+      },
+      {
+        path: 'leads/nuevo',
+        loadComponent: () =>
+          import('./features/leads/lead-form/lead-form.component').then((m) => m.LeadFormComponent),
+      },
+      {
+        path: 'leads/:id',
+        loadComponent: () =>
+          import('./features/leads/lead-detail/lead-detail.component').then((m) => m.LeadDetailComponent),
+      },
+      {
         path: 'asesor',
         canActivate: [roleGuard(['ASESOR'])],
         loadComponent: () =>

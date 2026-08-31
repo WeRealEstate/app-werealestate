@@ -1,0 +1,95 @@
+<div>
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="font-heading text-2xl font-semibold text-we-dark">
+        {{ esAdmin() ? 'Leads de todos los asesores' : 'Mis leads' }}
+      </h1>
+      <p class="mt-1 text-sm text-we-text/60">
+        @if (esAdmin() && totalFrios() > 0) {
+          <span class="text-red-600 font-medium">{{ totalFrios() }} lead{{ totalFrios() === 1 ? '' : 's' }} sin seguimiento reciente.</span>
+        } @else {
+          Seguimiento de leads de Samai y Nanuu.
+        }
+      </p>
+    </div>
+    <a
+      routerLink="/panel/leads/nuevo"
+      class="inline-flex items-center justify-center gap-2 rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
+             hover:bg-we-primary/90 focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
+    >
+      + Nuevo lead
+    </a>
+  </div>
+
+  <div class="mt-6">
+    <input
+      type="search"
+      [value]="filtro()"
+      (input)="filtro.set($any($event.target).value)"
+      placeholder="Buscar por nombre, teléfono o desarrollo…"
+      class="w-full max-w-sm rounded-lg border border-we-secondary px-3.5 py-2.5 text-sm text-we-dark placeholder:text-we-text/40
+             focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+    />
+  </div>
+
+  @if (isLoading()) {
+    <p class="mt-8 text-sm text-we-text/50">Cargando leads…</p>
+  } @else if (errorMessage()) {
+    <div class="mt-8 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+      {{ errorMessage() }}
+    </div>
+  } @else if (leadsFiltrados().length === 0) {
+    <div class="mt-8 rounded-xl border border-dashed border-we-secondary p-10 text-center">
+      <p class="text-sm text-we-text/50">
+        {{ leads().length === 0 ? 'Todavía no hay leads registrados.' : 'Ningún lead coincide con tu búsqueda.' }}
+      </p>
+    </div>
+  } @else {
+    <div class="mt-6 overflow-x-auto rounded-xl border border-we-secondary/60">
+      <table class="min-w-full divide-y divide-we-secondary/60 text-sm">
+        <thead class="bg-we-background">
+          <tr class="text-left text-xs font-medium uppercase tracking-wide text-we-text/50">
+            <th class="px-4 py-3">Cliente</th>
+            <th class="px-4 py-3">Desarrollo</th>
+            <th class="px-4 py-3">Estado</th>
+            @if (esAdmin()) {
+              <th class="px-4 py-3">Asesor</th>
+            }
+            <th class="px-4 py-3">Último contacto</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-we-secondary/40 bg-white">
+          @for (lead of leadsFiltrados(); track lead.id) {
+            <tr class="hover:bg-we-background/60">
+              <td class="px-4 py-3">
+                <div class="font-medium text-we-dark">{{ lead.nombreCliente }}</div>
+                <div class="text-xs text-we-text/50">{{ lead.telefono }}</div>
+              </td>
+              <td class="px-4 py-3 text-we-text/70">{{ lead.desarrollo.nombre }}</td>
+              <td class="px-4 py-3">
+                <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" [class]="badgeClass(lead.estado)">
+                  {{ estadoLabels[lead.estado] }}
+                </span>
+              </td>
+              @if (esAdmin()) {
+                <td class="px-4 py-3 text-we-text/70">{{ lead.asesor.nombre }}</td>
+              }
+              <td class="px-4 py-3">
+                <span class="text-we-text/70" [class.text-red-600]="lead.frio" [class.font-medium]="lead.frio">
+                  {{ lead.diasSinContacto === 0 ? 'Hoy' : 'Hace ' + lead.diasSinContacto + ' día' + (lead.diasSinContacto === 1 ? '' : 's') }}
+                </span>
+                @if (lead.frio) {
+                  <span class="ml-1.5 inline-block h-2 w-2 rounded-full bg-red-500" title="Lead frío" aria-hidden="true"></span>
+                }
+              </td>
+              <td class="px-4 py-3 text-right">
+                <a [routerLink]="['/panel/leads', lead.id]" class="text-we-primary hover:underline font-medium">Ver</a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>
