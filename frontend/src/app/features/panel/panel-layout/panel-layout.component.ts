@@ -4,6 +4,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { ROLE_LABELS, Role } from '../../../core/models/user.model';
 import { ThemeService } from '../../../core/services/theme.service';
 import { ThemeToggleComponent } from '../../../shared/theme-toggle/theme-toggle.component';
+import { ToastContainerComponent } from '../../../shared/toast-container/toast-container.component';
 
 interface NavItem {
   label: string;
@@ -31,7 +32,7 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
 @Component({
   selector: 'app-panel-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ThemeToggleComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ThemeToggleComponent, ToastContainerComponent],
   templateUrl: './panel-layout.component.html',
 })
 export class PanelLayoutComponent {

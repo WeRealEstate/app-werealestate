@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { ToastService } from '../../../core/services/toast.service';
 import { UsuariosService } from '../../../core/services/usuarios.service';
 import { ROLE_LABELS, Role, Usuario } from '../../../core/models/user.model';
 
@@ -15,6 +16,7 @@ const ROLES: Role[] = ['ASESOR', 'LIDER_AREA', 'EQUIPO_INTERNO', 'ADMIN'];
 export class UsuariosListComponent {
   private readonly usuariosService = inject(UsuariosService);
   private readonly auth = inject(AuthService);
+  private readonly toast = inject(ToastService);
 
   readonly roles = ROLES;
   readonly roleLabels = ROLE_LABELS;
@@ -28,7 +30,6 @@ export class UsuariosListComponent {
   readonly resetId = signal<number | null>(null);
   readonly nuevaPassword = signal('');
   readonly resetError = signal<string | null>(null);
-  readonly resetOkId = signal<number | null>(null);
 
   constructor() {
     this.cargar();
@@ -48,21 +49,36 @@ export class UsuariosListComponent {
 
   async cambiarRol(usuario: Usuario, nuevoRol: Role): Promise<void> {
     if (nuevoRol === usuario.rol) return;
-    await this.guardar(usuario, { nombre: usuario.nombre, rol: nuevoRol, activo: usuario.activo });
+    await this.guardar(
+      usuario,
+      { nombre: usuario.nombre, rol: nuevoRol, activo: usuario.activo },
+      `Rol de ${usuario.nombre} actualizado a ${this.roleLabels[nuevoRol]}.`,
+    );
   }
 
   async toggleActivo(usuario: Usuario): Promise<void> {
-    await this.guardar(usuario, { nombre: usuario.nombre, rol: usuario.rol, activo: !usuario.activo });
+    const nuevoEstado = !usuario.activo;
+    await this.guardar(
+      usuario,
+      { nombre: usuario.nombre, rol: usuario.rol, activo: nuevoEstado },
+      `${usuario.nombre} ahora está ${nuevoEstado ? 'activo' : 'inactivo'}.`,
+    );
   }
 
-  private async guardar(usuario: Usuario, cambios: { nombre: string; rol: Role; activo: boolean }): Promise<void> {
+  private async guardar(
+    usuario: Usuario,
+    cambios: { nombre: string; rol: Role; activo: boolean },
+    mensajeExito: string,
+  ): Promise<void> {
     this.savingId.set(usuario.id);
     this.errorMessage.set(null);
     try {
       const actualizado = await this.usuariosService.actualizar(usuario.id, cambios);
       this.usuarios.update((lista) => lista.map((u) => (u.id === actualizado.id ? actualizado : u)));
+      this.toast.success(mensajeExito);
     } catch {
       this.errorMessage.set('No se pudo actualizar el usuario. Intenta de nuevo.');
+      this.toast.error('No se pudo actualizar el usuario.');
     } finally {
       this.savingId.set(null);
     }
@@ -72,7 +88,6 @@ export class UsuariosListComponent {
     this.resetId.set(usuario.id);
     this.nuevaPassword.set('');
     this.resetError.set(null);
-    this.resetOkId.set(null);
   }
 
   cancelarReset(): void {
@@ -94,9 +109,10 @@ export class UsuariosListComponent {
       await this.usuariosService.restablecerPassword(usuario.id, password);
       this.resetId.set(null);
       this.nuevaPassword.set('');
-      this.resetOkId.set(usuario.id);
+      this.toast.success(`Contraseña de ${usuario.nombre} actualizada.`);
     } catch {
       this.resetError.set('No se pudo restablecer la contraseña. Intenta de nuevo.');
+      this.toast.error('No se pudo restablecer la contraseña.');
     } finally {
       this.savingId.set(null);
     }

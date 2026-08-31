@@ -1,11 +1,11 @@
-<div>
+<div class="page-enter">
   <h1 class="font-heading text-2xl font-semibold text-ink">
     Hola, {{ user()?.nombre }} 👋
   </h1>
   <p class="mt-1 text-sm text-ink-muted">Este es tu panel de administrador.</p>
 
   <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    <a routerLink="/panel/leads" class="rounded-xl border border-border bg-surface p-5 hover:border-we-primary transition-colors">
+    <a routerLink="/panel/leads" class="stagger-item rounded-xl border border-border bg-surface p-5 hover:border-we-primary hover:-translate-y-0.5 active:scale-[0.98] active:translate-y-0 transition-[color,background-color,border-color,transform] duration-150">
       <h2 class="font-heading font-semibold text-ink text-sm">Leads de todos los asesores</h2>
       <p class="mt-1 text-xs text-ink-muted">Visibilidad completa por asesor y desarrollo.</p>
     </a>
@@ -13,7 +13,7 @@
     <a
       [routerLink]="['/panel/leads']"
       [queryParams]="{ frios: 1 }"
-      class="rounded-xl border border-red-200 bg-red-50/60 p-5 hover:border-red-400 transition-colors dark:border-red-500/25 dark:bg-red-500/10 dark:hover:border-red-500/50"
+      class="stagger-item rounded-xl border border-red-200 bg-red-50/60 p-5 hover:border-red-400 hover:-translate-y-0.5 active:scale-[0.98] active:translate-y-0 transition-[color,background-color,border-color,transform] duration-150 dark:border-red-500/25 dark:bg-red-500/10 dark:hover:border-red-500/50"
     >
       <div class="flex items-center justify-between gap-2">
         <h2 class="font-heading font-semibold text-ink text-sm">Alertas de leads fríos</h2>
@@ -26,12 +26,12 @@
       <p class="mt-1 text-xs text-ink-muted">Leads sin seguimiento reciente, listos para retomar.</p>
     </a>
 
-    <a routerLink="/panel/usuarios" class="rounded-xl border border-border bg-surface p-5 hover:border-we-primary transition-colors">
+    <a routerLink="/panel/usuarios" class="stagger-item rounded-xl border border-border bg-surface p-5 hover:border-we-primary hover:-translate-y-0.5 active:scale-[0.98] active:translate-y-0 transition-[color,background-color,border-color,transform] duration-150">
       <h2 class="font-heading font-semibold text-ink text-sm">Gestión de usuarios</h2>
       <p class="mt-1 text-xs text-ink-muted">Da de alta asesores y administra roles y accesos.</p>
     </a>
 
-    <div class="rounded-xl border border-border bg-surface p-5">
+    <div class="stagger-item rounded-xl border border-border bg-surface p-5">
       <h2 class="font-heading font-semibold text-ink text-sm">Desempeño general</h2>
       <p class="mt-1 text-xs text-ink-muted">Ranking y comisiones de todo el equipo — próximamente.</p>
     </div>

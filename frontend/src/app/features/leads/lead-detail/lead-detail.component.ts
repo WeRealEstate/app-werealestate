@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
+import { ToastService } from '../../../core/services/toast.service';
 import { UsuariosService } from '../../../core/services/usuarios.service';
 import {
   ESTADO_LEAD_LABELS,
@@ -30,6 +31,7 @@ export class LeadDetailComponent implements OnInit {
   private readonly leadsService = inject(LeadsService);
   private readonly usuariosService = inject(UsuariosService);
   private readonly auth = inject(AuthService);
+  private readonly toast = inject(ToastService);
   private readonly fb = inject(FormBuilder);
 
   readonly estadoLabels = ESTADO_LEAD_LABELS;
@@ -106,8 +108,10 @@ export class LeadDetailComponent implements OnInit {
         valorEstimado: actual.valorEstimado,
       });
       this.lead.set(actualizado);
+      this.toast.success(`Estado actualizado a "${this.estadoLabels[nuevoEstado]}".`);
     } catch {
       this.errorMessage.set('No se pudo actualizar el estado.');
+      this.toast.error('No se pudo actualizar el estado.');
     } finally {
       this.isSavingEstado.set(false);
     }
@@ -122,8 +126,10 @@ export class LeadDetailComponent implements OnInit {
     try {
       const actualizado = await this.leadsService.reasignar(this.leadId, nuevoAsesorId);
       this.lead.set(actualizado);
+      this.toast.success(`Lead reasignado a ${actualizado.asesor.nombre}.`);
     } catch {
       this.errorMessage.set('No se pudo reasignar el lead.');
+      this.toast.error('No se pudo reasignar el lead.');
     } finally {
       this.isSavingAsesor.set(false);
     }
@@ -151,8 +157,10 @@ export class LeadDetailComponent implements OnInit {
 
       const leadActualizado = await this.leadsService.obtener(this.leadId);
       this.lead.set(leadActualizado);
+      this.toast.success('Seguimiento registrado.');
     } catch {
       this.errorMessage.set('No se pudo registrar el seguimiento.');
+      this.toast.error('No se pudo registrar el seguimiento.');
     } finally {
       this.isSavingSeguimiento.set(false);
     }

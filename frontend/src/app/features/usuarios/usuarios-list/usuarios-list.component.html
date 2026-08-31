@@ -1,4 +1,4 @@
-<div>
+<div class="page-enter">
   <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
       <h1 class="font-heading text-2xl font-semibold text-ink">Usuarios</h1>
@@ -7,7 +7,8 @@
     <a
       routerLink="/panel/usuarios/nuevo"
       class="inline-flex items-center justify-center gap-2 rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
-             hover:bg-we-primary/90 focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
+             hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
+             focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
     >
       + Nuevo usuario
     </a>
@@ -33,8 +34,8 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-border bg-surface">
-          @for (u of usuarios(); track u.id) {
-            <tr class="hover:bg-surface-2">
+          @for (u of usuarios(); track u.id; let i = $index) {
+            <tr class="stagger-item hover:bg-surface-2 transition-colors duration-150" [style.animation-delay.ms]="i < 8 ? i * 40 : 0">
               <td class="px-4 py-3">
                 <div class="font-medium text-ink">
                   {{ u.nombre }}
@@ -61,7 +62,9 @@
                   type="button"
                   [disabled]="u.id === propioId() || savingId() === u.id"
                   (click)="toggleActivo(u)"
-                  class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium
+                         transition-[color,background-color,transform] duration-150 active:scale-[0.95]
+                         disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
                   [class.bg-green-100]="u.activo"
                   [class.text-green-700]="u.activo"
                   [class.dark:bg-green-500/15]="u.activo"
@@ -78,13 +81,10 @@
                   <button
                     type="button"
                     (click)="abrirReset(u)"
-                    class="text-sm font-medium text-we-blue-light hover:underline"
+                    class="text-sm font-medium text-we-blue-light hover:underline active:scale-[0.96] transition-transform duration-150"
                   >
                     Restablecer
                   </button>
-                  @if (resetOkId() === u.id) {
-                    <span class="ml-2 text-xs text-green-600 dark:text-green-400">Actualizada ✓</span>
-                  }
                 }
               </td>
             </tr>
@@ -109,14 +109,16 @@
                         type="button"
                         [disabled]="savingId() === u.id"
                         (click)="confirmarReset(u)"
-                        class="rounded-lg bg-we-primary px-3.5 py-2 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60"
+                        class="rounded-lg bg-we-primary px-3.5 py-2 text-sm font-semibold text-white hover:bg-we-primary/90
+                               active:scale-[0.97] transition-transform duration-150 disabled:opacity-60"
                       >
                         {{ savingId() === u.id ? 'Guardando…' : 'Guardar' }}
                       </button>
                       <button
                         type="button"
                         (click)="cancelarReset()"
-                        class="rounded-lg border border-border px-3.5 py-2 text-sm font-medium text-ink-muted hover:border-we-primary"
+                        class="rounded-lg border border-border px-3.5 py-2 text-sm font-medium text-ink-muted hover:border-we-primary
+                               active:scale-[0.97] transition-transform duration-150"
                       >
                         Cancelar
                       </button>

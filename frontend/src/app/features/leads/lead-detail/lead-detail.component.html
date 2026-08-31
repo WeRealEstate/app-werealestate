@@ -1,4 +1,4 @@
-<div class="max-w-3xl">
+<div class="max-w-3xl page-enter">
   <a routerLink="/panel/leads" class="text-sm text-we-blue-light hover:underline">&larr; Volver a leads</a>
 
   @if (isLoading()) {
@@ -133,8 +133,9 @@
           type="submit"
           [disabled]="isSavingSeguimiento()"
           class="inline-flex items-center justify-center rounded-lg bg-we-primary px-5 py-2.5 text-sm font-semibold text-white
-                 hover:bg-we-primary/90 focus:outline-none focus:ring-2 focus:ring-we-primary/50
-                 disabled:opacity-60 disabled:cursor-not-allowed min-h-[44px]"
+                 hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
+                 focus:outline-none focus:ring-2 focus:ring-we-primary/50
+                 disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100 min-h-[44px]"
         >
           {{ isSavingSeguimiento() ? 'Guardando…' : 'Registrar seguimiento' }}
         </button>
@@ -149,8 +150,8 @@
         <p class="text-sm text-ink-muted">Aún no hay seguimientos registrados para este lead.</p>
       } @else {
         <ol class="space-y-4 border-l-2 border-border pl-5">
-          @for (s of seguimientos(); track s.id) {
-            <li class="relative">
+          @for (s of seguimientos(); track s.id; let i = $index) {
+            <li class="stagger-item relative" [style.animation-delay.ms]="i < 8 ? i * 40 : 0">
               <span class="absolute -left-[26px] top-1 h-3 w-3 rounded-full bg-we-primary"></span>
               <div class="flex items-center justify-between gap-2">
                 <span class="text-xs font-semibold uppercase tracking-wide text-we-blue-light">{{ tipoLabels[s.tipo] }}</span>

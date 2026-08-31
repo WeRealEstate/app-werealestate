@@ -66,3 +66,90 @@ body {
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
 }
+
+/* ---- Movimiento: curvas de easing propias, más marcadas que las de CSS por
+   defecto — se sienten intencionales en vez de genéricas. Expuestas también
+   como utilidades Tailwind (ease-brand-out / ease-brand-in-out). ---- */
+@theme {
+  --ease-brand-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-brand-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+/* Inputs/selects: transición suave de foco en vez de un salto brusco de borde. */
+input, select, textarea {
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+/* Entrada de pantalla: cada página del panel aparece con un fade + leve
+   desplazamiento — se re-dispara solo, porque Angular crea un nodo nuevo
+   en cada navegación (rutas con loadComponent). */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.page-enter {
+  animation: page-enter 320ms var(--ease-brand-out) both;
+}
+
+/* Stagger: para tarjetas/filas que aparecen juntas al cargar una lista.
+   Limitado a los primeros 8 elementos — más que eso se siente lento. */
+@keyframes stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.stagger-item {
+  animation: stagger-in 280ms var(--ease-brand-out) both;
+}
+.stagger-item:nth-child(1) { animation-delay: 0ms; }
+.stagger-item:nth-child(2) { animation-delay: 40ms; }
+.stagger-item:nth-child(3) { animation-delay: 80ms; }
+.stagger-item:nth-child(4) { animation-delay: 120ms; }
+.stagger-item:nth-child(5) { animation-delay: 160ms; }
+.stagger-item:nth-child(6) { animation-delay: 200ms; }
+.stagger-item:nth-child(7) { animation-delay: 240ms; }
+.stagger-item:nth-child(8) { animation-delay: 280ms; }
+
+/* Toasts: entran deslizándose desde abajo, salen más rápido de lo que entran
+   (Sonner/Emil Kowalski: la salida siempre debe sentirse más ágil). */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.toast-enter {
+  animation: toast-in 220ms var(--ease-brand-out) both;
+}
+.toast-exit {
+  transition: opacity 150ms ease-out, transform 150ms ease-out;
+  opacity: 0;
+  transform: translateY(4px) scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter,
+  .stagger-item,
+  .toast-enter {
+    animation: none;
+  }
+  .toast-exit {
+    transition: opacity 120ms ease-out;
+    transform: none;
+  }
+}

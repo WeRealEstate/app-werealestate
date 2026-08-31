@@ -1,4 +1,4 @@
-<div>
+<div class="page-enter">
   <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
       <h1 class="font-heading text-2xl font-semibold text-ink">
@@ -9,7 +9,8 @@
     <a
       routerLink="/panel/leads/nuevo"
       class="inline-flex items-center justify-center gap-2 rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
-             hover:bg-we-primary/90 focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
+             hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
+             focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
     >
       + Nuevo lead
     </a>
@@ -19,7 +20,8 @@
     <button
       type="button"
       (click)="toggleSoloFrios()"
-      class="mt-4 flex w-full items-center gap-2.5 rounded-lg border px-4 py-2.5 text-left text-sm transition-colors sm:w-auto"
+      class="mt-4 flex w-full items-center gap-2.5 rounded-lg border px-4 py-2.5 text-left text-sm
+             transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.99] sm:w-auto"
       [class.border-red-200]="estadoFiltro() !== 'FRIOS'"
       [class.bg-red-50]="estadoFiltro() !== 'FRIOS'"
       [class.hover:bg-red-100]="estadoFiltro() !== 'FRIOS'"
@@ -102,15 +104,15 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-border bg-surface">
-          @for (lead of leadsFiltrados(); track lead.id) {
-            <tr class="hover:bg-surface-2">
+          @for (lead of leadsFiltrados(); track lead.id; let i = $index) {
+            <tr class="stagger-item hover:bg-surface-2 transition-colors duration-150" [style.animation-delay.ms]="i < 8 ? i * 40 : 0">
               <td class="px-4 py-3">
                 <div class="font-medium text-ink">{{ lead.nombreCliente }}</div>
                 <div class="text-xs text-ink-muted">{{ lead.telefono }}</div>
               </td>
               <td class="px-4 py-3 text-ink-muted">{{ lead.desarrollo.nombre }}</td>
               <td class="px-4 py-3">
-                <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" [class]="badgeClass(lead.estado)">
+                <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium transition-colors duration-200" [class]="badgeClass(lead.estado)">
                   {{ estadoLabels[lead.estado] }}
                 </span>
               </td>
@@ -126,7 +128,7 @@
                 }
               </td>
               <td class="px-4 py-3 text-right">
-                <a [routerLink]="['/panel/leads', lead.id]" class="text-we-blue-light hover:underline font-medium">Ver</a>
+                <a [routerLink]="['/panel/leads', lead.id]" class="text-we-blue-light hover:underline font-medium active:scale-[0.95] transition-transform duration-150 inline-block">Ver</a>
               </td>
             </tr>
           }
