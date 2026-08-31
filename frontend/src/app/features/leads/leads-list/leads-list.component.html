@@ -4,13 +4,7 @@
       <h1 class="font-heading text-2xl font-semibold text-ink">
         {{ esAdmin() ? 'Leads de todos los asesores' : 'Mis leads' }}
       </h1>
-      <p class="mt-1 text-sm text-ink-muted">
-        @if (esAdmin() && totalFrios() > 0) {
-          <span class="text-red-600 font-medium">{{ totalFrios() }} lead{{ totalFrios() === 1 ? '' : 's' }} sin seguimiento reciente.</span>
-        } @else {
-          Seguimiento de leads de Samai y Nanuu.
-        }
-      </p>
+      <p class="mt-1 text-sm text-ink-muted">Seguimiento de leads de Samai y Nanuu.</p>
     </div>
     <a
       routerLink="/panel/leads/nuevo"
@@ -21,15 +15,53 @@
     </a>
   </div>
 
-  <div class="mt-6">
+  @if (esAdmin() && totalFrios() > 0) {
+    <button
+      type="button"
+      (click)="toggleSoloFrios()"
+      class="mt-4 flex w-full items-center gap-2.5 rounded-lg border px-4 py-2.5 text-left text-sm transition-colors sm:w-auto"
+      [class.border-red-200]="!soloFrios()"
+      [class.bg-red-50]="!soloFrios()"
+      [class.hover:bg-red-100]="!soloFrios()"
+      [class.dark:border-red-500/25]="!soloFrios()"
+      [class.dark:bg-red-500/10]="!soloFrios()"
+      [class.border-red-400]="soloFrios()"
+      [class.bg-red-100]="soloFrios()"
+      [class.dark:bg-red-500/20]="soloFrios()"
+      [class.dark:border-red-500/50]="soloFrios()"
+    >
+      <span class="h-2 w-2 shrink-0 rounded-full bg-red-500" aria-hidden="true"></span>
+      <span class="font-medium text-red-700 dark:text-red-300">
+        {{ totalFrios() }} lead{{ totalFrios() === 1 ? '' : 's' }} sin seguimiento reciente
+      </span>
+      <span class="ml-auto text-xs text-red-600 dark:text-red-300/80">
+        {{ soloFrios() ? 'Ver todos ✕' : 'Ver solo estos →' }}
+      </span>
+    </button>
+  }
+
+  <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
     <input
       type="search"
       [value]="filtro()"
       (input)="filtro.set($any($event.target).value)"
-      placeholder="Buscar por nombre, teléfono o desarrollo…"
+      placeholder="Buscar por nombre de cliente…"
       class="w-full max-w-sm rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted
              focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
     />
+    @if (esAdmin() && asesoresDisponibles().length > 1) {
+      <select
+        [value]="asesorId() ?? ''"
+        (change)="asesorId.set($any($event.target).value === '' ? null : +$any($event.target).value)"
+        class="w-full max-w-xs rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+               focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+      >
+        <option value="">Todos los asesores</option>
+        @for (a of asesoresDisponibles(); track a.id) {
+          <option [value]="a.id">{{ a.nombre }}</option>
+        }
+      </select>
+    }
   </div>
 
   @if (isLoading()) {
@@ -41,7 +73,7 @@
   } @else if (leadsFiltrados().length === 0) {
     <div class="mt-8 rounded-xl border border-dashed border-border p-10 text-center">
       <p class="text-sm text-ink-muted">
-        {{ leads().length === 0 ? 'Todavía no hay leads registrados.' : 'Ningún lead coincide con tu búsqueda.' }}
+        {{ leads().length === 0 ? 'Todavía no hay leads registrados.' : 'Ningún lead coincide con los filtros aplicados.' }}
       </p>
     </div>
   } @else {

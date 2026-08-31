@@ -1,8 +1,8 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
-import { ESTADO_LEAD_LABELS, Lead } from '../../../core/models/lead.model';
+import { ESTADO_LEAD_LABELS, Lead, UsuarioResumen } from '../../../core/models/lead.model';
 
 @Component({
   selector: 'app-leads-list',
@@ -13,6 +13,7 @@ import { ESTADO_LEAD_LABELS, Lead } from '../../../core/models/lead.model';
 export class LeadsListComponent {
   private readonly leadsService = inject(LeadsService);
   private readonly auth = inject(AuthService);
+  private readonly route = inject(ActivatedRoute);
 
   readonly estadoLabels = ESTADO_LEAD_LABELS;
   readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
@@ -21,22 +22,38 @@ export class LeadsListComponent {
   readonly isLoading = signal(true);
   readonly errorMessage = signal<string | null>(null);
   readonly filtro = signal('');
+  readonly asesorId = signal<number | null>(null);
+  readonly soloFrios = signal(false);
+
+  readonly asesoresDisponibles = computed<UsuarioResumen[]>(() => {
+    const porId = new Map<number, UsuarioResumen>();
+    for (const l of this.leads()) porId.set(l.asesor.id, l.asesor);
+    return [...porId.values()].sort((a, b) => a.nombre.localeCompare(b.nombre));
+  });
 
   readonly leadsFiltrados = computed(() => {
     const term = this.filtro().trim().toLowerCase();
-    if (!term) return this.leads();
-    return this.leads().filter(
-      (l) =>
-        l.nombreCliente.toLowerCase().includes(term) ||
-        l.telefono.includes(term) ||
-        l.desarrollo.nombre.toLowerCase().includes(term),
-    );
+    const asesorId = this.asesorId();
+    const soloFrios = this.soloFrios();
+    return this.leads().filter((l) => {
+      if (soloFrios && !l.frio) return false;
+      if (asesorId !== null && l.asesor.id !== asesorId) return false;
+      if (term && !l.nombreCliente.toLowerCase().includes(term)) return false;
+      return true;
+    });
   });
 
   readonly totalFrios = computed(() => this.leads().filter((l) => l.frio).length);
 
   constructor() {
+    if (this.route.snapshot.queryParamMap.get('frios') === '1') {
+      this.soloFrios.set(true);
+    }
     this.cargar();
+  }
+
+  toggleSoloFrios(): void {
+    this.soloFrios.update((v) => !v);
   }
 
   async cargar(): Promise<void> {

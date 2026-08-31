@@ -10,8 +10,19 @@
       <p class="mt-1 text-xs text-ink-muted">Visibilidad completa por asesor y desarrollo.</p>
     </a>
 
-    <a routerLink="/panel/leads" class="rounded-xl border border-red-200 bg-red-50/60 p-5 hover:border-red-400 transition-colors dark:border-red-500/25 dark:bg-red-500/10 dark:hover:border-red-500/50">
-      <h2 class="font-heading font-semibold text-ink text-sm">Alertas de leads fríos</h2>
+    <a
+      [routerLink]="['/panel/leads']"
+      [queryParams]="{ frios: 1 }"
+      class="rounded-xl border border-red-200 bg-red-50/60 p-5 hover:border-red-400 transition-colors dark:border-red-500/25 dark:bg-red-500/10 dark:hover:border-red-500/50"
+    >
+      <div class="flex items-center justify-between gap-2">
+        <h2 class="font-heading font-semibold text-ink text-sm">Alertas de leads fríos</h2>
+        @if (totalFrios(); as total) {
+          <span class="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-semibold text-white">
+            {{ total }}
+          </span>
+        }
+      </div>
       <p class="mt-1 text-xs text-ink-muted">Leads sin seguimiento reciente, listos para retomar.</p>
     </a>
 

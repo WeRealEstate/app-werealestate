@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { Role } from '../../../core/models/user.model';
+import { ThemeService } from '../../../core/services/theme.service';
 import { ThemeToggleComponent } from '../../../shared/theme-toggle/theme-toggle.component';
 
 const ROLE_LABELS: Record<Role, string> = {
@@ -41,12 +42,14 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
 })
 export class PanelLayoutComponent {
   private readonly auth = inject(AuthService);
+  private readonly themeService = inject(ThemeService);
 
   readonly user = this.auth.currentUser;
   readonly roleLabel = computed(() => {
     const rol = this.user()?.rol;
     return rol ? ROLE_LABELS[rol] : '';
   });
+  readonly themeLabel = computed(() => (this.themeService.theme() === 'dark' ? 'Modo oscuro' : 'Modo claro'));
   readonly navItems = computed<NavItem[]>(() => {
     const rol = this.user()?.rol;
     return rol ? NAV_BY_ROLE[rol] : [];
