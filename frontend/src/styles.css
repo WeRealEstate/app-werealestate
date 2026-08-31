@@ -2,7 +2,11 @@
 
 @import 'tailwindcss';
 
+/* Habilita el modo oscuro por clase (.dark en <html>), no solo por preferencia del sistema. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
+  /* Marca We Real Estate — constante en ambos temas (sidebar, login, botones primarios) */
   --color-we-primary: #243fb8;
   --color-we-blue-light: #81b3f0;
   --color-we-secondary: #d6d6d6;
@@ -10,19 +14,53 @@
   --color-we-text: #0b132b;
   --color-we-dark: #0b132b;
 
+  /* Tokens de tema — cambian entre :root (claro) y .dark más abajo. Úsalos en el
+     contenido del panel (no en el sidebar ni el login, que son siempre oscuros). */
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+
   --font-heading: 'Lexend', 'Segoe UI', ui-sans-serif, system-ui, sans-serif;
   --font-body: 'Source Sans 3', 'Segoe UI', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ---- Tema claro (por defecto) — inspirado en "SaaS Analytics Dashboard" ---- */
+:root {
+  --canvas: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --border: #e2e8f0;
+  --ink: #0b132b;
+  --ink-muted: #64748b;
+}
+
+/* ---- Tema oscuro — inspirado en "Fintech Crypto Dashboard" ---- */
+.dark {
+  --canvas: #0f172a;
+  --surface: #1b2336;
+  --surface-2: #242c40;
+  --border: #334155;
+  --ink: #f8fafc;
+  --ink-muted: #94a3b8;
 }
 
 html {
   color-scheme: light;
 }
 
+html.dark {
+  color-scheme: dark;
+}
+
 body {
   margin: 0;
   font-family: var(--font-body);
-  color: var(--color-we-text);
-  background: var(--color-we-background);
+  color: var(--ink);
+  background: var(--canvas);
+  transition: background-color 200ms ease, color 200ms ease;
 }
 
 h1, h2, h3, h4, h5, h6 {

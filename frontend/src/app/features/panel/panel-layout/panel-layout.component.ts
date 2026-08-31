@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { Role } from '../../../core/models/user.model';
+import { ThemeToggleComponent } from '../../../shared/theme-toggle/theme-toggle.component';
 
 const ROLE_LABELS: Record<Role, string> = {
   ASESOR: 'Asesor',
@@ -35,7 +36,7 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
 @Component({
   selector: 'app-panel-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ThemeToggleComponent],
   templateUrl: './panel-layout.component.html',
 })
 export class PanelLayoutComponent {

@@ -54,19 +54,19 @@ export class LeadsListComponent {
   badgeClass(estado: Lead['estado']): string {
     switch (estado) {
       case 'NUEVO':
-        return 'bg-we-blue-light/20 text-we-primary';
+        return 'bg-we-blue-light/20 text-we-primary dark:text-we-blue-light';
       case 'CONTACTADO':
-        return 'bg-we-secondary/40 text-we-text/70';
+        return 'bg-surface-2 text-ink-muted';
       case 'INTERESADO':
-        return 'bg-we-primary/15 text-we-primary';
+        return 'bg-we-primary/15 text-we-primary dark:text-we-blue-light';
       case 'CITA_AGENDADA':
-        return 'bg-amber-100 text-amber-700';
+        return 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300';
       case 'NEGOCIACION':
-        return 'bg-orange-100 text-orange-700';
+        return 'bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300';
       case 'CERRADO_GANADO':
-        return 'bg-green-100 text-green-700';
+        return 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300';
       case 'CERRADO_PERDIDO':
-        return 'bg-red-100 text-red-700';
+        return 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300';
     }
   }
 }

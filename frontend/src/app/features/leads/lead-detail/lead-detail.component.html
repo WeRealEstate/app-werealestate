@@ -1,10 +1,10 @@
 <div class="max-w-3xl">
-  <a routerLink="/panel/leads" class="text-sm text-we-primary hover:underline">&larr; Volver a leads</a>
+  <a routerLink="/panel/leads" class="text-sm text-we-blue-light hover:underline">&larr; Volver a leads</a>
 
   @if (isLoading()) {
-    <p class="mt-8 text-sm text-we-text/50">Cargando…</p>
+    <p class="mt-8 text-sm text-ink-muted">Cargando…</p>
   } @else if (!lead()) {
-    <div class="mt-8 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+    <div class="mt-8 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
       {{ errorMessage() || 'Lead no encontrado.' }}
     </div>
   } @else {
@@ -12,14 +12,14 @@
 
     <div class="mt-3 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div>
-        <h1 class="font-heading text-2xl font-semibold text-we-dark">{{ l.nombreCliente }}</h1>
-        <p class="mt-1 text-sm text-we-text/60">
+        <h1 class="font-heading text-2xl font-semibold text-ink">{{ l.nombreCliente }}</h1>
+        <p class="mt-1 text-sm text-ink-muted">
           {{ l.telefono }}
           @if (l.email) { &middot; {{ l.email }} }
           &middot; {{ l.desarrollo.nombre }}
         </p>
         @if (l.frio) {
-          <p class="mt-2 inline-flex items-center gap-1.5 rounded-full bg-red-50 border border-red-200 px-3 py-1 text-xs font-medium text-red-700">
+          <p class="mt-2 inline-flex items-center gap-1.5 rounded-full bg-red-50 border border-red-200 px-3 py-1 text-xs font-medium text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
             <span class="h-1.5 w-1.5 rounded-full bg-red-500"></span>
             Sin seguimiento hace {{ l.diasSinContacto }} días
           </p>
@@ -27,13 +27,13 @@
       </div>
 
       <div class="sm:text-right">
-        <label for="estado" class="block text-xs font-medium text-we-text/50 mb-1">Estado</label>
+        <label for="estado" class="block text-xs font-medium text-ink-muted mb-1">Estado</label>
         <select
           id="estado"
           [value]="l.estado"
           (change)="cambiarEstado($any($event.target).value)"
           [disabled]="isSavingEstado()"
-          class="rounded-lg border border-we-secondary px-3 py-2 text-sm text-we-dark bg-white
+          class="rounded-lg border border-border px-3 py-2 text-sm text-ink bg-surface
                  focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary disabled:opacity-60"
         >
           @for (e of estados; track e) {
@@ -41,28 +41,28 @@
           }
         </select>
         @if (l.valorEstimado) {
-          <p class="mt-2 text-sm text-we-text/60">Valor estimado: <span class="font-medium text-we-dark">{{ l.valorEstimado | number:'1.0-0' }} MXN</span></p>
+          <p class="mt-2 text-sm text-ink-muted">Valor estimado: <span class="font-medium text-ink">{{ l.valorEstimado | number:'1.0-0' }} MXN</span></p>
         }
       </div>
     </div>
 
     @if (errorMessage()) {
-      <div class="mt-4 rounded-lg bg-red-50 border border-red-200 px-3.5 py-2.5 text-sm text-red-700">
+      <div class="mt-4 rounded-lg bg-red-50 border border-red-200 px-3.5 py-2.5 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
         {{ errorMessage() }}
       </div>
     }
 
     <!-- Nuevo seguimiento -->
-    <div class="mt-8 rounded-xl border border-we-secondary/60 bg-white p-5">
-      <h2 class="font-heading font-semibold text-we-dark text-sm mb-4">Registrar seguimiento</h2>
+    <div class="mt-8 rounded-xl border border-border bg-surface p-5">
+      <h2 class="font-heading font-semibold text-ink text-sm mb-4">Registrar seguimiento</h2>
       <form [formGroup]="seguimientoForm" (ngSubmit)="registrarSeguimiento()" class="space-y-4" novalidate>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label for="tipo" class="block text-sm font-medium text-we-dark mb-1.5">Tipo</label>
+            <label for="tipo" class="block text-sm font-medium text-ink mb-1.5">Tipo</label>
             <select
               id="tipo"
               formControlName="tipo"
-              class="block w-full rounded-lg border border-we-secondary px-3.5 py-2.5 text-sm text-we-dark bg-white
+              class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
                      focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
             >
               @for (t of tipos; track t) {
@@ -71,25 +71,25 @@
             </select>
           </div>
           <div>
-            <label for="proximoSeguimiento" class="block text-sm font-medium text-we-dark mb-1.5">Próximo seguimiento (opcional)</label>
+            <label for="proximoSeguimiento" class="block text-sm font-medium text-ink mb-1.5">Próximo seguimiento (opcional)</label>
             <input
               id="proximoSeguimiento"
               type="date"
               formControlName="proximoSeguimiento"
-              class="block w-full rounded-lg border border-we-secondary px-3.5 py-2.5 text-sm text-we-dark
+              class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
                      focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
             />
           </div>
         </div>
 
         <div>
-          <label for="nota" class="block text-sm font-medium text-we-dark mb-1.5">Nota</label>
+          <label for="nota" class="block text-sm font-medium text-ink mb-1.5">Nota</label>
           <textarea
             id="nota"
             formControlName="nota"
             rows="3"
             placeholder="¿Qué se habló? ¿Cómo reaccionó el cliente?"
-            class="block w-full rounded-lg border border-we-secondary px-3.5 py-2.5 text-sm text-we-dark placeholder:text-we-text/35
+            class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted
                    focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
           ></textarea>
           @if (seguimientoForm.controls.nota.invalid && seguimientoForm.controls.nota.touched) {
@@ -98,13 +98,13 @@
         </div>
 
         <div>
-          <label for="resultado" class="block text-sm font-medium text-we-dark mb-1.5">Resultado (opcional)</label>
+          <label for="resultado" class="block text-sm font-medium text-ink mb-1.5">Resultado (opcional)</label>
           <input
             id="resultado"
             type="text"
             formControlName="resultado"
             placeholder="Interesado, sin respuesta, agendó cita…"
-            class="block w-full rounded-lg border border-we-secondary px-3.5 py-2.5 text-sm text-we-dark placeholder:text-we-text/35
+            class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted
                    focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
           />
         </div>
@@ -123,24 +123,24 @@
 
     <!-- Bitácora -->
     <div class="mt-8">
-      <h2 class="font-heading font-semibold text-we-dark text-sm mb-4">Bitácora ({{ seguimientos().length }})</h2>
+      <h2 class="font-heading font-semibold text-ink text-sm mb-4">Bitácora ({{ seguimientos().length }})</h2>
 
       @if (seguimientos().length === 0) {
-        <p class="text-sm text-we-text/50">Aún no hay seguimientos registrados para este lead.</p>
+        <p class="text-sm text-ink-muted">Aún no hay seguimientos registrados para este lead.</p>
       } @else {
-        <ol class="space-y-4 border-l-2 border-we-secondary/60 pl-5">
+        <ol class="space-y-4 border-l-2 border-border pl-5">
           @for (s of seguimientos(); track s.id) {
             <li class="relative">
               <span class="absolute -left-[26px] top-1 h-3 w-3 rounded-full bg-we-primary"></span>
               <div class="flex items-center justify-between gap-2">
-                <span class="text-xs font-semibold uppercase tracking-wide text-we-primary">{{ tipoLabels[s.tipo] }}</span>
-                <span class="text-xs text-we-text/45">{{ s.fecha | date:'d MMM y, HH:mm' }}</span>
+                <span class="text-xs font-semibold uppercase tracking-wide text-we-blue-light">{{ tipoLabels[s.tipo] }}</span>
+                <span class="text-xs text-ink-muted">{{ s.fecha | date:'d MMM y, HH:mm' }}</span>
               </div>
-              <p class="mt-1 text-sm text-we-dark">{{ s.nota }}</p>
+              <p class="mt-1 text-sm text-ink">{{ s.nota }}</p>
               @if (s.resultado) {
-                <p class="mt-1 text-xs text-we-text/55">Resultado: {{ s.resultado }}</p>
+                <p class="mt-1 text-xs text-ink-muted">Resultado: {{ s.resultado }}</p>
               }
-              <p class="mt-1 text-xs text-we-text/40">{{ s.asesor.nombre }}</p>
+              <p class="mt-1 text-xs text-ink-muted">{{ s.asesor.nombre }}</p>
             </li>
           }
         </ol>

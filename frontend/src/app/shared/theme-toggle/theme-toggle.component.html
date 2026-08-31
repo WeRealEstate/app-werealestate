@@ -1,0 +1,34 @@
+<button
+  type="button"
+  role="switch"
+  [attr.aria-checked]="themeService.theme() === 'dark'"
+  [attr.aria-label]="themeService.theme() === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
+  (click)="toggle()"
+  class="relative inline-flex h-7 w-14 shrink-0 cursor-pointer items-center rounded-full border border-white/15
+         transition-colors duration-300 ease-out focus:outline-none focus:ring-2 focus:ring-white/50"
+  [class.bg-we-dark]="themeService.theme() === 'dark'"
+  [class.bg-we-blue-light]="themeService.theme() !== 'dark'"
+>
+  <svg
+    class="pointer-events-none absolute left-1.5 h-3.5 w-3.5 transition-opacity duration-300"
+    [class.opacity-0]="themeService.theme() === 'dark'"
+    viewBox="0 0 24 24" fill="none" stroke="#1b2b6b" stroke-width="2" aria-hidden="true"
+  >
+    <circle cx="12" cy="12" r="4"/>
+    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke-linecap="round"/>
+  </svg>
+
+  <svg
+    class="pointer-events-none absolute right-1.5 h-3.5 w-3.5 transition-opacity duration-300"
+    [class.opacity-0]="themeService.theme() !== 'dark'"
+    viewBox="0 0 24 24" fill="#e8ecff" stroke="none" aria-hidden="true"
+  >
+    <path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11Z"/>
+  </svg>
+
+  <span
+    class="relative z-10 h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-300 ease-out"
+    [class.translate-x-7]="themeService.theme() === 'dark'"
+    [class.translate-x-1]="themeService.theme() !== 'dark'"
+  ></span>
+</button>
