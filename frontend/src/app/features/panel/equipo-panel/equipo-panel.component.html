@@ -10,22 +10,166 @@
     }
   </p>
 
-  <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    <div class="stagger-item rounded-xl border border-border bg-surface p-5">
-      <h2 class="font-heading font-semibold text-ink text-sm">Mis tareas</h2>
-      <p class="mt-1 text-xs text-ink-muted">Tareas asignadas y su estado — próximamente.</p>
-    </div>
+  @if (!isLoading()) {
+    <div class="mt-8 grid gap-4 sm:grid-cols-2">
+      <div class="stagger-item rounded-xl border border-border bg-surface p-5">
+        <h2 class="font-heading font-semibold text-ink text-sm mb-4">Mis tareas</h2>
+        @if (misTareas().length === 0) {
+          <p class="text-sm text-ink-muted">No tienes tareas asignadas.</p>
+        } @else {
+          <ul class="space-y-2.5">
+            @for (t of misTareas(); track t.id) {
+              <li class="flex items-start gap-2.5">
+                <button
+                  type="button"
+                  [disabled]="savingTareaId() === t.id"
+                  (click)="toggleTarea(t, 'mias')"
+                  class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors duration-150 active:scale-90"
+                  [class.border-we-primary]="t.completada"
+                  [class.bg-we-primary]="t.completada"
+                  [class.border-border]="!t.completada"
+                  [attr.aria-label]="t.completada ? 'Marcar como pendiente' : 'Marcar como completada'"
+                >
+                  @if (t.completada) {
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" aria-hidden="true"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  }
+                </button>
+                <span class="text-sm" [class.text-ink]="!t.completada" [class.text-ink-muted]="t.completada" [class.line-through]="t.completada">
+                  {{ t.titulo }}
+                  @if (t.creadoPor.id !== user()?.id) {
+                    <span class="block text-xs text-ink-muted">Asignada por {{ t.creadoPor.nombre }}@if (t.fechaLimite) { &middot; Vence {{ t.fechaLimite | date:'d MMM' }} }</span>
+                  } @else if (t.fechaLimite) {
+                    <span class="block text-xs text-ink-muted">Vence {{ t.fechaLimite | date:'d MMM' }}</span>
+                  }
+                </span>
+              </li>
+            }
+          </ul>
+        }
+      </div>
 
-    <div class="stagger-item rounded-xl border border-border bg-surface p-5">
-      <h2 class="font-heading font-semibold text-ink text-sm">Resumen semanal</h2>
-      <p class="mt-1 text-xs text-ink-muted">Lo que has avanzado día con día — próximamente.</p>
+      <div class="stagger-item rounded-xl border border-border bg-surface p-5">
+        <h2 class="font-heading font-semibold text-ink text-sm mb-4">Resumen de tareas</h2>
+        <div class="flex gap-6">
+          <div>
+            <p class="font-heading text-2xl font-semibold text-ink">{{ totalPendientes() }}</p>
+            <p class="text-xs text-ink-muted">Pendientes</p>
+          </div>
+          <div>
+            <p class="font-heading text-2xl font-semibold text-ink">{{ totalCompletadas() }}</p>
+            <p class="text-xs text-ink-muted">Completadas</p>
+          </div>
+        </div>
+      </div>
     </div>
 
     @if (esLider()) {
-      <div class="stagger-item rounded-xl border border-we-blue-light/60 bg-we-blue-light/10 p-5">
-        <h2 class="font-heading font-semibold text-ink text-sm">Asignar tareas al equipo</h2>
-        <p class="mt-1 text-xs text-ink-muted">Solo visible para líderes de área — próximamente.</p>
+      <div class="mt-6 grid gap-4 lg:grid-cols-2">
+        <div class="stagger-item rounded-xl border border-we-blue-light/60 bg-we-blue-light/10 p-5">
+          <h2 class="font-heading font-semibold text-ink text-sm mb-4">Asignar una tarea</h2>
+          <form [formGroup]="form" (ngSubmit)="crearTarea()" class="space-y-3" novalidate>
+            <div>
+              <label for="titulo" class="block text-xs font-medium text-ink-muted mb-1">Título</label>
+              <input
+                id="titulo"
+                type="text"
+                formControlName="titulo"
+                class="block w-full rounded-lg border border-border px-3 py-2 text-sm text-ink bg-surface
+                       focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+              />
+              @if (form.controls.titulo.invalid && form.controls.titulo.touched) {
+                <p class="mt-1 text-xs text-red-600">Ingresa un título.</p>
+              }
+            </div>
+
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label for="asignadoAId" class="block text-xs font-medium text-ink-muted mb-1">Asignar a</label>
+                <select
+                  id="asignadoAId"
+                  formControlName="asignadoAId"
+                  class="block w-full rounded-lg border border-border px-3 py-2 text-sm text-ink bg-surface
+                         focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+                >
+                  <option [ngValue]="null" disabled>Selecciona a alguien</option>
+                  @for (u of usuariosAsignables(); track u.id) {
+                    <option [ngValue]="u.id">{{ u.nombre }}</option>
+                  }
+                </select>
+                @if (form.controls.asignadoAId.invalid && form.controls.asignadoAId.touched) {
+                  <p class="mt-1 text-xs text-red-600">Elige a quién se le asigna.</p>
+                }
+              </div>
+              <div>
+                <label for="fechaLimite" class="block text-xs font-medium text-ink-muted mb-1">Fecha límite (opcional)</label>
+                <input
+                  id="fechaLimite"
+                  type="date"
+                  formControlName="fechaLimite"
+                  class="block w-full rounded-lg border border-border px-3 py-2 text-sm text-ink bg-surface
+                         focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label for="descripcion" class="block text-xs font-medium text-ink-muted mb-1">Descripción (opcional)</label>
+              <textarea
+                id="descripcion"
+                formControlName="descripcion"
+                rows="2"
+                class="block w-full rounded-lg border border-border px-3 py-2 text-sm text-ink bg-surface placeholder:text-ink-muted
+                       focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+              ></textarea>
+            </div>
+
+            <button
+              type="submit"
+              [disabled]="isCreando()"
+              class="inline-flex items-center justify-center rounded-lg bg-we-primary px-4 py-2 text-sm font-semibold text-white
+                     hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 disabled:opacity-60 min-h-[40px]"
+            >
+              {{ isCreando() ? 'Asignando…' : 'Asignar tarea' }}
+            </button>
+          </form>
+        </div>
+
+        <div class="stagger-item rounded-xl border border-border bg-surface p-5">
+          <h2 class="font-heading font-semibold text-ink text-sm mb-4">Tareas que has asignado</h2>
+          @if (tareasCreadas().length === 0) {
+            <p class="text-sm text-ink-muted">Todavía no has asignado ninguna tarea.</p>
+          } @else {
+            <ul class="space-y-2.5">
+              @for (t of tareasCreadas(); track t.id) {
+                <li class="flex items-start gap-2.5">
+                  <button
+                    type="button"
+                    [disabled]="savingTareaId() === t.id"
+                    (click)="toggleTarea(t, 'creadas')"
+                    class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors duration-150 active:scale-90"
+                    [class.border-we-primary]="t.completada"
+                    [class.bg-we-primary]="t.completada"
+                    [class.border-border]="!t.completada"
+                    [attr.aria-label]="t.completada ? 'Marcar como pendiente' : 'Marcar como completada'"
+                  >
+                    @if (t.completada) {
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" aria-hidden="true"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    }
+                  </button>
+                  <span class="text-sm" [class.text-ink]="!t.completada" [class.text-ink-muted]="t.completada" [class.line-through]="t.completada">
+                    {{ t.titulo }}
+                    <span class="block text-xs text-ink-muted">
+                      {{ t.asignadoA.nombre }}
+                      @if (t.fechaLimite) { &middot; Vence {{ t.fechaLimite | date:'d MMM' }} }
+                    </span>
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
       </div>
     }
-  </div>
+  }
 </div>

@@ -3,6 +3,7 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { ROLE_LABELS, Role } from '../../../core/models/user.model';
 import { ThemeService } from '../../../core/services/theme.service';
+import { NotificationBellComponent } from '../../../shared/notification-bell/notification-bell.component';
 import { ThemeToggleComponent } from '../../../shared/theme-toggle/theme-toggle.component';
 import { ToastContainerComponent } from '../../../shared/toast-container/toast-container.component';
 
@@ -32,7 +33,14 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
 @Component({
   selector: 'app-panel-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ThemeToggleComponent, ToastContainerComponent],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    ThemeToggleComponent,
+    ToastContainerComponent,
+    NotificationBellComponent,
+  ],
   templateUrl: './panel-layout.component.html',
 })
 export class PanelLayoutComponent {

@@ -3,6 +3,7 @@ package com.werealestate.backend.controller;
 import com.werealestate.backend.dto.UsuarioCreateRequest;
 import com.werealestate.backend.dto.UsuarioDto;
 import com.werealestate.backend.dto.UsuarioResetPasswordRequest;
+import com.werealestate.backend.dto.UsuarioResumenDto;
 import com.werealestate.backend.dto.UsuarioUpdateRequest;
 import com.werealestate.backend.service.UsuarioService;
 import jakarta.validation.Valid;
@@ -29,6 +30,11 @@ public class UsuarioController {
     @GetMapping
     public List<UsuarioDto> listar() {
         return usuarioService.listar();
+    }
+
+    @GetMapping("/asignables")
+    public List<UsuarioResumenDto> asignables() {
+        return usuarioService.asignables();
     }
 
     @PostMapping

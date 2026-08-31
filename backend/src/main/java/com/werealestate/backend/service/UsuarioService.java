@@ -3,6 +3,7 @@ package com.werealestate.backend.service;
 import com.werealestate.backend.dto.UsuarioCreateRequest;
 import com.werealestate.backend.dto.UsuarioDto;
 import com.werealestate.backend.dto.UsuarioResetPasswordRequest;
+import com.werealestate.backend.dto.UsuarioResumenDto;
 import com.werealestate.backend.dto.UsuarioUpdateRequest;
 import com.werealestate.backend.exception.ConflictException;
 import com.werealestate.backend.exception.ForbiddenOperationException;
@@ -39,6 +40,22 @@ public class UsuarioService {
         return usuarioRepository.findAll().stream()
                 .sorted(Comparator.comparing(Usuario::getNombre))
                 .map(UsuarioDto::from)
+                .toList();
+    }
+
+    /**
+     * Lista ligera (solo id/nombre) de usuarios activos no-admin, para pickers de "asignar a"
+     * (leads, tareas). A diferencia de listar(), la usan también los líderes de área, no solo admin.
+     */
+    public List<UsuarioResumenDto> asignables() {
+        Usuario actual = currentUserProvider.getUsuarioActual();
+        if (actual.getRol() != Role.ADMIN && actual.getRol() != Role.LIDER_AREA) {
+            throw new ForbiddenOperationException("No tienes acceso a la lista de usuarios");
+        }
+        return usuarioRepository.findAll().stream()
+                .filter(u -> u.isActivo() && u.getRol() != Role.ADMIN)
+                .sorted(Comparator.comparing(Usuario::getNombre))
+                .map(UsuarioResumenDto::from)
                 .toList();
     }
 
