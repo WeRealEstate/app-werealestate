@@ -2,7 +2,10 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
-import { ESTADO_LEAD_LABELS, Lead, UsuarioResumen } from '../../../core/models/lead.model';
+import { ESTADO_LEAD_LABELS, EstadoLead, Lead, UsuarioResumen } from '../../../core/models/lead.model';
+
+/** Filtro de estado: un EstadoLead puntual, o 'FRIOS' para leads sin seguimiento reciente. */
+type FiltroEstado = EstadoLead | 'FRIOS';
 
 @Component({
   selector: 'app-leads-list',
@@ -16,6 +19,7 @@ export class LeadsListComponent {
   private readonly route = inject(ActivatedRoute);
 
   readonly estadoLabels = ESTADO_LEAD_LABELS;
+  readonly estados = Object.keys(ESTADO_LEAD_LABELS) as EstadoLead[];
   readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
 
   readonly leads = signal<Lead[]>([]);
@@ -23,7 +27,7 @@ export class LeadsListComponent {
   readonly errorMessage = signal<string | null>(null);
   readonly filtro = signal('');
   readonly asesorId = signal<number | null>(null);
-  readonly soloFrios = signal(false);
+  readonly estadoFiltro = signal<FiltroEstado | null>(null);
 
   readonly asesoresDisponibles = computed<UsuarioResumen[]>(() => {
     const porId = new Map<number, UsuarioResumen>();
@@ -34,9 +38,10 @@ export class LeadsListComponent {
   readonly leadsFiltrados = computed(() => {
     const term = this.filtro().trim().toLowerCase();
     const asesorId = this.asesorId();
-    const soloFrios = this.soloFrios();
+    const estadoFiltro = this.estadoFiltro();
     return this.leads().filter((l) => {
-      if (soloFrios && !l.frio) return false;
+      if (estadoFiltro === 'FRIOS' && !l.frio) return false;
+      if (estadoFiltro && estadoFiltro !== 'FRIOS' && l.estado !== estadoFiltro) return false;
       if (asesorId !== null && l.asesor.id !== asesorId) return false;
       if (term && !l.nombreCliente.toLowerCase().includes(term)) return false;
       return true;
@@ -47,13 +52,17 @@ export class LeadsListComponent {
 
   constructor() {
     if (this.route.snapshot.queryParamMap.get('frios') === '1') {
-      this.soloFrios.set(true);
+      this.estadoFiltro.set('FRIOS');
     }
     this.cargar();
   }
 
   toggleSoloFrios(): void {
-    this.soloFrios.update((v) => !v);
+    this.estadoFiltro.update((v) => (v === 'FRIOS' ? null : 'FRIOS'));
+  }
+
+  cambiarEstadoFiltro(valor: string): void {
+    this.estadoFiltro.set(valor === '' ? null : (valor as FiltroEstado));
   }
 
   async cargar(): Promise<void> {

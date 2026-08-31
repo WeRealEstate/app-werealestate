@@ -20,22 +20,22 @@
       type="button"
       (click)="toggleSoloFrios()"
       class="mt-4 flex w-full items-center gap-2.5 rounded-lg border px-4 py-2.5 text-left text-sm transition-colors sm:w-auto"
-      [class.border-red-200]="!soloFrios()"
-      [class.bg-red-50]="!soloFrios()"
-      [class.hover:bg-red-100]="!soloFrios()"
-      [class.dark:border-red-500/25]="!soloFrios()"
-      [class.dark:bg-red-500/10]="!soloFrios()"
-      [class.border-red-400]="soloFrios()"
-      [class.bg-red-100]="soloFrios()"
-      [class.dark:bg-red-500/20]="soloFrios()"
-      [class.dark:border-red-500/50]="soloFrios()"
+      [class.border-red-200]="estadoFiltro() !== 'FRIOS'"
+      [class.bg-red-50]="estadoFiltro() !== 'FRIOS'"
+      [class.hover:bg-red-100]="estadoFiltro() !== 'FRIOS'"
+      [class.dark:border-red-500/25]="estadoFiltro() !== 'FRIOS'"
+      [class.dark:bg-red-500/10]="estadoFiltro() !== 'FRIOS'"
+      [class.border-red-400]="estadoFiltro() === 'FRIOS'"
+      [class.bg-red-100]="estadoFiltro() === 'FRIOS'"
+      [class.dark:bg-red-500/20]="estadoFiltro() === 'FRIOS'"
+      [class.dark:border-red-500/50]="estadoFiltro() === 'FRIOS'"
     >
       <span class="h-2 w-2 shrink-0 rounded-full bg-red-500" aria-hidden="true"></span>
       <span class="font-medium text-red-700 dark:text-red-300">
         {{ totalFrios() }} lead{{ totalFrios() === 1 ? '' : 's' }} sin seguimiento reciente
       </span>
       <span class="ml-auto text-xs text-red-600 dark:text-red-300/80">
-        {{ soloFrios() ? 'Ver todos ✕' : 'Ver solo estos →' }}
+        {{ estadoFiltro() === 'FRIOS' ? 'Ver todos ✕' : 'Ver solo estos →' }}
       </span>
     </button>
   }
@@ -49,6 +49,17 @@
       class="w-full max-w-sm rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted
              focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
     />
+    <select
+      (change)="cambiarEstadoFiltro($any($event.target).value)"
+      class="w-full max-w-xs rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+             focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+    >
+      <option value="" [selected]="estadoFiltro() === null">Todos los estados</option>
+      <option value="FRIOS" [selected]="estadoFiltro() === 'FRIOS'">Abandonados (sin seguimiento)</option>
+      @for (e of estados; track e) {
+        <option [value]="e" [selected]="e === estadoFiltro()">{{ estadoLabels[e] }}</option>
+      }
+    </select>
     @if (esAdmin() && asesoresDisponibles().length > 1) {
       <select
         (change)="asesorId.set($any($event.target).value === '' ? null : +$any($event.target).value)"
