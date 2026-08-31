@@ -10,5 +10,6 @@ public record LeadCreateRequest(
         String email,
         String origen,
         @NotNull Long desarrolloId,
-        BigDecimal valorEstimado) {
+        BigDecimal valorEstimado,
+        Long asesorId) {
 }

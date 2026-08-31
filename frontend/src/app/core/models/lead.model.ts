@@ -45,6 +45,7 @@ export interface LeadCreateRequest {
   origen?: string | null;
   desarrolloId: number;
   valorEstimado?: number | null;
+  asesorId?: number | null;
 }
 
 export interface LeadUpdateRequest {

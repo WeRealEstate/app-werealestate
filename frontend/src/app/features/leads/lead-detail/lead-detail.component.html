@@ -24,6 +24,9 @@
             Sin seguimiento hace {{ l.diasSinContacto }} días
           </p>
         }
+        @if (esAdmin()) {
+          <p class="mt-2 text-sm text-ink-muted">Asesor: <span class="font-medium text-ink">{{ l.asesor.nombre }}</span></p>
+        }
       </div>
 
       <div class="sm:text-right">
@@ -39,6 +42,24 @@
             <option [value]="e" [selected]="e === l.estado">{{ estadoLabels[e] }}</option>
           }
         </select>
+
+        @if (esAdmin()) {
+          <div class="mt-3">
+            <label for="asesor" class="block text-xs font-medium text-ink-muted mb-1">Reasignar a</label>
+            <select
+              id="asesor"
+              (change)="reasignar(+$any($event.target).value)"
+              [disabled]="isSavingAsesor()"
+              class="rounded-lg border border-border px-3 py-2 text-sm text-ink bg-surface
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary disabled:opacity-60"
+            >
+              @for (a of opcionesAsesor(); track a.id) {
+                <option [value]="a.id" [selected]="a.id === l.asesor.id">{{ a.nombre }}</option>
+              }
+            </select>
+          </div>
+        }
+
         @if (l.valorEstimado) {
           <p class="mt-2 text-sm text-ink-muted">Valor estimado: <span class="font-medium text-ink">{{ l.valorEstimado | number:'1.0-0' }} MXN</span></p>
         }

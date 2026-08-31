@@ -2,10 +2,14 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
+import { UsuariosService } from '../../../core/services/usuarios.service';
 import { ESTADO_LEAD_LABELS, EstadoLead, Lead, UsuarioResumen } from '../../../core/models/lead.model';
 
 /** Filtro de estado: un EstadoLead puntual, o 'FRIOS' para leads sin seguimiento reciente. */
 type FiltroEstado = EstadoLead | 'FRIOS';
+
+/** Roles que efectivamente trabajan leads y por lo tanto aparecen en el filtro por asesor. */
+const ROLES_ASIGNABLES = new Set(['ASESOR', 'LIDER_AREA']);
 
 @Component({
   selector: 'app-leads-list',
@@ -15,6 +19,7 @@ type FiltroEstado = EstadoLead | 'FRIOS';
 })
 export class LeadsListComponent {
   private readonly leadsService = inject(LeadsService);
+  private readonly usuariosService = inject(UsuariosService);
   private readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
 
@@ -28,12 +33,7 @@ export class LeadsListComponent {
   readonly filtro = signal('');
   readonly asesorId = signal<number | null>(null);
   readonly estadoFiltro = signal<FiltroEstado | null>(null);
-
-  readonly asesoresDisponibles = computed<UsuarioResumen[]>(() => {
-    const porId = new Map<number, UsuarioResumen>();
-    for (const l of this.leads()) porId.set(l.asesor.id, l.asesor);
-    return [...porId.values()].sort((a, b) => a.nombre.localeCompare(b.nombre));
-  });
+  readonly asesoresDisponibles = signal<UsuarioResumen[]>([]);
 
   readonly leadsFiltrados = computed(() => {
     const term = this.filtro().trim().toLowerCase();
@@ -55,6 +55,22 @@ export class LeadsListComponent {
       this.estadoFiltro.set('FRIOS');
     }
     this.cargar();
+    if (this.esAdmin()) {
+      this.cargarAsesores();
+    }
+  }
+
+  private async cargarAsesores(): Promise<void> {
+    try {
+      const usuarios = await this.usuariosService.listar();
+      this.asesoresDisponibles.set(
+        usuarios
+          .filter((u) => u.activo && ROLES_ASIGNABLES.has(u.rol))
+          .sort((a, b) => a.nombre.localeCompare(b.nombre)),
+      );
+    } catch {
+      // El filtro por asesor es una comodidad, no algo crítico: si falla, simplemente no se muestra.
+    }
   }
 
   toggleSoloFrios(): void {

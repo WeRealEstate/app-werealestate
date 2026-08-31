@@ -1,8 +1,10 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
+import { UsuariosService } from '../../../core/services/usuarios.service';
 import {
   ESTADO_LEAD_LABELS,
   EstadoLead,
@@ -10,7 +12,12 @@ import {
   Seguimiento,
   TIPO_SEGUIMIENTO_LABELS,
   TipoSeguimiento,
+  UsuarioResumen,
 } from '../../../core/models/lead.model';
+import { Usuario } from '../../../core/models/user.model';
+
+/** Roles que efectivamente trabajan leads y por lo tanto pueden recibir una reasignación. */
+const ROLES_ASIGNABLES = new Set(['ASESOR', 'LIDER_AREA']);
 
 @Component({
   selector: 'app-lead-detail',
@@ -21,19 +28,32 @@ import {
 export class LeadDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly leadsService = inject(LeadsService);
+  private readonly usuariosService = inject(UsuariosService);
+  private readonly auth = inject(AuthService);
   private readonly fb = inject(FormBuilder);
 
   readonly estadoLabels = ESTADO_LEAD_LABELS;
   readonly tipoLabels = TIPO_SEGUIMIENTO_LABELS;
   readonly estados = Object.keys(ESTADO_LEAD_LABELS) as EstadoLead[];
   readonly tipos = Object.keys(TIPO_SEGUIMIENTO_LABELS) as TipoSeguimiento[];
+  readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
 
   readonly lead = signal<Lead | null>(null);
   readonly seguimientos = signal<Seguimiento[]>([]);
+  readonly asesores = signal<Usuario[]>([]);
   readonly isLoading = signal(true);
   readonly isSavingEstado = signal(false);
+  readonly isSavingAsesor = signal(false);
   readonly isSavingSeguimiento = signal(false);
   readonly errorMessage = signal<string | null>(null);
+
+  /** Los asesores asignables, más el dueño actual del lead si por algún motivo no está en esa lista. */
+  readonly opcionesAsesor = computed<UsuarioResumen[]>(() => {
+    const lista: UsuarioResumen[] = this.asesores();
+    const actual = this.lead()?.asesor;
+    if (!actual || lista.some((a) => a.id === actual.id)) return lista;
+    return [...lista, actual].sort((a, b) => a.nombre.localeCompare(b.nombre));
+  });
 
   private leadId!: number;
 
@@ -47,6 +67,11 @@ export class LeadDetailComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     this.leadId = Number(this.route.snapshot.paramMap.get('id'));
     await this.cargar();
+
+    if (this.esAdmin()) {
+      const usuarios = await this.usuariosService.listar();
+      this.asesores.set(usuarios.filter((u) => u.activo && ROLES_ASIGNABLES.has(u.rol)));
+    }
   }
 
   async cargar(): Promise<void> {
@@ -85,6 +110,22 @@ export class LeadDetailComponent implements OnInit {
       this.errorMessage.set('No se pudo actualizar el estado.');
     } finally {
       this.isSavingEstado.set(false);
+    }
+  }
+
+  async reasignar(nuevoAsesorId: number): Promise<void> {
+    const actual = this.lead();
+    if (!actual || actual.asesor.id === nuevoAsesorId) return;
+
+    this.isSavingAsesor.set(true);
+    this.errorMessage.set(null);
+    try {
+      const actualizado = await this.leadsService.reasignar(this.leadId, nuevoAsesorId);
+      this.lead.set(actualizado);
+    } catch {
+      this.errorMessage.set('No se pudo reasignar el lead.');
+    } finally {
+      this.isSavingAsesor.set(false);
     }
   }
 

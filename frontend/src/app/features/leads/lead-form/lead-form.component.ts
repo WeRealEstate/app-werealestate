@@ -1,8 +1,14 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
+import { UsuariosService } from '../../../core/services/usuarios.service';
 import { Desarrollo } from '../../../core/models/lead.model';
+import { Usuario } from '../../../core/models/user.model';
+
+/** Roles que efectivamente trabajan leads y por lo tanto pueden recibir la asignación. */
+const ROLES_ASIGNABLES = new Set(['ASESOR', 'LIDER_AREA']);
 
 @Component({
   selector: 'app-lead-form',
@@ -13,9 +19,14 @@ import { Desarrollo } from '../../../core/models/lead.model';
 export class LeadFormComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly leadsService = inject(LeadsService);
+  private readonly usuariosService = inject(UsuariosService);
+  private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
+  readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
+
   readonly desarrollos = signal<Desarrollo[]>([]);
+  readonly asesores = signal<Usuario[]>([]);
   readonly isLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
 
@@ -26,10 +37,17 @@ export class LeadFormComponent implements OnInit {
     origen: this.fb.control('', { nonNullable: true }),
     desarrolloId: this.fb.control<number | null>(null, { validators: [Validators.required] }),
     valorEstimado: this.fb.control<number | null>(null),
+    asesorId: this.fb.control<number | null>(null),
   });
 
   async ngOnInit(): Promise<void> {
     this.desarrollos.set(await this.leadsService.listarDesarrollos());
+
+    if (this.esAdmin()) {
+      this.form.controls.asesorId.addValidators(Validators.required);
+      const usuarios = await this.usuariosService.listar();
+      this.asesores.set(usuarios.filter((u) => u.activo && ROLES_ASIGNABLES.has(u.rol)));
+    }
   }
 
   async onSubmit(): Promise<void> {
@@ -50,6 +68,7 @@ export class LeadFormComponent implements OnInit {
         origen: v.origen || null,
         desarrolloId: v.desarrolloId!,
         valorEstimado: v.valorEstimado,
+        asesorId: v.asesorId,
       });
       await this.router.navigate(['/panel/leads', lead.id]);
     } catch {

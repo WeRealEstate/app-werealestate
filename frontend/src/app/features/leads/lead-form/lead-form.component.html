@@ -64,6 +64,26 @@
       }
     </div>
 
+    @if (esAdmin()) {
+      <div>
+        <label for="asesorId" class="block text-sm font-medium text-ink mb-1.5">Asignar a</label>
+        <select
+          id="asesorId"
+          formControlName="asesorId"
+          class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+        >
+          <option [ngValue]="null" disabled>Selecciona un asesor</option>
+          @for (a of asesores(); track a.id) {
+            <option [ngValue]="a.id">{{ a.nombre }}</option>
+          }
+        </select>
+        @if (form.controls.asesorId.invalid && form.controls.asesorId.touched) {
+          <p class="mt-1.5 text-xs text-red-600">Selecciona a quién se le asigna este lead.</p>
+        }
+      </div>
+    }
+
     <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
       <div>
         <label for="origen" class="block text-sm font-medium text-ink mb-1.5">Origen (opcional)</label>

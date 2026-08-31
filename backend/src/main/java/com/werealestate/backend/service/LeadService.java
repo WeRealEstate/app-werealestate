@@ -79,13 +79,23 @@ public class LeadService {
                 .findById(request.desarrolloId())
                 .orElseThrow(() -> new ResourceNotFoundException("Desarrollo no encontrado"));
 
+        Usuario asesor = actual;
+        if (request.asesorId() != null && !request.asesorId().equals(actual.getId())) {
+            if (actual.getRol() != Role.ADMIN) {
+                throw new ForbiddenOperationException("Solo un administrador puede asignar el lead a otro asesor");
+            }
+            asesor = usuarioRepository
+                    .findById(request.asesorId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        }
+
         Lead lead = new Lead(
                 request.nombreCliente(),
                 request.telefono(),
                 request.email(),
                 request.origen(),
                 desarrollo,
-                actual,
+                asesor,
                 request.valorEstimado());
 
         return toDto(leadRepository.save(lead));
