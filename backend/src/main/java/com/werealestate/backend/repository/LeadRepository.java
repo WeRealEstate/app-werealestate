@@ -11,6 +11,11 @@ public interface LeadRepository extends JpaRepository<Lead, Long> {
 
     List<Lead> findAllByOrderByFechaUltimoContactoAsc();
 
+    /** Para la lista principal: el lead recién tocado (nuevo o con seguimiento reciente) sube arriba. */
+    List<Lead> findByAsesorIdOrderByFechaUltimoContactoDesc(Long asesorId);
+
+    List<Lead> findAllByOrderByFechaUltimoContactoDesc();
+
     List<Lead> findByAsesorIdAndFechaUltimoContactoBeforeAndEstadoNotInOrderByFechaUltimoContactoAsc(
             Long asesorId, LocalDateTime limite, List<com.werealestate.backend.model.EstadoLead> estadosExcluidos);
 

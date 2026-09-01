@@ -2,11 +2,13 @@ import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
+import { AsignarTareasComponent } from '../../../shared/asignar-tareas/asignar-tareas.component';
+import { DesempenoGeneralComponent } from './desempeno-general/desempeno-general.component';
 
 @Component({
   selector: 'app-admin-panel',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, AsignarTareasComponent, DesempenoGeneralComponent],
   templateUrl: './admin-panel.component.html',
 })
 export class AdminPanelComponent {

@@ -31,7 +31,7 @@
   </div>
 
   @if (!isLoading()) {
-    <div class="mt-6 grid gap-4 lg:grid-cols-3">
+    <div class="mt-6 grid gap-4 lg:grid-cols-2">
       <div class="stagger-item rounded-xl border border-border bg-surface p-5">
         <h2 class="font-heading font-semibold text-ink text-sm mb-4">Resumen de mis leads</h2>
         @if (totalLeads() === 0) {
@@ -67,40 +67,6 @@
                   <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" [class.bg-red-500]="p.tipo === 'LEAD_FRIO'" [class.bg-amber-500]="p.tipo === 'SEGUIMIENTO_PENDIENTE'" aria-hidden="true"></span>
                   {{ p.mensaje }}
                 </a>
-              </li>
-            }
-          </ul>
-        }
-      </div>
-
-      <div class="stagger-item rounded-xl border border-border bg-surface p-5">
-        <h2 class="font-heading font-semibold text-ink text-sm mb-4">Mis tareas</h2>
-        @if (tareas().length === 0) {
-          <p class="text-sm text-ink-muted">No tienes tareas asignadas.</p>
-        } @else {
-          <ul class="space-y-2.5">
-            @for (t of tareas(); track t.id) {
-              <li class="flex items-start gap-2.5">
-                <button
-                  type="button"
-                  [disabled]="savingTareaId() === t.id"
-                  (click)="toggleTarea(t)"
-                  class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors duration-150 active:scale-90"
-                  [class.border-we-primary]="t.completada"
-                  [class.bg-we-primary]="t.completada"
-                  [class.border-border]="!t.completada"
-                  [attr.aria-label]="t.completada ? 'Marcar como pendiente' : 'Marcar como completada'"
-                >
-                  @if (t.completada) {
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" aria-hidden="true"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  }
-                </button>
-                <span class="text-sm" [class.text-ink]="!t.completada" [class.text-ink-muted]="t.completada" [class.line-through]="t.completada">
-                  {{ t.titulo }}
-                  @if (t.fechaLimite) {
-                    <span class="block text-xs text-ink-muted">Vence {{ t.fechaLimite | date:'d MMM' }}</span>
-                  }
-                </span>
               </li>
             }
           </ul>

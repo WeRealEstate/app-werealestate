@@ -44,8 +44,8 @@ public class UsuarioService {
     }
 
     /**
-     * Lista ligera (solo id/nombre) de usuarios activos no-admin, para pickers de "asignar a"
-     * (leads, tareas). A diferencia de listar(), la usan también los líderes de área, no solo admin.
+     * Lista ligera (solo id/nombre) de equipo interno activo, para el picker de "asignar a" en
+     * tareas. Solo lo usan admin y líderes de área, que son quienes pueden asignar tareas.
      */
     public List<UsuarioResumenDto> asignables() {
         Usuario actual = currentUserProvider.getUsuarioActual();
@@ -53,7 +53,7 @@ public class UsuarioService {
             throw new ForbiddenOperationException("No tienes acceso a la lista de usuarios");
         }
         return usuarioRepository.findAll().stream()
-                .filter(u -> u.isActivo() && u.getRol() != Role.ADMIN)
+                .filter(u -> u.isActivo() && u.getRol() == Role.EQUIPO_INTERNO)
                 .sorted(Comparator.comparing(Usuario::getNombre))
                 .map(UsuarioResumenDto::from)
                 .toList();

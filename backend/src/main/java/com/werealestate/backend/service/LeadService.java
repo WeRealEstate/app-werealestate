@@ -48,8 +48,8 @@ public class LeadService {
     public List<LeadDto> listar() {
         Usuario actual = currentUserProvider.getUsuarioActual();
         List<Lead> leads = actual.getRol() == Role.ADMIN
-                ? leadRepository.findAllByOrderByFechaUltimoContactoAsc()
-                : leadRepository.findByAsesorIdOrderByFechaUltimoContactoAsc(actual.getId());
+                ? leadRepository.findAllByOrderByFechaUltimoContactoDesc()
+                : leadRepository.findByAsesorIdOrderByFechaUltimoContactoDesc(actual.getId());
 
         return leads.stream().map(this::toDto).toList();
     }

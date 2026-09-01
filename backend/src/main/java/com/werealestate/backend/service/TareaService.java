@@ -57,6 +57,9 @@ public class TareaService {
         Usuario asignado = usuarioRepository
                 .findById(request.asignadoAId())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        if (asignado.getRol() != Role.EQUIPO_INTERNO) {
+            throw new ForbiddenOperationException("Las tareas solo se pueden asignar a equipo interno");
+        }
 
         Tarea tarea = new Tarea(request.titulo(), request.descripcion(), asignado, actual, request.fechaLimite());
         return TareaDto.from(tareaRepository.save(tarea));
