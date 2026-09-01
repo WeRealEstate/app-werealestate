@@ -50,6 +50,12 @@ function toIso(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+function parseIsoDateOnly(value: string): Date {
+  // "2026-09-05" -> Date local a medianoche, sin el desfase de interpretar la fecha como UTC.
+  const [y, m, d] = value.slice(0, 10).split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
 @Component({
   selector: 'app-calendario',
   standalone: true,
@@ -160,6 +166,18 @@ export class CalendarioComponent {
 
   constructor() {
     this.cargar();
+
+    // Si la persona escribe la fecha directamente en el campo (en vez de dar
+    // clic en un día de la cuadrícula), el calendario de arriba debe seguirla:
+    // se mueve al mes correspondiente y resalta ese día. Los cambios que el
+    // propio componente hace al campo (seleccionarDia, editarEvento, etc.) se
+    // emiten con emitEvent:false para no disparar esto en un loop.
+    this.form.controls.fecha.valueChanges.subscribe((value) => {
+      if (!value) return;
+      const nueva = parseIsoDateOnly(value);
+      this.selectedDate.set(nueva);
+      this.viewMonth.set(new Date(nueva.getFullYear(), nueva.getMonth(), 1));
+    });
   }
 
   private async cargar(): Promise<void> {
@@ -225,8 +243,8 @@ export class CalendarioComponent {
 
   seleccionarDia(date: Date): void {
     this.selectedDate.set(date);
-    this.cancelarEdicion();
-    this.form.patchValue({ fecha: toIso(date) });
+    this.editandoId.set(null);
+    this.form.reset({ titulo: '', descripcion: '', fecha: toIso(date) }, { emitEvent: false });
   }
 
   diaClase(day: CalendarDay): string {
@@ -250,16 +268,19 @@ export class CalendarioComponent {
     const evento = this.eventos().find((e) => e.id === item.id);
     if (!evento) return;
     this.editandoId.set(evento.id);
-    this.form.setValue({
-      titulo: evento.titulo,
-      descripcion: evento.descripcion ?? '',
-      fecha: evento.fecha.slice(0, 10),
-    });
+    this.form.setValue(
+      {
+        titulo: evento.titulo,
+        descripcion: evento.descripcion ?? '',
+        fecha: evento.fecha.slice(0, 10),
+      },
+      { emitEvent: false },
+    );
   }
 
   cancelarEdicion(): void {
     this.editandoId.set(null);
-    this.form.reset({ titulo: '', descripcion: '', fecha: this.selectedIso() });
+    this.form.reset({ titulo: '', descripcion: '', fecha: this.selectedIso() }, { emitEvent: false });
   }
 
   async guardarEvento(): Promise<void> {
