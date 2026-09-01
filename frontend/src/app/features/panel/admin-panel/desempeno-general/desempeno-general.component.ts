@@ -102,21 +102,34 @@ export class DesempenoGeneralComponent {
     return total === 0 ? 0 : (this.totalCerradosGanados() / total) * 100;
   });
 
-  readonly valorPipelineFormateado = computed(() =>
-    this.currencyFormatter.format(
-      this.leads()
-        .filter((l) => l.estado !== 'CERRADO_GANADO' && l.estado !== 'CERRADO_PERDIDO')
-        .reduce((suma, l) => suma + (l.valorEstimado ?? 0), 0),
-    ),
-  );
+  // Asesor con más ventas cerradas (CERRADO_GANADO). Sin desempate especial:
+  // el primero que alcanza el máximo conteo se queda con el lugar.
+  readonly asesorEstrella = computed(() => {
+    const conteo = new Map<string, number>();
+    for (const l of this.leads()) {
+      if (l.estado !== 'CERRADO_GANADO') continue;
+      conteo.set(l.asesor.nombre, (conteo.get(l.asesor.nombre) ?? 0) + 1);
+    }
+    let mejor: { nombre: string; ventas: number } | null = null;
+    for (const [nombre, ventas] of conteo) {
+      if (!mejor || ventas > mejor.ventas) mejor = { nombre, ventas };
+    }
+    return mejor;
+  });
 
-  readonly valorCerradoGanadoFormateado = computed(() =>
-    this.currencyFormatter.format(
-      this.leads()
-        .filter((l) => l.estado === 'CERRADO_GANADO')
-        .reduce((suma, l) => suma + (l.valorEstimado ?? 0), 0),
-    ),
-  );
+  // No hay una fecha de cierre dedicada: se usa fechaUltimoContacto, que se
+  // actualiza al cambiar el estado del lead (incluido al cerrarlo ganado).
+  readonly ventasDelMesFormateado = computed(() => {
+    const ahora = new Date();
+    const total = this.leads()
+      .filter((l) => {
+        if (l.estado !== 'CERRADO_GANADO') return false;
+        const fecha = new Date(l.fechaUltimoContacto);
+        return fecha.getFullYear() === ahora.getFullYear() && fecha.getMonth() === ahora.getMonth();
+      })
+      .reduce((suma, l) => suma + (l.valorEstimado ?? 0), 0);
+    return this.currencyFormatter.format(total);
+  });
 
   // Dona de "leads por estado": rebanadas con % acumulado (from/to) para
   // dibujar un conic-gradient, más una leyenda con texto (nunca solo color).
