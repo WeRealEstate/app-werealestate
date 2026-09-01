@@ -68,6 +68,15 @@ export interface Seguimiento {
   proximoSeguimiento: string | null;
 }
 
+export interface SeguimientoProximo {
+  id: number;
+  leadId: number;
+  leadNombreCliente: string;
+  asesor: UsuarioResumen;
+  tipo: TipoSeguimiento;
+  proximoSeguimiento: string;
+}
+
 export interface SeguimientoCreateRequest {
   tipo: TipoSeguimiento;
   nota: string;

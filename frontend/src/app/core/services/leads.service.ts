@@ -9,6 +9,7 @@ import {
   LeadUpdateRequest,
   Seguimiento,
   SeguimientoCreateRequest,
+  SeguimientoProximo,
 } from '../models/lead.model';
 
 @Injectable({ providedIn: 'root' })
@@ -50,5 +51,9 @@ export class LeadsService {
 
   listarDesarrollos(): Promise<Desarrollo[]> {
     return firstValueFrom(this.http.get<Desarrollo[]>(`${environment.apiUrl}/desarrollos`));
+  }
+
+  proximosSeguimientos(): Promise<SeguimientoProximo[]> {
+    return firstValueFrom(this.http.get<SeguimientoProximo[]>(`${environment.apiUrl}/seguimientos/proximos`));
   }
 }

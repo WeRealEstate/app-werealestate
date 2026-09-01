@@ -7,4 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface SeguimientoRepository extends JpaRepository<Seguimiento, Long> {
 
     List<Seguimiento> findByLeadIdOrderByFechaDesc(Long leadId);
+
+    List<Seguimiento> findByProximoSeguimientoIsNotNullOrderByProximoSeguimientoAsc();
+
+    List<Seguimiento> findByProximoSeguimientoIsNotNullAndLeadAsesorIdOrderByProximoSeguimientoAsc(Long asesorId);
 }

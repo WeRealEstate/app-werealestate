@@ -2,6 +2,7 @@ package com.werealestate.backend.service;
 
 import com.werealestate.backend.dto.SeguimientoCreateRequest;
 import com.werealestate.backend.dto.SeguimientoDto;
+import com.werealestate.backend.dto.SeguimientoProximoDto;
 import com.werealestate.backend.model.Lead;
 import com.werealestate.backend.model.Seguimiento;
 import com.werealestate.backend.model.Usuario;
@@ -53,5 +54,21 @@ public class SeguimientoService {
         leadRepository.save(lead);
 
         return SeguimientoDto.from(seguimiento);
+    }
+
+    /**
+     * Próximos seguimientos agendados, para la agenda: admin ve los de todos, asesor y líder los
+     * de sus propios leads, equipo interno no tiene leads así que no ve ninguno.
+     */
+    public List<SeguimientoProximoDto> proximos() {
+        Usuario actual = currentUserProvider.getUsuarioActual();
+        List<Seguimiento> seguimientos =
+                switch (actual.getRol()) {
+                    case ADMIN -> seguimientoRepository.findByProximoSeguimientoIsNotNullOrderByProximoSeguimientoAsc();
+                    case ASESOR, LIDER_AREA -> seguimientoRepository
+                            .findByProximoSeguimientoIsNotNullAndLeadAsesorIdOrderByProximoSeguimientoAsc(actual.getId());
+                    case EQUIPO_INTERNO -> List.of();
+                };
+        return seguimientos.stream().map(SeguimientoProximoDto::from).toList();
     }
 }

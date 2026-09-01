@@ -10,23 +10,29 @@ import { ToastContainerComponent } from '../../../shared/toast-container/toast-c
 interface NavItem {
   label: string;
   route: string;
-  icon: 'home' | 'leads' | 'usuarios';
+  icon: 'home' | 'leads' | 'usuarios' | 'calendario';
 }
 
 const NAV_BY_ROLE: Record<Role, NavItem[]> = {
   ASESOR: [
     { label: 'Inicio', route: '/panel/asesor', icon: 'home' },
     { label: 'Leads', route: '/panel/leads', icon: 'leads' },
+    { label: 'Calendario', route: '/panel/calendario', icon: 'calendario' },
   ],
   LIDER_AREA: [
     { label: 'Inicio', route: '/panel/equipo', icon: 'home' },
     { label: 'Leads', route: '/panel/leads', icon: 'leads' },
+    { label: 'Calendario', route: '/panel/calendario', icon: 'calendario' },
   ],
-  EQUIPO_INTERNO: [{ label: 'Inicio', route: '/panel/equipo', icon: 'home' }],
+  EQUIPO_INTERNO: [
+    { label: 'Inicio', route: '/panel/equipo', icon: 'home' },
+    { label: 'Calendario', route: '/panel/calendario', icon: 'calendario' },
+  ],
   ADMIN: [
     { label: 'Inicio', route: '/panel/admin', icon: 'home' },
     { label: 'Leads', route: '/panel/leads', icon: 'leads' },
     { label: 'Usuarios', route: '/panel/usuarios', icon: 'usuarios' },
+    { label: 'Calendario', route: '/panel/calendario', icon: 'calendario' },
   ],
 };
 

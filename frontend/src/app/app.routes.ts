@@ -31,6 +31,11 @@ export const routes: Routes = [
           import('./features/leads/lead-detail/lead-detail.component').then((m) => m.LeadDetailComponent),
       },
       {
+        path: 'calendario',
+        loadComponent: () =>
+          import('./features/panel/calendario/calendario.component').then((m) => m.CalendarioComponent),
+      },
+      {
         path: 'asesor',
         canActivate: [roleGuard(['ASESOR'])],
         loadComponent: () =>

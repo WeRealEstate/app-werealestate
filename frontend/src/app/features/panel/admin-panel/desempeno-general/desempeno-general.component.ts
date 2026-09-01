@@ -117,18 +117,16 @@ export class DesempenoGeneralComponent {
     return mejor;
   });
 
-  // No hay una fecha de cierre dedicada: se usa fechaUltimoContacto, que se
-  // actualiza al cambiar el estado del lead (incluido al cerrarlo ganado).
-  readonly ventasDelMesFormateado = computed(() => {
+  // Número de ventas (no $). No hay una fecha de cierre dedicada: se usa
+  // fechaUltimoContacto, que se actualiza al cambiar el estado del lead
+  // (incluido al cerrarlo ganado).
+  readonly ventasDelMes = computed(() => {
     const ahora = new Date();
-    const total = this.leads()
-      .filter((l) => {
-        if (l.estado !== 'CERRADO_GANADO') return false;
-        const fecha = new Date(l.fechaUltimoContacto);
-        return fecha.getFullYear() === ahora.getFullYear() && fecha.getMonth() === ahora.getMonth();
-      })
-      .reduce((suma, l) => suma + (l.valorEstimado ?? 0), 0);
-    return this.currencyFormatter.format(total);
+    return this.leads().filter((l) => {
+      if (l.estado !== 'CERRADO_GANADO') return false;
+      const fecha = new Date(l.fechaUltimoContacto);
+      return fecha.getFullYear() === ahora.getFullYear() && fecha.getMonth() === ahora.getMonth();
+    }).length;
   });
 
   // Dona de "leads por estado": rebanadas con % acumulado (from/to) para
