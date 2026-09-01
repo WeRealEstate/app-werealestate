@@ -22,17 +22,24 @@ const ESTADO_ORDEN: EstadoLead[] = [
 
 // Progresión del embudo: rampa ordinal de un solo hue. Los dos estados
 // terminales usan los colores de estado fijos (good/critical), no la rampa.
+// Cada clase trae también un glow (box-shadow) del mismo tono — el brillo es
+// solo textura, la identidad del color sigue siendo la ya validada.
 const ESTADO_COLOR_CLASS: Record<EstadoLead, string> = {
-  NUEVO: 'bg-[#86b6ef] dark:bg-[#cde2fb]',
-  CONTACTADO: 'bg-[#5598e7] dark:bg-[#86b6ef]',
-  INTERESADO: 'bg-[#2a78d6] dark:bg-[#5598e7]',
-  CITA_AGENDADA: 'bg-[#1c5cab] dark:bg-[#2a78d6]',
-  NEGOCIACION: 'bg-[#104281] dark:bg-[#1c5cab]',
-  CERRADO_GANADO: 'bg-[#0ca30c]',
-  CERRADO_PERDIDO: 'bg-[#d03b3b]',
+  NUEVO: 'bg-[#86b6ef] shadow-[0_0_10px_-2px_#86b6ef] dark:bg-[#cde2fb] dark:shadow-[0_0_10px_-2px_#cde2fb]',
+  CONTACTADO: 'bg-[#5598e7] shadow-[0_0_10px_-2px_#5598e7] dark:bg-[#86b6ef] dark:shadow-[0_0_10px_-2px_#86b6ef]',
+  INTERESADO: 'bg-[#2a78d6] shadow-[0_0_10px_-2px_#2a78d6] dark:bg-[#5598e7] dark:shadow-[0_0_10px_-2px_#5598e7]',
+  CITA_AGENDADA: 'bg-[#1c5cab] shadow-[0_0_10px_-2px_#1c5cab] dark:bg-[#2a78d6] dark:shadow-[0_0_10px_-2px_#2a78d6]',
+  NEGOCIACION: 'bg-[#104281] shadow-[0_0_10px_-2px_#104281] dark:bg-[#1c5cab] dark:shadow-[0_0_10px_-2px_#1c5cab]',
+  CERRADO_GANADO: 'bg-[#0ca30c] shadow-[0_0_10px_-2px_#0ca30c]',
+  CERRADO_PERDIDO: 'bg-[#d03b3b] shadow-[0_0_10px_-2px_#d03b3b]',
 };
 
-const DESARROLLO_COLOR_CLASSES = ['bg-[#243fb8] dark:bg-[#3987e5]', 'bg-[#1baf7a] dark:bg-[#199e70]'];
+const DESARROLLO_COLOR_CLASSES = [
+  'bg-[#243fb8] shadow-[0_0_10px_-2px_#243fb8] dark:bg-[#3987e5] dark:shadow-[0_0_10px_-2px_#3987e5]',
+  'bg-[#1baf7a] shadow-[0_0_10px_-2px_#1baf7a] dark:bg-[#199e70] dark:shadow-[0_0_10px_-2px_#199e70]',
+];
+
+const ASESOR_COLOR_CLASS = 'bg-we-primary shadow-[0_0_10px_-2px_#243fb8] dark:shadow-[0_0_10px_-2px_#3987e5]';
 
 @Component({
   selector: 'app-desempeno-general',
@@ -106,7 +113,7 @@ export class DesempenoGeneralComponent {
       label: nombre,
       value,
       pct: (value / max) * 100,
-      colorClass: 'bg-we-primary',
+      colorClass: ASESOR_COLOR_CLASS,
     }));
   });
 
@@ -125,6 +132,21 @@ export class DesempenoGeneralComponent {
     }));
   });
 
+  // Anillo de "tasa de conversión": circunferencia fija del SVG (r=30) y el
+  // offset que se anima de "vacío" a la posición real al cargar los datos.
+  readonly ringRadius = 30;
+  readonly ringCircumference = 2 * Math.PI * this.ringRadius;
+
+  readonly ringOffset = computed(() => {
+    const pct = Math.max(0, Math.min(100, this.tasaConversion()));
+    return this.ringCircumference * (1 - pct / 100);
+  });
+
+  // Arranca "vacío" (offset = circunferencia completa) y se anima a su valor
+  // real tras el primer pintado, para que el anillo se sienta como que se
+  // llena en vez de aparecer ya resuelto.
+  readonly displayedRingOffset = signal(this.ringCircumference);
+
   constructor() {
     this.cargar();
   }
@@ -133,6 +155,7 @@ export class DesempenoGeneralComponent {
     this.isLoading.set(true);
     try {
       this.leads.set(await this.leadsService.listar());
+      setTimeout(() => this.displayedRingOffset.set(this.ringOffset()), 60);
     } catch {
       // El dashboard es informativo: si falla, el resto del panel sigue usable.
     } finally {
