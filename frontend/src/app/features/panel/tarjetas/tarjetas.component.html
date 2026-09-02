@@ -1,0 +1,111 @@
+<div class="page-enter flex h-full flex-col">
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="font-heading text-2xl font-semibold text-ink">Tarjetas</h1>
+      <p class="mt-1 text-sm text-ink-muted">Arrastra una tarjeta a otra columna para cambiar el estado del lead.</p>
+    </div>
+    <div class="flex items-center gap-2.5">
+      @if (esAdmin() && opcionesTablero().length > 1) {
+        <select
+          (change)="cambiarAsesor($any($event.target).value)"
+          class="w-full max-w-[220px] rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+        >
+          @for (a of opcionesTablero(); track a.id) {
+            <option [value]="a.id" [selected]="a.id === asesorSeleccionado()">
+              {{ a.id === propioId() ? 'Mi tablero' : a.nombre }}
+            </option>
+          }
+        </select>
+      }
+      <span
+        class="whitespace-nowrap rounded-lg border border-border px-3 py-2.5 text-sm text-ink-muted"
+        [class.text-red-600]="limiteAlcanzado()"
+        [class.border-red-200]="limiteAlcanzado()"
+      >
+        {{ totalTarjetas() }}/{{ maxTarjetas }}
+      </span>
+      <a
+        [routerLink]="['/panel/leads/nuevo']"
+        [queryParams]="nuevaTarjetaQueryParams()"
+        class="inline-flex items-center justify-center gap-2 rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
+               hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
+               focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]
+               disabled:pointer-events-none disabled:opacity-50"
+        [class.pointer-events-none]="limiteAlcanzado()"
+        [class.opacity-50]="limiteAlcanzado()"
+      >
+        + Nueva tarjeta
+      </a>
+    </div>
+  </div>
+
+  @if (limiteAlcanzado()) {
+    <p class="mt-3 text-xs text-red-600 dark:text-red-400">
+      Se alcanzó el máximo de {{ maxTarjetas }} tarjetas activas. Cierra o archiva alguna para agregar otra.
+    </p>
+  }
+
+  @if (isLoading()) {
+    <p class="mt-8 text-sm text-ink-muted">Cargando tarjetas…</p>
+  } @else if (errorMessage()) {
+    <div class="mt-8 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
+      {{ errorMessage() }}
+    </div>
+  } @else {
+    <div class="mt-6 flex-1 overflow-x-auto pb-4" cdkDropListGroup>
+      <div class="flex h-full min-h-[400px] gap-4">
+        @for (col of columnas(); track col.estado) {
+          <div class="flex w-72 shrink-0 flex-col rounded-xl border border-border bg-surface-2">
+            <div class="flex items-center justify-between gap-2 border-b border-border px-3.5 py-3">
+              <span class="text-sm font-semibold text-ink">{{ estadoLabels[col.estado] }}</span>
+              <span class="rounded-full bg-surface px-2 py-0.5 text-xs font-medium text-ink-muted">{{ col.leads.length }}</span>
+            </div>
+
+            <div
+              cdkDropList
+              [cdkDropListData]="col.leads"
+              (cdkDropListDropped)="onDrop($event, col.estado)"
+              class="flex-1 space-y-2.5 overflow-y-auto p-2.5"
+            >
+              @for (lead of col.leads; track lead.id) {
+                <div
+                  cdkDrag
+                  [cdkDragData]="lead"
+                  class="cursor-grab rounded-lg border border-border bg-surface p-3 shadow-sm active:cursor-grabbing"
+                >
+                  <div class="flex items-start justify-between gap-2">
+                    <p class="text-sm font-medium text-ink">{{ lead.nombreCliente }}</p>
+                    @if (lead.frio) {
+                      <span class="mt-1 h-2 w-2 shrink-0 rounded-full bg-red-500" title="Lead frío" aria-hidden="true"></span>
+                    }
+                  </div>
+                  <p class="mt-0.5 text-xs text-ink-muted">{{ lead.desarrollo.nombre }}</p>
+
+                  <div class="mt-3 flex items-center justify-between gap-2">
+                    <span
+                      class="flex h-6 w-6 items-center justify-center rounded-full bg-we-primary/15 text-[10px] font-semibold text-we-primary dark:text-we-blue-light"
+                      [title]="lead.asesor.nombre"
+                    >
+                      {{ iniciales(lead.asesor.nombre) }}
+                    </span>
+                    <a
+                      [routerLink]="['/panel/leads', lead.id]"
+                      class="text-xs font-medium text-we-blue-light hover:underline"
+                    >
+                      Ver
+                    </a>
+                  </div>
+                </div>
+              } @empty {
+                <div class="rounded-lg border border-dashed border-border p-4 text-center text-xs text-ink-muted">
+                  Sin leads aquí
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>

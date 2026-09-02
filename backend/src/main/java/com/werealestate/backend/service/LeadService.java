@@ -4,6 +4,7 @@ import com.werealestate.backend.dto.LeadCreateRequest;
 import com.werealestate.backend.dto.LeadDto;
 import com.werealestate.backend.dto.LeadUpdateRequest;
 import com.werealestate.backend.dto.ReasignarLeadRequest;
+import com.werealestate.backend.exception.ConflictException;
 import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.model.Desarrollo;
@@ -11,14 +12,18 @@ import com.werealestate.backend.model.EstadoLead;
 import com.werealestate.backend.model.Lead;
 import com.werealestate.backend.model.Pais;
 import com.werealestate.backend.model.Role;
+import com.werealestate.backend.model.Seguimiento;
+import com.werealestate.backend.model.TipoSeguimiento;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.repository.DesarrolloRepository;
 import com.werealestate.backend.repository.LeadRepository;
+import com.werealestate.backend.repository.SeguimientoRepository;
 import com.werealestate.backend.repository.UsuarioRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,9 +32,22 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class LeadService {
 
+    /** Tope de leads activos (no archivados) por asesor, para mantener el pipeline manejable. */
+    private static final int MAX_LEADS_ACTIVOS_POR_ASESOR = 20;
+
+    private static final Map<EstadoLead, String> ESTADO_LABEL = Map.of(
+            EstadoLead.NUEVO, "Nuevo",
+            EstadoLead.CONTACTADO, "Contactado",
+            EstadoLead.INTERESADO, "Interesado",
+            EstadoLead.CITA_AGENDADA, "Cita agendada",
+            EstadoLead.NEGOCIACION, "Negociación",
+            EstadoLead.CERRADO_GANADO, "Cerrado (ganado)",
+            EstadoLead.CERRADO_PERDIDO, "Cerrado (perdido)");
+
     private final LeadRepository leadRepository;
     private final DesarrolloRepository desarrolloRepository;
     private final UsuarioRepository usuarioRepository;
+    private final SeguimientoRepository seguimientoRepository;
     private final CurrentUserProvider currentUserProvider;
     private final ComisionService comisionService;
     private final int diasFrio;
@@ -38,12 +56,14 @@ public class LeadService {
             LeadRepository leadRepository,
             DesarrolloRepository desarrolloRepository,
             UsuarioRepository usuarioRepository,
+            SeguimientoRepository seguimientoRepository,
             CurrentUserProvider currentUserProvider,
             ComisionService comisionService,
             @Value("${app.lead.dias-frio}") int diasFrio) {
         this.leadRepository = leadRepository;
         this.desarrolloRepository = desarrolloRepository;
         this.usuarioRepository = usuarioRepository;
+        this.seguimientoRepository = seguimientoRepository;
         this.currentUserProvider = currentUserProvider;
         this.comisionService = comisionService;
         this.diasFrio = diasFrio;
@@ -108,6 +128,11 @@ public class LeadService {
                     .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
         }
 
+        if (leadRepository.countByAsesorIdAndArchivadoFalse(asesor.getId()) >= MAX_LEADS_ACTIVOS_POR_ASESOR) {
+            throw new ConflictException(asesor.getNombre() + " ya tiene " + MAX_LEADS_ACTIVOS_POR_ASESOR
+                    + " leads activos, el máximo permitido. Cierra o archiva alguno antes de agregar otro.");
+        }
+
         Lead lead = new Lead(
                 request.nombreCliente(),
                 request.telefono(),
@@ -139,6 +164,37 @@ public class LeadService {
         Lead guardado = leadRepository.save(lead);
 
         comisionService.generarSiCorresponde(guardado, eraGanado, request.estado() == EstadoLead.CERRADO_GANADO);
+
+        return toDto(guardado);
+    }
+
+    /**
+     * Cambia el estado del lead desde el tablero de tarjetas (arrastrar y soltar). A diferencia de
+     * {@link #actualizar}, esto no viene de un formulario con nota, así que registra un seguimiento
+     * automático en la bitácora para no perder el rastro del cambio.
+     */
+    public LeadDto mover(Long id, EstadoLead nuevoEstado) {
+        Lead lead = buscarLeadPermitido(id);
+        if (lead.getEstado() == nuevoEstado) {
+            return toDto(lead);
+        }
+
+        Usuario actual = currentUserProvider.getUsuarioActual();
+        boolean eraGanado = lead.getEstado() == EstadoLead.CERRADO_GANADO;
+
+        lead.setEstado(nuevoEstado);
+        lead.setFechaUltimoContacto(LocalDateTime.now());
+        Lead guardado = leadRepository.save(lead);
+
+        seguimientoRepository.save(new Seguimiento(
+                guardado,
+                actual,
+                TipoSeguimiento.OTRO,
+                "Estado actualizado a \"" + ESTADO_LABEL.get(nuevoEstado) + "\" desde el tablero de tarjetas.",
+                null,
+                null));
+
+        comisionService.generarSiCorresponde(guardado, eraGanado, nuevoEstado == EstadoLead.CERRADO_GANADO);
 
         return toDto(guardado);
     }

@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   Desarrollo,
+  EstadoLead,
   Lead,
   LeadCreateRequest,
   LeadUpdateRequest,
@@ -51,6 +52,10 @@ export class LeadsService {
 
   reasignar(id: number, nuevoAsesorId: number): Promise<Lead> {
     return firstValueFrom(this.http.put<Lead>(`${this.baseUrl}/${id}/reasignar`, { nuevoAsesorId }));
+  }
+
+  mover(id: number, estado: EstadoLead): Promise<Lead> {
+    return firstValueFrom(this.http.put<Lead>(`${this.baseUrl}/${id}/mover`, { estado }));
   }
 
   listarSeguimientos(leadId: number): Promise<Seguimiento[]> {

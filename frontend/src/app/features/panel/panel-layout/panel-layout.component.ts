@@ -10,13 +10,14 @@ import { ToastContainerComponent } from '../../../shared/toast-container/toast-c
 interface NavItem {
   label: string;
   route: string;
-  icon: 'home' | 'leads' | 'usuarios' | 'calendario' | 'comisiones';
+  icon: 'home' | 'leads' | 'usuarios' | 'calendario' | 'comisiones' | 'tarjetas';
 }
 
 const NAV_BY_ROLE: Record<Role, NavItem[]> = {
   ASESOR: [
     { label: 'Inicio', route: '/panel/asesor', icon: 'home' },
     { label: 'Leads', route: '/panel/leads', icon: 'leads' },
+    { label: 'Tarjetas', route: '/panel/tarjetas', icon: 'tarjetas' },
     { label: 'Calendario', route: '/panel/calendario', icon: 'calendario' },
     { label: 'Comisiones', route: '/panel/comisiones', icon: 'comisiones' },
   ],
@@ -32,6 +33,7 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
   ADMIN: [
     { label: 'Inicio', route: '/panel/admin', icon: 'home' },
     { label: 'Leads', route: '/panel/leads', icon: 'leads' },
+    { label: 'Tarjetas', route: '/panel/tarjetas', icon: 'tarjetas' },
     { label: 'Usuarios', route: '/panel/usuarios', icon: 'usuarios' },
     { label: 'Calendario', route: '/panel/calendario', icon: 'calendario' },
     { label: 'Comisiones', route: '/panel/comisiones', icon: 'comisiones' },

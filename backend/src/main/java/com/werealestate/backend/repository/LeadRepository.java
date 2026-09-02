@@ -28,4 +28,6 @@ public interface LeadRepository extends JpaRepository<Lead, Long> {
             LocalDateTime limite, List<com.werealestate.backend.model.EstadoLead> estadosExcluidos);
 
     boolean existsByAsesorId(Long asesorId);
+
+    long countByAsesorIdAndArchivadoFalse(Long asesorId);
 }
