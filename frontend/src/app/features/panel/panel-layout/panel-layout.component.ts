@@ -10,7 +10,7 @@ import { ToastContainerComponent } from '../../../shared/toast-container/toast-c
 interface NavItem {
   label: string;
   route: string;
-  icon: 'home' | 'leads' | 'usuarios' | 'calendario';
+  icon: 'home' | 'leads' | 'usuarios' | 'calendario' | 'comisiones';
 }
 
 const NAV_BY_ROLE: Record<Role, NavItem[]> = {
@@ -18,6 +18,7 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
     { label: 'Inicio', route: '/panel/asesor', icon: 'home' },
     { label: 'Leads', route: '/panel/leads', icon: 'leads' },
     { label: 'Calendario', route: '/panel/calendario', icon: 'calendario' },
+    { label: 'Comisiones', route: '/panel/comisiones', icon: 'comisiones' },
   ],
   LIDER_AREA: [
     { label: 'Inicio', route: '/panel/equipo', icon: 'home' },
@@ -33,6 +34,7 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
     { label: 'Leads', route: '/panel/leads', icon: 'leads' },
     { label: 'Usuarios', route: '/panel/usuarios', icon: 'usuarios' },
     { label: 'Calendario', route: '/panel/calendario', icon: 'calendario' },
+    { label: 'Comisiones', route: '/panel/comisiones', icon: 'comisiones' },
   ],
 };
 

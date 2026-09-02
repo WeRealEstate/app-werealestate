@@ -31,6 +31,7 @@ public class LeadService {
     private final DesarrolloRepository desarrolloRepository;
     private final UsuarioRepository usuarioRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final ComisionService comisionService;
     private final int diasFrio;
 
     public LeadService(
@@ -38,11 +39,13 @@ public class LeadService {
             DesarrolloRepository desarrolloRepository,
             UsuarioRepository usuarioRepository,
             CurrentUserProvider currentUserProvider,
+            ComisionService comisionService,
             @Value("${app.lead.dias-frio}") int diasFrio) {
         this.leadRepository = leadRepository;
         this.desarrolloRepository = desarrolloRepository;
         this.usuarioRepository = usuarioRepository;
         this.currentUserProvider = currentUserProvider;
+        this.comisionService = comisionService;
         this.diasFrio = diasFrio;
     }
 
@@ -107,6 +110,8 @@ public class LeadService {
 
     public LeadDto actualizar(Long id, LeadUpdateRequest request) {
         Lead lead = buscarLeadPermitido(id);
+        boolean eraGanado = lead.getEstado() == EstadoLead.CERRADO_GANADO;
+
         lead.setNombreCliente(request.nombreCliente());
         lead.setTelefono(request.telefono());
         lead.setEmail(request.email());
@@ -116,7 +121,11 @@ public class LeadService {
         lead.setEdad(request.edad());
         lead.setPais(request.pais());
         lead.setEstadoRepublica(request.pais() == Pais.EXTRANJERO ? null : request.estadoRepublica());
-        return toDto(leadRepository.save(lead));
+        Lead guardado = leadRepository.save(lead);
+
+        comisionService.generarSiCorresponde(guardado, eraGanado, request.estado() == EstadoLead.CERRADO_GANADO);
+
+        return toDto(guardado);
     }
 
     public LeadDto reasignar(Long id, ReasignarLeadRequest request) {

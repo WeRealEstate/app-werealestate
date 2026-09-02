@@ -1,0 +1,138 @@
+<div class="page-enter">
+  <h1 class="font-heading text-2xl font-semibold text-ink">
+    {{ esAdmin() ? 'Comisiones del equipo' : 'Mi comisión' }}
+  </h1>
+  <p class="mt-1 text-sm text-ink-muted">
+    @if (esAdmin()) {
+      Comisión vigente: {{ porcentaje() }}% sobre el valor estimado de cada lead cerrado ganado.
+    } @else {
+      Ganas el {{ porcentaje() }}% del valor estimado de cada lead que cierras como ganado.
+    }
+  </p>
+
+  @if (isLoading()) {
+    <p class="mt-8 text-sm text-ink-muted">Cargando…</p>
+  } @else {
+    @if (esAdmin()) {
+      <div class="mt-6 max-w-sm stagger-item rounded-xl border border-border bg-surface p-5">
+        <h2 class="font-heading font-semibold text-ink text-sm mb-3">Porcentaje de comisión</h2>
+        <form [formGroup]="porcentajeForm" (ngSubmit)="guardarPorcentaje()" class="flex items-start gap-2" novalidate>
+          <div class="flex-1">
+            <div class="flex items-center gap-1.5">
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.5"
+                formControlName="porcentaje"
+                class="block w-full rounded-lg border border-border px-3 py-2 text-sm text-ink bg-surface
+                       focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+              />
+              <span class="text-sm text-ink-muted">%</span>
+            </div>
+            @if (porcentajeForm.controls.porcentaje.invalid && porcentajeForm.controls.porcentaje.touched) {
+              <p class="mt-1 text-xs text-red-600 dark:text-red-400">Ingresa un porcentaje entre 0 y 100.</p>
+            }
+          </div>
+          <button
+            type="submit"
+            [disabled]="isGuardandoPorcentaje()"
+            class="inline-flex items-center justify-center rounded-lg bg-we-primary px-4 py-2 text-sm font-semibold text-white
+                   hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 disabled:opacity-60 min-h-[40px]"
+          >
+            {{ isGuardandoPorcentaje() ? 'Guardando…' : 'Guardar' }}
+          </button>
+        </form>
+      </div>
+    }
+
+    <div class="mt-6 grid gap-4 grid-cols-2 lg:grid-cols-3">
+      <div class="stagger-item rounded-xl border border-border bg-surface p-5">
+        <p class="text-xs text-ink-muted">Total generado</p>
+        <p class="mt-1.5 font-heading text-2xl font-semibold text-ink">{{ formatMonto(totalGenerado()) }}</p>
+      </div>
+      <div class="stagger-item rounded-xl border border-border bg-surface p-5">
+        <p class="text-xs text-ink-muted">Pagado</p>
+        <p class="mt-1.5 font-heading text-2xl font-semibold text-ink">{{ formatMonto(totalPagado()) }}</p>
+      </div>
+      <div class="stagger-item rounded-xl border border-border bg-surface p-5">
+        <p class="text-xs text-ink-muted">Pendiente</p>
+        <p class="mt-1.5 font-heading text-2xl font-semibold text-ink">{{ formatMonto(totalPendiente()) }}</p>
+      </div>
+    </div>
+
+    @if (esAdmin() && porAsesor().length > 1) {
+      <div class="mt-6 stagger-item rounded-xl border border-border bg-surface p-5">
+        <h2 class="font-heading font-semibold text-ink text-sm mb-4">Por asesor</h2>
+        <div class="space-y-2.5">
+          @for (a of porAsesor(); track a.nombre) {
+            <div class="flex items-center justify-between gap-3 text-sm">
+              <span class="text-ink">{{ a.nombre }}</span>
+              <span class="text-ink-muted text-right">
+                {{ formatMonto(a.pagado) }} pagado &middot; {{ formatMonto(a.generado - a.pagado) }} pendiente
+              </span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <div class="mt-6 stagger-item rounded-xl border border-border bg-surface p-5">
+      <h2 class="font-heading font-semibold text-ink text-sm mb-4">Historial</h2>
+      @if (comisiones().length === 0) {
+        <p class="text-sm text-ink-muted">
+          {{ esAdmin() ? 'Todavía no se ha generado ninguna comisión.' : 'Todavía no has generado comisiones.' }}
+        </p>
+      } @else {
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-xs text-ink-muted border-b border-border">
+                <th class="pb-2 pr-3 font-medium">Lead</th>
+                @if (esAdmin()) {
+                  <th class="pb-2 pr-3 font-medium">Asesor</th>
+                }
+                <th class="pb-2 pr-3 font-medium">Monto</th>
+                <th class="pb-2 pr-3 font-medium">Fecha</th>
+                <th class="pb-2 font-medium">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of comisiones(); track c.id) {
+                <tr class="border-b border-border last:border-b-0">
+                  <td class="py-2.5 pr-3 text-ink">{{ c.leadNombreCliente }}</td>
+                  @if (esAdmin()) {
+                    <td class="py-2.5 pr-3 text-ink-muted">{{ c.asesor.nombre }}</td>
+                  }
+                  <td class="py-2.5 pr-3 text-ink font-medium whitespace-nowrap">{{ formatMonto(c.monto) }}</td>
+                  <td class="py-2.5 pr-3 text-ink-muted whitespace-nowrap">{{ c.fechaCreacion | date: 'd MMM y' }}</td>
+                  <td class="py-2.5">
+                    @if (esAdmin()) {
+                      <button
+                        type="button"
+                        (click)="alternarPagada(c)"
+                        [disabled]="savingId() === c.id"
+                        class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium transition-colors duration-150 active:scale-[0.96] disabled:opacity-60"
+                        [class]="pillClase(c.pagada)"
+                      >
+                        {{ c.pagada ? 'Pagada' : 'Pendiente' }}
+                      </button>
+                    } @else {
+                      <span
+                        class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium"
+                        [class]="pillClase(c.pagada)"
+                      >
+                        {{ c.pagada ? 'Pagada' : 'Pendiente' }}
+                      </span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+</div>

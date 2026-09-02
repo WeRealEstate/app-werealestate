@@ -36,6 +36,12 @@ export const routes: Routes = [
           import('./features/panel/calendario/calendario.component').then((m) => m.CalendarioComponent),
       },
       {
+        path: 'comisiones',
+        canActivate: [roleGuard(['ASESOR', 'ADMIN'])],
+        loadComponent: () =>
+          import('./features/panel/comisiones/comisiones.component').then((m) => m.ComisionesComponent),
+      },
+      {
         path: 'asesor',
         canActivate: [roleGuard(['ASESOR'])],
         loadComponent: () =>
