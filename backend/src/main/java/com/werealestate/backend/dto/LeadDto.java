@@ -1,5 +1,6 @@
 package com.werealestate.backend.dto;
 
+import com.werealestate.backend.model.ColumnaPersonalizada;
 import com.werealestate.backend.model.EstadoLead;
 import com.werealestate.backend.model.Lead;
 import com.werealestate.backend.model.Pais;
@@ -23,9 +24,12 @@ public record LeadDto(
         String estadoRepublica,
         long diasSinContacto,
         boolean frio,
-        boolean archivado) {
+        boolean archivado,
+        Long columnaPersonalizadaId,
+        String columnaPersonalizadaNombre) {
 
     public static LeadDto from(Lead lead, long diasSinContacto, boolean frio) {
+        ColumnaPersonalizada columna = lead.getColumnaPersonalizada();
         return new LeadDto(
                 lead.getId(),
                 lead.getNombreCliente(),
@@ -43,6 +47,8 @@ public record LeadDto(
                 lead.getEstadoRepublica(),
                 diasSinContacto,
                 frio,
-                lead.isArchivado());
+                lead.isArchivado(),
+                columna != null ? columna.getId() : null,
+                columna != null ? columna.getNombre() : null);
     }
 }

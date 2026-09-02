@@ -42,6 +42,14 @@ export interface Lead {
   diasSinContacto: number;
   frio: boolean;
   archivado: boolean;
+  columnaPersonalizadaId: number | null;
+  columnaPersonalizadaNombre: string | null;
+}
+
+export interface ColumnaPersonalizada {
+  id: number;
+  nombre: string;
+  orden: number;
 }
 
 export interface LeadCreateRequest {

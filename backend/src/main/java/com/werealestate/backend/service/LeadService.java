@@ -7,6 +7,7 @@ import com.werealestate.backend.dto.ReasignarLeadRequest;
 import com.werealestate.backend.exception.ConflictException;
 import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
+import com.werealestate.backend.model.ColumnaPersonalizada;
 import com.werealestate.backend.model.Desarrollo;
 import com.werealestate.backend.model.EstadoLead;
 import com.werealestate.backend.model.Lead;
@@ -15,6 +16,7 @@ import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Seguimiento;
 import com.werealestate.backend.model.TipoSeguimiento;
 import com.werealestate.backend.model.Usuario;
+import com.werealestate.backend.repository.ColumnaPersonalizadaRepository;
 import com.werealestate.backend.repository.DesarrolloRepository;
 import com.werealestate.backend.repository.LeadRepository;
 import com.werealestate.backend.repository.SeguimientoRepository;
@@ -48,6 +50,7 @@ public class LeadService {
     private final DesarrolloRepository desarrolloRepository;
     private final UsuarioRepository usuarioRepository;
     private final SeguimientoRepository seguimientoRepository;
+    private final ColumnaPersonalizadaRepository columnaRepository;
     private final CurrentUserProvider currentUserProvider;
     private final ComisionService comisionService;
     private final int diasFrio;
@@ -57,6 +60,7 @@ public class LeadService {
             DesarrolloRepository desarrolloRepository,
             UsuarioRepository usuarioRepository,
             SeguimientoRepository seguimientoRepository,
+            ColumnaPersonalizadaRepository columnaRepository,
             CurrentUserProvider currentUserProvider,
             ComisionService comisionService,
             @Value("${app.lead.dias-frio}") int diasFrio) {
@@ -64,6 +68,7 @@ public class LeadService {
         this.desarrolloRepository = desarrolloRepository;
         this.usuarioRepository = usuarioRepository;
         this.seguimientoRepository = seguimientoRepository;
+        this.columnaRepository = columnaRepository;
         this.currentUserProvider = currentUserProvider;
         this.comisionService = comisionService;
         this.diasFrio = diasFrio;
@@ -175,7 +180,9 @@ public class LeadService {
      */
     public LeadDto mover(Long id, EstadoLead nuevoEstado) {
         Lead lead = buscarLeadPermitido(id);
-        if (lead.getEstado() == nuevoEstado) {
+        boolean estadoCambia = lead.getEstado() != nuevoEstado;
+        boolean saliaDeColumnaPersonalizada = lead.getColumnaPersonalizada() != null;
+        if (!estadoCambia && !saliaDeColumnaPersonalizada) {
             return toDto(lead);
         }
 
@@ -183,6 +190,7 @@ public class LeadService {
         boolean eraGanado = lead.getEstado() == EstadoLead.CERRADO_GANADO;
 
         lead.setEstado(nuevoEstado);
+        lead.setColumnaPersonalizada(null);
         lead.setFechaUltimoContacto(LocalDateTime.now());
         Lead guardado = leadRepository.save(lead);
 
@@ -195,6 +203,41 @@ public class LeadService {
                 null));
 
         comisionService.generarSiCorresponde(guardado, eraGanado, nuevoEstado == EstadoLead.CERRADO_GANADO);
+
+        return toDto(guardado);
+    }
+
+    /**
+     * Mueve el lead a una columna personalizada del tablero de tarjetas: solo cambia su posición
+     * visual, nunca su estado real, pero igual queda registrado en la bitácora.
+     */
+    public LeadDto moverAColumnaPersonalizada(Long id, Long columnaPersonalizadaId) {
+        Lead lead = buscarLeadPermitido(id);
+        ColumnaPersonalizada columna = columnaRepository
+                .findById(columnaPersonalizadaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Columna no encontrada"));
+
+        if (!columna.getAsesor().getId().equals(lead.getAsesor().getId())) {
+            throw new ForbiddenOperationException("Esa columna no pertenece al asesor de este lead");
+        }
+
+        ColumnaPersonalizada actual = lead.getColumnaPersonalizada();
+        if (actual != null && actual.getId().equals(columnaPersonalizadaId)) {
+            return toDto(lead);
+        }
+
+        Usuario usuarioActual = currentUserProvider.getUsuarioActual();
+        lead.setColumnaPersonalizada(columna);
+        lead.setFechaUltimoContacto(LocalDateTime.now());
+        Lead guardado = leadRepository.save(lead);
+
+        seguimientoRepository.save(new Seguimiento(
+                guardado,
+                usuarioActual,
+                TipoSeguimiento.OTRO,
+                "Se movió a la columna personalizada \"" + columna.getNombre() + "\" desde el tablero de tarjetas.",
+                null,
+                null));
 
         return toDto(guardado);
     }

@@ -6,8 +6,16 @@ import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
 import { UsuariosService } from '../../../core/services/usuarios.service';
+import { ColumnasService } from '../../../core/services/columnas.service';
 import { ToastService } from '../../../core/services/toast.service';
-import { Desarrollo, ESTADO_LEAD_LABELS, EstadoLead, Lead, UsuarioResumen } from '../../../core/models/lead.model';
+import {
+  ColumnaPersonalizada,
+  Desarrollo,
+  ESTADO_LEAD_LABELS,
+  EstadoLead,
+  Lead,
+  UsuarioResumen,
+} from '../../../core/models/lead.model';
 
 /** Roles que efectivamente trabajan leads y por lo tanto pueden tener un tablero propio. */
 const ROLES_ASIGNABLES = new Set(['ASESOR', 'LIDER_AREA']);
@@ -15,10 +23,10 @@ const ROLES_ASIGNABLES = new Set(['ASESOR', 'LIDER_AREA']);
 /** Tope de tarjetas (leads activos) por asesor; debe coincidir con el límite del backend. */
 export const MAX_TARJETAS_POR_ASESOR = 20;
 
-interface Columna {
-  estado: EstadoLead;
-  leads: Lead[];
-}
+/** Una columna fija (estado del lead) o una que el asesor agregó a su propio tablero. */
+type Columna =
+  | { tipo: 'estado'; estado: EstadoLead; nombre: string; leads: Lead[] }
+  | { tipo: 'personalizada'; id: number; nombre: string; leads: Lead[] };
 
 @Component({
   selector: 'app-tarjetas',
@@ -29,6 +37,7 @@ interface Columna {
 export class TarjetasComponent {
   private readonly leadsService = inject(LeadsService);
   private readonly usuariosService = inject(UsuariosService);
+  private readonly columnasService = inject(ColumnasService);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly route = inject(ActivatedRoute);
@@ -45,6 +54,7 @@ export class TarjetasComponent {
   readonly errorMessage = signal<string | null>(null);
   readonly asesoresDisponibles = signal<UsuarioResumen[]>([]);
   readonly asesorSeleccionado = signal<number | null>(null);
+  readonly columnasPersonalizadas = signal<ColumnaPersonalizada[]>([]);
 
   /** Para el selector de admin: su propio "tablero" primero, luego el resto del equipo. */
   readonly opcionesTablero = computed<UsuarioResumen[]>(() => {
@@ -63,22 +73,42 @@ export class TarjetasComponent {
   readonly limiteAlcanzado = computed(() => this.totalTarjetas() >= this.maxTarjetas);
 
   readonly desarrollos = signal<Desarrollo[]>([]);
+
   readonly modalAbierto = signal(false);
   readonly isCreando = signal(false);
   readonly errorCreacion = signal<string | null>(null);
-
   readonly nuevaTarjetaForm = this.fb.group({
     nombreCliente: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
     telefono: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
     desarrolloId: this.fb.control<number | null>(null, { validators: [Validators.required] }),
   });
 
-  readonly columnas = computed<Columna[]>(() =>
-    this.estados.map((estado) => ({
+  readonly modalColumnaAbierto = signal(false);
+  readonly isCreandoColumna = signal(false);
+  readonly errorColumna = signal<string | null>(null);
+  readonly nuevaColumnaForm = this.fb.group({
+    nombre: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
+  });
+
+  readonly editandoColumnaId = signal<number | null>(null);
+  readonly nombreEdicion = signal('');
+
+  readonly columnas = computed<Columna[]>(() => {
+    const leadsAsesor = this.leadsDelAsesor();
+    const fijas: Columna[] = this.estados.map((estado) => ({
+      tipo: 'estado',
       estado,
-      leads: this.leadsDelAsesor().filter((l) => l.estado === estado),
-    })),
-  );
+      nombre: this.estadoLabels[estado],
+      leads: leadsAsesor.filter((l) => l.estado === estado && l.columnaPersonalizadaId === null),
+    }));
+    const personalizadas: Columna[] = this.columnasPersonalizadas().map((col) => ({
+      tipo: 'personalizada',
+      id: col.id,
+      nombre: col.nombre,
+      leads: leadsAsesor.filter((l) => l.columnaPersonalizadaId === col.id),
+    }));
+    return [...fijas, ...personalizadas];
+  });
 
   constructor() {
     const asesorParam = this.route.snapshot.queryParamMap.get('asesor');
@@ -101,6 +131,7 @@ export class TarjetasComponent {
             .sort((a, b) => a.nombre.localeCompare(b.nombre)),
         );
       }
+      await this.cargarColumnas();
     } catch {
       this.errorMessage.set('No se pudieron cargar las tarjetas. Intenta de nuevo.');
     } finally {
@@ -108,9 +139,38 @@ export class TarjetasComponent {
     }
   }
 
-  cambiarAsesor(valor: string): void {
-    this.asesorSeleccionado.set(valor === '' ? null : +valor);
+  private async cargarColumnas(): Promise<void> {
+    const asesorId = this.asesorSeleccionado();
+    if (asesorId === null) {
+      this.columnasPersonalizadas.set([]);
+      return;
+    }
+    try {
+      this.columnasPersonalizadas.set(await this.columnasService.listar(this.esAdmin() ? asesorId : undefined));
+    } catch {
+      // Las columnas personalizadas son una comodidad, no algo crítico: si falla, el tablero sigue con las fijas.
+    }
   }
+
+  async cambiarAsesor(valor: string): Promise<void> {
+    this.asesorSeleccionado.set(valor === '' ? null : +valor);
+    await this.cargarColumnas();
+  }
+
+  iniciales(nombre: string): string {
+    return nombre
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((parte) => parte[0]?.toUpperCase())
+      .join('');
+  }
+
+  trackColumna(_index: number, col: Columna): string {
+    return col.tipo === 'estado' ? `estado-${col.estado}` : `personalizada-${col.id}`;
+  }
+
+  // --- Nueva tarjeta ---
 
   abrirModal(): void {
     if (this.limiteAlcanzado()) return;
@@ -154,28 +214,134 @@ export class TarjetasComponent {
     }
   }
 
-  iniciales(nombre: string): string {
-    return nombre
-      .split(' ')
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((parte) => parte[0]?.toUpperCase())
-      .join('');
+  // --- Columnas personalizadas ---
+
+  abrirModalColumna(): void {
+    this.nuevaColumnaForm.reset({ nombre: '' });
+    this.errorColumna.set(null);
+    this.modalColumnaAbierto.set(true);
   }
 
-  async onDrop(event: CdkDragDrop<Lead[]>, nuevoEstado: EstadoLead): Promise<void> {
+  cerrarModalColumna(): void {
+    this.modalColumnaAbierto.set(false);
+  }
+
+  async crearColumna(): Promise<void> {
+    if (this.nuevaColumnaForm.invalid || this.isCreandoColumna()) {
+      this.nuevaColumnaForm.markAllAsTouched();
+      return;
+    }
+
+    this.isCreandoColumna.set(true);
+    this.errorColumna.set(null);
+    try {
+      const nueva = await this.columnasService.crear(
+        this.nuevaColumnaForm.getRawValue().nombre.trim(),
+        this.esAdmin() ? this.asesorSeleccionado() : null,
+      );
+      this.columnasPersonalizadas.update((lista) => [...lista, nueva]);
+      this.toast.success(`Columna "${nueva.nombre}" creada.`);
+      this.modalColumnaAbierto.set(false);
+    } catch (error) {
+      this.errorColumna.set(
+        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+          ? error.error.message
+          : 'No se pudo crear la columna. Intenta de nuevo.',
+      );
+    } finally {
+      this.isCreandoColumna.set(false);
+    }
+  }
+
+  iniciarEdicionColumna(col: Extract<Columna, { tipo: 'personalizada' }>): void {
+    this.editandoColumnaId.set(col.id);
+    this.nombreEdicion.set(col.nombre);
+  }
+
+  cancelarEdicionColumna(): void {
+    this.editandoColumnaId.set(null);
+  }
+
+  async guardarEdicionColumna(id: number): Promise<void> {
+    const nombre = this.nombreEdicion().trim();
+    if (!nombre) return;
+
+    try {
+      const actualizada = await this.columnasService.renombrar(id, nombre);
+      this.columnasPersonalizadas.update((lista) => lista.map((c) => (c.id === id ? actualizada : c)));
+      this.leads.update((lista) =>
+        lista.map((l) => (l.columnaPersonalizadaId === id ? { ...l, columnaPersonalizadaNombre: actualizada.nombre } : l)),
+      );
+      this.editandoColumnaId.set(null);
+    } catch {
+      this.toast.error('No se pudo renombrar la columna.');
+    }
+  }
+
+  async eliminarColumna(col: Extract<Columna, { tipo: 'personalizada' }>): Promise<void> {
+    if (!confirm(`¿Eliminar la columna "${col.nombre}"? Sus tarjetas volverán a agruparse por su estado.`)) return;
+
+    try {
+      await this.columnasService.eliminar(col.id);
+      this.columnasPersonalizadas.update((lista) => lista.filter((c) => c.id !== col.id));
+      this.leads.update((lista) =>
+        lista.map((l) =>
+          l.columnaPersonalizadaId === col.id ? { ...l, columnaPersonalizadaId: null, columnaPersonalizadaNombre: null } : l,
+        ),
+      );
+      this.toast.success(`Columna "${col.nombre}" eliminada.`);
+    } catch {
+      this.toast.error('No se pudo eliminar la columna.');
+    }
+  }
+
+  // --- Arrastrar y soltar ---
+
+  async onDrop(event: CdkDragDrop<Lead[]>, col: Columna): Promise<void> {
     if (event.previousContainer === event.container) return;
-
     const lead = event.previousContainer.data[event.previousIndex];
-    const estadoAnterior = lead.estado;
 
-    this.leads.update((lista) => lista.map((l) => (l.id === lead.id ? { ...l, estado: nuevoEstado } : l)));
+    if (col.tipo === 'estado') {
+      await this.moverAEstado(lead, col.estado);
+    } else {
+      await this.moverAColumnaPersonalizada(lead, col.id, col.nombre);
+    }
+  }
+
+  private async moverAEstado(lead: Lead, nuevoEstado: EstadoLead): Promise<void> {
+    const anterior = {
+      estado: lead.estado,
+      columnaPersonalizadaId: lead.columnaPersonalizadaId,
+      columnaPersonalizadaNombre: lead.columnaPersonalizadaNombre,
+    };
+    this.leads.update((lista) =>
+      lista.map((l) => (l.id === lead.id ? { ...l, estado: nuevoEstado, columnaPersonalizadaId: null, columnaPersonalizadaNombre: null } : l)),
+    );
 
     try {
       await this.leadsService.mover(lead.id, nuevoEstado);
       this.toast.success(`${lead.nombreCliente} → ${this.estadoLabels[nuevoEstado]}.`);
     } catch {
-      this.leads.update((lista) => lista.map((l) => (l.id === lead.id ? { ...l, estado: estadoAnterior } : l)));
+      this.leads.update((lista) => lista.map((l) => (l.id === lead.id ? { ...l, ...anterior } : l)));
+      this.toast.error('No se pudo mover el lead. Intenta de nuevo.');
+    }
+  }
+
+  private async moverAColumnaPersonalizada(lead: Lead, columnaId: number, nombreColumna: string): Promise<void> {
+    const anterior = {
+      estado: lead.estado,
+      columnaPersonalizadaId: lead.columnaPersonalizadaId,
+      columnaPersonalizadaNombre: lead.columnaPersonalizadaNombre,
+    };
+    this.leads.update((lista) =>
+      lista.map((l) => (l.id === lead.id ? { ...l, columnaPersonalizadaId: columnaId, columnaPersonalizadaNombre: nombreColumna } : l)),
+    );
+
+    try {
+      await this.leadsService.moverColumna(lead.id, columnaId);
+      this.toast.success(`${lead.nombreCliente} → ${nombreColumna}.`);
+    } catch {
+      this.leads.update((lista) => lista.map((l) => (l.id === lead.id ? { ...l, ...anterior } : l)));
       this.toast.error('No se pudo mover el lead. Intenta de nuevo.');
     }
   }

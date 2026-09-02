@@ -2,7 +2,7 @@
   <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
       <h1 class="font-heading text-2xl font-semibold text-ink">Tarjetas</h1>
-      <p class="mt-1 text-sm text-ink-muted">Arrastra una tarjeta a otra columna para cambiar el estado del lead.</p>
+      <p class="mt-1 text-sm text-ink-muted">Arrastra una tarjeta a otra columna para moverla; agrega columnas propias con "+ Nueva columna".</p>
     </div>
     <div class="flex items-center gap-2.5">
       @if (esAdmin() && opcionesTablero().length > 1) {
@@ -27,13 +27,12 @@
       </span>
       <button
         type="button"
-        [disabled]="limiteAlcanzado()"
-        (click)="abrirModal()"
+        (click)="abrirModalColumna()"
         class="inline-flex items-center justify-center gap-2 rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
                hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
-               focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px] disabled:opacity-50 disabled:pointer-events-none"
+               focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
       >
-        + Nueva tarjeta
+        + Nueva columna
       </button>
     </div>
   </div>
@@ -53,17 +52,45 @@
   } @else {
     <div class="mt-6 flex-1 overflow-x-auto pb-4" cdkDropListGroup>
       <div class="flex h-full min-h-[400px] gap-4">
-        @for (col of columnas(); track col.estado) {
+        @for (col of columnas(); track trackColumna($index, col)) {
           <div class="flex w-72 shrink-0 flex-col rounded-xl border border-border bg-surface-2">
             <div class="flex items-center justify-between gap-2 border-b border-border px-3.5 py-3">
-              <span class="text-sm font-semibold text-ink">{{ estadoLabels[col.estado] }}</span>
-              <span class="rounded-full bg-surface px-2 py-0.5 text-xs font-medium text-ink-muted">{{ col.leads.length }}</span>
+              @if (col.tipo === 'personalizada' && editandoColumnaId() === col.id) {
+                <input
+                  type="text"
+                  [value]="nombreEdicion()"
+                  (input)="nombreEdicion.set($any($event.target).value)"
+                  (keyup.enter)="guardarEdicionColumna(col.id)"
+                  (keyup.escape)="cancelarEdicionColumna()"
+                  class="min-w-0 flex-1 rounded-md border border-we-primary px-2 py-1 text-sm text-ink bg-surface
+                         focus:outline-none"
+                />
+                <button type="button" (click)="guardarEdicionColumna(col.id)" aria-label="Guardar" class="text-we-blue-light hover:opacity-80">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                </button>
+                <button type="button" (click)="cancelarEdicionColumna()" aria-label="Cancelar" class="text-ink-muted hover:opacity-80">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+              } @else {
+                <span class="truncate text-sm font-semibold text-ink">{{ col.nombre }}</span>
+                <div class="flex shrink-0 items-center gap-1.5">
+                  <span class="rounded-full bg-surface px-2 py-0.5 text-xs font-medium text-ink-muted">{{ col.leads.length }}</span>
+                  @if (col.tipo === 'personalizada') {
+                    <button type="button" (click)="iniciarEdicionColumna(col)" aria-label="Renombrar columna" class="text-ink-muted hover:text-we-primary">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                    </button>
+                    <button type="button" (click)="eliminarColumna(col)" aria-label="Eliminar columna" class="text-ink-muted hover:text-red-600">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z"/></svg>
+                    </button>
+                  }
+                </div>
+              }
             </div>
 
             <div
               cdkDropList
               [cdkDropListData]="col.leads"
-              (cdkDropListDropped)="onDrop($event, col.estado)"
+              (cdkDropListDropped)="onDrop($event, col)"
               class="flex-1 space-y-2.5 overflow-y-auto p-2.5"
             >
               @for (lead of col.leads; track lead.id) {
@@ -101,6 +128,19 @@
                 </div>
               }
             </div>
+
+            @if (col.tipo === 'estado' && col.estado === 'NUEVO') {
+              <button
+                type="button"
+                [disabled]="limiteAlcanzado()"
+                (click)="abrirModal()"
+                class="m-2.5 mt-0 flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm text-ink-muted
+                       hover:bg-surface hover:text-ink transition-colors duration-150 disabled:opacity-50 disabled:pointer-events-none"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                Agregar tarjeta
+              </button>
+            }
           </div>
         }
       </div>
@@ -108,12 +148,7 @@
   }
 
   @if (modalAbierto()) {
-    <button
-      type="button"
-      (click)="cerrarModal()"
-      aria-label="Cerrar"
-      class="fixed inset-0 z-40 bg-black/40"
-    ></button>
+    <button type="button" (click)="cerrarModal()" aria-label="Cerrar" class="fixed inset-0 z-40 bg-black/40"></button>
     <div class="fixed inset-0 z-40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="nueva-tarjeta-titulo">
       <div class="w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
         <h2 id="nueva-tarjeta-titulo" class="font-heading text-lg font-semibold text-ink">Nueva tarjeta</h2>
@@ -186,6 +221,56 @@
                      active:scale-[0.97] transition-transform duration-150 disabled:opacity-60"
             >
               {{ isCreando() ? 'Creando…' : 'Crear tarjeta' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  @if (modalColumnaAbierto()) {
+    <button type="button" (click)="cerrarModalColumna()" aria-label="Cerrar" class="fixed inset-0 z-40 bg-black/40"></button>
+    <div class="fixed inset-0 z-40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="nueva-columna-titulo">
+      <div class="w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <h2 id="nueva-columna-titulo" class="font-heading text-lg font-semibold text-ink">Nueva columna</h2>
+        <p class="mt-1 text-sm text-ink-muted">Se agrega solo a tu tablero; no afecta el estado real de tus leads.</p>
+
+        <form [formGroup]="nuevaColumnaForm" (ngSubmit)="crearColumna()" class="mt-4 space-y-4" novalidate>
+          <div>
+            <label for="modal-nombreColumna" class="block text-sm font-medium text-ink mb-1.5">Nombre de la columna</label>
+            <input
+              id="modal-nombreColumna"
+              type="text"
+              formControlName="nombre"
+              placeholder="Ej. Esperando papeles"
+              class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            />
+            @if (nuevaColumnaForm.controls.nombre.invalid && nuevaColumnaForm.controls.nombre.touched) {
+              <p class="mt-1.5 text-xs text-red-600">Ingresa un nombre para la columna.</p>
+            }
+          </div>
+
+          @if (errorColumna()) {
+            <p class="text-sm text-red-600 dark:text-red-400">{{ errorColumna() }}</p>
+          }
+
+          <div class="flex justify-end gap-2.5 pt-1">
+            <button
+              type="button"
+              (click)="cerrarModalColumna()"
+              class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary
+                     active:scale-[0.97] transition-transform duration-150"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              [disabled]="isCreandoColumna()"
+              class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90
+                     active:scale-[0.97] transition-transform duration-150 disabled:opacity-60"
+            >
+              {{ isCreandoColumna() ? 'Creando…' : 'Crear columna' }}
             </button>
           </div>
         </form>

@@ -3,6 +3,7 @@ package com.werealestate.backend.controller;
 import com.werealestate.backend.dto.LeadCreateRequest;
 import com.werealestate.backend.dto.LeadDto;
 import com.werealestate.backend.dto.LeadUpdateRequest;
+import com.werealestate.backend.dto.MoverColumnaRequest;
 import com.werealestate.backend.dto.MoverLeadRequest;
 import com.werealestate.backend.dto.ReasignarLeadRequest;
 import com.werealestate.backend.service.LeadService;
@@ -64,6 +65,11 @@ public class LeadController {
     @PutMapping("/{id}/mover")
     public LeadDto mover(@PathVariable Long id, @Valid @RequestBody MoverLeadRequest request) {
         return leadService.mover(id, request.estado());
+    }
+
+    @PutMapping("/{id}/mover-columna")
+    public LeadDto moverAColumnaPersonalizada(@PathVariable Long id, @Valid @RequestBody MoverColumnaRequest request) {
+        return leadService.moverAColumnaPersonalizada(id, request.columnaPersonalizadaId());
     }
 
     @PutMapping("/{id}/archivar")

@@ -69,6 +69,11 @@ public class Lead {
     @Column(nullable = false)
     private boolean archivado = false;
 
+    /** Posición extra en el tablero de tarjetas del asesor; no reemplaza ni afecta {@link #estado}. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "columna_personalizada_id")
+    private ColumnaPersonalizada columnaPersonalizada;
+
     protected Lead() {
         // JPA
     }
@@ -196,5 +201,13 @@ public class Lead {
 
     public void setArchivado(boolean archivado) {
         this.archivado = archivado;
+    }
+
+    public ColumnaPersonalizada getColumnaPersonalizada() {
+        return columnaPersonalizada;
+    }
+
+    public void setColumnaPersonalizada(ColumnaPersonalizada columnaPersonalizada) {
+        this.columnaPersonalizada = columnaPersonalizada;
     }
 }
