@@ -22,7 +22,8 @@ public record LeadDto(
         Pais pais,
         String estadoRepublica,
         long diasSinContacto,
-        boolean frio) {
+        boolean frio,
+        boolean archivado) {
 
     public static LeadDto from(Lead lead, long diasSinContacto, boolean frio) {
         return new LeadDto(
@@ -41,6 +42,7 @@ public record LeadDto(
                 lead.getPais(),
                 lead.getEstadoRepublica(),
                 diasSinContacto,
-                frio);
+                frio,
+                lead.isArchivado());
     }
 }

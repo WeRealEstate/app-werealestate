@@ -52,8 +52,22 @@ public class LeadService {
     public List<LeadDto> listar() {
         Usuario actual = currentUserProvider.getUsuarioActual();
         List<Lead> leads = actual.getRol() == Role.ADMIN
-                ? leadRepository.findAllByOrderByFechaUltimoContactoDesc()
-                : leadRepository.findByAsesorIdOrderByFechaUltimoContactoDesc(actual.getId());
+                ? leadRepository.findByArchivadoFalseOrderByFechaUltimoContactoDesc()
+                : leadRepository.findByAsesorIdAndArchivadoFalseOrderByFechaUltimoContactoDesc(actual.getId());
+
+        return leads.stream().map(this::toDto).toList();
+    }
+
+    /**
+     * Leads archivados: se conservan como métrica pero no aparecen en la lista activa. Solo
+     * accesibles explícitamente (icono dedicado en la lista), con el mismo alcance por rol que
+     * {@link #listar()}.
+     */
+    public List<LeadDto> listarArchivados() {
+        Usuario actual = currentUserProvider.getUsuarioActual();
+        List<Lead> leads = actual.getRol() == Role.ADMIN
+                ? leadRepository.findByArchivadoTrueOrderByFechaUltimoContactoDesc()
+                : leadRepository.findByAsesorIdAndArchivadoTrueOrderByFechaUltimoContactoDesc(actual.getId());
 
         return leads.stream().map(this::toDto).toList();
     }
@@ -66,7 +80,8 @@ public class LeadService {
         LocalDateTime limite = LocalDateTime.now().minusDays(diasFrio);
         List<EstadoLead> cerrados = List.of(EstadoLead.CERRADO_GANADO, EstadoLead.CERRADO_PERDIDO);
         return leadRepository
-                .findByFechaUltimoContactoBeforeAndEstadoNotInOrderByFechaUltimoContactoAsc(limite, cerrados)
+                .findByFechaUltimoContactoBeforeAndEstadoNotInAndArchivadoFalseOrderByFechaUltimoContactoAsc(
+                        limite, cerrados)
                 .stream()
                 .map(this::toDto)
                 .toList();
@@ -140,6 +155,19 @@ public class LeadService {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
 
         lead.setAsesor(nuevoAsesor);
+        return toDto(leadRepository.save(lead));
+    }
+
+    /** Archiva el lead: deja de aparecer en la lista activa, pero se conserva íntegro como métrica. */
+    public LeadDto archivar(Long id) {
+        Lead lead = buscarLeadPermitido(id);
+        lead.setArchivado(true);
+        return toDto(leadRepository.save(lead));
+    }
+
+    public LeadDto desarchivar(Long id) {
+        Lead lead = buscarLeadPermitido(id);
+        lead.setArchivado(false);
         return toDto(leadRepository.save(lead));
     }
 

@@ -65,6 +65,10 @@ public class Lead {
     @Column(name = "estado_republica", length = 50)
     private String estadoRepublica;
 
+    /** Un lead archivado se conserva como métrica pero desaparece de la lista activa; no se elimina. */
+    @Column(nullable = false)
+    private boolean archivado = false;
+
     protected Lead() {
         // JPA
     }
@@ -184,5 +188,13 @@ public class Lead {
 
     public void setEstadoRepublica(String estadoRepublica) {
         this.estadoRepublica = estadoRepublica;
+    }
+
+    public boolean isArchivado() {
+        return archivado;
+    }
+
+    public void setArchivado(boolean archivado) {
+        this.archivado = archivado;
     }
 }

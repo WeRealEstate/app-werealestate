@@ -35,6 +35,8 @@ export class LeadsListComponent {
   readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
 
   readonly leads = signal<Lead[]>([]);
+  readonly archivados = signal<Lead[]>([]);
+  readonly verArchivados = signal(false);
   readonly isLoading = signal(true);
   readonly errorMessage = signal<string | null>(null);
   readonly filtro = signal('');
@@ -42,11 +44,14 @@ export class LeadsListComponent {
   readonly estadoFiltro = signal<FiltroEstado | null>(null);
   readonly asesoresDisponibles = signal<UsuarioResumen[]>([]);
 
+  private archivadosCargados = false;
+
   readonly leadsFiltrados = computed(() => {
     const term = this.filtro().trim().toLowerCase();
     const asesorId = this.asesorId();
     const estadoFiltro = this.estadoFiltro();
-    return this.leads().filter((l) => {
+    const fuente = this.verArchivados() ? this.archivados() : this.leads();
+    return fuente.filter((l) => {
       if (estadoFiltro === 'FRIOS' && !l.frio) return false;
       if (estadoFiltro && estadoFiltro !== 'FRIOS' && l.estado !== estadoFiltro) return false;
       if (asesorId !== null && l.asesor.id !== asesorId) return false;
@@ -97,6 +102,23 @@ export class LeadsListComponent {
       this.errorMessage.set('No se pudieron cargar los leads. Intenta de nuevo.');
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  async toggleArchivados(): Promise<void> {
+    const nuevoValor = !this.verArchivados();
+    this.verArchivados.set(nuevoValor);
+    if (nuevoValor && !this.archivadosCargados) {
+      this.isLoading.set(true);
+      this.errorMessage.set(null);
+      try {
+        this.archivados.set(await this.leadsService.listarArchivados());
+        this.archivadosCargados = true;
+      } catch {
+        this.errorMessage.set('No se pudieron cargar los leads archivados.');
+      } finally {
+        this.isLoading.set(false);
+      }
     }
   }
 

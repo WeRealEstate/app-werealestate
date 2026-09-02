@@ -52,8 +52,8 @@ public class NotificacionService {
     public List<NotificacionDto> listar() {
         Usuario actual = currentUserProvider.getUsuarioActual();
         List<Lead> leadsVisibles = actual.getRol() == Role.ADMIN
-                ? leadRepository.findAllByOrderByFechaUltimoContactoAsc()
-                : leadRepository.findByAsesorIdOrderByFechaUltimoContactoAsc(actual.getId());
+                ? leadRepository.findByArchivadoFalseOrderByFechaUltimoContactoAsc()
+                : leadRepository.findByAsesorIdAndArchivadoFalseOrderByFechaUltimoContactoAsc(actual.getId());
 
         LocalDateTime ahora = LocalDateTime.now();
         List<NotificacionDto> notificaciones = new ArrayList<>();

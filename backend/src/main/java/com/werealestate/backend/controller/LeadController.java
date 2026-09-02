@@ -35,6 +35,11 @@ public class LeadController {
         return leadService.listarFrios();
     }
 
+    @GetMapping("/archivados")
+    public List<LeadDto> listarArchivados() {
+        return leadService.listarArchivados();
+    }
+
     @GetMapping("/{id}")
     public LeadDto obtener(@PathVariable Long id) {
         return leadService.obtener(id);
@@ -53,5 +58,15 @@ public class LeadController {
     @PutMapping("/{id}/reasignar")
     public LeadDto reasignar(@PathVariable Long id, @Valid @RequestBody ReasignarLeadRequest request) {
         return leadService.reasignar(id, request);
+    }
+
+    @PutMapping("/{id}/archivar")
+    public LeadDto archivar(@PathVariable Long id) {
+        return leadService.archivar(id);
+    }
+
+    @PutMapping("/{id}/desarchivar")
+    public LeadDto desarchivar(@PathVariable Long id) {
+        return leadService.desarchivar(id);
     }
 }

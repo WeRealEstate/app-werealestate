@@ -41,6 +41,7 @@ export interface Lead {
   estadoRepublica: string | null;
   diasSinContacto: number;
   frio: boolean;
+  archivado: boolean;
 }
 
 export interface LeadCreateRequest {

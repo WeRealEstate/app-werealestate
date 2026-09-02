@@ -47,6 +47,7 @@ export class LeadDetailComponent implements OnInit {
   readonly isSavingEstado = signal(false);
   readonly isSavingAsesor = signal(false);
   readonly isSavingSeguimiento = signal(false);
+  readonly isArchivando = signal(false);
   readonly errorMessage = signal<string | null>(null);
 
   /** Los asesores asignables, más el dueño actual del lead si por algún motivo no está en esa lista. */
@@ -135,6 +136,45 @@ export class LeadDetailComponent implements OnInit {
       this.toast.error('No se pudo reasignar el lead.');
     } finally {
       this.isSavingAsesor.set(false);
+    }
+  }
+
+  async archivar(): Promise<void> {
+    const actual = this.lead();
+    if (!actual || this.isArchivando()) return;
+    if (
+      !confirm(
+        `¿Archivar a ${actual.nombreCliente}? Dejará de aparecer en la lista activa, pero se conserva como métrica y puedes desarchivarlo cuando quieras.`,
+      )
+    ) {
+      return;
+    }
+
+    this.isArchivando.set(true);
+    try {
+      const actualizado = await this.leadsService.archivar(this.leadId);
+      this.lead.set(actualizado);
+      this.toast.success(`${actualizado.nombreCliente} fue archivado.`);
+    } catch {
+      this.toast.error('No se pudo archivar el lead.');
+    } finally {
+      this.isArchivando.set(false);
+    }
+  }
+
+  async desarchivar(): Promise<void> {
+    const actual = this.lead();
+    if (!actual || this.isArchivando()) return;
+
+    this.isArchivando.set(true);
+    try {
+      const actualizado = await this.leadsService.desarchivar(this.leadId);
+      this.lead.set(actualizado);
+      this.toast.success(`${actualizado.nombreCliente} fue desarchivado.`);
+    } catch {
+      this.toast.error('No se pudo desarchivar el lead.');
+    } finally {
+      this.isArchivando.set(false);
     }
   }
 

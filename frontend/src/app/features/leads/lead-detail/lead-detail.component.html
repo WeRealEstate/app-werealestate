@@ -1,5 +1,23 @@
 <div class="max-w-3xl page-enter">
-  <a routerLink="/panel/leads" class="text-sm text-we-blue-light hover:underline">&larr; Volver a leads</a>
+  <div class="flex items-center justify-between gap-3">
+    <a routerLink="/panel/leads" class="text-sm text-we-blue-light hover:underline">&larr; Volver a leads</a>
+    @if (lead(); as l) {
+      <button
+        type="button"
+        [disabled]="isArchivando()"
+        (click)="l.archivado ? desarchivar() : archivar()"
+        class="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-ink-muted
+               hover:border-we-primary hover:text-we-primary active:scale-[0.97] transition-transform duration-150 disabled:opacity-60"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="4" rx="1"></rect>
+          <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"></path>
+          <path d="M10 12h4"></path>
+        </svg>
+        {{ isArchivando() ? 'Guardando…' : (l.archivado ? 'Desarchivar' : 'Archivar') }}
+      </button>
+    }
+  </div>
 
   @if (isLoading()) {
     <p class="mt-8 text-sm text-ink-muted">Cargando…</p>
@@ -20,6 +38,11 @@
           @if (l.edad) { &middot; {{ l.edad }} años }
           @if (l.pais) { &middot; {{ l.pais === 'MEXICANO' ? (l.estadoRepublica || 'Mexicano') : 'Extranjero' }} }
         </p>
+        @if (l.archivado) {
+          <p class="mt-2 inline-flex items-center gap-1.5 rounded-full bg-surface-2 border border-border px-3 py-1 text-xs font-medium text-ink-muted">
+            Archivado
+          </p>
+        }
         @if (l.frio) {
           <p class="mt-2 inline-flex items-center gap-1.5 rounded-full bg-red-50 border border-red-200 px-3 py-1 text-xs font-medium text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
             <span class="h-1.5 w-1.5 rounded-full bg-red-500"></span>

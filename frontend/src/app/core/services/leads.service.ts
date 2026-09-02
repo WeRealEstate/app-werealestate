@@ -25,6 +25,18 @@ export class LeadsService {
     return firstValueFrom(this.http.get<Lead[]>(`${this.baseUrl}/frios`));
   }
 
+  listarArchivados(): Promise<Lead[]> {
+    return firstValueFrom(this.http.get<Lead[]>(`${this.baseUrl}/archivados`));
+  }
+
+  archivar(id: number): Promise<Lead> {
+    return firstValueFrom(this.http.put<Lead>(`${this.baseUrl}/${id}/archivar`, {}));
+  }
+
+  desarchivar(id: number): Promise<Lead> {
+    return firstValueFrom(this.http.put<Lead>(`${this.baseUrl}/${id}/desarchivar`, {}));
+  }
+
   obtener(id: number): Promise<Lead> {
     return firstValueFrom(this.http.get<Lead>(`${this.baseUrl}/${id}`));
   }
