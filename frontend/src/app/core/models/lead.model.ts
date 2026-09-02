@@ -7,7 +7,9 @@ export type EstadoLead =
   | 'CERRADO_GANADO'
   | 'CERRADO_PERDIDO';
 
-export type TipoSeguimiento = 'LLAMADA' | 'WHATSAPP' | 'EMAIL' | 'VISITA' | 'OTRO';
+export type TipoSeguimiento = 'LLAMADA' | 'WHATSAPP' | 'EMAIL' | 'VISITA' | 'VISITA_OFICINA' | 'OTRO';
+
+export type Pais = 'MEXICANO' | 'EXTRANJERO';
 
 export interface Desarrollo {
   id: number;
@@ -34,6 +36,9 @@ export interface Lead {
   fechaCreacion: string;
   fechaUltimoContacto: string;
   valorEstimado: number | null;
+  edad: number | null;
+  pais: Pais | null;
+  estadoRepublica: string | null;
   diasSinContacto: number;
   frio: boolean;
 }
@@ -46,6 +51,9 @@ export interface LeadCreateRequest {
   desarrolloId: number;
   valorEstimado?: number | null;
   asesorId?: number | null;
+  edad?: number | null;
+  pais?: Pais | null;
+  estadoRepublica?: string | null;
 }
 
 export interface LeadUpdateRequest {
@@ -55,6 +63,9 @@ export interface LeadUpdateRequest {
   origen?: string | null;
   estado: EstadoLead;
   valorEstimado?: number | null;
+  edad?: number | null;
+  pais?: Pais | null;
+  estadoRepublica?: string | null;
 }
 
 export interface Seguimiento {
@@ -98,6 +109,47 @@ export const TIPO_SEGUIMIENTO_LABELS: Record<TipoSeguimiento, string> = {
   LLAMADA: 'Llamada',
   WHATSAPP: 'WhatsApp',
   EMAIL: 'Correo',
-  VISITA: 'Visita',
+  VISITA: 'Recorrido',
+  VISITA_OFICINA: 'Visita a la oficina',
   OTRO: 'Otro',
 };
+
+export const PAIS_LABELS: Record<Pais, string> = {
+  MEXICANO: 'Mexicano',
+  EXTRANJERO: 'Extranjero',
+};
+
+export const ESTADOS_REPUBLICA = [
+  'Aguascalientes',
+  'Baja California',
+  'Baja California Sur',
+  'Campeche',
+  'Chiapas',
+  'Chihuahua',
+  'Ciudad de México',
+  'Coahuila',
+  'Colima',
+  'Durango',
+  'Estado de México',
+  'Guanajuato',
+  'Guerrero',
+  'Hidalgo',
+  'Jalisco',
+  'Michoacán',
+  'Morelos',
+  'Nayarit',
+  'Nuevo León',
+  'Oaxaca',
+  'Puebla',
+  'Querétaro',
+  'Quintana Roo',
+  'San Luis Potosí',
+  'Sinaloa',
+  'Sonora',
+  'Tabasco',
+  'Tamaulipas',
+  'Tlaxcala',
+  'Veracruz',
+  'Yucatán',
+  'Zacatecas',
+] as const;

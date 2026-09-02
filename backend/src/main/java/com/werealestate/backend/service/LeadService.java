@@ -9,6 +9,7 @@ import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.model.Desarrollo;
 import com.werealestate.backend.model.EstadoLead;
 import com.werealestate.backend.model.Lead;
+import com.werealestate.backend.model.Pais;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.repository.DesarrolloRepository;
@@ -97,6 +98,9 @@ public class LeadService {
                 desarrollo,
                 asesor,
                 request.valorEstimado());
+        lead.setEdad(request.edad());
+        lead.setPais(request.pais());
+        lead.setEstadoRepublica(request.pais() == Pais.EXTRANJERO ? null : request.estadoRepublica());
 
         return toDto(leadRepository.save(lead));
     }
@@ -109,6 +113,9 @@ public class LeadService {
         lead.setOrigen(request.origen());
         lead.setEstado(request.estado());
         lead.setValorEstimado(request.valorEstimado());
+        lead.setEdad(request.edad());
+        lead.setPais(request.pais());
+        lead.setEstadoRepublica(request.pais() == Pais.EXTRANJERO ? null : request.estadoRepublica());
         return toDto(leadRepository.save(lead));
     }
 

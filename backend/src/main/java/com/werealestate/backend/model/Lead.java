@@ -55,6 +55,16 @@ public class Lead {
     @Column(name = "valor_estimado")
     private BigDecimal valorEstimado;
 
+    private Integer edad;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private Pais pais;
+
+    /** Solo aplica cuando pais = MEXICANO; para EXTRANJERO se deja en null. */
+    @Column(name = "estado_republica", length = 50)
+    private String estadoRepublica;
+
     protected Lead() {
         // JPA
     }
@@ -150,5 +160,29 @@ public class Lead {
 
     public void setValorEstimado(BigDecimal valorEstimado) {
         this.valorEstimado = valorEstimado;
+    }
+
+    public Integer getEdad() {
+        return edad;
+    }
+
+    public void setEdad(Integer edad) {
+        this.edad = edad;
+    }
+
+    public Pais getPais() {
+        return pais;
+    }
+
+    public void setPais(Pais pais) {
+        this.pais = pais;
+    }
+
+    public String getEstadoRepublica() {
+        return estadoRepublica;
+    }
+
+    public void setEstadoRepublica(String estadoRepublica) {
+        this.estadoRepublica = estadoRepublica;
     }
 }

@@ -106,6 +106,9 @@ export class LeadDetailComponent implements OnInit {
         origen: actual.origen,
         estado: nuevoEstado,
         valorEstimado: actual.valorEstimado,
+        edad: actual.edad,
+        pais: actual.pais,
+        estadoRepublica: actual.estadoRepublica,
       });
       this.lead.set(actualizado);
       this.toast.success(`Estado actualizado a "${this.estadoLabels[nuevoEstado]}".`);

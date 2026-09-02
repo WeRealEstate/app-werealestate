@@ -5,5 +5,6 @@ public enum TipoSeguimiento {
     WHATSAPP,
     EMAIL,
     VISITA,
+    VISITA_OFICINA,
     OTRO
 }

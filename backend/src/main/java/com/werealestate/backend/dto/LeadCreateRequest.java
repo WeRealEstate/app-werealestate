@@ -1,5 +1,6 @@
 package com.werealestate.backend.dto;
 
+import com.werealestate.backend.model.Pais;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
@@ -11,5 +12,8 @@ public record LeadCreateRequest(
         String origen,
         @NotNull Long desarrolloId,
         BigDecimal valorEstimado,
-        Long asesorId) {
+        Long asesorId,
+        Integer edad,
+        Pais pais,
+        String estadoRepublica) {
 }

@@ -2,6 +2,7 @@ package com.werealestate.backend.dto;
 
 import com.werealestate.backend.model.EstadoLead;
 import com.werealestate.backend.model.Lead;
+import com.werealestate.backend.model.Pais;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -17,6 +18,9 @@ public record LeadDto(
         LocalDateTime fechaCreacion,
         LocalDateTime fechaUltimoContacto,
         BigDecimal valorEstimado,
+        Integer edad,
+        Pais pais,
+        String estadoRepublica,
         long diasSinContacto,
         boolean frio) {
 
@@ -33,6 +37,9 @@ public record LeadDto(
                 lead.getFechaCreacion(),
                 lead.getFechaUltimoContacto(),
                 lead.getValorEstimado(),
+                lead.getEdad(),
+                lead.getPais(),
+                lead.getEstadoRepublica(),
                 diasSinContacto,
                 frio);
     }

@@ -4,7 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
 import { UsuariosService } from '../../../core/services/usuarios.service';
-import { Desarrollo } from '../../../core/models/lead.model';
+import { Desarrollo, ESTADOS_REPUBLICA, PAIS_LABELS, Pais } from '../../../core/models/lead.model';
 import { Usuario } from '../../../core/models/user.model';
 
 /** Roles que efectivamente trabajan leads y por lo tanto pueden recibir la asignación. */
@@ -30,6 +30,10 @@ export class LeadFormComponent implements OnInit {
   readonly isLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
 
+  readonly paisLabels = PAIS_LABELS;
+  readonly paisOptions: Pais[] = ['MEXICANO', 'EXTRANJERO'];
+  readonly estadosRepublica = ESTADOS_REPUBLICA;
+
   readonly form = this.fb.group({
     nombreCliente: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
     telefono: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
@@ -38,6 +42,9 @@ export class LeadFormComponent implements OnInit {
     desarrolloId: this.fb.control<number | null>(null, { validators: [Validators.required] }),
     valorEstimado: this.fb.control<number | null>(null),
     asesorId: this.fb.control<number | null>(null),
+    edad: this.fb.control<number | null>(null),
+    pais: this.fb.control<Pais>('MEXICANO', { nonNullable: true }),
+    estadoRepublica: this.fb.control<string | null>(null),
   });
 
   async ngOnInit(): Promise<void> {
@@ -48,6 +55,15 @@ export class LeadFormComponent implements OnInit {
       const usuarios = await this.usuariosService.listar();
       this.asesores.set(usuarios.filter((u) => u.activo && ROLES_ASIGNABLES.has(u.rol)));
     }
+
+    this.form.controls.pais.valueChanges.subscribe((pais) => {
+      if (pais === 'EXTRANJERO') {
+        this.form.controls.estadoRepublica.setValue(null);
+        this.form.controls.estadoRepublica.disable();
+      } else {
+        this.form.controls.estadoRepublica.enable();
+      }
+    });
   }
 
   async onSubmit(): Promise<void> {
@@ -69,6 +85,9 @@ export class LeadFormComponent implements OnInit {
         desarrolloId: v.desarrolloId!,
         valorEstimado: v.valorEstimado,
         asesorId: v.asesorId,
+        edad: v.edad,
+        pais: v.pais,
+        estadoRepublica: v.estadoRepublica,
       });
       await this.router.navigate(['/panel/leads', lead.id]);
     } catch {
