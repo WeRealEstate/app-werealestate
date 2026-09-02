@@ -1,11 +1,13 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
 import { UsuariosService } from '../../../core/services/usuarios.service';
 import { ToastService } from '../../../core/services/toast.service';
-import { ESTADO_LEAD_LABELS, EstadoLead, Lead, UsuarioResumen } from '../../../core/models/lead.model';
+import { Desarrollo, ESTADO_LEAD_LABELS, EstadoLead, Lead, UsuarioResumen } from '../../../core/models/lead.model';
 
 /** Roles que efectivamente trabajan leads y por lo tanto pueden tener un tablero propio. */
 const ROLES_ASIGNABLES = new Set(['ASESOR', 'LIDER_AREA']);
@@ -21,7 +23,7 @@ interface Columna {
 @Component({
   selector: 'app-tarjetas',
   standalone: true,
-  imports: [RouterLink, DragDropModule],
+  imports: [RouterLink, DragDropModule, ReactiveFormsModule],
   templateUrl: './tarjetas.component.html',
 })
 export class TarjetasComponent {
@@ -30,6 +32,7 @@ export class TarjetasComponent {
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly route = inject(ActivatedRoute);
+  private readonly fb = inject(FormBuilder);
 
   readonly estadoLabels = ESTADO_LEAD_LABELS;
   readonly estados = Object.keys(ESTADO_LEAD_LABELS) as EstadoLead[];
@@ -59,15 +62,15 @@ export class TarjetasComponent {
   readonly totalTarjetas = computed(() => this.leadsDelAsesor().length);
   readonly limiteAlcanzado = computed(() => this.totalTarjetas() >= this.maxTarjetas);
 
-  readonly nuevaTarjetaQueryParams = computed<Record<string, string>>(() => {
-    const asesorId = this.asesorSeleccionado();
-    const params: Record<string, string> = {
-      returnTo: this.esAdmin() && asesorId !== null ? `/panel/tarjetas?asesor=${asesorId}` : '/panel/tarjetas',
-    };
-    if (this.esAdmin() && asesorId !== null) {
-      params['asesorId'] = String(asesorId);
-    }
-    return params;
+  readonly desarrollos = signal<Desarrollo[]>([]);
+  readonly modalAbierto = signal(false);
+  readonly isCreando = signal(false);
+  readonly errorCreacion = signal<string | null>(null);
+
+  readonly nuevaTarjetaForm = this.fb.group({
+    nombreCliente: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
+    telefono: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
+    desarrolloId: this.fb.control<number | null>(null, { validators: [Validators.required] }),
   });
 
   readonly columnas = computed<Columna[]>(() =>
@@ -87,7 +90,9 @@ export class TarjetasComponent {
     this.isLoading.set(true);
     this.errorMessage.set(null);
     try {
-      this.leads.set(await this.leadsService.listar());
+      const [leads, desarrollos] = await Promise.all([this.leadsService.listar(), this.leadsService.listarDesarrollos()]);
+      this.leads.set(leads);
+      this.desarrollos.set(desarrollos);
       if (this.esAdmin()) {
         const usuarios = await this.usuariosService.listar();
         this.asesoresDisponibles.set(
@@ -105,6 +110,48 @@ export class TarjetasComponent {
 
   cambiarAsesor(valor: string): void {
     this.asesorSeleccionado.set(valor === '' ? null : +valor);
+  }
+
+  abrirModal(): void {
+    if (this.limiteAlcanzado()) return;
+    this.nuevaTarjetaForm.reset({ nombreCliente: '', telefono: '', desarrolloId: null });
+    this.errorCreacion.set(null);
+    this.modalAbierto.set(true);
+  }
+
+  cerrarModal(): void {
+    this.modalAbierto.set(false);
+  }
+
+  async crearTarjeta(): Promise<void> {
+    if (this.nuevaTarjetaForm.invalid || this.isCreando()) {
+      this.nuevaTarjetaForm.markAllAsTouched();
+      return;
+    }
+
+    this.isCreando.set(true);
+    this.errorCreacion.set(null);
+    const v = this.nuevaTarjetaForm.getRawValue();
+
+    try {
+      const nuevo = await this.leadsService.crear({
+        nombreCliente: v.nombreCliente,
+        telefono: v.telefono,
+        desarrolloId: v.desarrolloId!,
+        asesorId: this.esAdmin() ? this.asesorSeleccionado() : null,
+      });
+      this.leads.update((lista) => [nuevo, ...lista]);
+      this.toast.success(`${nuevo.nombreCliente} se agregó al tablero.`);
+      this.modalAbierto.set(false);
+    } catch (error) {
+      this.errorCreacion.set(
+        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+          ? error.error.message
+          : 'No se pudo crear la tarjeta. Intenta de nuevo.',
+      );
+    } finally {
+      this.isCreando.set(false);
+    }
   }
 
   iniciales(nombre: string): string {

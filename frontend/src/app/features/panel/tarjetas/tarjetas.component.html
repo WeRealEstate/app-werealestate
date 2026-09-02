@@ -25,18 +25,16 @@
       >
         {{ totalTarjetas() }}/{{ maxTarjetas }}
       </span>
-      <a
-        [routerLink]="['/panel/leads/nuevo']"
-        [queryParams]="nuevaTarjetaQueryParams()"
+      <button
+        type="button"
+        [disabled]="limiteAlcanzado()"
+        (click)="abrirModal()"
         class="inline-flex items-center justify-center gap-2 rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
                hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
-               focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]
-               disabled:pointer-events-none disabled:opacity-50"
-        [class.pointer-events-none]="limiteAlcanzado()"
-        [class.opacity-50]="limiteAlcanzado()"
+               focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px] disabled:opacity-50 disabled:pointer-events-none"
       >
         + Nueva tarjeta
-      </a>
+      </button>
     </div>
   </div>
 
@@ -105,6 +103,92 @@
             </div>
           </div>
         }
+      </div>
+    </div>
+  }
+
+  @if (modalAbierto()) {
+    <button
+      type="button"
+      (click)="cerrarModal()"
+      aria-label="Cerrar"
+      class="fixed inset-0 z-40 bg-black/40"
+    ></button>
+    <div class="fixed inset-0 z-40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="nueva-tarjeta-titulo">
+      <div class="w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <h2 id="nueva-tarjeta-titulo" class="font-heading text-lg font-semibold text-ink">Nueva tarjeta</h2>
+        <p class="mt-1 text-sm text-ink-muted">Cae en la columna "Nuevo"; puedes completar el resto desde el lead.</p>
+
+        <form [formGroup]="nuevaTarjetaForm" (ngSubmit)="crearTarjeta()" class="mt-4 space-y-4" novalidate>
+          <div>
+            <label for="modal-nombreCliente" class="block text-sm font-medium text-ink mb-1.5">Nombre del cliente</label>
+            <input
+              id="modal-nombreCliente"
+              type="text"
+              formControlName="nombreCliente"
+              class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            />
+            @if (nuevaTarjetaForm.controls.nombreCliente.invalid && nuevaTarjetaForm.controls.nombreCliente.touched) {
+              <p class="mt-1.5 text-xs text-red-600">Ingresa el nombre del cliente.</p>
+            }
+          </div>
+
+          <div>
+            <label for="modal-telefono" class="block text-sm font-medium text-ink mb-1.5">Teléfono</label>
+            <input
+              id="modal-telefono"
+              type="text"
+              formControlName="telefono"
+              class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            />
+            @if (nuevaTarjetaForm.controls.telefono.invalid && nuevaTarjetaForm.controls.telefono.touched) {
+              <p class="mt-1.5 text-xs text-red-600">Ingresa un teléfono.</p>
+            }
+          </div>
+
+          <div>
+            <label for="modal-desarrolloId" class="block text-sm font-medium text-ink mb-1.5">Desarrollo</label>
+            <select
+              id="modal-desarrolloId"
+              formControlName="desarrolloId"
+              class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            >
+              <option [ngValue]="null" disabled>Selecciona un desarrollo</option>
+              @for (d of desarrollos(); track d.id) {
+                <option [ngValue]="d.id">{{ d.nombre }}</option>
+              }
+            </select>
+            @if (nuevaTarjetaForm.controls.desarrolloId.invalid && nuevaTarjetaForm.controls.desarrolloId.touched) {
+              <p class="mt-1.5 text-xs text-red-600">Selecciona un desarrollo.</p>
+            }
+          </div>
+
+          @if (errorCreacion()) {
+            <p class="text-sm text-red-600 dark:text-red-400">{{ errorCreacion() }}</p>
+          }
+
+          <div class="flex justify-end gap-2.5 pt-1">
+            <button
+              type="button"
+              (click)="cerrarModal()"
+              class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary
+                     active:scale-[0.97] transition-transform duration-150"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              [disabled]="isCreando()"
+              class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90
+                     active:scale-[0.97] transition-transform duration-150 disabled:opacity-60"
+            >
+              {{ isCreando() ? 'Creando…' : 'Crear tarjeta' }}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   }

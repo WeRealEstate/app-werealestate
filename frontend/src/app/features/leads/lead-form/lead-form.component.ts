@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
 import { UsuariosService } from '../../../core/services/usuarios.service';
@@ -23,10 +23,6 @@ export class LeadFormComponent implements OnInit {
   private readonly usuariosService = inject(UsuariosService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
-  private readonly route = inject(ActivatedRoute);
-
-  /** Si se llega desde el tablero de tarjetas, vuelve ahí en vez de al detalle del lead nuevo. */
-  readonly returnTo = this.route.snapshot.queryParamMap.get('returnTo');
 
   readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
 
@@ -58,20 +54,7 @@ export class LeadFormComponent implements OnInit {
     if (this.esAdmin()) {
       this.form.controls.asesorId.addValidators(Validators.required);
       const usuarios = await this.usuariosService.listar();
-      const asignables = usuarios.filter((u) => u.activo && ROLES_ASIGNABLES.has(u.rol));
-
-      const asesorIdParam = this.route.snapshot.queryParamMap.get('asesorId');
-      if (asesorIdParam) {
-        const id = +asesorIdParam;
-        this.form.controls.asesorId.setValue(id);
-        // Si viene del propio tablero del admin, agrégalo a las opciones (no es un asesor "asignable" normal).
-        const actual = this.auth.currentUser();
-        if (actual && actual.id === id && !asignables.some((a) => a.id === id)) {
-          asignables.push({ ...actual, activo: true });
-        }
-      }
-
-      this.asesores.set(asignables);
+      this.asesores.set(usuarios.filter((u) => u.activo && ROLES_ASIGNABLES.has(u.rol)));
     }
 
     this.form.controls.pais.valueChanges.subscribe((pais) => {
@@ -107,11 +90,7 @@ export class LeadFormComponent implements OnInit {
         pais: v.pais,
         estadoRepublica: v.estadoRepublica,
       });
-      if (this.returnTo) {
-        await this.router.navigateByUrl(this.returnTo);
-      } else {
-        await this.router.navigate(['/panel/leads', lead.id]);
-      }
+      await this.router.navigate(['/panel/leads', lead.id]);
     } catch (error) {
       this.errorMessage.set(
         error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
