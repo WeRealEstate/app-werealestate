@@ -9,4 +9,8 @@ public interface TareaRepository extends JpaRepository<Tarea, Long> {
     List<Tarea> findByAsignadoAIdOrderByCompletadaAscFechaLimiteAscFechaCreacionDesc(Long asignadoAId);
 
     List<Tarea> findByCreadoPorIdOrderByFechaCreacionDesc(Long creadoPorId);
+
+    boolean existsByAsignadoAId(Long asignadoAId);
+
+    boolean existsByCreadoPorId(Long creadoPorId);
 }

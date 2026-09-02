@@ -21,4 +21,6 @@ public interface LeadRepository extends JpaRepository<Lead, Long> {
 
     List<Lead> findByFechaUltimoContactoBeforeAndEstadoNotInOrderByFechaUltimoContactoAsc(
             LocalDateTime limite, List<com.werealestate.backend.model.EstadoLead> estadosExcluidos);
+
+    boolean existsByAsesorId(Long asesorId);
 }

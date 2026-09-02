@@ -79,7 +79,20 @@
     }
 
     <div class="mt-6 stagger-item rounded-xl border border-border bg-surface p-5">
-      <h2 class="font-heading font-semibold text-ink text-sm mb-4">Historial</h2>
+      <div class="mb-4 flex items-center justify-between gap-3">
+        <h2 class="font-heading font-semibold text-ink text-sm">Historial</h2>
+        @if (comisiones().length > 0) {
+          <button
+            type="button"
+            (click)="exportarCsv()"
+            class="inline-flex items-center justify-center rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-ink
+                   hover:border-we-primary active:scale-[0.97] transition-transform duration-150
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+          >
+            Exportar CSV
+          </button>
+        }
+      </div>
       @if (comisiones().length === 0) {
         <p class="text-sm text-ink-muted">
           {{ esAdmin() ? 'Todavía no se ha generado ninguna comisión.' : 'Todavía no has generado comisiones.' }}

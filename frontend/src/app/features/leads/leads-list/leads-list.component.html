@@ -6,14 +6,27 @@
       </h1>
       <p class="mt-1 text-sm text-ink-muted">Seguimiento de leads de Samai y Nanuu.</p>
     </div>
-    <a
-      routerLink="/panel/leads/nuevo"
-      class="inline-flex items-center justify-center gap-2 rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
-             hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
-             focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
-    >
-      + Nuevo lead
-    </a>
+    <div class="flex items-center gap-2.5">
+      @if (!isLoading() && !errorMessage() && leadsFiltrados().length > 0) {
+        <button
+          type="button"
+          (click)="exportarCsv()"
+          class="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink
+                 hover:border-we-primary active:scale-[0.97] transition-transform duration-150
+                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
+        >
+          Exportar CSV
+        </button>
+      }
+      <a
+        routerLink="/panel/leads/nuevo"
+        class="inline-flex items-center justify-center gap-2 rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
+               hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
+               focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
+      >
+        + Nuevo lead
+      </a>
+    </div>
   </div>
 
   @if (esAdmin() && totalFrios() > 0) {

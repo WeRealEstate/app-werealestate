@@ -11,4 +11,6 @@ public interface ComisionRepository extends JpaRepository<Comision, Long> {
     List<Comision> findAllByOrderByFechaCreacionDesc();
 
     boolean existsByLeadId(Long leadId);
+
+    boolean existsByAsesorId(Long asesorId);
 }

@@ -10,6 +10,11 @@ import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Usuario;
+import com.werealestate.backend.repository.ComisionRepository;
+import com.werealestate.backend.repository.EventoCalendarioRepository;
+import com.werealestate.backend.repository.LeadRepository;
+import com.werealestate.backend.repository.SeguimientoRepository;
+import com.werealestate.backend.repository.TareaRepository;
 import com.werealestate.backend.repository.UsuarioRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
 import java.util.Comparator;
@@ -23,14 +28,29 @@ import org.springframework.transaction.annotation.Transactional;
 public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
+    private final LeadRepository leadRepository;
+    private final TareaRepository tareaRepository;
+    private final ComisionRepository comisionRepository;
+    private final EventoCalendarioRepository eventoCalendarioRepository;
+    private final SeguimientoRepository seguimientoRepository;
     private final CurrentUserProvider currentUserProvider;
     private final PasswordEncoder passwordEncoder;
 
     public UsuarioService(
             UsuarioRepository usuarioRepository,
+            LeadRepository leadRepository,
+            TareaRepository tareaRepository,
+            ComisionRepository comisionRepository,
+            EventoCalendarioRepository eventoCalendarioRepository,
+            SeguimientoRepository seguimientoRepository,
             CurrentUserProvider currentUserProvider,
             PasswordEncoder passwordEncoder) {
         this.usuarioRepository = usuarioRepository;
+        this.leadRepository = leadRepository;
+        this.tareaRepository = tareaRepository;
+        this.comisionRepository = comisionRepository;
+        this.eventoCalendarioRepository = eventoCalendarioRepository;
+        this.seguimientoRepository = seguimientoRepository;
         this.currentUserProvider = currentUserProvider;
         this.passwordEncoder = passwordEncoder;
     }
@@ -84,6 +104,35 @@ public class UsuarioService {
         usuario.setRol(request.rol());
         usuario.setActivo(request.activo());
         return UsuarioDto.from(usuarioRepository.save(usuario));
+    }
+
+    /**
+     * Elimina definitivamente a un usuario. Se rechaza si tiene actividad registrada (leads,
+     * tareas, comisiones, eventos o seguimientos) para no perder historial ni romper referencias;
+     * en ese caso hay que desactivarlo en vez de eliminarlo.
+     */
+    public void eliminar(Long id) {
+        Usuario actual = exigirAdmin();
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+
+        if (usuario.getId().equals(actual.getId())) {
+            throw new ForbiddenOperationException("No puedes eliminar tu propia cuenta");
+        }
+
+        boolean tieneActividad = leadRepository.existsByAsesorId(id)
+                || tareaRepository.existsByAsignadoAId(id)
+                || tareaRepository.existsByCreadoPorId(id)
+                || comisionRepository.existsByAsesorId(id)
+                || eventoCalendarioRepository.existsByUsuarioId(id)
+                || seguimientoRepository.existsByAsesorId(id);
+        if (tieneActividad) {
+            throw new ConflictException("No se puede eliminar a " + usuario.getNombre()
+                    + ": tiene actividad registrada (leads, tareas, comisiones, seguimientos o eventos). "
+                    + "Desactívalo para quitarle el acceso sin perder ese historial.");
+        }
+
+        usuarioRepository.delete(usuario);
     }
 
     /** Solo un admin puede fijar la contraseña de cualquier usuario (incluida la propia). Los usuarios no la cambian ellos mismos. */

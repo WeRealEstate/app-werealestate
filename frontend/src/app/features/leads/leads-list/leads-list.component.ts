@@ -3,7 +3,14 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
 import { UsuariosService } from '../../../core/services/usuarios.service';
-import { ESTADO_LEAD_LABELS, EstadoLead, Lead, UsuarioResumen } from '../../../core/models/lead.model';
+import { descargarCsv } from '../../../core/utils/csv';
+import {
+  ESTADO_LEAD_LABELS,
+  EstadoLead,
+  Lead,
+  PAIS_LABELS,
+  UsuarioResumen,
+} from '../../../core/models/lead.model';
 
 /** Filtro de estado: un EstadoLead puntual, o 'FRIOS' para leads sin seguimiento reciente. */
 type FiltroEstado = EstadoLead | 'FRIOS';
@@ -91,6 +98,48 @@ export class LeadsListComponent {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  exportarCsv(): void {
+    const filas = this.leadsFiltrados().map((l) => ({
+      cliente: l.nombreCliente,
+      telefono: l.telefono,
+      email: l.email ?? '',
+      desarrollo: l.desarrollo.nombre,
+      estado: this.estadoLabels[l.estado],
+      asesor: l.asesor.nombre,
+      edad: l.edad ?? '',
+      pais: l.pais ? PAIS_LABELS[l.pais] : '',
+      estadoRepublica: l.estadoRepublica ?? '',
+      origen: l.origen ?? '',
+      valorEstimado: l.valorEstimado ?? '',
+      fechaCreacion: l.fechaCreacion,
+      fechaUltimoContacto: l.fechaUltimoContacto,
+      diasSinContacto: l.diasSinContacto,
+      frio: l.frio ? 'Sí' : 'No',
+    }));
+
+    descargarCsv(
+      `leads_${new Date().toISOString().slice(0, 10)}.csv`,
+      {
+        cliente: 'Cliente',
+        telefono: 'Teléfono',
+        email: 'Correo',
+        desarrollo: 'Desarrollo',
+        estado: 'Estado',
+        asesor: 'Asesor',
+        edad: 'Edad',
+        pais: 'País',
+        estadoRepublica: 'Estado (República)',
+        origen: 'Origen',
+        valorEstimado: 'Valor estimado',
+        fechaCreacion: 'Fecha de creación',
+        fechaUltimoContacto: 'Último contacto',
+        diasSinContacto: 'Días sin contacto',
+        frio: 'Lead frío',
+      },
+      filas,
+    );
   }
 
   badgeClass(estado: Lead['estado']): string {

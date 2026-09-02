@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
@@ -54,6 +55,27 @@ export class UsuariosListComponent {
       { nombre: usuario.nombre, rol: nuevoRol, activo: usuario.activo },
       `Rol de ${usuario.nombre} actualizado a ${this.roleLabels[nuevoRol]}.`,
     );
+  }
+
+  async eliminar(usuario: Usuario): Promise<void> {
+    if (!confirm(`¿Eliminar a ${usuario.nombre} definitivamente? Esta acción no se puede deshacer.`)) return;
+
+    this.savingId.set(usuario.id);
+    this.errorMessage.set(null);
+    try {
+      await this.usuariosService.eliminar(usuario.id);
+      this.usuarios.update((lista) => lista.filter((u) => u.id !== usuario.id));
+      this.toast.success(`${usuario.nombre} fue eliminado.`);
+    } catch (error) {
+      const mensaje =
+        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+          ? error.error.message
+          : 'No se pudo eliminar el usuario.';
+      this.errorMessage.set(mensaje);
+      this.toast.error(mensaje);
+    } finally {
+      this.savingId.set(null);
+    }
   }
 
   async toggleActivo(usuario: Usuario): Promise<void> {

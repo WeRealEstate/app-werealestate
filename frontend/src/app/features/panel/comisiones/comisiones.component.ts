@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth.service';
 import { ComisionesService } from '../../../core/services/comisiones.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { descargarCsv } from '../../../core/utils/csv';
 import { Comision } from '../../../core/models/comision.model';
 
 interface ResumenAsesor {
@@ -109,6 +110,32 @@ export class ComisionesComponent {
     } finally {
       this.isGuardandoPorcentaje.set(false);
     }
+  }
+
+  exportarCsv(): void {
+    const filas = this.comisiones().map((c) => ({
+      lead: c.leadNombreCliente,
+      asesor: c.asesor.nombre,
+      monto: c.monto,
+      porcentajeAplicado: c.porcentajeAplicado,
+      estado: c.pagada ? 'Pagada' : 'Pendiente',
+      fechaCreacion: c.fechaCreacion,
+      fechaPago: c.fechaPago ?? '',
+    }));
+
+    descargarCsv(
+      `comisiones_${new Date().toISOString().slice(0, 10)}.csv`,
+      {
+        lead: 'Lead',
+        asesor: 'Asesor',
+        monto: 'Monto',
+        porcentajeAplicado: 'Porcentaje aplicado',
+        estado: 'Estado',
+        fechaCreacion: 'Fecha de generación',
+        fechaPago: 'Fecha de pago',
+      },
+      filas,
+    );
   }
 
   async alternarPagada(comision: Comision): Promise<void> {

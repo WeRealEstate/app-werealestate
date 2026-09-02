@@ -31,6 +31,7 @@
             <th class="px-4 py-3">Rol</th>
             <th class="px-4 py-3">Estado</th>
             <th class="px-4 py-3">Contraseña</th>
+            <th class="px-4 py-3"></th>
           </tr>
         </thead>
         <tbody class="divide-y divide-border bg-surface">
@@ -87,10 +88,24 @@
                   </button>
                 }
               </td>
+              <td class="px-4 py-3 text-right">
+                @if (u.id !== propioId()) {
+                  <button
+                    type="button"
+                    [disabled]="savingId() === u.id"
+                    (click)="eliminar(u)"
+                    aria-label="Eliminar usuario"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-red-50 hover:text-red-600
+                           dark:hover:bg-red-500/10 dark:hover:text-red-400 transition-colors duration-150 active:scale-90 disabled:opacity-60"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                }
+              </td>
             </tr>
             @if (resetId() === u.id) {
               <tr class="bg-surface-2">
-                <td colspan="4" class="px-4 py-3">
+                <td colspan="5" class="px-4 py-3">
                   <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <label [for]="'nueva-password-' + u.id" class="text-xs font-medium text-ink-muted whitespace-nowrap">
                       Nueva contraseña para {{ u.nombre }}

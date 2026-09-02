@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface EventoCalendarioRepository extends JpaRepository<EventoCalendario, Long> {
 
     List<EventoCalendario> findByUsuarioIdOrderByFechaAsc(Long usuarioId);
+
+    boolean existsByUsuarioId(Long usuarioId);
 }

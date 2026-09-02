@@ -11,4 +11,6 @@ public interface SeguimientoRepository extends JpaRepository<Seguimiento, Long> 
     List<Seguimiento> findByProximoSeguimientoIsNotNullOrderByProximoSeguimientoAsc();
 
     List<Seguimiento> findByProximoSeguimientoIsNotNullAndLeadAsesorIdOrderByProximoSeguimientoAsc(Long asesorId);
+
+    boolean existsByAsesorId(Long asesorId);
 }

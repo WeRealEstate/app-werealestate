@@ -30,4 +30,8 @@ export class UsuariosService {
   restablecerPassword(id: number, password: string): Promise<void> {
     return firstValueFrom(this.http.put<void>(`${this.baseUrl}/${id}/password`, { password }));
   }
+
+  eliminar(id: number): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`${this.baseUrl}/${id}`));
+  }
 }
