@@ -45,6 +45,9 @@ public class Seguimiento {
     @Column(name = "proximo_seguimiento")
     private LocalDateTime proximoSeguimiento;
 
+    @Column(name = "duracion_minutos")
+    private Integer duracionMinutos;
+
     protected Seguimiento() {
         // JPA
     }
@@ -55,13 +58,15 @@ public class Seguimiento {
             TipoSeguimiento tipo,
             String nota,
             String resultado,
-            LocalDateTime proximoSeguimiento) {
+            LocalDateTime proximoSeguimiento,
+            Integer duracionMinutos) {
         this.lead = lead;
         this.asesor = asesor;
         this.tipo = tipo;
         this.nota = nota;
         this.resultado = resultado;
         this.proximoSeguimiento = proximoSeguimiento;
+        this.duracionMinutos = proximoSeguimiento != null ? duracionMinutos : null;
     }
 
     public Long getId() {
@@ -94,5 +99,9 @@ public class Seguimiento {
 
     public LocalDateTime getProximoSeguimiento() {
         return proximoSeguimiento;
+    }
+
+    public Integer getDuracionMinutos() {
+        return duracionMinutos;
     }
 }

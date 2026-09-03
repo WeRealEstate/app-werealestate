@@ -16,6 +16,7 @@ import {
   TipoSeguimiento,
   UsuarioResumen,
 } from '../../../core/models/lead.model';
+import { DURACION_OPCIONES, DURACION_POR_DEFECTO, HORA_POR_DEFECTO, combinarFechaHora } from '../../../core/utils/fecha-hora';
 
 /** Roles que efectivamente trabajan leads y por lo tanto pueden tener un tablero propio. */
 const ROLES_ASIGNABLES = new Set(['ASESOR', 'LIDER_AREA']);
@@ -95,6 +96,7 @@ export class TarjetasComponent {
 
   readonly tipoSeguimientoLabels = TIPO_SEGUIMIENTO_LABELS;
   readonly tiposSeguimiento = Object.keys(TIPO_SEGUIMIENTO_LABELS) as TipoSeguimiento[];
+  readonly duracionOpciones = DURACION_OPCIONES;
 
   /** Movimiento pendiente de confirmar: el lead no se mueve solo con el drop, hay que registrar el seguimiento. */
   readonly panelMovimiento = signal<{ lead: Lead; destino: Destino } | null>(null);
@@ -105,6 +107,8 @@ export class TarjetasComponent {
     nota: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
     resultado: this.fb.control('', { nonNullable: true }),
     proximoSeguimiento: this.fb.control('', { nonNullable: true }),
+    horaSeguimiento: this.fb.control(HORA_POR_DEFECTO, { nonNullable: true }),
+    duracionSeguimiento: this.fb.control(DURACION_POR_DEFECTO, { nonNullable: true }),
   });
 
   /** Leads que no están en ninguna tarjeta todavía; siempre visibles, no cuenta para el tope de 20. */
@@ -340,6 +344,8 @@ export class TarjetasComponent {
       nota: `Movido a "${nombreDestino}" desde el tablero de tarjetas.`,
       resultado: '',
       proximoSeguimiento: '',
+      horaSeguimiento: HORA_POR_DEFECTO,
+      duracionSeguimiento: DURACION_POR_DEFECTO,
     });
     this.errorMovimiento.set(null);
   }
@@ -367,7 +373,8 @@ export class TarjetasComponent {
         tipo: v.tipo,
         nota: v.nota,
         resultado: v.resultado || null,
-        proximoSeguimiento: v.proximoSeguimiento ? new Date(v.proximoSeguimiento).toISOString() : null,
+        proximoSeguimiento: v.proximoSeguimiento ? combinarFechaHora(v.proximoSeguimiento, v.horaSeguimiento) : null,
+        duracionMinutos: v.proximoSeguimiento ? v.duracionSeguimiento : null,
       });
 
       this.leads.update((lista) => lista.map((l) => (l.id === lead.id ? actualizado : l)));

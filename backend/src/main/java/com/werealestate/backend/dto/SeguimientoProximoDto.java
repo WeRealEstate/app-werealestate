@@ -10,7 +10,8 @@ public record SeguimientoProximoDto(
         String leadNombreCliente,
         UsuarioResumenDto asesor,
         TipoSeguimiento tipo,
-        LocalDateTime proximoSeguimiento) {
+        LocalDateTime proximoSeguimiento,
+        Integer duracionMinutos) {
 
     public static SeguimientoProximoDto from(Seguimiento seguimiento) {
         return new SeguimientoProximoDto(
@@ -19,6 +20,7 @@ public record SeguimientoProximoDto(
                 seguimiento.getLead().getNombreCliente(),
                 UsuarioResumenDto.from(seguimiento.getAsesor()),
                 seguimiento.getTipo(),
-                seguimiento.getProximoSeguimiento());
+                seguimiento.getProximoSeguimiento(),
+                seguimiento.getDuracionMinutos());
     }
 }

@@ -7,6 +7,7 @@ import { LeadsService } from '../../../core/services/leads.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { EventoCalendario } from '../../../core/models/evento-calendario.model';
 import { TIPO_SEGUIMIENTO_LABELS } from '../../../core/models/lead.model';
+import { etiquetaDuracion, formatearHora12h } from '../../../core/utils/fecha-hora';
 
 type ItemTipo = 'PERSONAL' | 'TAREA' | 'SEGUIMIENTO';
 
@@ -207,15 +208,20 @@ export class CalendarioComponent {
       );
 
       this.seguimientoItems.set(
-        proximos.map((s) => ({
-          tipo: 'SEGUIMIENTO' as const,
-          id: s.id,
-          iso: s.proximoSeguimiento.slice(0, 10),
-          titulo: s.leadNombreCliente,
-          subtitulo: `${this.tipoSeguimientoLabels[s.tipo]} · ${s.asesor.nombre}`,
-          leadId: s.leadId,
-          completada: false,
-        })),
+        proximos.map((s) => {
+          const fecha = new Date(s.proximoSeguimiento);
+          const horaHHmm = `${String(fecha.getHours()).padStart(2, '0')}:${String(fecha.getMinutes()).padStart(2, '0')}`;
+          const duracion = s.duracionMinutos ? ` · ${etiquetaDuracion(s.duracionMinutos)}` : '';
+          return {
+            tipo: 'SEGUIMIENTO' as const,
+            id: s.id,
+            iso: s.proximoSeguimiento.slice(0, 10),
+            titulo: s.leadNombreCliente,
+            subtitulo: `${this.tipoSeguimientoLabels[s.tipo]} · ${s.asesor.nombre} · ${formatearHora12h(horaHHmm)}${duracion}`,
+            leadId: s.leadId,
+            completada: false,
+          };
+        }),
       );
     } catch {
       this.toast.error('No se pudo cargar el calendario. Intenta de nuevo.');

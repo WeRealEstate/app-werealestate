@@ -127,6 +127,34 @@
           </div>
         </div>
 
+        @if (seguimientoForm.controls.proximoSeguimiento.value) {
+          <div class="grid grid-cols-1 gap-4 rounded-lg border border-border bg-surface-2 p-3.5 sm:grid-cols-2">
+            <div>
+              <label for="horaSeguimiento" class="block text-xs font-medium text-ink-muted mb-1">Hora</label>
+              <input
+                id="horaSeguimiento"
+                type="time"
+                formControlName="horaSeguimiento"
+                class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+                       focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+              />
+            </div>
+            <div>
+              <label for="duracionSeguimiento" class="block text-xs font-medium text-ink-muted mb-1">Duración</label>
+              <select
+                id="duracionSeguimiento"
+                formControlName="duracionSeguimiento"
+                class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+                       focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+              >
+                @for (o of duracionOpciones; track o.valor) {
+                  <option [ngValue]="o.valor">{{ o.etiqueta }}</option>
+                }
+              </select>
+            </div>
+          </div>
+        }
+
         <div>
           <label for="nota" class="block text-sm font-medium text-ink mb-1.5">Nota</label>
           <textarea
@@ -185,6 +213,12 @@
               <p class="mt-1 text-sm text-ink">{{ s.nota }}</p>
               @if (s.resultado) {
                 <p class="mt-1 text-xs text-ink-muted">Resultado: {{ s.resultado }}</p>
+              }
+              @if (s.proximoSeguimiento) {
+                <p class="mt-1 text-xs font-medium text-we-blue-light">
+                  Próximo seguimiento: {{ s.proximoSeguimiento | date:'d MMM y, HH:mm' }}
+                  @if (s.duracionMinutos) { &middot; {{ s.duracionMinutos }} min }
+                </p>
               }
               <p class="mt-1 text-xs text-ink-muted">{{ s.asesor.nombre }}</p>
             </li>

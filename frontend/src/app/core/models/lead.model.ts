@@ -86,6 +86,7 @@ export interface Seguimiento {
   nota: string;
   resultado: string | null;
   proximoSeguimiento: string | null;
+  duracionMinutos: number | null;
 }
 
 export interface SeguimientoProximo {
@@ -95,6 +96,7 @@ export interface SeguimientoProximo {
   asesor: UsuarioResumen;
   tipo: TipoSeguimiento;
   proximoSeguimiento: string;
+  duracionMinutos: number | null;
 }
 
 export interface SeguimientoCreateRequest {
@@ -102,6 +104,7 @@ export interface SeguimientoCreateRequest {
   nota: string;
   resultado?: string | null;
   proximoSeguimiento?: string | null;
+  duracionMinutos?: number | null;
 }
 
 /** Mover un lead a otra tarjeta (o a "Sin asignar" si columnaPersonalizadaId es null) se confirma con estos mismos datos de seguimiento. */
@@ -111,6 +114,7 @@ export interface MoverColumnaRequest {
   nota: string;
   resultado?: string | null;
   proximoSeguimiento?: string | null;
+  duracionMinutos?: number | null;
 }
 
 export const ESTADO_LEAD_LABELS: Record<EstadoLead, string> = {

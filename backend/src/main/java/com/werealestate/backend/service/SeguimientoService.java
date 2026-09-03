@@ -47,7 +47,13 @@ public class SeguimientoService {
         Usuario actual = currentUserProvider.getUsuarioActual();
 
         Seguimiento seguimiento = new Seguimiento(
-                lead, actual, request.tipo(), request.nota(), request.resultado(), request.proximoSeguimiento());
+                lead,
+                actual,
+                request.tipo(),
+                request.nota(),
+                request.resultado(),
+                request.proximoSeguimiento(),
+                request.duracionMinutos());
         seguimientoRepository.save(seguimiento);
 
         lead.setFechaUltimoContacto(LocalDateTime.now());

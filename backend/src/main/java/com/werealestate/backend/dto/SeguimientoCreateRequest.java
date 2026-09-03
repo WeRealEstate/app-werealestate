@@ -9,5 +9,6 @@ public record SeguimientoCreateRequest(
         @NotNull TipoSeguimiento tipo,
         @NotBlank String nota,
         String resultado,
-        LocalDateTime proximoSeguimiento) {
+        LocalDateTime proximoSeguimiento,
+        Integer duracionMinutos) {
 }

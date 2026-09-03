@@ -184,7 +184,13 @@ public class LeadService {
         Lead guardado = leadRepository.save(lead);
 
         seguimientoRepository.save(new Seguimiento(
-                guardado, usuarioActual, request.tipo(), request.nota(), request.resultado(), request.proximoSeguimiento()));
+                guardado,
+                usuarioActual,
+                request.tipo(),
+                request.nota(),
+                request.resultado(),
+                request.proximoSeguimiento(),
+                request.duracionMinutos()));
 
         return toDto(guardado);
     }

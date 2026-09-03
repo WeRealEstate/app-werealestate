@@ -14,5 +14,6 @@ public record MoverColumnaRequest(
         @NotNull TipoSeguimiento tipo,
         @NotBlank String nota,
         String resultado,
-        LocalDateTime proximoSeguimiento) {
+        LocalDateTime proximoSeguimiento,
+        Integer duracionMinutos) {
 }

@@ -12,7 +12,8 @@ public record SeguimientoDto(
         TipoSeguimiento tipo,
         String nota,
         String resultado,
-        LocalDateTime proximoSeguimiento) {
+        LocalDateTime proximoSeguimiento,
+        Integer duracionMinutos) {
 
     public static SeguimientoDto from(Seguimiento seguimiento) {
         return new SeguimientoDto(
@@ -23,6 +24,7 @@ public record SeguimientoDto(
                 seguimiento.getTipo(),
                 seguimiento.getNota(),
                 seguimiento.getResultado(),
-                seguimiento.getProximoSeguimiento());
+                seguimiento.getProximoSeguimiento(),
+                seguimiento.getDuracionMinutos());
     }
 }
