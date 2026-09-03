@@ -9,19 +9,22 @@ export const DURACION_OPCIONES: { valor: number; etiqueta: string }[] = [
 ];
 
 export const DURACION_POR_DEFECTO = 30;
-export const HORA_POR_DEFECTO = '09:00';
 
-/** Combina una fecha ("2026-09-04") y una hora ("10:00") en un ISO string local, sin desfase de zona horaria. */
-export function combinarFechaHora(fecha: string, hora: string): string {
-  return new Date(`${fecha}T${hora || HORA_POR_DEFECTO}:00`).toISOString();
-}
+/** Horas del día en formato 24h ("00".."23"): un selector explícito no deja lugar a confundir am/pm. */
+export const HORAS_OPCIONES: string[] = Array.from({ length: 24 }, (_, h) => String(h).padStart(2, '0'));
+export const MINUTOS_OPCIONES: string[] = ['00', '15', '30', '45'];
 
-/** Etiqueta corta "10:00 am" a partir de una hora "HH:mm" en formato 24h. */
-export function formatearHora12h(hora: string): string {
-  const [h, m] = hora.split(':').map(Number);
-  const periodo = h < 12 ? 'a. m.' : 'p. m.';
-  const h12 = h % 12 === 0 ? 12 : h % 12;
-  return `${h12}:${String(m).padStart(2, '0')} ${periodo}`;
+export const HORA_POR_DEFECTO = '09';
+export const MINUTO_POR_DEFECTO = '00';
+
+/**
+ * Combina una fecha ("2026-09-04"), una hora ("14") y un minuto ("00") en el mismo formato de
+ * texto que espera el backend (LocalDateTime), SIN pasar por `Date`/`toISOString()`: eso
+ * reinterpreta la hora como si fuera UTC y la desfasa varias horas al guardarla (p. ej. 2pm
+ * termina guardado como 8pm). Al armar el texto tal cual, la hora que se ve es la que se guarda.
+ */
+export function combinarFechaHora(fecha: string, hora: string, minuto: string): string {
+  return `${fecha}T${hora || HORA_POR_DEFECTO}:${minuto || MINUTO_POR_DEFECTO}:00`;
 }
 
 export function etiquetaDuracion(minutos: number): string {

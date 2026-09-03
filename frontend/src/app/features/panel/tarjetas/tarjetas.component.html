@@ -423,14 +423,31 @@
           @if (movimientoForm.controls.proximoSeguimiento.value) {
             <div class="grid grid-cols-2 gap-3 rounded-lg border border-border bg-surface-2 p-3">
               <div>
-                <label for="mov-hora" class="block text-xs font-medium text-ink-muted mb-1">Hora</label>
-                <input
-                  id="mov-hora"
-                  type="time"
-                  formControlName="horaSeguimiento"
-                  class="block w-full rounded-lg border border-border px-3 py-2 text-sm text-ink bg-surface
-                         focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
-                />
+                <label for="mov-hora" class="block text-xs font-medium text-ink-muted mb-1">Hora (24h)</label>
+                <div class="flex items-center gap-1.5">
+                  <select
+                    id="mov-hora"
+                    formControlName="horaSeguimiento"
+                    aria-label="Hora"
+                    class="block w-full rounded-lg border border-border px-3 py-2 text-sm text-ink bg-surface
+                           focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+                  >
+                    @for (h of horasOpciones; track h) {
+                      <option [ngValue]="h">{{ h }}</option>
+                    }
+                  </select>
+                  <span class="text-ink-muted">:</span>
+                  <select
+                    formControlName="minutoSeguimiento"
+                    aria-label="Minutos"
+                    class="block w-full rounded-lg border border-border px-3 py-2 text-sm text-ink bg-surface
+                           focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+                  >
+                    @for (m of minutosOpciones; track m) {
+                      <option [ngValue]="m">{{ m }}</option>
+                    }
+                  </select>
+                </div>
               </div>
               <div>
                 <label for="mov-duracion" class="block text-xs font-medium text-ink-muted mb-1">Duración</label>

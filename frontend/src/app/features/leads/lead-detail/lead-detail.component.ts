@@ -16,7 +16,15 @@ import {
   UsuarioResumen,
 } from '../../../core/models/lead.model';
 import { Usuario } from '../../../core/models/user.model';
-import { DURACION_OPCIONES, DURACION_POR_DEFECTO, HORA_POR_DEFECTO, combinarFechaHora } from '../../../core/utils/fecha-hora';
+import {
+  DURACION_OPCIONES,
+  DURACION_POR_DEFECTO,
+  HORAS_OPCIONES,
+  HORA_POR_DEFECTO,
+  MINUTOS_OPCIONES,
+  MINUTO_POR_DEFECTO,
+  combinarFechaHora,
+} from '../../../core/utils/fecha-hora';
 
 /** Roles que efectivamente trabajan leads y por lo tanto pueden recibir una reasignación. */
 const ROLES_ASIGNABLES = new Set(['ASESOR', 'LIDER_AREA']);
@@ -40,6 +48,8 @@ export class LeadDetailComponent implements OnInit {
   readonly estados = Object.keys(ESTADO_LEAD_LABELS) as EstadoLead[];
   readonly tipos = Object.keys(TIPO_SEGUIMIENTO_LABELS) as TipoSeguimiento[];
   readonly duracionOpciones = DURACION_OPCIONES;
+  readonly horasOpciones = HORAS_OPCIONES;
+  readonly minutosOpciones = MINUTOS_OPCIONES;
   readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
 
   readonly lead = signal<Lead | null>(null);
@@ -68,6 +78,7 @@ export class LeadDetailComponent implements OnInit {
     resultado: this.fb.control('', { nonNullable: true }),
     proximoSeguimiento: this.fb.control('', { nonNullable: true }),
     horaSeguimiento: this.fb.control(HORA_POR_DEFECTO, { nonNullable: true }),
+    minutoSeguimiento: this.fb.control(MINUTO_POR_DEFECTO, { nonNullable: true }),
     duracionSeguimiento: this.fb.control(DURACION_POR_DEFECTO, { nonNullable: true }),
   });
 
@@ -197,7 +208,9 @@ export class LeadDetailComponent implements OnInit {
         tipo: v.tipo,
         nota: v.nota,
         resultado: v.resultado || null,
-        proximoSeguimiento: v.proximoSeguimiento ? combinarFechaHora(v.proximoSeguimiento, v.horaSeguimiento) : null,
+        proximoSeguimiento: v.proximoSeguimiento
+          ? combinarFechaHora(v.proximoSeguimiento, v.horaSeguimiento, v.minutoSeguimiento)
+          : null,
         duracionMinutos: v.proximoSeguimiento ? v.duracionSeguimiento : null,
       });
       this.seguimientos.update((lista) => [nuevo, ...lista]);
@@ -207,6 +220,7 @@ export class LeadDetailComponent implements OnInit {
         resultado: '',
         proximoSeguimiento: '',
         horaSeguimiento: HORA_POR_DEFECTO,
+        minutoSeguimiento: MINUTO_POR_DEFECTO,
         duracionSeguimiento: DURACION_POR_DEFECTO,
       });
 

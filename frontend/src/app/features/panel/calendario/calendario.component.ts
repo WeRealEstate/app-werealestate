@@ -7,7 +7,7 @@ import { LeadsService } from '../../../core/services/leads.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { EventoCalendario } from '../../../core/models/evento-calendario.model';
 import { TIPO_SEGUIMIENTO_LABELS } from '../../../core/models/lead.model';
-import { etiquetaDuracion, formatearHora12h } from '../../../core/utils/fecha-hora';
+import { etiquetaDuracion } from '../../../core/utils/fecha-hora';
 
 type ItemTipo = 'PERSONAL' | 'TAREA' | 'SEGUIMIENTO';
 
@@ -217,7 +217,7 @@ export class CalendarioComponent {
             id: s.id,
             iso: s.proximoSeguimiento.slice(0, 10),
             titulo: s.leadNombreCliente,
-            subtitulo: `${this.tipoSeguimientoLabels[s.tipo]} · ${s.asesor.nombre} · ${formatearHora12h(horaHHmm)}${duracion}`,
+            subtitulo: `${this.tipoSeguimientoLabels[s.tipo]} · ${s.asesor.nombre} · ${horaHHmm}${duracion}`,
             leadId: s.leadId,
             completada: false,
           };
