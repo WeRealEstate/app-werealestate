@@ -77,6 +77,18 @@
         <option [value]="e" [selected]="e === estadoFiltro()">{{ estadoLabels[e] }}</option>
       }
     </select>
+    @if (esAdmin() && asesoresDisponibles().length > 0) {
+      <select
+        (change)="asesorId.set($any($event.target).value === '' ? null : +$any($event.target).value)"
+        class="w-full max-w-xs rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+               focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+      >
+        <option value="" [selected]="asesorId() === null">Todos los asesores</option>
+        @for (a of asesoresDisponibles(); track a.id) {
+          <option [value]="a.id" [selected]="a.id === asesorId()">{{ a.nombre }}</option>
+        }
+      </select>
+    }
     <button
       type="button"
       (click)="toggleArchivados()"
@@ -98,18 +110,6 @@
         <path d="M10 12h4"></path>
       </svg>
     </button>
-    @if (esAdmin() && asesoresDisponibles().length > 1) {
-      <select
-        (change)="asesorId.set($any($event.target).value === '' ? null : +$any($event.target).value)"
-        class="w-full max-w-xs rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
-               focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
-      >
-        <option value="" [selected]="asesorId() === null">Todos los asesores</option>
-        @for (a of asesoresDisponibles(); track a.id) {
-          <option [value]="a.id" [selected]="a.id === asesorId()">{{ a.nombre }}</option>
-        }
-      </select>
-    }
   </div>
 
   @if (isLoading()) {
