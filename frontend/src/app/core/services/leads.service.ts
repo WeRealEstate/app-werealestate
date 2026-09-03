@@ -38,6 +38,10 @@ export class LeadsService {
     return firstValueFrom(this.http.put<Lead>(`${this.baseUrl}/${id}/desarchivar`, {}));
   }
 
+  eliminar(id: number): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`${this.baseUrl}/${id}`));
+  }
+
   obtener(id: number): Promise<Lead> {
     return firstValueFrom(this.http.get<Lead>(`${this.baseUrl}/${id}`));
   }

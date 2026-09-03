@@ -5,6 +5,7 @@ import com.werealestate.backend.dto.LeadDto;
 import com.werealestate.backend.dto.LeadUpdateRequest;
 import com.werealestate.backend.dto.MoverColumnaRequest;
 import com.werealestate.backend.dto.ReasignarLeadRequest;
+import com.werealestate.backend.exception.ConflictException;
 import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.model.ColumnaPersonalizada;
@@ -16,6 +17,7 @@ import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Seguimiento;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.repository.ColumnaPersonalizadaRepository;
+import com.werealestate.backend.repository.ComisionRepository;
 import com.werealestate.backend.repository.DesarrolloRepository;
 import com.werealestate.backend.repository.LeadRepository;
 import com.werealestate.backend.repository.SeguimientoRepository;
@@ -38,6 +40,7 @@ public class LeadService {
     private final UsuarioRepository usuarioRepository;
     private final SeguimientoRepository seguimientoRepository;
     private final ColumnaPersonalizadaRepository columnaRepository;
+    private final ComisionRepository comisionRepository;
     private final CurrentUserProvider currentUserProvider;
     private final ComisionService comisionService;
     private final int diasFrio;
@@ -48,6 +51,7 @@ public class LeadService {
             UsuarioRepository usuarioRepository,
             SeguimientoRepository seguimientoRepository,
             ColumnaPersonalizadaRepository columnaRepository,
+            ComisionRepository comisionRepository,
             CurrentUserProvider currentUserProvider,
             ComisionService comisionService,
             @Value("${app.lead.dias-frio}") int diasFrio) {
@@ -56,6 +60,7 @@ public class LeadService {
         this.usuarioRepository = usuarioRepository;
         this.seguimientoRepository = seguimientoRepository;
         this.columnaRepository = columnaRepository;
+        this.comisionRepository = comisionRepository;
         this.currentUserProvider = currentUserProvider;
         this.comisionService = comisionService;
         this.diasFrio = diasFrio;
@@ -221,6 +226,29 @@ public class LeadService {
         Lead lead = buscarLeadPermitido(id);
         lead.setArchivado(false);
         return toDto(leadRepository.save(lead));
+    }
+
+    /**
+     * Borra el lead definitivamente (a diferencia de archivar, no se puede deshacer). Solo un
+     * administrador puede hacerlo. Se rechaza si el lead ya generó una comisión, para no perder
+     * ese registro financiero; su bitácora de seguimientos sí se borra junto con él, porque no
+     * tiene sentido conservarla por separado.
+     */
+    public void eliminar(Long id) {
+        Usuario actual = currentUserProvider.getUsuarioActual();
+        if (actual.getRol() != Role.ADMIN) {
+            throw new ForbiddenOperationException("Solo un administrador puede borrar leads");
+        }
+
+        Lead lead = leadRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Lead no encontrado"));
+
+        if (comisionRepository.existsByLeadId(id)) {
+            throw new ConflictException("No se puede borrar a " + lead.getNombreCliente()
+                    + ": ya generó una comisión y ese registro financiero no se puede perder.");
+        }
+
+        seguimientoRepository.deleteByLeadId(id);
+        leadRepository.delete(lead);
     }
 
     /** Carga un lead y valida que el usuario actual pueda verlo/editarlo (dueño o admin). */

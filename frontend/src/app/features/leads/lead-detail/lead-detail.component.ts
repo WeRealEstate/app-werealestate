@@ -1,7 +1,8 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
 import { ToastService } from '../../../core/services/toast.service';
@@ -37,6 +38,7 @@ const ROLES_ASIGNABLES = new Set(['ASESOR', 'LIDER_AREA']);
 })
 export class LeadDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly leadsService = inject(LeadsService);
   private readonly usuariosService = inject(UsuariosService);
   private readonly auth = inject(AuthService);
@@ -60,6 +62,7 @@ export class LeadDetailComponent implements OnInit {
   readonly isSavingAsesor = signal(false);
   readonly isSavingSeguimiento = signal(false);
   readonly isArchivando = signal(false);
+  readonly isEliminando = signal(false);
   readonly errorMessage = signal<string | null>(null);
 
   /** Los asesores asignables, más el dueño actual del lead si por algún motivo no está en esa lista. */
@@ -190,6 +193,34 @@ export class LeadDetailComponent implements OnInit {
       this.toast.error('No se pudo desarchivar el lead.');
     } finally {
       this.isArchivando.set(false);
+    }
+  }
+
+  /** Borrado permanente, solo admin. A diferencia de archivar, esto no se puede deshacer. */
+  async eliminar(): Promise<void> {
+    const actual = this.lead();
+    if (!actual || this.isEliminando()) return;
+    if (
+      !confirm(
+        `¿Borrar a ${actual.nombreCliente} para siempre? Esto elimina también su bitácora de seguimientos y no se puede deshacer.`,
+      )
+    ) {
+      return;
+    }
+
+    this.isEliminando.set(true);
+    try {
+      await this.leadsService.eliminar(this.leadId);
+      this.toast.success(`${actual.nombreCliente} fue borrado.`);
+      this.router.navigateByUrl('/panel/leads');
+    } catch (error) {
+      const mensaje =
+        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+          ? error.error.message
+          : 'No se pudo borrar el lead.';
+      this.toast.error(mensaje);
+    } finally {
+      this.isEliminando.set(false);
     }
   }
 
