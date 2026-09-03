@@ -64,12 +64,12 @@ public class LeadController {
 
     @PutMapping("/{id}/mover")
     public LeadDto mover(@PathVariable Long id, @Valid @RequestBody MoverLeadRequest request) {
-        return leadService.mover(id, request.estado());
+        return leadService.mover(id, request);
     }
 
     @PutMapping("/{id}/mover-columna")
     public LeadDto moverAColumnaPersonalizada(@PathVariable Long id, @Valid @RequestBody MoverColumnaRequest request) {
-        return leadService.moverAColumnaPersonalizada(id, request.columnaPersonalizadaId());
+        return leadService.moverAColumnaPersonalizada(id, request);
     }
 
     @PutMapping("/{id}/archivar")

@@ -4,10 +4,11 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   Desarrollo,
-  EstadoLead,
   Lead,
   LeadCreateRequest,
   LeadUpdateRequest,
+  MoverColumnaRequest,
+  MoverLeadRequest,
   Seguimiento,
   SeguimientoCreateRequest,
   SeguimientoProximo,
@@ -54,12 +55,12 @@ export class LeadsService {
     return firstValueFrom(this.http.put<Lead>(`${this.baseUrl}/${id}/reasignar`, { nuevoAsesorId }));
   }
 
-  mover(id: number, estado: EstadoLead): Promise<Lead> {
-    return firstValueFrom(this.http.put<Lead>(`${this.baseUrl}/${id}/mover`, { estado }));
+  mover(id: number, request: MoverLeadRequest): Promise<Lead> {
+    return firstValueFrom(this.http.put<Lead>(`${this.baseUrl}/${id}/mover`, request));
   }
 
-  moverColumna(id: number, columnaPersonalizadaId: number): Promise<Lead> {
-    return firstValueFrom(this.http.put<Lead>(`${this.baseUrl}/${id}/mover-columna`, { columnaPersonalizadaId }));
+  moverColumna(id: number, request: MoverColumnaRequest): Promise<Lead> {
+    return firstValueFrom(this.http.put<Lead>(`${this.baseUrl}/${id}/mover-columna`, request));
   }
 
   listarSeguimientos(leadId: number): Promise<Seguimiento[]> {

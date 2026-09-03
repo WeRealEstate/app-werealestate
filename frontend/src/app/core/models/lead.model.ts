@@ -104,6 +104,23 @@ export interface SeguimientoCreateRequest {
   proximoSeguimiento?: string | null;
 }
 
+/** Mover una tarjeta en el tablero se confirma con estos mismos datos de seguimiento. */
+export interface MoverLeadRequest {
+  estado: EstadoLead;
+  tipo: TipoSeguimiento;
+  nota: string;
+  resultado?: string | null;
+  proximoSeguimiento?: string | null;
+}
+
+export interface MoverColumnaRequest {
+  columnaPersonalizadaId: number;
+  tipo: TipoSeguimiento;
+  nota: string;
+  resultado?: string | null;
+  proximoSeguimiento?: string | null;
+}
+
 export const ESTADO_LEAD_LABELS: Record<EstadoLead, string> = {
   NUEVO: 'Nuevo',
   CONTACTADO: 'Contactado',

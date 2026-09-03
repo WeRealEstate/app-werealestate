@@ -3,6 +3,8 @@ package com.werealestate.backend.service;
 import com.werealestate.backend.dto.LeadCreateRequest;
 import com.werealestate.backend.dto.LeadDto;
 import com.werealestate.backend.dto.LeadUpdateRequest;
+import com.werealestate.backend.dto.MoverColumnaRequest;
+import com.werealestate.backend.dto.MoverLeadRequest;
 import com.werealestate.backend.dto.ReasignarLeadRequest;
 import com.werealestate.backend.exception.ConflictException;
 import com.werealestate.backend.exception.ForbiddenOperationException;
@@ -14,7 +16,6 @@ import com.werealestate.backend.model.Lead;
 import com.werealestate.backend.model.Pais;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Seguimiento;
-import com.werealestate.backend.model.TipoSeguimiento;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.repository.ColumnaPersonalizadaRepository;
 import com.werealestate.backend.repository.DesarrolloRepository;
@@ -25,7 +26,6 @@ import com.werealestate.backend.security.CurrentUserProvider;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,15 +36,6 @@ public class LeadService {
 
     /** Tope de leads activos (no archivados) por asesor, para mantener el pipeline manejable. */
     private static final int MAX_LEADS_ACTIVOS_POR_ASESOR = 20;
-
-    private static final Map<EstadoLead, String> ESTADO_LABEL = Map.of(
-            EstadoLead.NUEVO, "Nuevo",
-            EstadoLead.CONTACTADO, "Contactado",
-            EstadoLead.INTERESADO, "Interesado",
-            EstadoLead.CITA_AGENDADA, "Cita agendada",
-            EstadoLead.NEGOCIACION, "Negociación",
-            EstadoLead.CERRADO_GANADO, "Cerrado (ganado)",
-            EstadoLead.CERRADO_PERDIDO, "Cerrado (perdido)");
 
     private final LeadRepository leadRepository;
     private final DesarrolloRepository desarrolloRepository;
@@ -174,13 +165,13 @@ public class LeadService {
     }
 
     /**
-     * Cambia el estado del lead desde el tablero de tarjetas (arrastrar y soltar). A diferencia de
-     * {@link #actualizar}, esto no viene de un formulario con nota, así que registra un seguimiento
-     * automático en la bitácora para no perder el rastro del cambio.
+     * Cambia el estado del lead desde el tablero de tarjetas. El propio movimiento se confirma con
+     * el panel de "Registrar seguimiento" (mismos campos que el de siempre), así que ese seguimiento
+     * real queda en la bitácora en lugar de un texto genérico.
      */
-    public LeadDto mover(Long id, EstadoLead nuevoEstado) {
+    public LeadDto mover(Long id, MoverLeadRequest request) {
         Lead lead = buscarLeadPermitido(id);
-        boolean estadoCambia = lead.getEstado() != nuevoEstado;
+        boolean estadoCambia = lead.getEstado() != request.estado();
         boolean saliaDeColumnaPersonalizada = lead.getColumnaPersonalizada() != null;
         if (!estadoCambia && !saliaDeColumnaPersonalizada) {
             return toDto(lead);
@@ -189,32 +180,27 @@ public class LeadService {
         Usuario actual = currentUserProvider.getUsuarioActual();
         boolean eraGanado = lead.getEstado() == EstadoLead.CERRADO_GANADO;
 
-        lead.setEstado(nuevoEstado);
+        lead.setEstado(request.estado());
         lead.setColumnaPersonalizada(null);
         lead.setFechaUltimoContacto(LocalDateTime.now());
         Lead guardado = leadRepository.save(lead);
 
         seguimientoRepository.save(new Seguimiento(
-                guardado,
-                actual,
-                TipoSeguimiento.OTRO,
-                "Estado actualizado a \"" + ESTADO_LABEL.get(nuevoEstado) + "\" desde el tablero de tarjetas.",
-                null,
-                null));
+                guardado, actual, request.tipo(), request.nota(), request.resultado(), request.proximoSeguimiento()));
 
-        comisionService.generarSiCorresponde(guardado, eraGanado, nuevoEstado == EstadoLead.CERRADO_GANADO);
+        comisionService.generarSiCorresponde(guardado, eraGanado, request.estado() == EstadoLead.CERRADO_GANADO);
 
         return toDto(guardado);
     }
 
     /**
      * Mueve el lead a una columna personalizada del tablero de tarjetas: solo cambia su posición
-     * visual, nunca su estado real, pero igual queda registrado en la bitácora.
+     * visual, nunca su estado real, pero el movimiento igual se confirma con un seguimiento real.
      */
-    public LeadDto moverAColumnaPersonalizada(Long id, Long columnaPersonalizadaId) {
+    public LeadDto moverAColumnaPersonalizada(Long id, MoverColumnaRequest request) {
         Lead lead = buscarLeadPermitido(id);
         ColumnaPersonalizada columna = columnaRepository
-                .findById(columnaPersonalizadaId)
+                .findById(request.columnaPersonalizadaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Columna no encontrada"));
 
         if (!columna.getAsesor().getId().equals(lead.getAsesor().getId())) {
@@ -222,7 +208,7 @@ public class LeadService {
         }
 
         ColumnaPersonalizada actual = lead.getColumnaPersonalizada();
-        if (actual != null && actual.getId().equals(columnaPersonalizadaId)) {
+        if (actual != null && actual.getId().equals(request.columnaPersonalizadaId())) {
             return toDto(lead);
         }
 
@@ -232,12 +218,7 @@ public class LeadService {
         Lead guardado = leadRepository.save(lead);
 
         seguimientoRepository.save(new Seguimiento(
-                guardado,
-                usuarioActual,
-                TipoSeguimiento.OTRO,
-                "Se movió a la columna personalizada \"" + columna.getNombre() + "\" desde el tablero de tarjetas.",
-                null,
-                null));
+                guardado, usuarioActual, request.tipo(), request.nota(), request.resultado(), request.proximoSeguimiento()));
 
         return toDto(guardado);
     }

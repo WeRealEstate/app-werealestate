@@ -14,6 +14,8 @@ import {
   ESTADO_LEAD_LABELS,
   EstadoLead,
   Lead,
+  TIPO_SEGUIMIENTO_LABELS,
+  TipoSeguimiento,
   UsuarioResumen,
 } from '../../../core/models/lead.model';
 
@@ -27,6 +29,11 @@ export const MAX_TARJETAS_POR_ASESOR = 20;
 type Columna =
   | { tipo: 'estado'; estado: EstadoLead; nombre: string; leads: Lead[] }
   | { tipo: 'personalizada'; id: number; nombre: string; leads: Lead[] };
+
+/** A dónde se movería la tarjeta si se confirma el movimiento pendiente. */
+type Destino =
+  | { tipo: 'estado'; estado: EstadoLead; nombre: string }
+  | { tipo: 'personalizada'; id: number; nombre: string };
 
 @Component({
   selector: 'app-tarjetas',
@@ -92,6 +99,20 @@ export class TarjetasComponent {
 
   readonly editandoColumnaId = signal<number | null>(null);
   readonly nombreEdicion = signal('');
+
+  readonly tipoSeguimientoLabels = TIPO_SEGUIMIENTO_LABELS;
+  readonly tiposSeguimiento = Object.keys(TIPO_SEGUIMIENTO_LABELS) as TipoSeguimiento[];
+
+  /** Movimiento pendiente de confirmar: la tarjeta ya no se mueve sola con el drop, hay que registrar el seguimiento. */
+  readonly panelMovimiento = signal<{ lead: Lead; destino: Destino } | null>(null);
+  readonly isMoviendo = signal(false);
+  readonly errorMovimiento = signal<string | null>(null);
+  readonly movimientoForm = this.fb.group({
+    tipo: this.fb.control<TipoSeguimiento>('OTRO', { nonNullable: true, validators: [Validators.required] }),
+    nota: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
+    resultado: this.fb.control('', { nonNullable: true }),
+    proximoSeguimiento: this.fb.control('', { nonNullable: true }),
+  });
 
   readonly columnas = computed<Columna[]>(() => {
     const leadsAsesor = this.leadsDelAsesor();
@@ -295,54 +316,79 @@ export class TarjetasComponent {
     }
   }
 
-  // --- Arrastrar y soltar ---
+  // --- Archivar tarjeta ---
 
-  async onDrop(event: CdkDragDrop<Lead[]>, col: Columna): Promise<void> {
+  async archivarTarjeta(lead: Lead): Promise<void> {
+    if (!confirm(`¿Archivar a ${lead.nombreCliente}? Dejará de aparecer en el tablero, pero se conserva como métrica.`)) {
+      return;
+    }
+    try {
+      await this.leadsService.archivar(lead.id);
+      this.leads.update((lista) => lista.filter((l) => l.id !== lead.id));
+      this.toast.success(`${lead.nombreCliente} fue archivado.`);
+    } catch {
+      this.toast.error('No se pudo archivar el lead. Intenta de nuevo.');
+    }
+  }
+
+  // --- Arrastrar y soltar: el drop solo abre el panel, el movimiento se confirma con un botón ---
+
+  onDrop(event: CdkDragDrop<Lead[]>, col: Columna): void {
     if (event.previousContainer === event.container) return;
     const lead = event.previousContainer.data[event.previousIndex];
 
-    if (col.tipo === 'estado') {
-      await this.moverAEstado(lead, col.estado);
-    } else {
-      await this.moverAColumnaPersonalizada(lead, col.id, col.nombre);
-    }
+    const destino: Destino =
+      col.tipo === 'estado' ? { tipo: 'estado', estado: col.estado, nombre: col.nombre } : { tipo: 'personalizada', id: col.id, nombre: col.nombre };
+
+    this.panelMovimiento.set({ lead, destino });
+    this.movimientoForm.reset({
+      tipo: 'OTRO',
+      nota: `Movido a "${destino.nombre}" desde el tablero de tarjetas.`,
+      resultado: '',
+      proximoSeguimiento: '',
+    });
+    this.errorMovimiento.set(null);
   }
 
-  private async moverAEstado(lead: Lead, nuevoEstado: EstadoLead): Promise<void> {
-    const anterior = {
-      estado: lead.estado,
-      columnaPersonalizadaId: lead.columnaPersonalizadaId,
-      columnaPersonalizadaNombre: lead.columnaPersonalizadaNombre,
-    };
-    this.leads.update((lista) =>
-      lista.map((l) => (l.id === lead.id ? { ...l, estado: nuevoEstado, columnaPersonalizadaId: null, columnaPersonalizadaNombre: null } : l)),
-    );
-
-    try {
-      await this.leadsService.mover(lead.id, nuevoEstado);
-      this.toast.success(`${lead.nombreCliente} → ${this.estadoLabels[nuevoEstado]}.`);
-    } catch {
-      this.leads.update((lista) => lista.map((l) => (l.id === lead.id ? { ...l, ...anterior } : l)));
-      this.toast.error('No se pudo mover el lead. Intenta de nuevo.');
-    }
+  cancelarMovimiento(): void {
+    this.panelMovimiento.set(null);
   }
 
-  private async moverAColumnaPersonalizada(lead: Lead, columnaId: number, nombreColumna: string): Promise<void> {
-    const anterior = {
-      estado: lead.estado,
-      columnaPersonalizadaId: lead.columnaPersonalizadaId,
-      columnaPersonalizadaNombre: lead.columnaPersonalizadaNombre,
+  async confirmarMovimiento(): Promise<void> {
+    const pendiente = this.panelMovimiento();
+    if (!pendiente || this.movimientoForm.invalid || this.isMoviendo()) {
+      this.movimientoForm.markAllAsTouched();
+      return;
+    }
+
+    this.isMoviendo.set(true);
+    this.errorMovimiento.set(null);
+    const v = this.movimientoForm.getRawValue();
+    const { lead, destino } = pendiente;
+    const base = {
+      tipo: v.tipo,
+      nota: v.nota,
+      resultado: v.resultado || null,
+      proximoSeguimiento: v.proximoSeguimiento ? new Date(v.proximoSeguimiento).toISOString() : null,
     };
-    this.leads.update((lista) =>
-      lista.map((l) => (l.id === lead.id ? { ...l, columnaPersonalizadaId: columnaId, columnaPersonalizadaNombre: nombreColumna } : l)),
-    );
 
     try {
-      await this.leadsService.moverColumna(lead.id, columnaId);
-      this.toast.success(`${lead.nombreCliente} → ${nombreColumna}.`);
-    } catch {
-      this.leads.update((lista) => lista.map((l) => (l.id === lead.id ? { ...l, ...anterior } : l)));
-      this.toast.error('No se pudo mover el lead. Intenta de nuevo.');
+      const actualizado =
+        destino.tipo === 'estado'
+          ? await this.leadsService.mover(lead.id, { estado: destino.estado, ...base })
+          : await this.leadsService.moverColumna(lead.id, { columnaPersonalizadaId: destino.id, ...base });
+
+      this.leads.update((lista) => lista.map((l) => (l.id === lead.id ? actualizado : l)));
+      this.toast.success(`${lead.nombreCliente} → ${destino.nombre}.`);
+      this.panelMovimiento.set(null);
+    } catch (error) {
+      this.errorMovimiento.set(
+        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+          ? error.error.message
+          : 'No se pudo mover el lead. Intenta de nuevo.',
+      );
+    } finally {
+      this.isMoviendo.set(false);
     }
   }
 }
