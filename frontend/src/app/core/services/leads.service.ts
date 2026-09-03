@@ -8,7 +8,6 @@ import {
   LeadCreateRequest,
   LeadUpdateRequest,
   MoverColumnaRequest,
-  MoverLeadRequest,
   Seguimiento,
   SeguimientoCreateRequest,
   SeguimientoProximo,
@@ -53,10 +52,6 @@ export class LeadsService {
 
   reasignar(id: number, nuevoAsesorId: number): Promise<Lead> {
     return firstValueFrom(this.http.put<Lead>(`${this.baseUrl}/${id}/reasignar`, { nuevoAsesorId }));
-  }
-
-  mover(id: number, request: MoverLeadRequest): Promise<Lead> {
-    return firstValueFrom(this.http.put<Lead>(`${this.baseUrl}/${id}/mover`, request));
   }
 
   moverColumna(id: number, request: MoverColumnaRequest): Promise<Lead> {

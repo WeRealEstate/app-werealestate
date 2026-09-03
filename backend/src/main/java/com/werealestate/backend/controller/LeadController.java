@@ -4,7 +4,6 @@ import com.werealestate.backend.dto.LeadCreateRequest;
 import com.werealestate.backend.dto.LeadDto;
 import com.werealestate.backend.dto.LeadUpdateRequest;
 import com.werealestate.backend.dto.MoverColumnaRequest;
-import com.werealestate.backend.dto.MoverLeadRequest;
 import com.werealestate.backend.dto.ReasignarLeadRequest;
 import com.werealestate.backend.service.LeadService;
 import jakarta.validation.Valid;
@@ -60,11 +59,6 @@ public class LeadController {
     @PutMapping("/{id}/reasignar")
     public LeadDto reasignar(@PathVariable Long id, @Valid @RequestBody ReasignarLeadRequest request) {
         return leadService.reasignar(id, request);
-    }
-
-    @PutMapping("/{id}/mover")
-    public LeadDto mover(@PathVariable Long id, @Valid @RequestBody MoverLeadRequest request) {
-        return leadService.mover(id, request);
     }
 
     @PutMapping("/{id}/mover-columna")

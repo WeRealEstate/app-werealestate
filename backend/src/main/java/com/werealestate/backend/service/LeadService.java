@@ -4,9 +4,7 @@ import com.werealestate.backend.dto.LeadCreateRequest;
 import com.werealestate.backend.dto.LeadDto;
 import com.werealestate.backend.dto.LeadUpdateRequest;
 import com.werealestate.backend.dto.MoverColumnaRequest;
-import com.werealestate.backend.dto.MoverLeadRequest;
 import com.werealestate.backend.dto.ReasignarLeadRequest;
-import com.werealestate.backend.exception.ConflictException;
 import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.model.ColumnaPersonalizada;
@@ -26,6 +24,7 @@ import com.werealestate.backend.security.CurrentUserProvider;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Objects;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,9 +32,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class LeadService {
-
-    /** Tope de leads activos (no archivados) por asesor, para mantener el pipeline manejable. */
-    private static final int MAX_LEADS_ACTIVOS_POR_ASESOR = 20;
 
     private final LeadRepository leadRepository;
     private final DesarrolloRepository desarrolloRepository;
@@ -124,11 +120,6 @@ public class LeadService {
                     .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
         }
 
-        if (leadRepository.countByAsesorIdAndArchivadoFalse(asesor.getId()) >= MAX_LEADS_ACTIVOS_POR_ASESOR) {
-            throw new ConflictException(asesor.getNombre() + " ya tiene " + MAX_LEADS_ACTIVOS_POR_ASESOR
-                    + " leads activos, el máximo permitido. Cierra o archiva alguno antes de agregar otro.");
-        }
-
         Lead lead = new Lead(
                 request.nombreCliente(),
                 request.telefono(),
@@ -165,51 +156,26 @@ public class LeadService {
     }
 
     /**
-     * Cambia el estado del lead desde el tablero de tarjetas. El propio movimiento se confirma con
-     * el panel de "Registrar seguimiento" (mismos campos que el de siempre), así que ese seguimiento
-     * real queda en la bitácora en lugar de un texto genérico.
-     */
-    public LeadDto mover(Long id, MoverLeadRequest request) {
-        Lead lead = buscarLeadPermitido(id);
-        boolean estadoCambia = lead.getEstado() != request.estado();
-        boolean saliaDeColumnaPersonalizada = lead.getColumnaPersonalizada() != null;
-        if (!estadoCambia && !saliaDeColumnaPersonalizada) {
-            return toDto(lead);
-        }
-
-        Usuario actual = currentUserProvider.getUsuarioActual();
-        boolean eraGanado = lead.getEstado() == EstadoLead.CERRADO_GANADO;
-
-        lead.setEstado(request.estado());
-        lead.setColumnaPersonalizada(null);
-        lead.setFechaUltimoContacto(LocalDateTime.now());
-        Lead guardado = leadRepository.save(lead);
-
-        seguimientoRepository.save(new Seguimiento(
-                guardado, actual, request.tipo(), request.nota(), request.resultado(), request.proximoSeguimiento()));
-
-        comisionService.generarSiCorresponde(guardado, eraGanado, request.estado() == EstadoLead.CERRADO_GANADO);
-
-        return toDto(guardado);
-    }
-
-    /**
-     * Mueve el lead a una columna personalizada del tablero de tarjetas: solo cambia su posición
-     * visual, nunca su estado real, pero el movimiento igual se confirma con un seguimiento real.
+     * Mueve el lead entre tarjetas (columnas 100% personalizadas del asesor) del tablero, o lo
+     * regresa a "Sin asignar" cuando {@code columnaPersonalizadaId} viene nulo. Nunca cambia el
+     * estado real del lead; el movimiento igual se confirma con un seguimiento real en la bitácora.
      */
     public LeadDto moverAColumnaPersonalizada(Long id, MoverColumnaRequest request) {
         Lead lead = buscarLeadPermitido(id);
-        ColumnaPersonalizada columna = columnaRepository
-                .findById(request.columnaPersonalizadaId())
-                .orElseThrow(() -> new ResourceNotFoundException("Columna no encontrada"));
-
-        if (!columna.getAsesor().getId().equals(lead.getAsesor().getId())) {
-            throw new ForbiddenOperationException("Esa columna no pertenece al asesor de este lead");
+        ColumnaPersonalizada actual = lead.getColumnaPersonalizada();
+        Long actualId = actual != null ? actual.getId() : null;
+        if (Objects.equals(actualId, request.columnaPersonalizadaId())) {
+            return toDto(lead);
         }
 
-        ColumnaPersonalizada actual = lead.getColumnaPersonalizada();
-        if (actual != null && actual.getId().equals(request.columnaPersonalizadaId())) {
-            return toDto(lead);
+        ColumnaPersonalizada columna = null;
+        if (request.columnaPersonalizadaId() != null) {
+            columna = columnaRepository
+                    .findById(request.columnaPersonalizadaId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Tarjeta no encontrada"));
+            if (!columna.getAsesor().getId().equals(lead.getAsesor().getId())) {
+                throw new ForbiddenOperationException("Esa tarjeta no pertenece al asesor de este lead");
+            }
         }
 
         Usuario usuarioActual = currentUserProvider.getUsuarioActual();

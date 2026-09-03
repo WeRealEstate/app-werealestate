@@ -104,17 +104,9 @@ export interface SeguimientoCreateRequest {
   proximoSeguimiento?: string | null;
 }
 
-/** Mover una tarjeta en el tablero se confirma con estos mismos datos de seguimiento. */
-export interface MoverLeadRequest {
-  estado: EstadoLead;
-  tipo: TipoSeguimiento;
-  nota: string;
-  resultado?: string | null;
-  proximoSeguimiento?: string | null;
-}
-
+/** Mover un lead a otra tarjeta (o a "Sin asignar" si columnaPersonalizadaId es null) se confirma con estos mismos datos de seguimiento. */
 export interface MoverColumnaRequest {
-  columnaPersonalizadaId: number;
+  columnaPersonalizadaId: number | null;
   tipo: TipoSeguimiento;
   nota: string;
   resultado?: string | null;

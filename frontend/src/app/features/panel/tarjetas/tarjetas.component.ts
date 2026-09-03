@@ -11,8 +11,6 @@ import { ToastService } from '../../../core/services/toast.service';
 import {
   ColumnaPersonalizada,
   Desarrollo,
-  ESTADO_LEAD_LABELS,
-  EstadoLead,
   Lead,
   TIPO_SEGUIMIENTO_LABELS,
   TipoSeguimiento,
@@ -22,18 +20,14 @@ import {
 /** Roles que efectivamente trabajan leads y por lo tanto pueden tener un tablero propio. */
 const ROLES_ASIGNABLES = new Set(['ASESOR', 'LIDER_AREA']);
 
-/** Tope de tarjetas (leads activos) por asesor; debe coincidir con el límite del backend. */
+/** Tope de tarjetas (columnas 100% personalizadas) por asesor; debe coincidir con el límite del backend. */
 export const MAX_TARJETAS_POR_ASESOR = 20;
 
-/** Una columna fija (estado del lead) o una que el asesor agregó a su propio tablero. */
-type Columna =
-  | { tipo: 'estado'; estado: EstadoLead; nombre: string; leads: Lead[] }
-  | { tipo: 'personalizada'; id: number; nombre: string; leads: Lead[] };
+/** Una tarjeta del tablero: un apartado que el asesor creó libremente (p.ej. "Nuevo", "Esperando papeles"). */
+type Tarjeta = { id: number; nombre: string; leads: Lead[] };
 
-/** A dónde se movería la tarjeta si se confirma el movimiento pendiente. */
-type Destino =
-  | { tipo: 'estado'; estado: EstadoLead; nombre: string }
-  | { tipo: 'personalizada'; id: number; nombre: string };
+/** A dónde se movería el lead si se confirma el movimiento pendiente. */
+type Destino = { tipo: 'tarjeta'; id: number; nombre: string } | { tipo: 'sin-asignar' };
 
 @Component({
   selector: 'app-tarjetas',
@@ -50,8 +44,6 @@ export class TarjetasComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(FormBuilder);
 
-  readonly estadoLabels = ESTADO_LEAD_LABELS;
-  readonly estados = Object.keys(ESTADO_LEAD_LABELS) as EstadoLead[];
   readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
   readonly propioId = computed(() => this.auth.currentUser()?.id);
   readonly maxTarjetas = MAX_TARJETAS_POR_ASESOR;
@@ -76,34 +68,35 @@ export class TarjetasComponent {
     return this.leads().filter((l) => l.asesor.id === asesorId);
   });
 
-  readonly totalTarjetas = computed(() => this.leadsDelAsesor().length);
+  /** Solo las tarjetas (columnas personalizadas) cuentan para el tope; "Sin asignar" no es una tarjeta real. */
+  readonly totalTarjetas = computed(() => this.columnasPersonalizadas().length);
   readonly limiteAlcanzado = computed(() => this.totalTarjetas() >= this.maxTarjetas);
 
   readonly desarrollos = signal<Desarrollo[]>([]);
 
-  readonly modalAbierto = signal(false);
-  readonly isCreando = signal(false);
-  readonly errorCreacion = signal<string | null>(null);
-  readonly nuevaTarjetaForm = this.fb.group({
+  readonly modalLeadAbierto = signal(false);
+  readonly isCreandoLead = signal(false);
+  readonly errorCreacionLead = signal<string | null>(null);
+  readonly nuevoLeadForm = this.fb.group({
     nombreCliente: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
     telefono: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
     desarrolloId: this.fb.control<number | null>(null, { validators: [Validators.required] }),
   });
 
-  readonly modalColumnaAbierto = signal(false);
-  readonly isCreandoColumna = signal(false);
-  readonly errorColumna = signal<string | null>(null);
-  readonly nuevaColumnaForm = this.fb.group({
+  readonly modalTarjetaAbierto = signal(false);
+  readonly isCreandoTarjeta = signal(false);
+  readonly errorTarjeta = signal<string | null>(null);
+  readonly nuevaTarjetaForm = this.fb.group({
     nombre: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
   });
 
-  readonly editandoColumnaId = signal<number | null>(null);
+  readonly editandoTarjetaId = signal<number | null>(null);
   readonly nombreEdicion = signal('');
 
   readonly tipoSeguimientoLabels = TIPO_SEGUIMIENTO_LABELS;
   readonly tiposSeguimiento = Object.keys(TIPO_SEGUIMIENTO_LABELS) as TipoSeguimiento[];
 
-  /** Movimiento pendiente de confirmar: la tarjeta ya no se mueve sola con el drop, hay que registrar el seguimiento. */
+  /** Movimiento pendiente de confirmar: el lead no se mueve solo con el drop, hay que registrar el seguimiento. */
   readonly panelMovimiento = signal<{ lead: Lead; destino: Destino } | null>(null);
   readonly isMoviendo = signal(false);
   readonly errorMovimiento = signal<string | null>(null);
@@ -114,21 +107,16 @@ export class TarjetasComponent {
     proximoSeguimiento: this.fb.control('', { nonNullable: true }),
   });
 
-  readonly columnas = computed<Columna[]>(() => {
+  /** Leads que no están en ninguna tarjeta todavía; siempre visibles, no cuenta para el tope de 20. */
+  readonly sinAsignar = computed(() => this.leadsDelAsesor().filter((l) => l.columnaPersonalizadaId === null));
+
+  readonly tarjetas = computed<Tarjeta[]>(() => {
     const leadsAsesor = this.leadsDelAsesor();
-    const fijas: Columna[] = this.estados.map((estado) => ({
-      tipo: 'estado',
-      estado,
-      nombre: this.estadoLabels[estado],
-      leads: leadsAsesor.filter((l) => l.estado === estado && l.columnaPersonalizadaId === null),
-    }));
-    const personalizadas: Columna[] = this.columnasPersonalizadas().map((col) => ({
-      tipo: 'personalizada',
+    return this.columnasPersonalizadas().map((col) => ({
       id: col.id,
       nombre: col.nombre,
       leads: leadsAsesor.filter((l) => l.columnaPersonalizadaId === col.id),
     }));
-    return [...fijas, ...personalizadas];
   });
 
   constructor() {
@@ -152,15 +140,15 @@ export class TarjetasComponent {
             .sort((a, b) => a.nombre.localeCompare(b.nombre)),
         );
       }
-      await this.cargarColumnas();
+      await this.cargarTarjetas();
     } catch {
-      this.errorMessage.set('No se pudieron cargar las tarjetas. Intenta de nuevo.');
+      this.errorMessage.set('No se pudo cargar el tablero. Intenta de nuevo.');
     } finally {
       this.isLoading.set(false);
     }
   }
 
-  private async cargarColumnas(): Promise<void> {
+  private async cargarTarjetas(): Promise<void> {
     const asesorId = this.asesorSeleccionado();
     if (asesorId === null) {
       this.columnasPersonalizadas.set([]);
@@ -169,13 +157,13 @@ export class TarjetasComponent {
     try {
       this.columnasPersonalizadas.set(await this.columnasService.listar(this.esAdmin() ? asesorId : undefined));
     } catch {
-      // Las columnas personalizadas son una comodidad, no algo crítico: si falla, el tablero sigue con las fijas.
+      this.columnasPersonalizadas.set([]);
     }
   }
 
   async cambiarAsesor(valor: string): Promise<void> {
     this.asesorSeleccionado.set(valor === '' ? null : +valor);
-    await this.cargarColumnas();
+    await this.cargarTarjetas();
   }
 
   iniciales(nombre: string): string {
@@ -187,32 +175,31 @@ export class TarjetasComponent {
       .join('');
   }
 
-  trackColumna(_index: number, col: Columna): string {
-    return col.tipo === 'estado' ? `estado-${col.estado}` : `personalizada-${col.id}`;
+  trackTarjeta(_index: number, tarjeta: Tarjeta): number {
+    return tarjeta.id;
   }
 
-  // --- Nueva tarjeta ---
+  // --- Nuevo lead: siempre entra a "Sin asignar", sin tope ---
 
-  abrirModal(): void {
-    if (this.limiteAlcanzado()) return;
-    this.nuevaTarjetaForm.reset({ nombreCliente: '', telefono: '', desarrolloId: null });
-    this.errorCreacion.set(null);
-    this.modalAbierto.set(true);
+  abrirModalLead(): void {
+    this.nuevoLeadForm.reset({ nombreCliente: '', telefono: '', desarrolloId: null });
+    this.errorCreacionLead.set(null);
+    this.modalLeadAbierto.set(true);
   }
 
-  cerrarModal(): void {
-    this.modalAbierto.set(false);
+  cerrarModalLead(): void {
+    this.modalLeadAbierto.set(false);
   }
 
-  async crearTarjeta(): Promise<void> {
-    if (this.nuevaTarjetaForm.invalid || this.isCreando()) {
-      this.nuevaTarjetaForm.markAllAsTouched();
+  async crearLead(): Promise<void> {
+    if (this.nuevoLeadForm.invalid || this.isCreandoLead()) {
+      this.nuevoLeadForm.markAllAsTouched();
       return;
     }
 
-    this.isCreando.set(true);
-    this.errorCreacion.set(null);
-    const v = this.nuevaTarjetaForm.getRawValue();
+    this.isCreandoLead.set(true);
+    this.errorCreacionLead.set(null);
+    const v = this.nuevoLeadForm.getRawValue();
 
     try {
       const nuevo = await this.leadsService.crear({
@@ -223,67 +210,68 @@ export class TarjetasComponent {
       });
       this.leads.update((lista) => [nuevo, ...lista]);
       this.toast.success(`${nuevo.nombreCliente} se agregó al tablero.`);
-      this.modalAbierto.set(false);
+      this.modalLeadAbierto.set(false);
     } catch (error) {
-      this.errorCreacion.set(
+      this.errorCreacionLead.set(
+        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+          ? error.error.message
+          : 'No se pudo crear el lead. Intenta de nuevo.',
+      );
+    } finally {
+      this.isCreandoLead.set(false);
+    }
+  }
+
+  // --- Tarjetas (columnas 100% personalizadas), tope de 20 ---
+
+  abrirModalTarjeta(): void {
+    if (this.limiteAlcanzado()) return;
+    this.nuevaTarjetaForm.reset({ nombre: '' });
+    this.errorTarjeta.set(null);
+    this.modalTarjetaAbierto.set(true);
+  }
+
+  cerrarModalTarjeta(): void {
+    this.modalTarjetaAbierto.set(false);
+  }
+
+  async crearTarjeta(): Promise<void> {
+    if (this.nuevaTarjetaForm.invalid || this.isCreandoTarjeta()) {
+      this.nuevaTarjetaForm.markAllAsTouched();
+      return;
+    }
+
+    this.isCreandoTarjeta.set(true);
+    this.errorTarjeta.set(null);
+    try {
+      const nueva = await this.columnasService.crear(
+        this.nuevaTarjetaForm.getRawValue().nombre.trim(),
+        this.esAdmin() ? this.asesorSeleccionado() : null,
+      );
+      this.columnasPersonalizadas.update((lista) => [...lista, nueva]);
+      this.toast.success(`Tarjeta "${nueva.nombre}" creada.`);
+      this.modalTarjetaAbierto.set(false);
+    } catch (error) {
+      this.errorTarjeta.set(
         error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
           ? error.error.message
           : 'No se pudo crear la tarjeta. Intenta de nuevo.',
       );
     } finally {
-      this.isCreando.set(false);
+      this.isCreandoTarjeta.set(false);
     }
   }
 
-  // --- Columnas personalizadas ---
-
-  abrirModalColumna(): void {
-    this.nuevaColumnaForm.reset({ nombre: '' });
-    this.errorColumna.set(null);
-    this.modalColumnaAbierto.set(true);
+  iniciarEdicionTarjeta(tarjeta: Tarjeta): void {
+    this.editandoTarjetaId.set(tarjeta.id);
+    this.nombreEdicion.set(tarjeta.nombre);
   }
 
-  cerrarModalColumna(): void {
-    this.modalColumnaAbierto.set(false);
+  cancelarEdicionTarjeta(): void {
+    this.editandoTarjetaId.set(null);
   }
 
-  async crearColumna(): Promise<void> {
-    if (this.nuevaColumnaForm.invalid || this.isCreandoColumna()) {
-      this.nuevaColumnaForm.markAllAsTouched();
-      return;
-    }
-
-    this.isCreandoColumna.set(true);
-    this.errorColumna.set(null);
-    try {
-      const nueva = await this.columnasService.crear(
-        this.nuevaColumnaForm.getRawValue().nombre.trim(),
-        this.esAdmin() ? this.asesorSeleccionado() : null,
-      );
-      this.columnasPersonalizadas.update((lista) => [...lista, nueva]);
-      this.toast.success(`Columna "${nueva.nombre}" creada.`);
-      this.modalColumnaAbierto.set(false);
-    } catch (error) {
-      this.errorColumna.set(
-        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
-          ? error.error.message
-          : 'No se pudo crear la columna. Intenta de nuevo.',
-      );
-    } finally {
-      this.isCreandoColumna.set(false);
-    }
-  }
-
-  iniciarEdicionColumna(col: Extract<Columna, { tipo: 'personalizada' }>): void {
-    this.editandoColumnaId.set(col.id);
-    this.nombreEdicion.set(col.nombre);
-  }
-
-  cancelarEdicionColumna(): void {
-    this.editandoColumnaId.set(null);
-  }
-
-  async guardarEdicionColumna(id: number): Promise<void> {
+  async guardarEdicionTarjeta(id: number): Promise<void> {
     const nombre = this.nombreEdicion().trim();
     if (!nombre) return;
 
@@ -293,32 +281,32 @@ export class TarjetasComponent {
       this.leads.update((lista) =>
         lista.map((l) => (l.columnaPersonalizadaId === id ? { ...l, columnaPersonalizadaNombre: actualizada.nombre } : l)),
       );
-      this.editandoColumnaId.set(null);
+      this.editandoTarjetaId.set(null);
     } catch {
-      this.toast.error('No se pudo renombrar la columna.');
+      this.toast.error('No se pudo renombrar la tarjeta.');
     }
   }
 
-  async eliminarColumna(col: Extract<Columna, { tipo: 'personalizada' }>): Promise<void> {
-    if (!confirm(`¿Eliminar la columna "${col.nombre}"? Sus tarjetas volverán a agruparse por su estado.`)) return;
+  async eliminarTarjeta(tarjeta: Tarjeta): Promise<void> {
+    if (!confirm(`¿Eliminar la tarjeta "${tarjeta.nombre}"? Sus leads pasarán a "Sin asignar".`)) return;
 
     try {
-      await this.columnasService.eliminar(col.id);
-      this.columnasPersonalizadas.update((lista) => lista.filter((c) => c.id !== col.id));
+      await this.columnasService.eliminar(tarjeta.id);
+      this.columnasPersonalizadas.update((lista) => lista.filter((c) => c.id !== tarjeta.id));
       this.leads.update((lista) =>
         lista.map((l) =>
-          l.columnaPersonalizadaId === col.id ? { ...l, columnaPersonalizadaId: null, columnaPersonalizadaNombre: null } : l,
+          l.columnaPersonalizadaId === tarjeta.id ? { ...l, columnaPersonalizadaId: null, columnaPersonalizadaNombre: null } : l,
         ),
       );
-      this.toast.success(`Columna "${col.nombre}" eliminada.`);
+      this.toast.success(`Tarjeta "${tarjeta.nombre}" eliminada.`);
     } catch {
-      this.toast.error('No se pudo eliminar la columna.');
+      this.toast.error('No se pudo eliminar la tarjeta.');
     }
   }
 
-  // --- Archivar tarjeta ---
+  // --- Archivar lead ---
 
-  async archivarTarjeta(lead: Lead): Promise<void> {
+  async archivarLead(lead: Lead): Promise<void> {
     if (!confirm(`¿Archivar a ${lead.nombreCliente}? Dejará de aparecer en el tablero, pero se conserva como métrica.`)) {
       return;
     }
@@ -333,17 +321,23 @@ export class TarjetasComponent {
 
   // --- Arrastrar y soltar: el drop solo abre el panel, el movimiento se confirma con un botón ---
 
-  onDrop(event: CdkDragDrop<Lead[]>, col: Columna): void {
+  onDropTarjeta(event: CdkDragDrop<Lead[]>, tarjeta: Tarjeta): void {
+    this.abrirPanelMovimiento(event, { tipo: 'tarjeta', id: tarjeta.id, nombre: tarjeta.nombre });
+  }
+
+  onDropSinAsignar(event: CdkDragDrop<Lead[]>): void {
+    this.abrirPanelMovimiento(event, { tipo: 'sin-asignar' });
+  }
+
+  private abrirPanelMovimiento(event: CdkDragDrop<Lead[]>, destino: Destino): void {
     if (event.previousContainer === event.container) return;
     const lead = event.previousContainer.data[event.previousIndex];
-
-    const destino: Destino =
-      col.tipo === 'estado' ? { tipo: 'estado', estado: col.estado, nombre: col.nombre } : { tipo: 'personalizada', id: col.id, nombre: col.nombre };
+    const nombreDestino = destino.tipo === 'tarjeta' ? destino.nombre : 'Sin asignar';
 
     this.panelMovimiento.set({ lead, destino });
     this.movimientoForm.reset({
       tipo: 'OTRO',
-      nota: `Movido a "${destino.nombre}" desde el tablero de tarjetas.`,
+      nota: `Movido a "${nombreDestino}" desde el tablero de tarjetas.`,
       resultado: '',
       proximoSeguimiento: '',
     });
@@ -365,21 +359,19 @@ export class TarjetasComponent {
     this.errorMovimiento.set(null);
     const v = this.movimientoForm.getRawValue();
     const { lead, destino } = pendiente;
-    const base = {
-      tipo: v.tipo,
-      nota: v.nota,
-      resultado: v.resultado || null,
-      proximoSeguimiento: v.proximoSeguimiento ? new Date(v.proximoSeguimiento).toISOString() : null,
-    };
+    const nombreDestino = destino.tipo === 'tarjeta' ? destino.nombre : 'Sin asignar';
 
     try {
-      const actualizado =
-        destino.tipo === 'estado'
-          ? await this.leadsService.mover(lead.id, { estado: destino.estado, ...base })
-          : await this.leadsService.moverColumna(lead.id, { columnaPersonalizadaId: destino.id, ...base });
+      const actualizado = await this.leadsService.moverColumna(lead.id, {
+        columnaPersonalizadaId: destino.tipo === 'tarjeta' ? destino.id : null,
+        tipo: v.tipo,
+        nota: v.nota,
+        resultado: v.resultado || null,
+        proximoSeguimiento: v.proximoSeguimiento ? new Date(v.proximoSeguimiento).toISOString() : null,
+      });
 
       this.leads.update((lista) => lista.map((l) => (l.id === lead.id ? actualizado : l)));
-      this.toast.success(`${lead.nombreCliente} → ${destino.nombre}.`);
+      this.toast.success(`${lead.nombreCliente} → ${nombreDestino}.`);
       this.panelMovimiento.set(null);
     } catch (error) {
       this.errorMovimiento.set(

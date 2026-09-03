@@ -3,6 +3,7 @@ package com.werealestate.backend.service;
 import com.werealestate.backend.dto.ColumnaPersonalizadaCreateRequest;
 import com.werealestate.backend.dto.ColumnaPersonalizadaDto;
 import com.werealestate.backend.dto.ColumnaPersonalizadaUpdateRequest;
+import com.werealestate.backend.exception.ConflictException;
 import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.model.ColumnaPersonalizada;
@@ -22,6 +23,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class ColumnaPersonalizadaService {
+
+    /** Tope de tarjetas por asesor, para mantener el tablero manejable. */
+    private static final int MAX_TARJETAS_POR_ASESOR = 20;
 
     private final ColumnaPersonalizadaRepository columnaRepository;
     private final UsuarioRepository usuarioRepository;
@@ -51,8 +55,13 @@ public class ColumnaPersonalizadaService {
                 ? actual
                 : usuarioRepository.findById(targetId).orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
 
-        int orden = (int) columnaRepository.countByAsesorId(targetId);
-        ColumnaPersonalizada columna = new ColumnaPersonalizada(request.nombre().trim(), asesor, orden);
+        long total = columnaRepository.countByAsesorId(targetId);
+        if (total >= MAX_TARJETAS_POR_ASESOR) {
+            throw new ConflictException(asesor.getNombre() + " ya tiene " + MAX_TARJETAS_POR_ASESOR
+                    + " tarjetas, el máximo permitido. Elimina alguna antes de agregar otra.");
+        }
+
+        ColumnaPersonalizada columna = new ColumnaPersonalizada(request.nombre().trim(), asesor, (int) total);
         return ColumnaPersonalizadaDto.from(columnaRepository.save(columna));
     }
 

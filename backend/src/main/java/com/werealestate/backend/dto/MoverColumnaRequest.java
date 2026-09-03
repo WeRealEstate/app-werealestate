@@ -5,9 +5,12 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
-/** Mover una tarjeta a una columna personalizada desde el tablero registra, con estos mismos datos, un seguimiento real en la bitácora. */
+/**
+ * Mover un lead a otra tarjeta (o a "Sin asignar" cuando columnaPersonalizadaId es nulo) desde el
+ * tablero registra, con estos mismos datos, un seguimiento real en la bitácora.
+ */
 public record MoverColumnaRequest(
-        @NotNull Long columnaPersonalizadaId,
+        Long columnaPersonalizadaId,
         @NotNull TipoSeguimiento tipo,
         @NotBlank String nota,
         String resultado,

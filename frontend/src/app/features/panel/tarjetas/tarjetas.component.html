@@ -2,7 +2,7 @@
   <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
       <h1 class="font-heading text-2xl font-semibold text-ink">Tarjetas</h1>
-      <p class="mt-1 text-sm text-ink-muted">Arrastra una tarjeta a otra columna para moverla; agrega columnas propias con "+ Nueva columna".</p>
+      <p class="mt-1 text-sm text-ink-muted">Crea tus propias tarjetas y arrastra leads entre ellas para moverlos.</p>
     </div>
     <div class="flex items-center gap-2.5">
       @if (esAdmin() && opcionesTablero().length > 1) {
@@ -22,29 +22,40 @@
         class="whitespace-nowrap rounded-lg border border-border px-3 py-2.5 text-sm text-ink-muted"
         [class.text-red-600]="limiteAlcanzado()"
         [class.border-red-200]="limiteAlcanzado()"
+        title="Tarjetas creadas"
       >
         {{ totalTarjetas() }}/{{ maxTarjetas }}
       </span>
       <button
         type="button"
-        (click)="abrirModalColumna()"
-        class="inline-flex items-center justify-center gap-2 rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
-               hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
+        (click)="abrirModalLead()"
+        class="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink
+               hover:border-we-primary active:scale-[0.97] transition-transform duration-150
                focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
       >
-        + Nueva columna
+        + Nuevo lead
+      </button>
+      <button
+        type="button"
+        [disabled]="limiteAlcanzado()"
+        (click)="abrirModalTarjeta()"
+        class="inline-flex items-center justify-center gap-2 rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
+               hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
+               focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px] disabled:opacity-50 disabled:pointer-events-none"
+      >
+        + Nueva tarjeta
       </button>
     </div>
   </div>
 
   @if (limiteAlcanzado()) {
     <p class="mt-3 text-xs text-red-600 dark:text-red-400">
-      Se alcanzó el máximo de {{ maxTarjetas }} tarjetas activas. Cierra o archiva alguna para agregar otra.
+      Se alcanzó el máximo de {{ maxTarjetas }} tarjetas. Elimina alguna para agregar otra.
     </p>
   }
 
   @if (isLoading()) {
-    <p class="mt-8 text-sm text-ink-muted">Cargando tarjetas…</p>
+    <p class="mt-8 text-sm text-ink-muted">Cargando tablero…</p>
   } @else if (errorMessage()) {
     <div class="mt-8 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
       {{ errorMessage() }}
@@ -52,48 +63,116 @@
   } @else {
     <div class="mt-6 flex-1 overflow-x-auto pb-4" cdkDropListGroup>
       <div class="flex h-full min-h-[400px] gap-4">
-        @for (col of columnas(); track trackColumna($index, col)) {
+        <!-- "Sin asignar" no es una tarjeta real: no cuenta para el tope y no se puede renombrar ni eliminar. -->
+        <div class="flex w-72 shrink-0 flex-col rounded-xl border border-dashed border-border bg-surface-2">
+          <div class="flex items-center justify-between gap-2 border-b border-border px-3.5 py-3">
+            <span class="truncate text-sm font-semibold text-ink-muted">Sin asignar</span>
+            <span class="rounded-full bg-surface px-2 py-0.5 text-xs font-medium text-ink-muted">{{ sinAsignar().length }}</span>
+          </div>
+
+          <div
+            cdkDropList
+            [cdkDropListData]="sinAsignar()"
+            (cdkDropListDropped)="onDropSinAsignar($event)"
+            class="flex-1 space-y-2.5 overflow-y-auto p-2.5"
+          >
+            @for (lead of sinAsignar(); track lead.id) {
+              <div
+                cdkDrag
+                [cdkDragData]="lead"
+                class="cursor-grab rounded-lg border border-border bg-surface p-3 shadow-sm active:cursor-grabbing"
+              >
+                <div class="flex items-start justify-between gap-2">
+                  <p class="text-sm font-medium text-ink">{{ lead.nombreCliente }}</p>
+                  <div class="flex shrink-0 items-center gap-1.5">
+                    @if (lead.frio) {
+                      <span class="mt-1 h-2 w-2 shrink-0 rounded-full bg-red-500" title="Lead frío" aria-hidden="true"></span>
+                    }
+                    <button
+                      type="button"
+                      (click)="archivarLead(lead)"
+                      aria-label="Archivar lead"
+                      class="text-ink-muted hover:text-red-600"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
+                    </button>
+                  </div>
+                </div>
+                <p class="mt-0.5 text-xs text-ink-muted">{{ lead.desarrollo.nombre }}</p>
+
+                <div class="mt-3 flex items-center justify-between gap-2">
+                  <span
+                    class="flex h-6 w-6 items-center justify-center rounded-full bg-we-primary/15 text-[10px] font-semibold text-we-primary dark:text-we-blue-light"
+                    [title]="lead.asesor.nombre"
+                  >
+                    {{ iniciales(lead.asesor.nombre) }}
+                  </span>
+                  <a
+                    [routerLink]="['/panel/leads', lead.id]"
+                    class="text-xs font-medium text-we-blue-light hover:underline"
+                  >
+                    Ver
+                  </a>
+                </div>
+              </div>
+            } @empty {
+              <div class="rounded-lg border border-dashed border-border p-4 text-center text-xs text-ink-muted">
+                Sin leads aquí
+              </div>
+            }
+          </div>
+
+          <button
+            type="button"
+            (click)="abrirModalLead()"
+            class="m-2.5 mt-0 flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm text-ink-muted
+                   hover:bg-surface hover:text-ink transition-colors duration-150"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            Agregar lead
+          </button>
+        </div>
+
+        @for (tarjeta of tarjetas(); track trackTarjeta($index, tarjeta)) {
           <div class="flex w-72 shrink-0 flex-col rounded-xl border border-border bg-surface-2">
             <div class="flex items-center justify-between gap-2 border-b border-border px-3.5 py-3">
-              @if (col.tipo === 'personalizada' && editandoColumnaId() === col.id) {
+              @if (editandoTarjetaId() === tarjeta.id) {
                 <input
                   type="text"
                   [value]="nombreEdicion()"
                   (input)="nombreEdicion.set($any($event.target).value)"
-                  (keyup.enter)="guardarEdicionColumna(col.id)"
-                  (keyup.escape)="cancelarEdicionColumna()"
+                  (keyup.enter)="guardarEdicionTarjeta(tarjeta.id)"
+                  (keyup.escape)="cancelarEdicionTarjeta()"
                   class="min-w-0 flex-1 rounded-md border border-we-primary px-2 py-1 text-sm text-ink bg-surface
                          focus:outline-none"
                 />
-                <button type="button" (click)="guardarEdicionColumna(col.id)" aria-label="Guardar" class="text-we-blue-light hover:opacity-80">
+                <button type="button" (click)="guardarEdicionTarjeta(tarjeta.id)" aria-label="Guardar" class="text-we-blue-light hover:opacity-80">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
                 </button>
-                <button type="button" (click)="cancelarEdicionColumna()" aria-label="Cancelar" class="text-ink-muted hover:opacity-80">
+                <button type="button" (click)="cancelarEdicionTarjeta()" aria-label="Cancelar" class="text-ink-muted hover:opacity-80">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
                 </button>
               } @else {
-                <span class="truncate text-sm font-semibold text-ink">{{ col.nombre }}</span>
+                <span class="truncate text-sm font-semibold text-ink">{{ tarjeta.nombre }}</span>
                 <div class="flex shrink-0 items-center gap-1.5">
-                  <span class="rounded-full bg-surface px-2 py-0.5 text-xs font-medium text-ink-muted">{{ col.leads.length }}</span>
-                  @if (col.tipo === 'personalizada') {
-                    <button type="button" (click)="iniciarEdicionColumna(col)" aria-label="Renombrar columna" class="text-ink-muted hover:text-we-primary">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                    </button>
-                    <button type="button" (click)="eliminarColumna(col)" aria-label="Eliminar columna" class="text-ink-muted hover:text-red-600">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z"/></svg>
-                    </button>
-                  }
+                  <span class="rounded-full bg-surface px-2 py-0.5 text-xs font-medium text-ink-muted">{{ tarjeta.leads.length }}</span>
+                  <button type="button" (click)="iniciarEdicionTarjeta(tarjeta)" aria-label="Renombrar tarjeta" class="text-ink-muted hover:text-we-primary">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                  </button>
+                  <button type="button" (click)="eliminarTarjeta(tarjeta)" aria-label="Eliminar tarjeta" class="text-ink-muted hover:text-red-600">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z"/></svg>
+                  </button>
                 </div>
               }
             </div>
 
             <div
               cdkDropList
-              [cdkDropListData]="col.leads"
-              (cdkDropListDropped)="onDrop($event, col)"
+              [cdkDropListData]="tarjeta.leads"
+              (cdkDropListDropped)="onDropTarjeta($event, tarjeta)"
               class="flex-1 space-y-2.5 overflow-y-auto p-2.5"
             >
-              @for (lead of col.leads; track lead.id) {
+              @for (lead of tarjeta.leads; track lead.id) {
                 <div
                   cdkDrag
                   [cdkDragData]="lead"
@@ -107,8 +186,8 @@
                       }
                       <button
                         type="button"
-                        (click)="archivarTarjeta(lead)"
-                        aria-label="Archivar tarjeta"
+                        (click)="archivarLead(lead)"
+                        aria-label="Archivar lead"
                         class="text-ink-muted hover:text-red-600"
                       >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
@@ -138,33 +217,24 @@
                 </div>
               }
             </div>
-
-            @if (col.tipo === 'estado' && col.estado === 'NUEVO') {
-              <button
-                type="button"
-                [disabled]="limiteAlcanzado()"
-                (click)="abrirModal()"
-                class="m-2.5 mt-0 flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm text-ink-muted
-                       hover:bg-surface hover:text-ink transition-colors duration-150 disabled:opacity-50 disabled:pointer-events-none"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-                Agregar tarjeta
-              </button>
-            }
+          </div>
+        } @empty {
+          <div class="flex w-72 shrink-0 items-center justify-center rounded-xl border border-dashed border-border p-6 text-center text-sm text-ink-muted">
+            Todavía no tienes tarjetas. Usa "+ Nueva tarjeta" para crear tu primer apartado.
           </div>
         }
       </div>
     </div>
   }
 
-  @if (modalAbierto()) {
-    <button type="button" (click)="cerrarModal()" aria-label="Cerrar" class="fixed inset-0 z-40 bg-black/40"></button>
-    <div class="fixed inset-0 z-40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="nueva-tarjeta-titulo">
+  @if (modalLeadAbierto()) {
+    <button type="button" (click)="cerrarModalLead()" aria-label="Cerrar" class="fixed inset-0 z-40 bg-black/40"></button>
+    <div class="fixed inset-0 z-40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="nuevo-lead-titulo">
       <div class="w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
-        <h2 id="nueva-tarjeta-titulo" class="font-heading text-lg font-semibold text-ink">Nueva tarjeta</h2>
-        <p class="mt-1 text-sm text-ink-muted">Cae en la columna "Nuevo"; puedes completar el resto desde el lead.</p>
+        <h2 id="nuevo-lead-titulo" class="font-heading text-lg font-semibold text-ink">Nuevo lead</h2>
+        <p class="mt-1 text-sm text-ink-muted">Cae en "Sin asignar"; arrástralo a una tarjeta cuando quieras.</p>
 
-        <form [formGroup]="nuevaTarjetaForm" (ngSubmit)="crearTarjeta()" class="mt-4 space-y-4" novalidate>
+        <form [formGroup]="nuevoLeadForm" (ngSubmit)="crearLead()" class="mt-4 space-y-4" novalidate>
           <div>
             <label for="modal-nombreCliente" class="block text-sm font-medium text-ink mb-1.5">Nombre del cliente</label>
             <input
@@ -174,7 +244,7 @@
               class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
                      focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
             />
-            @if (nuevaTarjetaForm.controls.nombreCliente.invalid && nuevaTarjetaForm.controls.nombreCliente.touched) {
+            @if (nuevoLeadForm.controls.nombreCliente.invalid && nuevoLeadForm.controls.nombreCliente.touched) {
               <p class="mt-1.5 text-xs text-red-600">Ingresa el nombre del cliente.</p>
             }
           </div>
@@ -188,7 +258,7 @@
               class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
                      focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
             />
-            @if (nuevaTarjetaForm.controls.telefono.invalid && nuevaTarjetaForm.controls.telefono.touched) {
+            @if (nuevoLeadForm.controls.telefono.invalid && nuevoLeadForm.controls.telefono.touched) {
               <p class="mt-1.5 text-xs text-red-600">Ingresa un teléfono.</p>
             }
           </div>
@@ -206,19 +276,19 @@
                 <option [ngValue]="d.id">{{ d.nombre }}</option>
               }
             </select>
-            @if (nuevaTarjetaForm.controls.desarrolloId.invalid && nuevaTarjetaForm.controls.desarrolloId.touched) {
+            @if (nuevoLeadForm.controls.desarrolloId.invalid && nuevoLeadForm.controls.desarrolloId.touched) {
               <p class="mt-1.5 text-xs text-red-600">Selecciona un desarrollo.</p>
             }
           </div>
 
-          @if (errorCreacion()) {
-            <p class="text-sm text-red-600 dark:text-red-400">{{ errorCreacion() }}</p>
+          @if (errorCreacionLead()) {
+            <p class="text-sm text-red-600 dark:text-red-400">{{ errorCreacionLead() }}</p>
           }
 
           <div class="flex justify-end gap-2.5 pt-1">
             <button
               type="button"
-              (click)="cerrarModal()"
+              (click)="cerrarModalLead()"
               class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary
                      active:scale-[0.97] transition-transform duration-150"
             >
@@ -226,11 +296,11 @@
             </button>
             <button
               type="submit"
-              [disabled]="isCreando()"
+              [disabled]="isCreandoLead()"
               class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90
                      active:scale-[0.97] transition-transform duration-150 disabled:opacity-60"
             >
-              {{ isCreando() ? 'Creando…' : 'Crear tarjeta' }}
+              {{ isCreandoLead() ? 'Creando…' : 'Crear lead' }}
             </button>
           </div>
         </form>
@@ -238,37 +308,37 @@
     </div>
   }
 
-  @if (modalColumnaAbierto()) {
-    <button type="button" (click)="cerrarModalColumna()" aria-label="Cerrar" class="fixed inset-0 z-40 bg-black/40"></button>
-    <div class="fixed inset-0 z-40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="nueva-columna-titulo">
+  @if (modalTarjetaAbierto()) {
+    <button type="button" (click)="cerrarModalTarjeta()" aria-label="Cerrar" class="fixed inset-0 z-40 bg-black/40"></button>
+    <div class="fixed inset-0 z-40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="nueva-tarjeta-titulo">
       <div class="w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
-        <h2 id="nueva-columna-titulo" class="font-heading text-lg font-semibold text-ink">Nueva columna</h2>
+        <h2 id="nueva-tarjeta-titulo" class="font-heading text-lg font-semibold text-ink">Nueva tarjeta</h2>
         <p class="mt-1 text-sm text-ink-muted">Se agrega solo a tu tablero; no afecta el estado real de tus leads.</p>
 
-        <form [formGroup]="nuevaColumnaForm" (ngSubmit)="crearColumna()" class="mt-4 space-y-4" novalidate>
+        <form [formGroup]="nuevaTarjetaForm" (ngSubmit)="crearTarjeta()" class="mt-4 space-y-4" novalidate>
           <div>
-            <label for="modal-nombreColumna" class="block text-sm font-medium text-ink mb-1.5">Nombre de la columna</label>
+            <label for="modal-nombreTarjeta" class="block text-sm font-medium text-ink mb-1.5">Nombre de la tarjeta</label>
             <input
-              id="modal-nombreColumna"
+              id="modal-nombreTarjeta"
               type="text"
               formControlName="nombre"
               placeholder="Ej. Esperando papeles"
               class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted
                      focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
             />
-            @if (nuevaColumnaForm.controls.nombre.invalid && nuevaColumnaForm.controls.nombre.touched) {
-              <p class="mt-1.5 text-xs text-red-600">Ingresa un nombre para la columna.</p>
+            @if (nuevaTarjetaForm.controls.nombre.invalid && nuevaTarjetaForm.controls.nombre.touched) {
+              <p class="mt-1.5 text-xs text-red-600">Ingresa un nombre para la tarjeta.</p>
             }
           </div>
 
-          @if (errorColumna()) {
-            <p class="text-sm text-red-600 dark:text-red-400">{{ errorColumna() }}</p>
+          @if (errorTarjeta()) {
+            <p class="text-sm text-red-600 dark:text-red-400">{{ errorTarjeta() }}</p>
           }
 
           <div class="flex justify-end gap-2.5 pt-1">
             <button
               type="button"
-              (click)="cerrarModalColumna()"
+              (click)="cerrarModalTarjeta()"
               class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary
                      active:scale-[0.97] transition-transform duration-150"
             >
@@ -276,11 +346,11 @@
             </button>
             <button
               type="submit"
-              [disabled]="isCreandoColumna()"
+              [disabled]="isCreandoTarjeta()"
               class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90
                      active:scale-[0.97] transition-transform duration-150 disabled:opacity-60"
             >
-              {{ isCreandoColumna() ? 'Creando…' : 'Crear columna' }}
+              {{ isCreandoTarjeta() ? 'Creando…' : 'Crear tarjeta' }}
             </button>
           </div>
         </form>
@@ -294,7 +364,8 @@
       <div class="w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
         <h2 id="movimiento-titulo" class="font-heading text-lg font-semibold text-ink">Registrar seguimiento</h2>
         <p class="mt-1 text-sm text-ink-muted">
-          Mover a <strong class="text-ink">{{ pendiente.lead.nombreCliente }}</strong> a "{{ pendiente.destino.nombre }}".
+          Mover a <strong class="text-ink">{{ pendiente.lead.nombreCliente }}</strong> a
+          "{{ pendiente.destino.tipo === 'tarjeta' ? pendiente.destino.nombre : 'Sin asignar' }}".
         </p>
 
         <form [formGroup]="movimientoForm" (ngSubmit)="confirmarMovimiento()" class="mt-4 space-y-4" novalidate>
