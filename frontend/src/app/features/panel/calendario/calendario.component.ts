@@ -155,8 +155,6 @@ export class CalendarioComponent {
 
   readonly selectedIso = computed(() => toIso(this.selectedDate()));
   readonly selectedDayItems = computed(() => this.itemsByDay().get(this.selectedIso()) ?? []);
-  readonly selectedPersonalItems = computed(() => this.selectedDayItems().filter((i) => i.tipo === 'PERSONAL'));
-  readonly selectedOtherItems = computed(() => this.selectedDayItems().filter((i) => i.tipo !== 'PERSONAL'));
 
   readonly form = this.fb.group({
     titulo: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
