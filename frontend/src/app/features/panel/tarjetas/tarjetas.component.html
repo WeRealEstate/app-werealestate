@@ -19,9 +19,15 @@
         </select>
       }
       <span
-        class="whitespace-nowrap rounded-lg border border-border px-3 py-2.5 text-sm text-ink-muted"
+        class="whitespace-nowrap rounded-lg border border-border px-3 py-2.5 text-sm text-ink-muted transition-colors duration-300"
+        [class.text-amber-600]="cercaDelLimite()"
+        [class.dark:text-amber-400]="cercaDelLimite()"
+        [class.border-amber-300]="cercaDelLimite()"
+        [class.dark:border-amber-500]="cercaDelLimite()"
         [class.text-red-600]="limiteAlcanzado()"
-        [class.border-red-200]="limiteAlcanzado()"
+        [class.dark:text-red-400]="limiteAlcanzado()"
+        [class.border-red-300]="limiteAlcanzado()"
+        [class.dark:border-red-500]="limiteAlcanzado()"
         title="Tarjetas creadas"
       >
         {{ totalTarjetas() }}/{{ maxTarjetas }}
@@ -64,23 +70,30 @@
     <div class="mt-6 flex-1 overflow-x-auto pb-4" cdkDropListGroup>
       <div class="flex h-full min-h-[400px] gap-4">
         <!-- "Sin asignar" no es una tarjeta real: no cuenta para el tope y no se puede renombrar ni eliminar. -->
-        <div class="flex w-72 shrink-0 flex-col rounded-xl border border-dashed border-border bg-surface-2">
-          <div class="flex items-center justify-between gap-2 border-b border-border px-3.5 py-3">
+        <div
+          class="stagger-item flex w-72 shrink-0 flex-col overflow-hidden rounded-xl border border-dashed border-border bg-surface-2"
+          [style.--card-accent]="acentoSinAsignar"
+        >
+          <div class="tablero-columna-header flex items-center justify-between gap-2 border-b border-border px-3.5 py-3">
             <span class="truncate text-sm font-semibold text-ink-muted">Sin asignar</span>
-            <span class="rounded-full bg-surface px-2 py-0.5 text-xs font-medium text-ink-muted">{{ sinAsignar().length }}</span>
+            <span class="tablero-columna-badge rounded-full px-2 py-0.5 text-xs font-medium">{{ sinAsignar().length }}</span>
           </div>
 
           <div
             cdkDropList
             [cdkDropListData]="sinAsignar()"
             (cdkDropListDropped)="onDropSinAsignar($event)"
+            (cdkDropListEntered)="onColumnaHoverEntered('sin-asignar')"
+            (cdkDropListExited)="onColumnaHoverExited('sin-asignar')"
             class="flex-1 space-y-2.5 overflow-y-auto p-2.5"
+            [class.tablero-lista-receptora]="columnaHoverId() === 'sin-asignar'"
           >
             @for (lead of sinAsignar(); track lead.id) {
               <div
                 cdkDrag
                 [cdkDragData]="lead"
-                class="cursor-grab rounded-lg border border-border bg-surface p-3 shadow-sm active:cursor-grabbing"
+                class="tablero-lead-card card-enter cursor-grab rounded-lg border border-border bg-surface p-3 shadow-sm active:cursor-grabbing"
+                [class.card-moved]="lead.id === leadRecienMovidoId()"
               >
                 <div class="flex items-start justify-between gap-2">
                   <p class="text-sm font-medium text-ink">{{ lead.nombreCliente }}</p>
@@ -134,8 +147,13 @@
         </div>
 
         @for (tarjeta of tarjetas(); track trackTarjeta($index, tarjeta)) {
-          <div class="flex w-72 shrink-0 flex-col rounded-xl border border-border bg-surface-2">
-            <div class="flex items-center justify-between gap-2 border-b border-border px-3.5 py-3">
+          <div
+            class="stagger-item flex w-72 shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-surface-2"
+            [style.--card-accent]="accentColor(tarjeta.id)"
+            [style.border-top-color]="accentColor(tarjeta.id)"
+            [style.border-top-width.px]="3"
+          >
+            <div class="tablero-columna-header flex items-center justify-between gap-2 border-b border-border px-3.5 py-3">
               @if (editandoTarjetaId() === tarjeta.id) {
                 <input
                   type="text"
@@ -155,7 +173,7 @@
               } @else {
                 <span class="truncate text-sm font-semibold text-ink">{{ tarjeta.nombre }}</span>
                 <div class="flex shrink-0 items-center gap-1.5">
-                  <span class="rounded-full bg-surface px-2 py-0.5 text-xs font-medium text-ink-muted">{{ tarjeta.leads.length }}</span>
+                  <span class="tablero-columna-badge rounded-full px-2 py-0.5 text-xs font-medium">{{ tarjeta.leads.length }}</span>
                   <button type="button" (click)="iniciarEdicionTarjeta(tarjeta)" aria-label="Renombrar tarjeta" class="text-ink-muted hover:text-we-primary">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                   </button>
@@ -170,13 +188,17 @@
               cdkDropList
               [cdkDropListData]="tarjeta.leads"
               (cdkDropListDropped)="onDropTarjeta($event, tarjeta)"
+              (cdkDropListEntered)="onColumnaHoverEntered(tarjeta.id)"
+              (cdkDropListExited)="onColumnaHoverExited(tarjeta.id)"
               class="flex-1 space-y-2.5 overflow-y-auto p-2.5"
+              [class.tablero-lista-receptora]="columnaHoverId() === tarjeta.id"
             >
               @for (lead of tarjeta.leads; track lead.id) {
                 <div
                   cdkDrag
                   [cdkDragData]="lead"
-                  class="cursor-grab rounded-lg border border-border bg-surface p-3 shadow-sm active:cursor-grabbing"
+                  class="tablero-lead-card card-enter cursor-grab rounded-lg border border-border bg-surface p-3 shadow-sm active:cursor-grabbing"
+                  [class.card-moved]="lead.id === leadRecienMovidoId()"
                 >
                   <div class="flex items-start justify-between gap-2">
                     <p class="text-sm font-medium text-ink">{{ lead.nombreCliente }}</p>
@@ -219,7 +241,7 @@
             </div>
           </div>
         } @empty {
-          <div class="flex w-72 shrink-0 items-center justify-center rounded-xl border border-dashed border-border p-6 text-center text-sm text-ink-muted">
+          <div class="stagger-item flex w-72 shrink-0 items-center justify-center rounded-xl border border-dashed border-border p-6 text-center text-sm text-ink-muted">
             Todavía no tienes tarjetas. Usa "+ Nueva tarjeta" para crear tu primer apartado.
           </div>
         }
@@ -228,9 +250,9 @@
   }
 
   @if (modalLeadAbierto()) {
-    <button type="button" (click)="cerrarModalLead()" aria-label="Cerrar" class="fixed inset-0 z-40 bg-black/40"></button>
+    <button type="button" (click)="cerrarModalLead()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-40 bg-black/40"></button>
     <div class="fixed inset-0 z-40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="nuevo-lead-titulo">
-      <div class="w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
+      <div class="modal-panel-enter w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
         <h2 id="nuevo-lead-titulo" class="font-heading text-lg font-semibold text-ink">Nuevo lead</h2>
         <p class="mt-1 text-sm text-ink-muted">Cae en "Sin asignar"; arrástralo a una tarjeta cuando quieras.</p>
 
@@ -309,9 +331,9 @@
   }
 
   @if (modalTarjetaAbierto()) {
-    <button type="button" (click)="cerrarModalTarjeta()" aria-label="Cerrar" class="fixed inset-0 z-40 bg-black/40"></button>
+    <button type="button" (click)="cerrarModalTarjeta()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-40 bg-black/40"></button>
     <div class="fixed inset-0 z-40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="nueva-tarjeta-titulo">
-      <div class="w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
+      <div class="modal-panel-enter w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
         <h2 id="nueva-tarjeta-titulo" class="font-heading text-lg font-semibold text-ink">Nueva tarjeta</h2>
         <p class="mt-1 text-sm text-ink-muted">Se agrega solo a tu tablero; no afecta el estado real de tus leads.</p>
 
@@ -359,9 +381,9 @@
   }
 
   @if (panelMovimiento(); as pendiente) {
-    <button type="button" (click)="cancelarMovimiento()" aria-label="Cerrar" class="fixed inset-0 z-40 bg-black/40"></button>
+    <button type="button" (click)="cancelarMovimiento()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-40 bg-black/40"></button>
     <div class="fixed inset-0 z-40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="movimiento-titulo">
-      <div class="w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
+      <div class="modal-panel-enter w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
         <h2 id="movimiento-titulo" class="font-heading text-lg font-semibold text-ink">Registrar seguimiento</h2>
         <p class="mt-1 text-sm text-ink-muted">
           Mover a <strong class="text-ink">{{ pendiente.lead.nombreCliente }}</strong> a

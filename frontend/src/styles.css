@@ -142,14 +142,144 @@ input, select, textarea {
   transform: translateY(4px) scale(0.97);
 }
 
+/* ---- Tablero de tarjetas (Kanban): cada columna recibe un color de acento fijo
+   (calculado por id en el componente y expuesto como --card-accent), que tiñe su
+   encabezado, su badge de conteo y el resaltado de "aquí se suelta" al arrastrar.
+   El acento vive en una variable para no repetir la paleta en cada regla. ---- */
+.tablero-columna-header {
+  background: color-mix(in oklch, var(--card-accent, var(--color-we-primary)) 9%, transparent);
+}
+.tablero-columna-badge {
+  background: color-mix(in oklch, var(--card-accent, var(--color-we-primary)) 20%, var(--surface));
+  color: color-mix(in oklch, var(--card-accent, var(--color-we-primary)) 75%, var(--ink));
+}
+
+/* Tarjetita (lead) arrastrable: se levanta sutilmente al pasar el cursor, como
+   invitación a moverla — el color de borde toma el acento de su propia columna. */
+.tablero-lead-card {
+  transition: transform 180ms var(--ease-brand-out), box-shadow 180ms var(--ease-brand-out), border-color 180ms ease;
+}
+.tablero-lead-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px -6px color-mix(in oklch, var(--card-accent, var(--color-we-primary)) 35%, transparent);
+  border-color: color-mix(in oklch, var(--card-accent, var(--color-we-primary)) 55%, var(--border));
+}
+
+/* Entrada de una tarjetita: al crearse un lead o al soltarlo en otra columna, Angular
+   crea un nodo nuevo (listas distintas por columna) — esta animación se re-dispara sola. */
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.card-enter {
+  animation: card-in 260ms var(--ease-brand-out) both;
+}
+
+/* Momento protagonista del tablero: al confirmar un movimiento, la tarjetita que
+   acaba de aterrizar en su nueva columna se resalta un instante con su color de
+   acento, para que el cambio se sienta reconocido y no solo "silencioso". */
+@keyframes card-moved-flash {
+  0% {
+    box-shadow: 0 0 0 2px color-mix(in oklch, var(--card-accent, var(--color-we-primary)) 70%, transparent);
+    background: color-mix(in oklch, var(--card-accent, var(--color-we-primary)) 16%, var(--surface));
+  }
+  100% {
+    box-shadow: 0 0 0 2px transparent;
+    background: var(--surface);
+  }
+}
+.card-moved {
+  animation: card-moved-flash 900ms var(--ease-brand-out) both;
+}
+
+/* Arrastrar y soltar: el CDK adjunta la vista previa al final del <body>, así que
+   estas reglas deben ser globales — un estilo de componente nunca las alcanzaría. */
+.cdk-drag-preview {
+  box-shadow: 0 16px 32px -12px rgb(0 0 0 / 0.35);
+  transform: rotate(-2deg) scale(1.03);
+  border-radius: 0.5rem;
+}
+.cdk-drag-placeholder {
+  opacity: 0.35;
+  border: 1.5px dashed var(--border);
+  background: transparent;
+  box-shadow: none;
+}
+.cdk-drag-placeholder * {
+  visibility: hidden;
+}
+
+/* Columna receptora: mientras se arrastra una tarjetita justo sobre ESTA columna (no
+   sobre cualquier columna válida — cdkDropListEntered/Exited en el componente rastrean
+   cuál es, ya que la clase automática de CDK se aplica por igual a todas las columnas
+   conectadas), respira con su propio color de acento: indica sin ambigüedad "aquí cae". */
+@keyframes board-glow {
+  0%, 100% {
+    box-shadow: inset 0 0 0 2px color-mix(in oklch, var(--card-accent, var(--color-we-primary)) 55%, transparent);
+  }
+  50% {
+    box-shadow: inset 0 0 0 2px color-mix(in oklch, var(--card-accent, var(--color-we-primary)) 90%, transparent);
+  }
+}
+.tablero-lista-receptora {
+  background: color-mix(in oklch, var(--card-accent, var(--color-we-primary)) 10%, transparent);
+  border-radius: 0.5rem;
+  animation: board-glow 1.3s ease-in-out infinite;
+}
+
+/* Entrada de los modales del tablero (nuevo lead, nueva tarjeta, registrar seguimiento). */
+@keyframes modal-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.modal-panel-enter {
+  animation: modal-panel-in 220ms var(--ease-brand-out) both;
+}
+@keyframes modal-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.modal-backdrop-enter {
+  animation: modal-backdrop-in 180ms ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .page-enter,
   .stagger-item,
-  .toast-enter {
+  .toast-enter,
+  .card-enter,
+  .modal-panel-enter,
+  .modal-backdrop-enter {
     animation: none;
   }
   .toast-exit {
     transition: opacity 120ms ease-out;
     transform: none;
+  }
+  .tablero-lead-card:hover {
+    transform: none;
+  }
+  .card-moved {
+    animation: none;
+    background: color-mix(in oklch, var(--card-accent, var(--color-we-primary)) 16%, var(--surface));
+  }
+  .cdk-drag-preview {
+    transform: none;
+  }
+  .tablero-lista-receptora {
+    animation: none;
+    box-shadow: inset 0 0 0 2px color-mix(in oklch, var(--card-accent, var(--color-we-primary)) 70%, transparent);
   }
 }

@@ -32,6 +32,24 @@ const ROLES_ASIGNABLES = new Set(['ASESOR', 'LIDER_AREA']);
 /** Tope de tarjetas (columnas 100% personalizadas) por asesor; debe coincidir con el límite del backend. */
 export const MAX_TARJETAS_POR_ASESOR = 20;
 
+/**
+ * Paleta de acento para las tarjetas del tablero: un color fijo por id (no por posición,
+ * para que no "salte" al reordenar o eliminar otra tarjeta), usado en su encabezado, su
+ * badge de conteo y el resaltado de "aquí se suelta" al arrastrar. "Sin asignar" usa el
+ * azul de marca en vez de rotar la paleta, para leerse como el cajón neutral que es.
+ */
+const TARJETA_ACCENTS = [
+  'oklch(66% 0.19 18)', // rosa
+  'oklch(70% 0.17 55)', // naranja
+  'oklch(78% 0.15 90)', // ámbar
+  'oklch(68% 0.15 155)', // esmeralda
+  'oklch(66% 0.12 195)', // verde azulado
+  'oklch(68% 0.14 235)', // azul cielo
+  'oklch(62% 0.19 295)', // violeta
+  'oklch(64% 0.2 335)', // fucsia
+];
+const ACENTO_SIN_ASIGNAR = 'var(--color-we-primary)';
+
 /** Una tarjeta del tablero: un apartado que el asesor creó libremente (p.ej. "Nuevo", "Esperando papeles"). */
 type Tarjeta = { id: number; nombre: string; leads: Lead[] };
 
@@ -80,6 +98,21 @@ export class TarjetasComponent {
   /** Solo las tarjetas (columnas personalizadas) cuentan para el tope; "Sin asignar" no es una tarjeta real. */
   readonly totalTarjetas = computed(() => this.columnasPersonalizadas().length);
   readonly limiteAlcanzado = computed(() => this.totalTarjetas() >= this.maxTarjetas);
+  readonly cercaDelLimite = computed(() => !this.limiteAlcanzado() && this.totalTarjetas() / this.maxTarjetas >= 0.7);
+
+  readonly acentoSinAsignar = ACENTO_SIN_ASIGNAR;
+
+  /** Id del lead que acaba de aterrizar en su nueva columna: se resalta un instante y luego se apaga solo. */
+  readonly leadRecienMovidoId = signal<number | null>(null);
+
+  /**
+   * Columna que el cursor tiene justo encima mientras se arrastra un lead. La clase que aplica
+   * CDK automáticamente (cdk-drop-list-receiving) se enciende por igual en TODAS las columnas
+   * conectadas mientras dura cualquier arrastre, no solo en la que está debajo del cursor — así
+   * que este estado se rastrea a mano con (cdkDropListEntered)/(cdkDropListExited) para que el
+   * resaltado de "aquí cae" señale una sola columna a la vez.
+   */
+  readonly columnaHoverId = signal<number | 'sin-asignar' | null>(null);
 
   readonly desarrollos = signal<Desarrollo[]>([]);
 
@@ -192,6 +225,11 @@ export class TarjetasComponent {
 
   trackTarjeta(_index: number, tarjeta: Tarjeta): number {
     return tarjeta.id;
+  }
+
+  /** Color de acento de una tarjeta, estable por id (no por posición en la lista). */
+  accentColor(tarjetaId: number): string {
+    return TARJETA_ACCENTS[tarjetaId % TARJETA_ACCENTS.length];
   }
 
   // --- Nuevo lead: siempre entra a "Sin asignar", sin tope ---
@@ -344,7 +382,17 @@ export class TarjetasComponent {
     this.abrirPanelMovimiento(event, { tipo: 'sin-asignar' });
   }
 
+  /** Marca cuál columna tiene el cursor encima ahora mismo, para el resaltado de "aquí cae". */
+  onColumnaHoverEntered(id: number | 'sin-asignar'): void {
+    this.columnaHoverId.set(id);
+  }
+
+  onColumnaHoverExited(id: number | 'sin-asignar'): void {
+    if (this.columnaHoverId() === id) this.columnaHoverId.set(null);
+  }
+
   private abrirPanelMovimiento(event: CdkDragDrop<Lead[]>, destino: Destino): void {
+    this.columnaHoverId.set(null);
     if (event.previousContainer === event.container) return;
     const lead = event.previousContainer.data[event.previousIndex];
     const nombreDestino = destino.tipo === 'tarjeta' ? destino.nombre : 'Sin asignar';
@@ -394,6 +442,11 @@ export class TarjetasComponent {
       this.leads.update((lista) => lista.map((l) => (l.id === lead.id ? actualizado : l)));
       this.toast.success(`${lead.nombreCliente} → ${nombreDestino}.`);
       this.panelMovimiento.set(null);
+
+      this.leadRecienMovidoId.set(lead.id);
+      setTimeout(() => {
+        if (this.leadRecienMovidoId() === lead.id) this.leadRecienMovidoId.set(null);
+      }, 900);
     } catch (error) {
       this.errorMovimiento.set(
         error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
