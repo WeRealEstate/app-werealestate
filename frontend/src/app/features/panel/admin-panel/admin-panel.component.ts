@@ -4,11 +4,12 @@ import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
 import { AsignarTareasComponent } from '../../../shared/asignar-tareas/asignar-tareas.component';
 import { DesempenoGeneralComponent } from './desempeno-general/desempeno-general.component';
+import { AdminTareasComponent } from './admin-tareas/admin-tareas.component';
 
 @Component({
   selector: 'app-admin-panel',
   standalone: true,
-  imports: [RouterLink, AsignarTareasComponent, DesempenoGeneralComponent],
+  imports: [RouterLink, AsignarTareasComponent, DesempenoGeneralComponent, AdminTareasComponent],
   templateUrl: './admin-panel.component.html',
 })
 export class AdminPanelComponent {

@@ -13,4 +13,6 @@ public interface TareaRepository extends JpaRepository<Tarea, Long> {
     boolean existsByAsignadoAId(Long asignadoAId);
 
     boolean existsByCreadoPorId(Long creadoPorId);
+
+    List<Tarea> findAllByOrderByCompletadaAscFechaLimiteAscFechaCreacionDesc();
 }

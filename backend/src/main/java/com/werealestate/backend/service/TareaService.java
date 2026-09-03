@@ -3,6 +3,7 @@ package com.werealestate.backend.service;
 import com.werealestate.backend.dto.TareaCreateRequest;
 import com.werealestate.backend.dto.TareaDto;
 import com.werealestate.backend.dto.TareaEstadoRequest;
+import com.werealestate.backend.dto.TareaReasignarRequest;
 import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.model.Role;
@@ -77,5 +78,48 @@ public class TareaService {
 
         tarea.setCompletada(request.completada());
         return TareaDto.from(tareaRepository.save(tarea));
+    }
+
+    /**
+     * Todas las tareas del equipo, de todos los que las crearon (líderes de área y admin), para
+     * que el administrador tenga visibilidad completa y pueda destrabar bajas de usuarios que
+     * quedan bloqueadas por tener actividad registrada.
+     */
+    public List<TareaDto> listarTodas() {
+        exigirAdmin();
+        return tareaRepository.findAllByOrderByCompletadaAscFechaLimiteAscFechaCreacionDesc().stream()
+                .map(TareaDto::from)
+                .toList();
+    }
+
+    /** Reasigna la tarea a otro miembro de equipo interno. Solo admin; no cambia quién la creó. */
+    public TareaDto reasignar(Long id, TareaReasignarRequest request) {
+        exigirAdmin();
+        Tarea tarea = tareaRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Tarea no encontrada"));
+
+        Usuario nuevoAsignado = usuarioRepository
+                .findById(request.nuevoAsignadoAId())
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        if (nuevoAsignado.getRol() != Role.EQUIPO_INTERNO) {
+            throw new ForbiddenOperationException("Las tareas solo se pueden asignar a equipo interno");
+        }
+
+        tarea.setAsignadoA(nuevoAsignado);
+        return TareaDto.from(tareaRepository.save(tarea));
+    }
+
+    /** Borra la tarea definitivamente. Solo admin. */
+    public void eliminar(Long id) {
+        exigirAdmin();
+        Tarea tarea = tareaRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Tarea no encontrada"));
+        tareaRepository.delete(tarea);
+    }
+
+    private Usuario exigirAdmin() {
+        Usuario actual = currentUserProvider.getUsuarioActual();
+        if (actual.getRol() != Role.ADMIN) {
+            throw new ForbiddenOperationException("Solo un administrador puede gestionar todas las tareas");
+        }
+        return actual;
     }
 }

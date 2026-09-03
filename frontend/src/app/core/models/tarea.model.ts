@@ -17,3 +17,7 @@ export interface TareaCreateRequest {
   asignadoAId: number;
   fechaLimite?: string | null;
 }
+
+export interface TareaReasignarRequest {
+  nuevoAsignadoAId: number;
+}

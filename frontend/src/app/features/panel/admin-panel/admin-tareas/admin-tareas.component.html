@@ -1,0 +1,86 @@
+<div class="rounded-xl border border-border bg-surface p-5">
+  <h2 class="font-heading font-semibold text-ink text-sm">Todas las tareas del equipo</h2>
+  <p class="mt-1 text-xs text-ink-muted">
+    De cualquier líder de área o del propio admin. Reasigna o borra una tarea si te está bloqueando eliminar a alguien.
+  </p>
+
+  @if (isLoading()) {
+    <p class="mt-4 text-sm text-ink-muted">Cargando…</p>
+  } @else if (errorMessage()) {
+    <div class="mt-4 rounded-lg bg-red-50 border border-red-200 px-3.5 py-2.5 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
+      {{ errorMessage() }}
+    </div>
+  } @else if (!hayTareas()) {
+    <p class="mt-4 text-sm text-ink-muted">Todavía no hay tareas asignadas en el equipo.</p>
+  } @else {
+    <div class="mt-4 overflow-x-auto rounded-lg border border-border">
+      <table class="min-w-full divide-y divide-border text-sm">
+        <thead class="bg-surface-2">
+          <tr class="text-left text-xs font-medium uppercase tracking-wide text-ink-muted">
+            <th class="px-4 py-3">Tarea</th>
+            <th class="px-4 py-3">Asignada a</th>
+            <th class="px-4 py-3">Creada por</th>
+            <th class="px-4 py-3">Vence</th>
+            <th class="px-4 py-3">Estado</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border">
+          @for (t of tareas(); track t.id) {
+            <tr class="hover:bg-surface-2 transition-colors duration-150">
+              <td class="px-4 py-3">
+                <div class="font-medium text-ink" [class.text-ink-muted]="t.completada" [class.line-through]="t.completada">
+                  {{ t.titulo }}
+                </div>
+                @if (t.descripcion) {
+                  <div class="mt-0.5 max-w-xs truncate text-xs text-ink-muted">{{ t.descripcion }}</div>
+                }
+              </td>
+              <td class="px-4 py-3">
+                <select
+                  [disabled]="reasignandoTareaId() === t.id"
+                  (change)="reasignar(t, +$any($event.target).value)"
+                  class="rounded-lg border border-border px-2.5 py-1.5 text-sm text-ink bg-surface
+                         focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary disabled:opacity-60"
+                  [attr.aria-label]="'Reasignar ' + t.titulo"
+                >
+                  @for (u of opcionesReasignar(t); track u.id) {
+                    <option [value]="u.id" [selected]="u.id === t.asignadoA.id">{{ u.nombre }}</option>
+                  }
+                </select>
+              </td>
+              <td class="px-4 py-3 text-ink-muted">{{ t.creadoPor.nombre }}</td>
+              <td class="px-4 py-3 text-ink-muted">
+                {{ t.fechaLimite ? (t.fechaLimite | date:'d MMM y') : '—' }}
+              </td>
+              <td class="px-4 py-3">
+                <span
+                  class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium"
+                  [class.bg-emerald-100]="t.completada"
+                  [class.text-emerald-700]="t.completada"
+                  [class.dark:bg-emerald-500/15]="t.completada"
+                  [class.dark:text-emerald-400]="t.completada"
+                  [class.bg-surface-2]="!t.completada"
+                  [class.text-ink-muted]="!t.completada"
+                >
+                  {{ t.completada ? 'Completada' : 'Pendiente' }}
+                </span>
+              </td>
+              <td class="px-4 py-3 text-right">
+                <button
+                  type="button"
+                  [disabled]="eliminandoTareaId() === t.id"
+                  (click)="eliminar(t)"
+                  aria-label="Borrar tarea"
+                  class="text-ink-muted hover:text-red-600 disabled:opacity-60"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z"/></svg>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

@@ -71,6 +71,10 @@ public class Tarea {
         return asignadoA;
     }
 
+    public void setAsignadoA(Usuario asignadoA) {
+        this.asignadoA = asignadoA;
+    }
+
     public Usuario getCreadoPor() {
         return creadoPor;
     }
