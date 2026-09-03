@@ -108,8 +108,10 @@ public class UsuarioService {
 
     /**
      * Elimina definitivamente a un usuario. Se rechaza si tiene actividad registrada (leads,
-     * tareas, comisiones, eventos o seguimientos) para no perder historial ni romper referencias;
-     * en ese caso hay que desactivarlo en vez de eliminarlo.
+     * tareas, comisiones o seguimientos) para no perder historial ni romper referencias; en ese
+     * caso hay que desactivarlo en vez de eliminarlo. Sus eventos de calendario NO bloquean el
+     * borrado (son personales — "solo él los ve" — y no tienen el mismo valor de historial que el
+     * resto); se borran junto con él.
      */
     public void eliminar(Long id) {
         Usuario actual = exigirAdmin();
@@ -124,14 +126,14 @@ public class UsuarioService {
                 || tareaRepository.existsByAsignadoAId(id)
                 || tareaRepository.existsByCreadoPorId(id)
                 || comisionRepository.existsByAsesorId(id)
-                || eventoCalendarioRepository.existsByUsuarioId(id)
                 || seguimientoRepository.existsByAsesorId(id);
         if (tieneActividad) {
             throw new ConflictException("No se puede eliminar a " + usuario.getNombre()
-                    + ": tiene actividad registrada (leads, tareas, comisiones, seguimientos o eventos). "
+                    + ": tiene actividad registrada (leads, tareas, comisiones o seguimientos). "
                     + "Desactívalo para quitarle el acceso sin perder ese historial.");
         }
 
+        eventoCalendarioRepository.deleteByUsuarioId(id);
         usuarioRepository.delete(usuario);
     }
 

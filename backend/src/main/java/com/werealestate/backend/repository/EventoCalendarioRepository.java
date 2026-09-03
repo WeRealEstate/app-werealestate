@@ -9,4 +9,6 @@ public interface EventoCalendarioRepository extends JpaRepository<EventoCalendar
     List<EventoCalendario> findByUsuarioIdOrderByFechaAsc(Long usuarioId);
 
     boolean existsByUsuarioId(Long usuarioId);
+
+    void deleteByUsuarioId(Long usuarioId);
 }
