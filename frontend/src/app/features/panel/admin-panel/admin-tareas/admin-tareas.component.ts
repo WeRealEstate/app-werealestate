@@ -4,6 +4,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { TareasService } from '../../../../core/services/tareas.service';
 import { UsuariosService } from '../../../../core/services/usuarios.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { ConfirmService } from '../../../../core/services/confirm.service';
 import { Tarea } from '../../../../core/models/tarea.model';
 import { UsuarioResumen } from '../../../../core/models/lead.model';
 
@@ -23,6 +24,7 @@ export class AdminTareasComponent {
   private readonly tareasService = inject(TareasService);
   private readonly usuariosService = inject(UsuariosService);
   private readonly toast = inject(ToastService);
+  private readonly confirmService = inject(ConfirmService);
 
   readonly tareas = signal<Tarea[]>([]);
   readonly usuariosAsignables = signal<UsuarioResumen[]>([]);
@@ -81,7 +83,13 @@ export class AdminTareasComponent {
   }
 
   async eliminar(tarea: Tarea): Promise<void> {
-    if (!confirm(`¿Borrar la tarea "${tarea.titulo}"? Esto no se puede deshacer.`)) return;
+    const confirmado = await this.confirmService.confirm({
+      titulo: 'Borrar tarea',
+      mensaje: `¿Borrar la tarea "${tarea.titulo}"? Esto no se puede deshacer.`,
+      textoConfirmar: 'Borrar',
+      peligroso: true,
+    });
+    if (!confirmado) return;
 
     this.eliminandoTareaId.set(tarea.id);
     try {

@@ -5,6 +5,7 @@ import { EventosCalendarioService } from '../../../core/services/eventos-calenda
 import { TareasService } from '../../../core/services/tareas.service';
 import { LeadsService } from '../../../core/services/leads.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { ConfirmService } from '../../../core/services/confirm.service';
 import { EventoCalendario } from '../../../core/models/evento-calendario.model';
 import { TIPO_SEGUIMIENTO_LABELS } from '../../../core/models/lead.model';
 import { etiquetaDuracion } from '../../../core/utils/fecha-hora';
@@ -68,6 +69,7 @@ export class CalendarioComponent {
   private readonly tareasService = inject(TareasService);
   private readonly leadsService = inject(LeadsService);
   private readonly toast = inject(ToastService);
+  private readonly confirmService = inject(ConfirmService);
   private readonly fb = inject(FormBuilder);
 
   readonly diasSemana = DIAS_SEMANA;
@@ -316,7 +318,13 @@ export class CalendarioComponent {
   }
 
   async eliminarEvento(item: CalendarItem): Promise<void> {
-    if (!confirm(`¿Eliminar "${item.titulo}" de tu calendario?`)) return;
+    const confirmado = await this.confirmService.confirm({
+      titulo: 'Eliminar evento',
+      mensaje: `¿Eliminar "${item.titulo}" de tu calendario?`,
+      textoConfirmar: 'Eliminar',
+      peligroso: true,
+    });
+    if (!confirmado) return;
     try {
       await this.eventosService.eliminar(item.id);
       this.eventos.update((lista) => lista.filter((e) => e.id !== item.id));

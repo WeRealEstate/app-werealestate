@@ -6,6 +6,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { ConfirmService } from '../../../core/services/confirm.service';
 import { UsuariosService } from '../../../core/services/usuarios.service';
 import {
   ESTADO_LEAD_LABELS,
@@ -43,6 +44,7 @@ export class LeadDetailComponent implements OnInit {
   private readonly usuariosService = inject(UsuariosService);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
+  private readonly confirmService = inject(ConfirmService);
   private readonly fb = inject(FormBuilder);
 
   readonly estadoLabels = ESTADO_LEAD_LABELS;
@@ -160,13 +162,12 @@ export class LeadDetailComponent implements OnInit {
   async archivar(): Promise<void> {
     const actual = this.lead();
     if (!actual || this.isArchivando()) return;
-    if (
-      !confirm(
-        `¿Archivar a ${actual.nombreCliente}? Dejará de aparecer en la lista activa, pero se conserva como métrica y puedes desarchivarlo cuando quieras.`,
-      )
-    ) {
-      return;
-    }
+    const confirmado = await this.confirmService.confirm({
+      titulo: 'Archivar lead',
+      mensaje: `¿Archivar a ${actual.nombreCliente}? Dejará de aparecer en la lista activa, pero se conserva como métrica y puedes desarchivarlo cuando quieras.`,
+      textoConfirmar: 'Archivar',
+    });
+    if (!confirmado) return;
 
     this.isArchivando.set(true);
     try {
@@ -200,13 +201,13 @@ export class LeadDetailComponent implements OnInit {
   async eliminar(): Promise<void> {
     const actual = this.lead();
     if (!actual || this.isEliminando()) return;
-    if (
-      !confirm(
-        `¿Borrar a ${actual.nombreCliente} para siempre? Esto elimina también su bitácora de seguimientos y no se puede deshacer.`,
-      )
-    ) {
-      return;
-    }
+    const confirmado = await this.confirmService.confirm({
+      titulo: 'Borrar lead',
+      mensaje: `¿Borrar a ${actual.nombreCliente} para siempre? Esto elimina también su bitácora de seguimientos y no se puede deshacer.`,
+      textoConfirmar: 'Borrar',
+      peligroso: true,
+    });
+    if (!confirmado) return;
 
     this.isEliminando.set(true);
     try {

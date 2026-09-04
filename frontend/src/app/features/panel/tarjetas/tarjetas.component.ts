@@ -8,6 +8,7 @@ import { LeadsService } from '../../../core/services/leads.service';
 import { UsuariosService } from '../../../core/services/usuarios.service';
 import { ColumnasService } from '../../../core/services/columnas.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { ConfirmService } from '../../../core/services/confirm.service';
 import {
   ColumnaPersonalizada,
   Desarrollo,
@@ -68,6 +69,7 @@ export class TarjetasComponent {
   private readonly columnasService = inject(ColumnasService);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
+  private readonly confirmService = inject(ConfirmService);
   private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(FormBuilder);
 
@@ -341,7 +343,13 @@ export class TarjetasComponent {
   }
 
   async eliminarTarjeta(tarjeta: Tarjeta): Promise<void> {
-    if (!confirm(`¿Eliminar la tarjeta "${tarjeta.nombre}"? Sus leads pasarán a "Sin asignar".`)) return;
+    const confirmado = await this.confirmService.confirm({
+      titulo: 'Eliminar tarjeta',
+      mensaje: `¿Eliminar la tarjeta "${tarjeta.nombre}"? Sus leads pasarán a "Sin asignar".`,
+      textoConfirmar: 'Eliminar',
+      peligroso: true,
+    });
+    if (!confirmado) return;
 
     try {
       await this.columnasService.eliminar(tarjeta.id);
@@ -360,9 +368,12 @@ export class TarjetasComponent {
   // --- Archivar lead ---
 
   async archivarLead(lead: Lead): Promise<void> {
-    if (!confirm(`¿Archivar a ${lead.nombreCliente}? Dejará de aparecer en el tablero, pero se conserva como métrica.`)) {
-      return;
-    }
+    const confirmado = await this.confirmService.confirm({
+      titulo: 'Archivar lead',
+      mensaje: `¿Archivar a ${lead.nombreCliente}? Dejará de aparecer en el tablero, pero se conserva como métrica.`,
+      textoConfirmar: 'Archivar',
+    });
+    if (!confirmado) return;
     try {
       await this.leadsService.archivar(lead.id);
       this.leads.update((lista) => lista.filter((l) => l.id !== lead.id));

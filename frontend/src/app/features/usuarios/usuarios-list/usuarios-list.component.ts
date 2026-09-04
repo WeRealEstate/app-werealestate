@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { ConfirmService } from '../../../core/services/confirm.service';
 import { UsuariosService } from '../../../core/services/usuarios.service';
 import { ROLE_LABELS, Role, Usuario } from '../../../core/models/user.model';
 
@@ -18,6 +19,7 @@ export class UsuariosListComponent {
   private readonly usuariosService = inject(UsuariosService);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
+  private readonly confirmService = inject(ConfirmService);
 
   readonly roles = ROLES;
   readonly roleLabels = ROLE_LABELS;
@@ -58,7 +60,13 @@ export class UsuariosListComponent {
   }
 
   async eliminar(usuario: Usuario): Promise<void> {
-    if (!confirm(`¿Eliminar a ${usuario.nombre} definitivamente? Esta acción no se puede deshacer.`)) return;
+    const confirmado = await this.confirmService.confirm({
+      titulo: 'Eliminar usuario',
+      mensaje: `¿Eliminar a ${usuario.nombre} definitivamente? Esta acción no se puede deshacer.`,
+      textoConfirmar: 'Eliminar',
+      peligroso: true,
+    });
+    if (!confirmado) return;
 
     this.savingId.set(usuario.id);
     this.errorMessage.set(null);

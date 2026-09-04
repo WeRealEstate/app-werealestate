@@ -6,6 +6,7 @@ import { ThemeService } from '../../../core/services/theme.service';
 import { NotificationBellComponent } from '../../../shared/notification-bell/notification-bell.component';
 import { ThemeToggleComponent } from '../../../shared/theme-toggle/theme-toggle.component';
 import { ToastContainerComponent } from '../../../shared/toast-container/toast-container.component';
+import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 
 interface NavItem {
   label: string;
@@ -49,6 +50,7 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
     RouterLinkActive,
     ThemeToggleComponent,
     ToastContainerComponent,
+    ConfirmDialogComponent,
     NotificationBellComponent,
   ],
   templateUrl: './panel-layout.component.html',

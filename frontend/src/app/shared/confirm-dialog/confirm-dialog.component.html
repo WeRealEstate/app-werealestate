@@ -1,0 +1,36 @@
+@if (confirmService.request(); as r) {
+  <button
+    type="button"
+    (click)="confirmService.responder(false)"
+    aria-label="Cerrar"
+    class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"
+  ></button>
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-titulo">
+    <div class="modal-panel-enter w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
+      <h2 id="confirm-dialog-titulo" class="font-heading text-lg font-semibold text-ink">{{ r.titulo }}</h2>
+      <p class="mt-2 text-sm text-ink-muted">{{ r.mensaje }}</p>
+
+      <div class="flex justify-end gap-2.5 pt-5">
+        <button
+          type="button"
+          (click)="confirmService.responder(false)"
+          class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary
+                 active:scale-[0.97] transition-transform duration-150"
+        >
+          {{ r.textoCancelar }}
+        </button>
+        <button
+          type="button"
+          (click)="confirmService.responder(true)"
+          class="rounded-lg px-4 py-2.5 text-sm font-semibold text-white active:scale-[0.97] transition-transform duration-150"
+          [class.bg-red-600]="r.peligroso"
+          [class.hover:bg-red-700]="r.peligroso"
+          [class.bg-we-primary]="!r.peligroso"
+          [class.hover:bg-we-primary/90]="!r.peligroso"
+        >
+          {{ r.textoConfirmar }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
