@@ -1,0 +1,671 @@
+<div class="page-enter">
+  <div>
+    <h1 class="font-heading text-2xl font-semibold text-ink">Cotizador</h1>
+    <p class="mt-1 text-sm text-ink-muted">Genera cotizaciones de SAMAI Campestre y Aldea Nanuu en PDF.</p>
+  </div>
+
+  <!-- ====================================================== -->
+  <!-- BARRA SUPERIOR -->
+  <!-- ====================================================== -->
+
+  <div class="mt-6 mb-7 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+    <!-- PROYECTOS -->
+    <div>
+      <p class="mb-3 text-sm font-semibold text-ink">Selecciona un proyecto</p>
+
+      <div class="flex flex-col gap-3 sm:flex-row">
+        <!-- SAMAI -->
+        <button
+          type="button"
+          weMotionPress
+          (click)="selectProject('samai')"
+          [class.bg-we-primary]="selectedProject === 'samai'"
+          [class.text-white]="selectedProject === 'samai'"
+          [class.shadow-[0_8px_20px_rgba(36,63,184,0.22)]]="selectedProject === 'samai'"
+          [class.bg-white]="selectedProject !== 'samai'"
+          [class.text-we-text]="selectedProject !== 'samai'"
+          [class.border]="selectedProject !== 'samai'"
+          [class.border-slate-200]="selectedProject !== 'samai'"
+          class="flex min-w-[230px] items-center justify-center gap-3 rounded-2xl px-6 py-4 text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5"
+        >
+          <span
+            class="flex h-8 w-8 items-center justify-center rounded-full border"
+            [class.border-white/30]="selectedProject === 'samai'"
+            [class.border-slate-200]="selectedProject !== 'samai'"
+          >
+            S
+          </span>
+          SAMAI CAMPESTRE
+        </button>
+
+        <!-- NANUU -->
+        <button
+          type="button"
+          weMotionPress
+          (click)="selectProject('nanuu')"
+          [class.bg-we-primary]="selectedProject === 'nanuu'"
+          [class.text-white]="selectedProject === 'nanuu'"
+          [class.shadow-[0_8px_20px_rgba(36,63,184,0.22)]]="selectedProject === 'nanuu'"
+          [class.bg-white]="selectedProject !== 'nanuu'"
+          [class.text-we-text]="selectedProject !== 'nanuu'"
+          [class.border]="selectedProject !== 'nanuu'"
+          [class.border-slate-200]="selectedProject !== 'nanuu'"
+          class="flex min-w-[210px] items-center justify-center gap-3 rounded-2xl px-6 py-4 text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5"
+        >
+          <span
+            class="flex h-8 w-8 items-center justify-center rounded-full border"
+            [class.border-white/30]="selectedProject === 'nanuu'"
+            [class.border-slate-200]="selectedProject !== 'nanuu'"
+          >
+            N
+          </span>
+          ALDEA NANUU
+        </button>
+      </div>
+    </div>
+
+    <!-- FECHA -->
+    <div class="lg:text-right">
+      <p class="text-xs text-ink-muted">Fecha de cotización</p>
+
+      <div class="mt-1 flex items-center gap-2 text-sm font-semibold text-ink lg:justify-end">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5 text-we-primary">
+          <rect x="3" y="5" width="18" height="16" rx="2" />
+          <path d="M16 3v4M8 3v4M3 10h18" />
+        </svg>
+        {{ currentDate | date: 'dd / MM / yyyy' }}
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================== -->
+  <!-- CONTENIDO PRINCIPAL -->
+  <!-- ====================================================== -->
+
+  <div class="grid items-start gap-7 xl:grid-cols-[minmax(0,1.15fr)_minmax(420px,0.85fr)]">
+    <!-- ==================================================== -->
+    <!-- FORMULARIO PRINCIPAL -->
+    <!-- ==================================================== -->
+
+    <div class="rounded-[24px] border border-slate-200/60 bg-white p-6 shadow-[0_12px_35px_rgba(15,23,42,0.08)] sm:p-8 lg:p-9">
+      <!-- ================================================== -->
+      <!-- DATOS DEL CLIENTE -->
+      <!-- ================================================== -->
+
+      <div>
+        <div class="mb-6">
+          <div class="flex items-start gap-3">
+            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-we-light text-sm font-bold text-we-primary">01</span>
+            <div>
+              <h2 class="text-base font-bold uppercase tracking-wide text-we-dark">Datos de la cotizacion</h2>
+              <p class="mt-1 text-sm text-we-muted">Información que aparecerá en la cotización.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid gap-5 sm:grid-cols-2">
+          <!-- NOMBRE ASESOR-->
+          <div>
+            <label class="mb-2 block text-sm font-medium text-we-text">Nombre del asesor *</label>
+            <input
+              type="text"
+              [(ngModel)]="advisorName"
+              placeholder="Ej. Juan Pérez García"
+              [class.border-red-500]="advisorNameInvalid"
+              [class.focus:border-red-500]="advisorNameInvalid"
+              [class.focus:ring-red-500]="advisorNameInvalid"
+              class="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3.5 text-sm text-we-text outline-none transition-all placeholder:text-slate-400 focus:border-we-primary focus:bg-white focus:ring-4 focus:ring-we-primary/10"
+            />
+            @if (advisorNameInvalid) {
+              <p class="mt-1.5 text-xs text-red-500">Campo obligatorio</p>
+            }
+          </div>
+
+          <!-- NOMBRE CLIENTE-->
+          <div>
+            <label class="mb-2 block text-sm font-medium text-we-text">Nombre del cliente *</label>
+            <input
+              type="text"
+              [(ngModel)]="clientName"
+              placeholder="Ej. Hernesto Montesinos Alba "
+              [class.border-red-500]="clientNameInvalid"
+              [class.focus:border-red-500]="clientNameInvalid"
+              [class.focus:ring-red-500]="clientNameInvalid"
+              class="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3.5 text-sm text-we-text outline-none transition-all placeholder:text-slate-400 focus:border-we-primary focus:bg-white focus:ring-4 focus:ring-we-primary/10"
+            />
+            @if (clientNameInvalid) {
+              <p class="mt-1.5 text-xs text-red-500">Campo obligatorio</p>
+            }
+          </div>
+
+          <div>
+            <label class="mb-2 block text-sm font-medium text-we-text">Manzana *</label>
+            <input
+              type="text"
+              [(ngModel)]="blockNumber"
+              placeholder="Ej. 5"
+              [class.border-red-500]="blockNumberInvalid"
+              [class.focus:border-red-500]="blockNumberInvalid"
+              [class.focus:ring-red-500]="blockNumberInvalid"
+              class="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3.5 text-sm text-we-text outline-none transition-all placeholder:text-slate-400 focus:border-we-primary focus:bg-white focus:ring-4 focus:ring-we-primary/10"
+            />
+            @if (blockNumberInvalid) {
+              <p class="mt-1.5 text-xs text-red-500">Campo obligatorio</p>
+            }
+          </div>
+
+          <div>
+            <label class="mb-2 block text-sm font-medium text-we-text">Lote *</label>
+            <input
+              type="text"
+              [(ngModel)]="lotNumber"
+              placeholder="Ej. 11"
+              [class.border-red-500]="lotNumberInvalid"
+              [class.focus:border-red-500]="lotNumberInvalid"
+              [class.focus:ring-red-500]="lotNumberInvalid"
+              class="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3.5 text-sm text-we-text outline-none transition-all placeholder:text-slate-400 focus:border-we-primary focus:bg-white focus:ring-4 focus:ring-we-primary/10"
+            />
+            @if (lotNumberInvalid) {
+              <p class="mt-1.5 text-xs text-red-500">Campo obligatorio</p>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- SEPARADOR -->
+      <div class="my-8 border-t border-slate-200"></div>
+
+      <!-- ================================================== -->
+      <!-- CONFIGURACIÓN DEL TERRENO -->
+      <!-- ================================================== -->
+
+      <div>
+        <div class="mb-6">
+          <div class="flex items-start gap-3">
+            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-we-light text-sm font-bold text-we-primary">02</span>
+            <div>
+              <h2 class="text-base font-bold uppercase tracking-wide text-we-dark">Configuración del terreno</h2>
+              <p class="mt-1 text-sm text-we-muted">Define la superficie y el valor del terreno.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid gap-6 sm:grid-cols-2">
+          <!-- SUPERFICIE -->
+          <div>
+            <label class="mb-2 block text-sm font-medium text-we-text">Superficie del terreno</label>
+
+            <div class="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                weMotionPress
+                (click)="selectArea(200)"
+                [class.border-we-primary]="selectedArea === 200 && !isCustomArea"
+                [class.text-we-primary]="selectedArea === 200 && !isCustomArea"
+                [class.shadow-md]="selectedArea === 200 && !isCustomArea"
+                [disabled]="pricePerM2 === 170"
+                [class.opacity-40]="pricePerM2 === 170"
+                [class.cursor-not-allowed]="pricePerM2 === 170"
+                class="rounded-xl border border-slate-200 bg-white px-6 py-2 font-normal transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+              >
+                200 m²
+              </button>
+
+              <button
+                type="button"
+                weMotionPress
+                (click)="selectCustomArea()"
+                [disabled]="selectedPaymentType === 'cash'"
+                [class.opacity-40]="selectedPaymentType === 'cash'"
+                [class.cursor-not-allowed]="selectedPaymentType === 'cash'"
+                [class.border-we-primary]="isCustomArea"
+                [class.text-we-primary]="isCustomArea"
+                [class.shadow-md]="isCustomArea"
+                class="rounded-xl border border-slate-200 bg-white px-2 py-4 font-medium transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+              >
+                Personalizada
+              </button>
+            </div>
+          </div>
+
+          <div
+            class="transition-all duration-200"
+            [class.pointer-events-none]="!isCustomArea"
+            [class.visible]="isCustomArea"
+            [class.opacity-100]="isCustomArea"
+            [class.pointer-events-auto]="isCustomArea"
+          >
+            <label for="customArea" class="mb-2 block text-sm font-semibold text-we-text">Superficie personalizada</label>
+
+            <div class="relative">
+              <input
+                id="customArea"
+                type="text"
+                inputmode="numeric"
+                [value]="customAreaDisplay"
+                (input)="onCustomAreaInput($event)"
+                min="1"
+                step="1"
+                placeholder="500"
+                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 pr-14 outline-none transition-all duration-200 focus:border-we-primary focus:ring-4 focus:ring-blue-100"
+              />
+              <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-500">m²</span>
+            </div>
+          </div>
+
+          <!-- PRECIO POR M2 -->
+          <div class="w-full">
+            <label class="mb-2 block text-sm font-medium text-we-text">Precio por m2</label>
+
+            <div class="relative">
+              <select
+                [ngModel]="pricePerM2"
+                (ngModelChange)="selectPricePerM2($event)"
+                class="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 pr-12 text-sm font-medium text-we-text outline-none transition-all focus:border-we-primary focus:bg-white focus:ring-4 focus:ring-we-primary/10"
+              >
+                @if (selectedProject === 'samai') {
+                  <option [ngValue]="800">$800 MXN - Lote</option>
+                  <option [ngValue]="170">$170 MXN - Hectarea</option>
+                }
+                @if (selectedProject === 'nanuu') {
+                  <option [ngValue]="3700">$3,700 MXN - Lote</option>
+                }
+              </select>
+
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-we-muted">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="mb-2 block text-sm font-medium text-we-text">Plazo de financiamiento</label>
+
+          <select
+            [(ngModel)]="selectedMonths"
+            class="relative w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-medium text-we-text outline-none transition-all focus:border-we-primary focus:bg-white focus:ring-4 focus:ring-we-primary/10"
+          >
+            <option [ngValue]="12">12 meses</option>
+            <option [ngValue]="24">24 meses</option>
+            <option [ngValue]="36">36 meses</option>
+            <option [ngValue]="48">48 meses</option>
+            <option [ngValue]="60">60 meses</option>
+          </select>
+        </div>
+
+        <!-- PRECIO TOTAL -->
+        <div class="mt-6 rounded-2xl border border-blue-100 bg-gradient-to-r from-we-light to-white p-5 shadow-[0_6px_18px_rgba(36,63,184,0.06)]">
+          <p class="text-xs font-semibold text-we-text">Precio total del terreno</p>
+          <p class="mt-1 text-3xl font-bold text-we-primary">
+            ${{ displayedLandPrice.toLocaleString('en-US') }} MXN
+            <span class="text-sm font-medium">MXN</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- SEPARADOR -->
+      <div class="my-8 border-t border-slate-200"></div>
+
+      <!-- ================================================== -->
+      <!-- FORMA DE PAGO -->
+      <!-- ================================================== -->
+
+      <div>
+        <div class="mb-6">
+          <div class="flex items-start gap-3">
+            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-we-light text-sm font-bold text-we-primary">03</span>
+            <div>
+              <h2 class="text-base font-bold uppercase tracking-wide text-we-dark">Forma de pago</h2>
+              <p class="mt-1 text-sm text-we-muted">Selecciona la opción que mejor se adapte al cliente.</p>
+            </div>
+          </div>
+        </div>
+
+        @if (selectedProject === 'samai') {
+          <div weFadeIn class="grid gap-3 md:grid-cols-4">
+            <!-- MSI -->
+            <button
+              type="button"
+              weMotionPress
+              (click)="selectPaymentType('msi')"
+              [class.border-we-primary]="selectedPaymentType === 'msi'"
+              [class.text-we-primary]="selectedPaymentType === 'msi'"
+              [class.bg-we-light]="selectedPaymentType === 'msi'"
+              class="rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <p class="font-semibold">Sin enganche</p>
+              <p class="mt-1 text-sm text-we-muted">Hasta 60 MSI</p>
+            </button>
+
+            <!-- ENGANCHE -->
+            <button
+              type="button"
+              weMotionPress
+              (click)="selectPaymentType('downpayment')"
+              [class.border-we-primary]="selectedPaymentType === 'downpayment'"
+              [class.text-we-primary]="selectedPaymentType === 'downpayment'"
+              [class.bg-we-light]="selectedPaymentType === 'downpayment'"
+              class="rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <p class="font-semibold">Con enganche</p>
+              <p class="mt-1 text-sm text-we-muted">Hasta 60 MSI</p>
+            </button>
+
+            <button
+              type="button"
+              weMotionPress
+              (click)="selectPaymentType('annualities')"
+              [class.border-we-primary]="selectedPaymentType === 'annualities'"
+              [class.text-we-primary]="selectedPaymentType === 'annualities'"
+              [class.shadow-[0_8px_20px_rgba(36,63,184,0.10)]]="selectedPaymentType === 'annualities'"
+              [disabled]="!annualitiesAvailable"
+              [class.opacity-40]="!annualitiesAvailable"
+              [class.cursor-not-allowed]="!annualitiesAvailable"
+              class="rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <p class="font-semibold">Con anualidades</p>
+              <p class="mt-1 text-sm text-we-muted">Aportación anual</p>
+            </button>
+
+            <!-- CONTADO -->
+            <button
+              [disabled]="selectedProject === 'samai' && pricePerM2 === 170"
+              [class.opacity-40]="selectedProject === 'samai' && pricePerM2 === 170"
+              [class.cursor-not-allowed]="selectedProject === 'samai' && pricePerM2 === 170"
+              [class.bg-slate-100]="selectedProject === 'samai' && pricePerM2 === 170"
+              type="button"
+              weMotionPress
+              (click)="selectPaymentType('cash')"
+              [class.border-we-primary]="selectedPaymentType === 'cash'"
+              [class.text-we-primary]="selectedPaymentType === 'cash'"
+              [class.bg-we-light]="selectedPaymentType === 'cash'"
+              class="rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <p class="font-semibold">Contado</p>
+              <p class="mt-1 text-sm text-we-muted">Precio especial, pocos lotes</p>
+            </button>
+          </div>
+
+          @if (selectedPaymentType === 'downpayment') {
+            <div weFadeIn class="mt-6 rounded-2xl border border-blue-100 bg-we-light/40 p-5">
+              <p class="mb-5 text-sm font-semibold text-we-dark">Configura el financiamiento</p>
+
+              <div class="grid gap-5 sm:grid-cols-2">
+                <!-- PORCENTAJE DE ENGANCHE -->
+                <div>
+                  <label class="mb-2 block text-sm font-medium text-we-text">Enganche</label>
+
+                  <div class="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="1"
+                      [(ngModel)]="downPaymentPercentage"
+                      class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 pr-12 text-sm outline-none transition-all focus:border-we-primary focus:ring-4 focus:ring-we-primary/10"
+                    />
+                    <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 font-semibold text-we-muted">%</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- MINI RESUMEN -->
+              <div class="mt-5 grid gap-3 rounded-xl bg-white p-4 sm:grid-cols-3">
+                <div>
+                  <p class="text-xs text-we-muted">Enganche</p>
+                  <p class="mt-1 font-semibold text-we-text">${{ downPayment.toLocaleString('en-US', { maximumFractionDigits: 0 }) }}</p>
+                </div>
+
+                <div>
+                  <p class="text-xs text-we-muted">Saldo</p>
+                  <p class="mt-1 font-semibold text-we-text">${{ financedAmount.toLocaleString('en-US', { maximumFractionDigits: 0 }) }}</p>
+                </div>
+
+                <div>
+                  <p class="text-xs text-we-muted">Mensualidad</p>
+                  <p class="mt-1 font-semibold text-we-primary">${{ monthlyPayment.toLocaleString('en-US', { maximumFractionDigits: 0 }) }}</p>
+                </div>
+              </div>
+            </div>
+          }
+        }
+
+        @if (isAnnualities) {
+          <div weFadeIn class="mt-6 rounded-2xl border border-blue-100 bg-we-light/40 p-5 shadow-[0_6px_18px_rgba(36,63,184,0.06)]">
+            <p class="text-sm font-semibold text-we-dark">Configura las anualidades</p>
+
+            <div class="mt-5 grid gap-5 sm:grid-cols-2">
+              <!-- MONTO DE ANUALIDAD -->
+              <div>
+                <label class="mb-2 block text-sm font-medium text-we-text">Monto de cada anualidad</label>
+
+                <div class="relative">
+                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-we-muted">$</span>
+                  <input
+                    type="text"
+                    inputmode="numeric"
+                    [value]="annualContributionDisplay"
+                    (input)="onAnnualContributionInput($event)"
+                    placeholder="Ej. 15,000"
+                    [class.border-red-500]="annualContributionInvalid"
+                    [class.focus:border-red-500]="annualContributionInvalid"
+                    class="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-8 pr-16 text-sm outline-none transition-all focus:border-we-primary focus:ring-4 focus:ring-we-primary/10"
+                  />
+                  <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-we-muted">MXN</span>
+                </div>
+
+                @if (isAnnualities && annualContribution <= 0) {
+                  <p class="mt-1.5 text-xs text-red-500">Ingresa el monto de la anualidad.</p>
+                } @else if (isAnnualities && annualContribution < minimumAnnualContribution) {
+                  <p class="mt-1.5 text-xs text-red-500">La anualidad mínima es de ${{ minimumAnnualContribution.toLocaleString('en-US') }} MXN.</p>
+                } @else if (isAnnualities && annualContribution > maximumAnnualContribution) {
+                  <p class="mt-1.5 text-xs text-red-500">La anualidad máxima es de ${{ maximumAnnualContribution.toLocaleString('en-US') }} MXN.</p>
+                }
+              </div>
+
+              <!-- MES DE ANUALIDAD -->
+              <div>
+                <label class="mb-2 block text-sm font-medium text-we-text">Mes de la anualidad</label>
+
+                <select
+                  [(ngModel)]="annualContributionMonth"
+                  class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm outline-none transition-all focus:border-we-primary focus:ring-4 focus:ring-we-primary/10"
+                >
+                  <option [ngValue]="1">Enero</option>
+                  <option [ngValue]="2">Febrero</option>
+                  <option [ngValue]="3">Marzo</option>
+                  <option [ngValue]="4">Abril</option>
+                  <option [ngValue]="5">Mayo</option>
+                  <option [ngValue]="6">Junio</option>
+                  <option [ngValue]="7">Julio</option>
+                  <option [ngValue]="8">Agosto</option>
+                  <option [ngValue]="9">Septiembre</option>
+                  <option [ngValue]="10">Octubre</option>
+                  <option [ngValue]="11">Noviembre</option>
+                  <option [ngValue]="12">Diciembre</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- RESUMEN DE ANUALIDADES -->
+            <div class="mt-5 grid gap-4 rounded-xl bg-white p-4 sm:grid-cols-3">
+              <div>
+                <p class="text-xs text-we-muted">Número de anualidades</p>
+                <p class="mt-1 font-semibold text-we-text">{{ annualContributionsCount }}</p>
+              </div>
+
+              <div>
+                <p class="text-xs text-we-muted">Total en anualidades</p>
+                <p class="mt-1 font-semibold text-we-text">${{ annualContributionsTotal.toLocaleString('en-US') }}</p>
+              </div>
+
+              <div>
+                <p class="text-xs text-we-muted">Mensualidad resultante</p>
+                <p class="mt-1 font-semibold text-we-primary">
+                  ${{ annualitiesMonthlyPayment.toLocaleString('en-US', { maximumFractionDigits: 0 }) }}
+                </p>
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (selectedProject === 'nanuu') {
+          <div weFadeIn class="grid gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              weMotionPress
+              (click)="selectPaymentType('downpayment')"
+              [class.border-we-primary]="selectedPaymentType === 'downpayment'"
+              [class.text-we-primary]="selectedPaymentType === 'downpayment'"
+              class="rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <p class="font-semibold">Con enganche</p>
+              <p class="mt-1 text-sm text-we-muted">20% de enganche</p>
+            </button>
+
+            <button
+              type="button"
+              weMotionPress
+              (click)="selectPaymentType('msi')"
+              [class.border-we-primary]="selectedPaymentType === 'msi'"
+              [class.text-we-primary]="selectedPaymentType === 'msi'"
+              class="rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <p class="font-semibold">Sin enganche</p>
+              <p class="mt-1 text-sm text-we-muted">0% de enganche</p>
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- ==================================================== -->
+    <!-- RESUMEN DE COTIZACIÓN -->
+    <!-- ==================================================== -->
+
+    <aside class="self-start overflow-hidden rounded-[24px] border border-slate-200/60 bg-white shadow-[0_12px_35px_rgba(15,23,42,0.08)] xl:sticky xl:top-6">
+      <!-- TÍTULO -->
+      <div class="px-6 pt-6">
+        <h2 class="text-sm font-bold uppercase tracking-wide text-we-dark">Resumen de cotización</h2>
+      </div>
+
+      <!-- IMAGEN -->
+      <div class="relative mx-6 mt-5 h-[155px] overflow-hidden rounded-2xl shadow-sm">
+        <img [src]="currentProjectImage" [alt]="currentProjectName" class="h-full w-full object-cover" />
+        <div class="absolute inset-0 bg-gradient-to-r from-black/65 via-black/25 to-transparent"></div>
+        <div class="absolute bottom-4 left-4 text-white">
+          <p class="text-lg font-bold">{{ currentProjectName }}</p>
+          <p class="mt-1 text-xs text-white/80">{{ currentProjectLocation }}</p>
+        </div>
+      </div>
+
+      <!-- INFORMACIÓN -->
+      <div class="space-y-4 p-6">
+        <div class="flex justify-between gap-4">
+          <span class="text-sm text-we-muted">Superficie</span>
+          <strong class="text-sm text-we-text">{{ selectedArea.toLocaleString('en-US') }} m²</strong>
+        </div>
+
+        @if (selectedPaymentType !== 'cash') {
+          <div class="flex justify-between gap-4">
+            <span class="text-sm text-we-muted">Precio por m²</span>
+            <strong class="text-sm text-we-text">${{ pricePerM2.toLocaleString('en-US') }} MXN</strong>
+          </div>
+        } @else {
+          <div class="flex justify-between gap-4">
+            <span class="text-sm text-we-muted">Modalidad de precio</span>
+            <strong class="text-sm text-we-primary">Precio especial de contado</strong>
+          </div>
+        }
+
+        <div class="flex justify-between gap-4">
+          <span class="text-sm text-we-muted">Precio total del terreno</span>
+          <strong [weValuePulse]="displayedLandPrice" class="text-lg text-we-primary">${{ displayedLandPrice.toLocaleString('en-US') }} MXN</strong>
+        </div>
+
+        <div class="border-t border-slate-200 pt-5">
+          <div class="flex justify-between gap-4">
+            <span class="text-sm text-we-muted">Forma de pago</span>
+            <strong class="text-sm text-we-text">{{ paymentMethodLabel }}</strong>
+          </div>
+
+          <div class="mt-4 flex justify-between gap-4">
+            <span class="text-sm text-we-muted">Enganche</span>
+            <strong class="text-sm text-we-text">${{ downPayment.toLocaleString('en-US') }} MXN</strong>
+          </div>
+
+          <div class="mt-4 flex justify-between gap-4">
+            <span class="text-sm text-we-muted">Saldo</span>
+            <strong class="text-sm text-we-text">${{ financedAmount.toLocaleString('en-US') }} MXN</strong>
+          </div>
+        </div>
+
+        <!-- MENSUALIDAD -->
+        <div class="rounded-2xl border border-blue-100 bg-gradient-to-br from-we-light to-white p-5 shadow-[0_6px_18px_rgba(36,63,184,0.06)]">
+          <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p class="text-xs font-semibold text-we-text">Mensualidad estimada</p>
+              <p [weValuePulse]="monthlyPayment" class="mt-1 text-3xl font-bold text-we-primary">
+                ${{ monthlyPayment.toLocaleString('en-US', { maximumFractionDigits: 0 }) }}
+                <span class="text-sm">MXN</span>
+              </p>
+              <p class="mt-1 text-xs text-we-muted">por {{ financingMonths }} meses</p>
+            </div>
+
+            <div class="sm:text-right">
+              <p class="text-xs text-we-muted">Plazo total</p>
+              <p class="font-semibold text-we-text">{{ financingMonths }} meses</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- TOTALES -->
+        <div class="space-y-4">
+          <div class="flex justify-between">
+            <span class="text-sm text-we-muted">Total a pagar</span>
+            <strong class="text-sm text-we-text">${{ displayedLandPrice.toLocaleString('en-US') }} MXN</strong>
+          </div>
+
+          <div class="flex justify-between">
+            <span class="text-sm text-we-muted">Intereses</span>
+            <strong class="text-sm text-we-text">${{ interestAmount.toLocaleString('en-US', { maximumFractionDigits: 0 }) }} MXN</strong>
+          </div>
+        </div>
+
+        <!-- TOTAL -->
+        <div class="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-4">
+          <span class="text-sm font-semibold text-we-text">Total de inversión</span>
+          <span [weValuePulse]="totalInvestment" class="text-xl font-bold text-we-primary">
+            ${{ totalInvestment.toLocaleString('en-US', { maximumFractionDigits: 0 }) }} MXN
+          </span>
+        </div>
+
+        <!-- ACCIONES -->
+        <div class="grid gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            (click)="generatePdf()"
+            [disabled]="!isQuoteValid"
+            [class.opacity-40]="!isQuoteValid"
+            [class.cursor-not-allowed]="!isQuoteValid"
+            class="rounded-xl border border-we-primary bg-white px-3 py-3 text-xs font-semibold text-we-primary shadow-sm transition-all hover:-translate-y-0.5 hover:bg-we-light"
+          >
+            Generar PDF
+          </button>
+
+          <button
+            type="button"
+            (click)="sharePdf()"
+            [disabled]="!isQuoteValid"
+            [class.opacity-40]="!isQuoteValid"
+            [class.cursor-not-allowed]="!isQuoteValid"
+            class="rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs font-semibold text-we-text shadow-sm transition-all hover:-translate-y-0.5 hover:border-we-primary/30"
+          >
+            Compartir
+          </button>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>

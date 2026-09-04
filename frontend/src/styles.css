@@ -13,6 +13,8 @@
   --color-we-background: #ffffff;
   --color-we-text: #0b132b;
   --color-we-dark: #0b132b;
+  --color-we-light: #eef3ff;
+  --color-we-muted: #64748b;
 
   /* Tokens de tema — cambian entre :root (claro) y .dark más abajo. Úsalos en el
      contenido del panel (no en el sidebar ni el login, que son siempre oscuros). */

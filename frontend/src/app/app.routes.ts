@@ -48,6 +48,12 @@ export const routes: Routes = [
           import('./features/panel/comisiones/comisiones.component').then((m) => m.ComisionesComponent),
       },
       {
+        path: 'cotizador',
+        canActivate: [roleGuard(['ASESOR', 'ADMIN'])],
+        loadComponent: () =>
+          import('./features/panel/cotizador/cotizador.component').then((m) => m.CotizadorComponent),
+      },
+      {
         path: 'asesor',
         canActivate: [roleGuard(['ASESOR'])],
         loadComponent: () =>
