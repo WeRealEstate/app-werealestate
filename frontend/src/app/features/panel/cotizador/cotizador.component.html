@@ -22,16 +22,16 @@
           [class.bg-we-primary]="selectedProject === 'samai'"
           [class.text-white]="selectedProject === 'samai'"
           [class.shadow-[0_8px_20px_rgba(36,63,184,0.22)]]="selectedProject === 'samai'"
-          [class.bg-white]="selectedProject !== 'samai'"
-          [class.text-we-text]="selectedProject !== 'samai'"
+          [class.bg-surface]="selectedProject !== 'samai'"
+          [class.text-ink]="selectedProject !== 'samai'"
           [class.border]="selectedProject !== 'samai'"
-          [class.border-slate-200]="selectedProject !== 'samai'"
+          [class.border-border]="selectedProject !== 'samai'"
           class="flex min-w-[230px] items-center justify-center gap-3 rounded-2xl px-6 py-4 text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5"
         >
           <span
             class="flex h-8 w-8 items-center justify-center rounded-full border"
             [class.border-white/30]="selectedProject === 'samai'"
-            [class.border-slate-200]="selectedProject !== 'samai'"
+            [class.border-border]="selectedProject !== 'samai'"
           >
             S
           </span>
@@ -46,16 +46,16 @@
           [class.bg-we-primary]="selectedProject === 'nanuu'"
           [class.text-white]="selectedProject === 'nanuu'"
           [class.shadow-[0_8px_20px_rgba(36,63,184,0.22)]]="selectedProject === 'nanuu'"
-          [class.bg-white]="selectedProject !== 'nanuu'"
-          [class.text-we-text]="selectedProject !== 'nanuu'"
+          [class.bg-surface]="selectedProject !== 'nanuu'"
+          [class.text-ink]="selectedProject !== 'nanuu'"
           [class.border]="selectedProject !== 'nanuu'"
-          [class.border-slate-200]="selectedProject !== 'nanuu'"
+          [class.border-border]="selectedProject !== 'nanuu'"
           class="flex min-w-[210px] items-center justify-center gap-3 rounded-2xl px-6 py-4 text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5"
         >
           <span
             class="flex h-8 w-8 items-center justify-center rounded-full border"
             [class.border-white/30]="selectedProject === 'nanuu'"
-            [class.border-slate-200]="selectedProject !== 'nanuu'"
+            [class.border-border]="selectedProject !== 'nanuu'"
           >
             N
           </span>
@@ -87,7 +87,7 @@
     <!-- FORMULARIO PRINCIPAL -->
     <!-- ==================================================== -->
 
-    <div class="rounded-[24px] border border-slate-200/60 bg-white p-6 shadow-[0_12px_35px_rgba(15,23,42,0.08)] sm:p-8 lg:p-9">
+    <div class="rounded-[24px] border border-border/60 bg-surface p-6 shadow-[0_12px_35px_rgba(15,23,42,0.08)] sm:p-8 lg:p-9">
       <!-- ================================================== -->
       <!-- DATOS DEL CLIENTE -->
       <!-- ================================================== -->
@@ -95,10 +95,10 @@
       <div>
         <div class="mb-6">
           <div class="flex items-start gap-3">
-            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-we-light text-sm font-bold text-we-primary">01</span>
+            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-we-primary/10 text-sm font-bold text-we-primary dark:text-we-blue-light">01</span>
             <div>
-              <h2 class="text-base font-bold uppercase tracking-wide text-we-dark">Datos de la cotizacion</h2>
-              <p class="mt-1 text-sm text-we-muted">Información que aparecerá en la cotización.</p>
+              <h2 class="text-base font-bold uppercase tracking-wide text-ink">Datos de la cotizacion</h2>
+              <p class="mt-1 text-sm text-ink-muted">Información que aparecerá en la cotización.</p>
             </div>
           </div>
         </div>
@@ -106,7 +106,7 @@
         <div class="grid gap-5 sm:grid-cols-2">
           <!-- NOMBRE ASESOR-->
           <div>
-            <label class="mb-2 block text-sm font-medium text-we-text">Nombre del asesor *</label>
+            <label class="mb-2 block text-sm font-medium text-ink">Nombre del asesor *</label>
             <input
               type="text"
               [(ngModel)]="advisorName"
@@ -114,7 +114,7 @@
               [class.border-red-500]="advisorNameInvalid"
               [class.focus:border-red-500]="advisorNameInvalid"
               [class.focus:ring-red-500]="advisorNameInvalid"
-              class="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3.5 text-sm text-we-text outline-none transition-all placeholder:text-slate-400 focus:border-we-primary focus:bg-white focus:ring-4 focus:ring-we-primary/10"
+              class="w-full rounded-xl border border-border bg-surface-2/50 px-4 py-3.5 text-sm text-ink outline-none transition-all placeholder:text-ink-muted focus:border-we-primary focus:bg-surface focus:ring-4 focus:ring-we-primary/10"
             />
             @if (advisorNameInvalid) {
               <p class="mt-1.5 text-xs text-red-500">Campo obligatorio</p>
@@ -123,7 +123,7 @@
 
           <!-- NOMBRE CLIENTE-->
           <div>
-            <label class="mb-2 block text-sm font-medium text-we-text">Nombre del cliente *</label>
+            <label class="mb-2 block text-sm font-medium text-ink">Nombre del cliente *</label>
             <input
               type="text"
               [(ngModel)]="clientName"
@@ -131,7 +131,7 @@
               [class.border-red-500]="clientNameInvalid"
               [class.focus:border-red-500]="clientNameInvalid"
               [class.focus:ring-red-500]="clientNameInvalid"
-              class="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3.5 text-sm text-we-text outline-none transition-all placeholder:text-slate-400 focus:border-we-primary focus:bg-white focus:ring-4 focus:ring-we-primary/10"
+              class="w-full rounded-xl border border-border bg-surface-2/50 px-4 py-3.5 text-sm text-ink outline-none transition-all placeholder:text-ink-muted focus:border-we-primary focus:bg-surface focus:ring-4 focus:ring-we-primary/10"
             />
             @if (clientNameInvalid) {
               <p class="mt-1.5 text-xs text-red-500">Campo obligatorio</p>
@@ -139,7 +139,7 @@
           </div>
 
           <div>
-            <label class="mb-2 block text-sm font-medium text-we-text">Manzana *</label>
+            <label class="mb-2 block text-sm font-medium text-ink">Manzana *</label>
             <input
               type="text"
               [(ngModel)]="blockNumber"
@@ -147,7 +147,7 @@
               [class.border-red-500]="blockNumberInvalid"
               [class.focus:border-red-500]="blockNumberInvalid"
               [class.focus:ring-red-500]="blockNumberInvalid"
-              class="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3.5 text-sm text-we-text outline-none transition-all placeholder:text-slate-400 focus:border-we-primary focus:bg-white focus:ring-4 focus:ring-we-primary/10"
+              class="w-full rounded-xl border border-border bg-surface-2/50 px-4 py-3.5 text-sm text-ink outline-none transition-all placeholder:text-ink-muted focus:border-we-primary focus:bg-surface focus:ring-4 focus:ring-we-primary/10"
             />
             @if (blockNumberInvalid) {
               <p class="mt-1.5 text-xs text-red-500">Campo obligatorio</p>
@@ -155,7 +155,7 @@
           </div>
 
           <div>
-            <label class="mb-2 block text-sm font-medium text-we-text">Lote *</label>
+            <label class="mb-2 block text-sm font-medium text-ink">Lote *</label>
             <input
               type="text"
               [(ngModel)]="lotNumber"
@@ -163,7 +163,7 @@
               [class.border-red-500]="lotNumberInvalid"
               [class.focus:border-red-500]="lotNumberInvalid"
               [class.focus:ring-red-500]="lotNumberInvalid"
-              class="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3.5 text-sm text-we-text outline-none transition-all placeholder:text-slate-400 focus:border-we-primary focus:bg-white focus:ring-4 focus:ring-we-primary/10"
+              class="w-full rounded-xl border border-border bg-surface-2/50 px-4 py-3.5 text-sm text-ink outline-none transition-all placeholder:text-ink-muted focus:border-we-primary focus:bg-surface focus:ring-4 focus:ring-we-primary/10"
             />
             @if (lotNumberInvalid) {
               <p class="mt-1.5 text-xs text-red-500">Campo obligatorio</p>
@@ -173,7 +173,7 @@
       </div>
 
       <!-- SEPARADOR -->
-      <div class="my-8 border-t border-slate-200"></div>
+      <div class="my-8 border-t border-border"></div>
 
       <!-- ================================================== -->
       <!-- CONFIGURACIÓN DEL TERRENO -->
@@ -182,10 +182,10 @@
       <div>
         <div class="mb-6">
           <div class="flex items-start gap-3">
-            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-we-light text-sm font-bold text-we-primary">02</span>
+            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-we-primary/10 text-sm font-bold text-we-primary dark:text-we-blue-light">02</span>
             <div>
-              <h2 class="text-base font-bold uppercase tracking-wide text-we-dark">Configuración del terreno</h2>
-              <p class="mt-1 text-sm text-we-muted">Define la superficie y el valor del terreno.</p>
+              <h2 class="text-base font-bold uppercase tracking-wide text-ink">Configuración del terreno</h2>
+              <p class="mt-1 text-sm text-ink-muted">Define la superficie y el valor del terreno.</p>
             </div>
           </div>
         </div>
@@ -193,7 +193,7 @@
         <div class="grid gap-6 sm:grid-cols-2">
           <!-- SUPERFICIE -->
           <div>
-            <label class="mb-2 block text-sm font-medium text-we-text">Superficie del terreno</label>
+            <label class="mb-2 block text-sm font-medium text-ink">Superficie del terreno</label>
 
             <div class="grid grid-cols-3 gap-2">
               <button
@@ -206,7 +206,7 @@
                 [disabled]="pricePerM2 === 170"
                 [class.opacity-40]="pricePerM2 === 170"
                 [class.cursor-not-allowed]="pricePerM2 === 170"
-                class="rounded-xl border border-slate-200 bg-white px-6 py-2 font-normal transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                class="rounded-xl border border-border bg-surface px-6 py-2 font-normal transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
               >
                 200 m²
               </button>
@@ -221,7 +221,7 @@
                 [class.border-we-primary]="isCustomArea"
                 [class.text-we-primary]="isCustomArea"
                 [class.shadow-md]="isCustomArea"
-                class="rounded-xl border border-slate-200 bg-white px-2 py-4 font-medium transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                class="rounded-xl border border-border bg-surface px-2 py-4 font-medium transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
               >
                 Personalizada
               </button>
@@ -235,7 +235,7 @@
             [class.opacity-100]="isCustomArea"
             [class.pointer-events-auto]="isCustomArea"
           >
-            <label for="customArea" class="mb-2 block text-sm font-semibold text-we-text">Superficie personalizada</label>
+            <label for="customArea" class="mb-2 block text-sm font-semibold text-ink">Superficie personalizada</label>
 
             <div class="relative">
               <input
@@ -247,21 +247,21 @@
                 min="1"
                 step="1"
                 placeholder="500"
-                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 pr-14 outline-none transition-all duration-200 focus:border-we-primary focus:ring-4 focus:ring-blue-100"
+                class="w-full rounded-xl border border-border bg-surface px-4 py-3.5 pr-14 outline-none transition-all duration-200 focus:border-we-primary focus:ring-4 focus:ring-we-primary/10"
               />
-              <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-500">m²</span>
+              <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-ink-muted">m²</span>
             </div>
           </div>
 
           <!-- PRECIO POR M2 -->
           <div class="w-full">
-            <label class="mb-2 block text-sm font-medium text-we-text">Precio por m2</label>
+            <label class="mb-2 block text-sm font-medium text-ink">Precio por m2</label>
 
             <div class="relative">
               <select
                 [ngModel]="pricePerM2"
                 (ngModelChange)="selectPricePerM2($event)"
-                class="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 pr-12 text-sm font-medium text-we-text outline-none transition-all focus:border-we-primary focus:bg-white focus:ring-4 focus:ring-we-primary/10"
+                class="w-full appearance-none rounded-xl border border-border bg-surface-2 px-4 py-3.5 pr-12 text-sm font-medium text-ink outline-none transition-all focus:border-we-primary focus:bg-surface focus:ring-4 focus:ring-we-primary/10"
               >
                 @if (selectedProject === 'samai') {
                   <option [ngValue]="800">$800 MXN - Lote</option>
@@ -272,7 +272,7 @@
                 }
               </select>
 
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-we-muted">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
               </svg>
             </div>
@@ -280,11 +280,11 @@
         </div>
 
         <div>
-          <label class="mb-2 block text-sm font-medium text-we-text">Plazo de financiamiento</label>
+          <label class="mb-2 block text-sm font-medium text-ink">Plazo de financiamiento</label>
 
           <select
             [(ngModel)]="selectedMonths"
-            class="relative w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-medium text-we-text outline-none transition-all focus:border-we-primary focus:bg-white focus:ring-4 focus:ring-we-primary/10"
+            class="relative w-full rounded-xl border border-border bg-surface-2 px-4 py-3.5 text-sm font-medium text-ink outline-none transition-all focus:border-we-primary focus:bg-surface focus:ring-4 focus:ring-we-primary/10"
           >
             <option [ngValue]="12">12 meses</option>
             <option [ngValue]="24">24 meses</option>
@@ -295,8 +295,8 @@
         </div>
 
         <!-- PRECIO TOTAL -->
-        <div class="mt-6 rounded-2xl border border-blue-100 bg-gradient-to-r from-we-light to-white p-5 shadow-[0_6px_18px_rgba(36,63,184,0.06)]">
-          <p class="text-xs font-semibold text-we-text">Precio total del terreno</p>
+        <div class="mt-6 rounded-2xl border border-we-primary/20 dark:border-we-primary/25 bg-we-primary/5 dark:bg-we-primary/10 p-5 shadow-[0_6px_18px_rgba(36,63,184,0.06)]">
+          <p class="text-xs font-semibold text-ink">Precio total del terreno</p>
           <p class="mt-1 text-3xl font-bold text-we-primary">
             ${{ displayedLandPrice.toLocaleString('en-US') }} MXN
             <span class="text-sm font-medium">MXN</span>
@@ -305,7 +305,7 @@
       </div>
 
       <!-- SEPARADOR -->
-      <div class="my-8 border-t border-slate-200"></div>
+      <div class="my-8 border-t border-border"></div>
 
       <!-- ================================================== -->
       <!-- FORMA DE PAGO -->
@@ -314,10 +314,10 @@
       <div>
         <div class="mb-6">
           <div class="flex items-start gap-3">
-            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-we-light text-sm font-bold text-we-primary">03</span>
+            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-we-primary/10 text-sm font-bold text-we-primary dark:text-we-blue-light">03</span>
             <div>
-              <h2 class="text-base font-bold uppercase tracking-wide text-we-dark">Forma de pago</h2>
-              <p class="mt-1 text-sm text-we-muted">Selecciona la opción que mejor se adapte al cliente.</p>
+              <h2 class="text-base font-bold uppercase tracking-wide text-ink">Forma de pago</h2>
+              <p class="mt-1 text-sm text-ink-muted">Selecciona la opción que mejor se adapte al cliente.</p>
             </div>
           </div>
         </div>
@@ -331,11 +331,11 @@
               (click)="selectPaymentType('msi')"
               [class.border-we-primary]="selectedPaymentType === 'msi'"
               [class.text-we-primary]="selectedPaymentType === 'msi'"
-              [class.bg-we-light]="selectedPaymentType === 'msi'"
-              class="rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+              [class.bg-we-primary/10]="selectedPaymentType === 'msi'"
+              class="rounded-2xl border border-border bg-surface p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
             >
               <p class="font-semibold">Sin enganche</p>
-              <p class="mt-1 text-sm text-we-muted">Hasta 60 MSI</p>
+              <p class="mt-1 text-sm text-ink-muted">Hasta 60 MSI</p>
             </button>
 
             <!-- ENGANCHE -->
@@ -345,11 +345,11 @@
               (click)="selectPaymentType('downpayment')"
               [class.border-we-primary]="selectedPaymentType === 'downpayment'"
               [class.text-we-primary]="selectedPaymentType === 'downpayment'"
-              [class.bg-we-light]="selectedPaymentType === 'downpayment'"
-              class="rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+              [class.bg-we-primary/10]="selectedPaymentType === 'downpayment'"
+              class="rounded-2xl border border-border bg-surface p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
             >
               <p class="font-semibold">Con enganche</p>
-              <p class="mt-1 text-sm text-we-muted">Hasta 60 MSI</p>
+              <p class="mt-1 text-sm text-ink-muted">Hasta 60 MSI</p>
             </button>
 
             <button
@@ -362,10 +362,10 @@
               [disabled]="!annualitiesAvailable"
               [class.opacity-40]="!annualitiesAvailable"
               [class.cursor-not-allowed]="!annualitiesAvailable"
-              class="rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all hover:-translate-y-0.5 hover:shadow-md"
+              class="rounded-2xl border border-border bg-surface p-5 text-left transition-all hover:-translate-y-0.5 hover:shadow-md"
             >
               <p class="font-semibold">Con anualidades</p>
-              <p class="mt-1 text-sm text-we-muted">Aportación anual</p>
+              <p class="mt-1 text-sm text-ink-muted">Aportación anual</p>
             </button>
 
             <!-- CONTADO -->
@@ -373,28 +373,28 @@
               [disabled]="selectedProject === 'samai' && pricePerM2 === 170"
               [class.opacity-40]="selectedProject === 'samai' && pricePerM2 === 170"
               [class.cursor-not-allowed]="selectedProject === 'samai' && pricePerM2 === 170"
-              [class.bg-slate-100]="selectedProject === 'samai' && pricePerM2 === 170"
+              [class.bg-surface-2]="selectedProject === 'samai' && pricePerM2 === 170"
               type="button"
               weMotionPress
               (click)="selectPaymentType('cash')"
               [class.border-we-primary]="selectedPaymentType === 'cash'"
               [class.text-we-primary]="selectedPaymentType === 'cash'"
-              [class.bg-we-light]="selectedPaymentType === 'cash'"
-              class="rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+              [class.bg-we-primary/10]="selectedPaymentType === 'cash'"
+              class="rounded-2xl border border-border bg-surface p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
             >
               <p class="font-semibold">Contado</p>
-              <p class="mt-1 text-sm text-we-muted">Precio especial, pocos lotes</p>
+              <p class="mt-1 text-sm text-ink-muted">Precio especial, pocos lotes</p>
             </button>
           </div>
 
           @if (selectedPaymentType === 'downpayment') {
-            <div weFadeIn class="mt-6 rounded-2xl border border-blue-100 bg-we-light/40 p-5">
-              <p class="mb-5 text-sm font-semibold text-we-dark">Configura el financiamiento</p>
+            <div weFadeIn class="mt-6 rounded-2xl border border-we-primary/20 dark:border-we-primary/25 bg-we-primary/5 dark:bg-we-primary/10 p-5">
+              <p class="mb-5 text-sm font-semibold text-ink">Configura el financiamiento</p>
 
               <div class="grid gap-5 sm:grid-cols-2">
                 <!-- PORCENTAJE DE ENGANCHE -->
                 <div>
-                  <label class="mb-2 block text-sm font-medium text-we-text">Enganche</label>
+                  <label class="mb-2 block text-sm font-medium text-ink">Enganche</label>
 
                   <div class="relative">
                     <input
@@ -403,27 +403,27 @@
                       max="100"
                       step="1"
                       [(ngModel)]="downPaymentPercentage"
-                      class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 pr-12 text-sm outline-none transition-all focus:border-we-primary focus:ring-4 focus:ring-we-primary/10"
+                      class="w-full rounded-xl border border-border bg-surface px-4 py-3.5 pr-12 text-sm outline-none transition-all focus:border-we-primary focus:ring-4 focus:ring-we-primary/10"
                     />
-                    <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 font-semibold text-we-muted">%</span>
+                    <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 font-semibold text-ink-muted">%</span>
                   </div>
                 </div>
               </div>
 
               <!-- MINI RESUMEN -->
-              <div class="mt-5 grid gap-3 rounded-xl bg-white p-4 sm:grid-cols-3">
+              <div class="mt-5 grid gap-3 rounded-xl bg-surface p-4 sm:grid-cols-3">
                 <div>
-                  <p class="text-xs text-we-muted">Enganche</p>
-                  <p class="mt-1 font-semibold text-we-text">${{ downPayment.toLocaleString('en-US', { maximumFractionDigits: 0 }) }}</p>
+                  <p class="text-xs text-ink-muted">Enganche</p>
+                  <p class="mt-1 font-semibold text-ink">${{ downPayment.toLocaleString('en-US', { maximumFractionDigits: 0 }) }}</p>
                 </div>
 
                 <div>
-                  <p class="text-xs text-we-muted">Saldo</p>
-                  <p class="mt-1 font-semibold text-we-text">${{ financedAmount.toLocaleString('en-US', { maximumFractionDigits: 0 }) }}</p>
+                  <p class="text-xs text-ink-muted">Saldo</p>
+                  <p class="mt-1 font-semibold text-ink">${{ financedAmount.toLocaleString('en-US', { maximumFractionDigits: 0 }) }}</p>
                 </div>
 
                 <div>
-                  <p class="text-xs text-we-muted">Mensualidad</p>
+                  <p class="text-xs text-ink-muted">Mensualidad</p>
                   <p class="mt-1 font-semibold text-we-primary">${{ monthlyPayment.toLocaleString('en-US', { maximumFractionDigits: 0 }) }}</p>
                 </div>
               </div>
@@ -432,16 +432,16 @@
         }
 
         @if (isAnnualities) {
-          <div weFadeIn class="mt-6 rounded-2xl border border-blue-100 bg-we-light/40 p-5 shadow-[0_6px_18px_rgba(36,63,184,0.06)]">
-            <p class="text-sm font-semibold text-we-dark">Configura las anualidades</p>
+          <div weFadeIn class="mt-6 rounded-2xl border border-we-primary/20 dark:border-we-primary/25 bg-we-primary/5 dark:bg-we-primary/10 p-5 shadow-[0_6px_18px_rgba(36,63,184,0.06)]">
+            <p class="text-sm font-semibold text-ink">Configura las anualidades</p>
 
             <div class="mt-5 grid gap-5 sm:grid-cols-2">
               <!-- MONTO DE ANUALIDAD -->
               <div>
-                <label class="mb-2 block text-sm font-medium text-we-text">Monto de cada anualidad</label>
+                <label class="mb-2 block text-sm font-medium text-ink">Monto de cada anualidad</label>
 
                 <div class="relative">
-                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-we-muted">$</span>
+                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted">$</span>
                   <input
                     type="text"
                     inputmode="numeric"
@@ -450,9 +450,9 @@
                     placeholder="Ej. 15,000"
                     [class.border-red-500]="annualContributionInvalid"
                     [class.focus:border-red-500]="annualContributionInvalid"
-                    class="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-8 pr-16 text-sm outline-none transition-all focus:border-we-primary focus:ring-4 focus:ring-we-primary/10"
+                    class="w-full rounded-xl border border-border bg-surface py-3.5 pl-8 pr-16 text-sm outline-none transition-all focus:border-we-primary focus:ring-4 focus:ring-we-primary/10"
                   />
-                  <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-we-muted">MXN</span>
+                  <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-ink-muted">MXN</span>
                 </div>
 
                 @if (isAnnualities && annualContribution <= 0) {
@@ -466,11 +466,11 @@
 
               <!-- MES DE ANUALIDAD -->
               <div>
-                <label class="mb-2 block text-sm font-medium text-we-text">Mes de la anualidad</label>
+                <label class="mb-2 block text-sm font-medium text-ink">Mes de la anualidad</label>
 
                 <select
                   [(ngModel)]="annualContributionMonth"
-                  class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm outline-none transition-all focus:border-we-primary focus:ring-4 focus:ring-we-primary/10"
+                  class="w-full rounded-xl border border-border bg-surface px-4 py-3.5 text-sm outline-none transition-all focus:border-we-primary focus:ring-4 focus:ring-we-primary/10"
                 >
                   <option [ngValue]="1">Enero</option>
                   <option [ngValue]="2">Febrero</option>
@@ -489,19 +489,19 @@
             </div>
 
             <!-- RESUMEN DE ANUALIDADES -->
-            <div class="mt-5 grid gap-4 rounded-xl bg-white p-4 sm:grid-cols-3">
+            <div class="mt-5 grid gap-4 rounded-xl bg-surface p-4 sm:grid-cols-3">
               <div>
-                <p class="text-xs text-we-muted">Número de anualidades</p>
-                <p class="mt-1 font-semibold text-we-text">{{ annualContributionsCount }}</p>
+                <p class="text-xs text-ink-muted">Número de anualidades</p>
+                <p class="mt-1 font-semibold text-ink">{{ annualContributionsCount }}</p>
               </div>
 
               <div>
-                <p class="text-xs text-we-muted">Total en anualidades</p>
-                <p class="mt-1 font-semibold text-we-text">${{ annualContributionsTotal.toLocaleString('en-US') }}</p>
+                <p class="text-xs text-ink-muted">Total en anualidades</p>
+                <p class="mt-1 font-semibold text-ink">${{ annualContributionsTotal.toLocaleString('en-US') }}</p>
               </div>
 
               <div>
-                <p class="text-xs text-we-muted">Mensualidad resultante</p>
+                <p class="text-xs text-ink-muted">Mensualidad resultante</p>
                 <p class="mt-1 font-semibold text-we-primary">
                   ${{ annualitiesMonthlyPayment.toLocaleString('en-US', { maximumFractionDigits: 0 }) }}
                 </p>
@@ -518,10 +518,10 @@
               (click)="selectPaymentType('downpayment')"
               [class.border-we-primary]="selectedPaymentType === 'downpayment'"
               [class.text-we-primary]="selectedPaymentType === 'downpayment'"
-              class="rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+              class="rounded-2xl border border-border bg-surface p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
             >
               <p class="font-semibold">Con enganche</p>
-              <p class="mt-1 text-sm text-we-muted">20% de enganche</p>
+              <p class="mt-1 text-sm text-ink-muted">20% de enganche</p>
             </button>
 
             <button
@@ -530,10 +530,10 @@
               (click)="selectPaymentType('msi')"
               [class.border-we-primary]="selectedPaymentType === 'msi'"
               [class.text-we-primary]="selectedPaymentType === 'msi'"
-              class="rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+              class="rounded-2xl border border-border bg-surface p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
             >
               <p class="font-semibold">Sin enganche</p>
-              <p class="mt-1 text-sm text-we-muted">0% de enganche</p>
+              <p class="mt-1 text-sm text-ink-muted">0% de enganche</p>
             </button>
           </div>
         }
@@ -544,10 +544,10 @@
     <!-- RESUMEN DE COTIZACIÓN -->
     <!-- ==================================================== -->
 
-    <aside class="self-start overflow-hidden rounded-[24px] border border-slate-200/60 bg-white shadow-[0_12px_35px_rgba(15,23,42,0.08)] xl:sticky xl:top-6">
+    <aside class="self-start overflow-hidden rounded-[24px] border border-border/60 bg-surface shadow-[0_12px_35px_rgba(15,23,42,0.08)] xl:sticky xl:top-6">
       <!-- TÍTULO -->
       <div class="px-6 pt-6">
-        <h2 class="text-sm font-bold uppercase tracking-wide text-we-dark">Resumen de cotización</h2>
+        <h2 class="text-sm font-bold uppercase tracking-wide text-ink">Resumen de cotización</h2>
       </div>
 
       <!-- IMAGEN -->
@@ -563,59 +563,59 @@
       <!-- INFORMACIÓN -->
       <div class="space-y-4 p-6">
         <div class="flex justify-between gap-4">
-          <span class="text-sm text-we-muted">Superficie</span>
-          <strong class="text-sm text-we-text">{{ selectedArea.toLocaleString('en-US') }} m²</strong>
+          <span class="text-sm text-ink-muted">Superficie</span>
+          <strong class="text-sm text-ink">{{ selectedArea.toLocaleString('en-US') }} m²</strong>
         </div>
 
         @if (selectedPaymentType !== 'cash') {
           <div class="flex justify-between gap-4">
-            <span class="text-sm text-we-muted">Precio por m²</span>
-            <strong class="text-sm text-we-text">${{ pricePerM2.toLocaleString('en-US') }} MXN</strong>
+            <span class="text-sm text-ink-muted">Precio por m²</span>
+            <strong class="text-sm text-ink">${{ pricePerM2.toLocaleString('en-US') }} MXN</strong>
           </div>
         } @else {
           <div class="flex justify-between gap-4">
-            <span class="text-sm text-we-muted">Modalidad de precio</span>
+            <span class="text-sm text-ink-muted">Modalidad de precio</span>
             <strong class="text-sm text-we-primary">Precio especial de contado</strong>
           </div>
         }
 
         <div class="flex justify-between gap-4">
-          <span class="text-sm text-we-muted">Precio total del terreno</span>
+          <span class="text-sm text-ink-muted">Precio total del terreno</span>
           <strong [weValuePulse]="displayedLandPrice" class="text-lg text-we-primary">${{ displayedLandPrice.toLocaleString('en-US') }} MXN</strong>
         </div>
 
-        <div class="border-t border-slate-200 pt-5">
+        <div class="border-t border-border pt-5">
           <div class="flex justify-between gap-4">
-            <span class="text-sm text-we-muted">Forma de pago</span>
-            <strong class="text-sm text-we-text">{{ paymentMethodLabel }}</strong>
+            <span class="text-sm text-ink-muted">Forma de pago</span>
+            <strong class="text-sm text-ink">{{ paymentMethodLabel }}</strong>
           </div>
 
           <div class="mt-4 flex justify-between gap-4">
-            <span class="text-sm text-we-muted">Enganche</span>
-            <strong class="text-sm text-we-text">${{ downPayment.toLocaleString('en-US') }} MXN</strong>
+            <span class="text-sm text-ink-muted">Enganche</span>
+            <strong class="text-sm text-ink">${{ downPayment.toLocaleString('en-US') }} MXN</strong>
           </div>
 
           <div class="mt-4 flex justify-between gap-4">
-            <span class="text-sm text-we-muted">Saldo</span>
-            <strong class="text-sm text-we-text">${{ financedAmount.toLocaleString('en-US') }} MXN</strong>
+            <span class="text-sm text-ink-muted">Saldo</span>
+            <strong class="text-sm text-ink">${{ financedAmount.toLocaleString('en-US') }} MXN</strong>
           </div>
         </div>
 
         <!-- MENSUALIDAD -->
-        <div class="rounded-2xl border border-blue-100 bg-gradient-to-br from-we-light to-white p-5 shadow-[0_6px_18px_rgba(36,63,184,0.06)]">
+        <div class="rounded-2xl border border-we-primary/20 dark:border-we-primary/25 bg-we-primary/5 dark:bg-we-primary/10 p-5 shadow-[0_6px_18px_rgba(36,63,184,0.06)]">
           <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p class="text-xs font-semibold text-we-text">Mensualidad estimada</p>
+              <p class="text-xs font-semibold text-ink">Mensualidad estimada</p>
               <p [weValuePulse]="monthlyPayment" class="mt-1 text-3xl font-bold text-we-primary">
                 ${{ monthlyPayment.toLocaleString('en-US', { maximumFractionDigits: 0 }) }}
                 <span class="text-sm">MXN</span>
               </p>
-              <p class="mt-1 text-xs text-we-muted">por {{ financingMonths }} meses</p>
+              <p class="mt-1 text-xs text-ink-muted">por {{ financingMonths }} meses</p>
             </div>
 
             <div class="sm:text-right">
-              <p class="text-xs text-we-muted">Plazo total</p>
-              <p class="font-semibold text-we-text">{{ financingMonths }} meses</p>
+              <p class="text-xs text-ink-muted">Plazo total</p>
+              <p class="font-semibold text-ink">{{ financingMonths }} meses</p>
             </div>
           </div>
         </div>
@@ -623,19 +623,19 @@
         <!-- TOTALES -->
         <div class="space-y-4">
           <div class="flex justify-between">
-            <span class="text-sm text-we-muted">Total a pagar</span>
-            <strong class="text-sm text-we-text">${{ displayedLandPrice.toLocaleString('en-US') }} MXN</strong>
+            <span class="text-sm text-ink-muted">Total a pagar</span>
+            <strong class="text-sm text-ink">${{ displayedLandPrice.toLocaleString('en-US') }} MXN</strong>
           </div>
 
           <div class="flex justify-between">
-            <span class="text-sm text-we-muted">Intereses</span>
-            <strong class="text-sm text-we-text">${{ interestAmount.toLocaleString('en-US', { maximumFractionDigits: 0 }) }} MXN</strong>
+            <span class="text-sm text-ink-muted">Intereses</span>
+            <strong class="text-sm text-ink">${{ interestAmount.toLocaleString('en-US', { maximumFractionDigits: 0 }) }} MXN</strong>
           </div>
         </div>
 
         <!-- TOTAL -->
-        <div class="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-4">
-          <span class="text-sm font-semibold text-we-text">Total de inversión</span>
+        <div class="flex items-center justify-between rounded-xl bg-surface-2 px-4 py-4">
+          <span class="text-sm font-semibold text-ink">Total de inversión</span>
           <span [weValuePulse]="totalInvestment" class="text-xl font-bold text-we-primary">
             ${{ totalInvestment.toLocaleString('en-US', { maximumFractionDigits: 0 }) }} MXN
           </span>
@@ -649,7 +649,7 @@
             [disabled]="!isQuoteValid"
             [class.opacity-40]="!isQuoteValid"
             [class.cursor-not-allowed]="!isQuoteValid"
-            class="rounded-xl border border-we-primary bg-white px-3 py-3 text-xs font-semibold text-we-primary shadow-sm transition-all hover:-translate-y-0.5 hover:bg-we-light"
+            class="rounded-xl border border-we-primary bg-surface px-3 py-3 text-xs font-semibold text-we-primary shadow-sm transition-all hover:-translate-y-0.5 hover:bg-we-primary/10"
           >
             Generar PDF
           </button>
@@ -660,7 +660,7 @@
             [disabled]="!isQuoteValid"
             [class.opacity-40]="!isQuoteValid"
             [class.cursor-not-allowed]="!isQuoteValid"
-            class="rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs font-semibold text-we-text shadow-sm transition-all hover:-translate-y-0.5 hover:border-we-primary/30"
+            class="rounded-xl border border-border bg-surface px-3 py-3 text-xs font-semibold text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:border-we-primary/30"
           >
             Compartir
           </button>
