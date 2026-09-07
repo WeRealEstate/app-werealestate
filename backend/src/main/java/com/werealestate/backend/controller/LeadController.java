@@ -1,5 +1,6 @@
 package com.werealestate.backend.controller;
 
+import com.werealestate.backend.dto.AsignarEtiquetasRequest;
 import com.werealestate.backend.dto.LeadCreateRequest;
 import com.werealestate.backend.dto.LeadDto;
 import com.werealestate.backend.dto.LeadUpdateRequest;
@@ -66,6 +67,11 @@ public class LeadController {
     @PutMapping("/{id}/mover-columna")
     public LeadDto moverAColumnaPersonalizada(@PathVariable Long id, @Valid @RequestBody MoverColumnaRequest request) {
         return leadService.moverAColumnaPersonalizada(id, request);
+    }
+
+    @PutMapping("/{id}/etiquetas")
+    public LeadDto asignarEtiquetas(@PathVariable Long id, @Valid @RequestBody AsignarEtiquetasRequest request) {
+        return leadService.asignarEtiquetas(id, request);
     }
 
     @PutMapping("/{id}/archivar")

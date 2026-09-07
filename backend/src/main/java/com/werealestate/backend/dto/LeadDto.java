@@ -6,6 +6,8 @@ import com.werealestate.backend.model.Lead;
 import com.werealestate.backend.model.Pais;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.List;
 
 public record LeadDto(
         Long id,
@@ -26,7 +28,8 @@ public record LeadDto(
         boolean frio,
         boolean archivado,
         Long columnaPersonalizadaId,
-        String columnaPersonalizadaNombre) {
+        String columnaPersonalizadaNombre,
+        List<EtiquetaDto> etiquetas) {
 
     public static LeadDto from(Lead lead, long diasSinContacto, boolean frio) {
         ColumnaPersonalizada columna = lead.getColumnaPersonalizada();
@@ -49,6 +52,10 @@ public record LeadDto(
                 frio,
                 lead.isArchivado(),
                 columna != null ? columna.getId() : null,
-                columna != null ? columna.getNombre() : null);
+                columna != null ? columna.getNombre() : null,
+                lead.getEtiquetas().stream()
+                        .map(EtiquetaDto::from)
+                        .sorted(Comparator.comparing(EtiquetaDto::nombre))
+                        .toList());
     }
 }

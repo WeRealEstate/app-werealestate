@@ -11,6 +11,7 @@ import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.repository.ComisionRepository;
+import com.werealestate.backend.repository.EtiquetaRepository;
 import com.werealestate.backend.repository.EventoCalendarioRepository;
 import com.werealestate.backend.repository.LeadRepository;
 import com.werealestate.backend.repository.SeguimientoRepository;
@@ -33,6 +34,7 @@ public class UsuarioService {
     private final ComisionRepository comisionRepository;
     private final EventoCalendarioRepository eventoCalendarioRepository;
     private final SeguimientoRepository seguimientoRepository;
+    private final EtiquetaRepository etiquetaRepository;
     private final CurrentUserProvider currentUserProvider;
     private final PasswordEncoder passwordEncoder;
 
@@ -43,6 +45,7 @@ public class UsuarioService {
             ComisionRepository comisionRepository,
             EventoCalendarioRepository eventoCalendarioRepository,
             SeguimientoRepository seguimientoRepository,
+            EtiquetaRepository etiquetaRepository,
             CurrentUserProvider currentUserProvider,
             PasswordEncoder passwordEncoder) {
         this.usuarioRepository = usuarioRepository;
@@ -51,6 +54,7 @@ public class UsuarioService {
         this.comisionRepository = comisionRepository;
         this.eventoCalendarioRepository = eventoCalendarioRepository;
         this.seguimientoRepository = seguimientoRepository;
+        this.etiquetaRepository = etiquetaRepository;
         this.currentUserProvider = currentUserProvider;
         this.passwordEncoder = passwordEncoder;
     }
@@ -111,7 +115,8 @@ public class UsuarioService {
      * tareas, comisiones o seguimientos) para no perder historial ni romper referencias; en ese
      * caso hay que desactivarlo en vez de eliminarlo. Sus eventos de calendario NO bloquean el
      * borrado (son personales — "solo él los ve" — y no tienen el mismo valor de historial que el
-     * resto); se borran junto con él.
+     * resto); se borran junto con él. Sus etiquetas tampoco bloquean el borrado: como no tiene
+     * ningún lead (ya lo garantiza el chequeo de arriba), ninguna puede estar asignada a uno.
      */
     public void eliminar(Long id) {
         Usuario actual = exigirAdmin();
@@ -134,6 +139,7 @@ public class UsuarioService {
         }
 
         eventoCalendarioRepository.deleteByUsuarioId(id);
+        etiquetaRepository.deleteByAsesorId(id);
         usuarioRepository.delete(usuario);
     }
 

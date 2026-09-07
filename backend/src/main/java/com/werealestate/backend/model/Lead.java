@@ -9,10 +9,14 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "lead")
@@ -73,6 +77,14 @@ public class Lead {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "columna_personalizada_id")
     private ColumnaPersonalizada columnaPersonalizada;
+
+    /** Etiquetas del catálogo privado del asesor dueño del lead; nunca de otro asesor. */
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "lead_etiqueta",
+            joinColumns = @JoinColumn(name = "lead_id"),
+            inverseJoinColumns = @JoinColumn(name = "etiqueta_id"))
+    private Set<Etiqueta> etiquetas = new LinkedHashSet<>();
 
     protected Lead() {
         // JPA
@@ -209,5 +221,9 @@ public class Lead {
 
     public void setColumnaPersonalizada(ColumnaPersonalizada columnaPersonalizada) {
         this.columnaPersonalizada = columnaPersonalizada;
+    }
+
+    public Set<Etiqueta> getEtiquetas() {
+        return etiquetas;
     }
 }

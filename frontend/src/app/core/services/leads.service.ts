@@ -62,6 +62,10 @@ export class LeadsService {
     return firstValueFrom(this.http.put<Lead>(`${this.baseUrl}/${id}/mover-columna`, request));
   }
 
+  asignarEtiquetas(id: number, etiquetaIds: number[]): Promise<Lead> {
+    return firstValueFrom(this.http.put<Lead>(`${this.baseUrl}/${id}/etiquetas`, { etiquetaIds }));
+  }
+
   listarSeguimientos(leadId: number): Promise<Seguimiento[]> {
     return firstValueFrom(this.http.get<Seguimiento[]>(`${this.baseUrl}/${leadId}/seguimientos`));
   }

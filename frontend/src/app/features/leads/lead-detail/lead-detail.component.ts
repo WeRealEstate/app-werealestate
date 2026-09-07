@@ -5,12 +5,18 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
+import { EtiquetasService } from '../../../core/services/etiquetas.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { UsuariosService } from '../../../core/services/usuarios.service';
 import {
   ESTADO_LEAD_LABELS,
   EstadoLead,
+  Etiqueta,
+  ETIQUETA_BADGE_CLASSES,
+  ETIQUETA_COLORES,
+  EtiquetaColor,
+  ETIQUETA_SWATCH_CLASSES,
   Lead,
   Seguimiento,
   TIPO_SEGUIMIENTO_LABELS,
@@ -41,6 +47,7 @@ export class LeadDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly leadsService = inject(LeadsService);
+  private readonly etiquetasService = inject(EtiquetasService);
   private readonly usuariosService = inject(UsuariosService);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
@@ -55,8 +62,20 @@ export class LeadDetailComponent implements OnInit {
   readonly horasOpciones = HORAS_OPCIONES;
   readonly minutosOpciones = MINUTOS_OPCIONES;
   readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
+  readonly coloresEtiqueta = ETIQUETA_COLORES;
+  readonly badgeClasesEtiqueta = ETIQUETA_BADGE_CLASSES;
+  readonly swatchClasesEtiqueta = ETIQUETA_SWATCH_CLASSES;
 
   readonly lead = signal<Lead | null>(null);
+  readonly catalogoEtiquetas = signal<Etiqueta[]>([]);
+  readonly mostrarPickerEtiquetas = signal(false);
+  readonly mostrarFormNuevaEtiqueta = signal(false);
+  readonly nuevaEtiquetaNombre = signal('');
+  readonly nuevaEtiquetaColor = signal<EtiquetaColor>('BLUE');
+  readonly editandoEtiquetaId = signal<number | null>(null);
+  readonly editEtiquetaNombre = signal('');
+  readonly editEtiquetaColor = signal<EtiquetaColor>('BLUE');
+  readonly isGuardandoEtiquetas = signal(false);
   readonly seguimientos = signal<Seguimiento[]>([]);
   readonly asesores = signal<Usuario[]>([]);
   readonly isLoading = signal(true);
@@ -107,6 +126,7 @@ export class LeadDetailComponent implements OnInit {
       ]);
       this.lead.set(lead);
       this.seguimientos.set(seguimientos);
+      this.catalogoEtiquetas.set(await this.etiquetasService.listar(lead.asesor.id));
     } catch {
       this.errorMessage.set('No se pudo cargar el lead.');
     } finally {
@@ -150,6 +170,8 @@ export class LeadDetailComponent implements OnInit {
     try {
       const actualizado = await this.leadsService.reasignar(this.leadId, nuevoAsesorId);
       this.lead.set(actualizado);
+      this.catalogoEtiquetas.set(await this.etiquetasService.listar(actualizado.asesor.id));
+      this.mostrarPickerEtiquetas.set(false);
       this.toast.success(`Lead reasignado a ${actualizado.asesor.nombre}.`);
     } catch {
       this.errorMessage.set('No se pudo reasignar el lead.');
@@ -264,6 +286,129 @@ export class LeadDetailComponent implements OnInit {
       this.toast.error('No se pudo registrar el seguimiento.');
     } finally {
       this.isSavingSeguimiento.set(false);
+    }
+  }
+
+  // --- Etiquetas ---
+
+  togglePickerEtiquetas(): void {
+    this.mostrarPickerEtiquetas.update((v) => !v);
+    this.mostrarFormNuevaEtiqueta.set(false);
+    this.editandoEtiquetaId.set(null);
+  }
+
+  tieneEtiqueta(etiquetaId: number): boolean {
+    return this.lead()?.etiquetas.some((e) => e.id === etiquetaId) ?? false;
+  }
+
+  async toggleEtiquetaEnLead(etiqueta: Etiqueta): Promise<void> {
+    const actual = this.lead();
+    if (!actual || this.isGuardandoEtiquetas()) return;
+
+    const idsActuales = actual.etiquetas.map((e) => e.id);
+    const nuevosIds = idsActuales.includes(etiqueta.id)
+      ? idsActuales.filter((id) => id !== etiqueta.id)
+      : [...idsActuales, etiqueta.id];
+
+    this.isGuardandoEtiquetas.set(true);
+    try {
+      const actualizado = await this.leadsService.asignarEtiquetas(this.leadId, nuevosIds);
+      this.lead.set(actualizado);
+    } catch {
+      this.toast.error('No se pudo actualizar las etiquetas del lead.');
+    } finally {
+      this.isGuardandoEtiquetas.set(false);
+    }
+  }
+
+  abrirFormNuevaEtiqueta(): void {
+    this.mostrarFormNuevaEtiqueta.set(true);
+    this.nuevaEtiquetaNombre.set('');
+    this.nuevaEtiquetaColor.set('BLUE');
+  }
+
+  async crearEtiqueta(): Promise<void> {
+    const actual = this.lead();
+    const nombre = this.nuevaEtiquetaNombre().trim();
+    if (!actual || !nombre || this.isGuardandoEtiquetas()) return;
+
+    this.isGuardandoEtiquetas.set(true);
+    try {
+      const nueva = await this.etiquetasService.crear({
+        nombre,
+        color: this.nuevaEtiquetaColor(),
+        asesorId: actual.asesor.id,
+      });
+      this.catalogoEtiquetas.update((lista) => [...lista, nueva].sort((a, b) => a.nombre.localeCompare(b.nombre)));
+      this.mostrarFormNuevaEtiqueta.set(false);
+
+      const nuevosIds = [...actual.etiquetas.map((e) => e.id), nueva.id];
+      const actualizado = await this.leadsService.asignarEtiquetas(this.leadId, nuevosIds);
+      this.lead.set(actualizado);
+
+      this.toast.success(`Etiqueta "${nueva.nombre}" creada.`);
+    } catch {
+      this.toast.error('No se pudo crear la etiqueta.');
+    } finally {
+      this.isGuardandoEtiquetas.set(false);
+    }
+  }
+
+  abrirEdicionEtiqueta(etiqueta: Etiqueta): void {
+    this.editandoEtiquetaId.set(etiqueta.id);
+    this.editEtiquetaNombre.set(etiqueta.nombre);
+    this.editEtiquetaColor.set(etiqueta.color);
+    this.mostrarFormNuevaEtiqueta.set(false);
+  }
+
+  cancelarEdicionEtiqueta(): void {
+    this.editandoEtiquetaId.set(null);
+  }
+
+  async guardarEdicionEtiqueta(): Promise<void> {
+    const id = this.editandoEtiquetaId();
+    const nombre = this.editEtiquetaNombre().trim();
+    if (id === null || !nombre) return;
+
+    this.isGuardandoEtiquetas.set(true);
+    try {
+      const actualizada = await this.etiquetasService.actualizar(id, { nombre, color: this.editEtiquetaColor() });
+      this.catalogoEtiquetas.update((lista) =>
+        lista.map((e) => (e.id === id ? actualizada : e)).sort((a, b) => a.nombre.localeCompare(b.nombre)),
+      );
+      this.lead.update((l) => (l ? { ...l, etiquetas: l.etiquetas.map((e) => (e.id === id ? actualizada : e)) } : l));
+      this.editandoEtiquetaId.set(null);
+      this.toast.success('Etiqueta actualizada.');
+    } catch {
+      this.toast.error('No se pudo actualizar la etiqueta.');
+    } finally {
+      this.isGuardandoEtiquetas.set(false);
+    }
+  }
+
+  async eliminarEtiqueta(etiqueta: Etiqueta): Promise<void> {
+    const confirmado = await this.confirmService.confirm({
+      titulo: 'Eliminar etiqueta',
+      mensaje: `¿Eliminar la etiqueta "${etiqueta.nombre}" de tu catálogo? Esto no se puede deshacer.`,
+      textoConfirmar: 'Eliminar',
+      peligroso: true,
+    });
+    if (!confirmado) return;
+
+    this.isGuardandoEtiquetas.set(true);
+    try {
+      await this.etiquetasService.eliminar(etiqueta.id);
+      this.catalogoEtiquetas.update((lista) => lista.filter((e) => e.id !== etiqueta.id));
+      this.lead.update((l) => (l ? { ...l, etiquetas: l.etiquetas.filter((e) => e.id !== etiqueta.id) } : l));
+      this.toast.success(`Etiqueta "${etiqueta.nombre}" eliminada.`);
+    } catch (error) {
+      const mensaje =
+        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+          ? error.error.message
+          : 'No se pudo eliminar la etiqueta.';
+      this.toast.error(mensaje);
+    } finally {
+      this.isGuardandoEtiquetas.set(false);
     }
   }
 }

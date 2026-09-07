@@ -1,5 +1,6 @@
 package com.werealestate.backend.service;
 
+import com.werealestate.backend.dto.AsignarEtiquetasRequest;
 import com.werealestate.backend.dto.LeadCreateRequest;
 import com.werealestate.backend.dto.LeadDto;
 import com.werealestate.backend.dto.LeadUpdateRequest;
@@ -10,6 +11,7 @@ import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.model.ColumnaPersonalizada;
 import com.werealestate.backend.model.Desarrollo;
+import com.werealestate.backend.model.Etiqueta;
 import com.werealestate.backend.model.EstadoLead;
 import com.werealestate.backend.model.Lead;
 import com.werealestate.backend.model.Pais;
@@ -19,14 +21,17 @@ import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.repository.ColumnaPersonalizadaRepository;
 import com.werealestate.backend.repository.ComisionRepository;
 import com.werealestate.backend.repository.DesarrolloRepository;
+import com.werealestate.backend.repository.EtiquetaRepository;
 import com.werealestate.backend.repository.LeadRepository;
 import com.werealestate.backend.repository.SeguimientoRepository;
 import com.werealestate.backend.repository.UsuarioRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,6 +46,7 @@ public class LeadService {
     private final SeguimientoRepository seguimientoRepository;
     private final ColumnaPersonalizadaRepository columnaRepository;
     private final ComisionRepository comisionRepository;
+    private final EtiquetaRepository etiquetaRepository;
     private final CurrentUserProvider currentUserProvider;
     private final ComisionService comisionService;
     private final int diasFrio;
@@ -52,6 +58,7 @@ public class LeadService {
             SeguimientoRepository seguimientoRepository,
             ColumnaPersonalizadaRepository columnaRepository,
             ComisionRepository comisionRepository,
+            EtiquetaRepository etiquetaRepository,
             CurrentUserProvider currentUserProvider,
             ComisionService comisionService,
             @Value("${app.lead.dias-frio}") int diasFrio) {
@@ -61,6 +68,7 @@ public class LeadService {
         this.seguimientoRepository = seguimientoRepository;
         this.columnaRepository = columnaRepository;
         this.comisionRepository = comisionRepository;
+        this.etiquetaRepository = etiquetaRepository;
         this.currentUserProvider = currentUserProvider;
         this.comisionService = comisionService;
         this.diasFrio = diasFrio;
@@ -211,7 +219,34 @@ public class LeadService {
                 .findById(request.nuevoAsesorId())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
 
+        if (!nuevoAsesor.getId().equals(lead.getAsesor().getId())) {
+            // Las etiquetas son privadas de cada asesor: al cambiar de dueño, las del anterior ya no aplican.
+            lead.getEtiquetas().clear();
+        }
         lead.setAsesor(nuevoAsesor);
+        return toDto(leadRepository.save(lead));
+    }
+
+    /**
+     * Reemplaza el conjunto completo de etiquetas del lead. Solo se pueden usar etiquetas del
+     * catálogo del asesor dueño del lead (son privadas, no se comparten entre asesores).
+     */
+    public LeadDto asignarEtiquetas(Long id, AsignarEtiquetasRequest request) {
+        Lead lead = buscarLeadPermitido(id);
+
+        Set<Etiqueta> nuevas = new LinkedHashSet<>();
+        for (Long etiquetaId : request.etiquetaIds()) {
+            Etiqueta etiqueta = etiquetaRepository
+                    .findById(etiquetaId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Etiqueta no encontrada"));
+            if (!etiqueta.getAsesor().getId().equals(lead.getAsesor().getId())) {
+                throw new ForbiddenOperationException("Esa etiqueta no pertenece al asesor de este lead");
+            }
+            nuevas.add(etiqueta);
+        }
+
+        lead.getEtiquetas().clear();
+        lead.getEtiquetas().addAll(nuevas);
         return toDto(leadRepository.save(lead));
     }
 

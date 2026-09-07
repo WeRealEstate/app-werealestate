@@ -7,6 +7,8 @@ import { descargarCsv } from '../../../core/utils/csv';
 import {
   ESTADO_LEAD_LABELS,
   EstadoLead,
+  Etiqueta,
+  ETIQUETA_BADGE_CLASSES,
   Lead,
   PAIS_LABELS,
   UsuarioResumen,
@@ -33,6 +35,7 @@ export class LeadsListComponent {
   readonly estadoLabels = ESTADO_LEAD_LABELS;
   readonly estados = Object.keys(ESTADO_LEAD_LABELS) as EstadoLead[];
   readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
+  readonly badgeClasesEtiqueta = ETIQUETA_BADGE_CLASSES;
 
   readonly leads = signal<Lead[]>([]);
   readonly archivados = signal<Lead[]>([]);
@@ -42,19 +45,34 @@ export class LeadsListComponent {
   readonly filtro = signal('');
   readonly asesorId = signal<number | null>(null);
   readonly estadoFiltro = signal<FiltroEstado | null>(null);
+  readonly etiquetaFiltro = signal<number | null>(null);
   readonly asesoresDisponibles = signal<UsuarioResumen[]>([]);
 
   private archivadosCargados = false;
+
+  /** Etiquetas presentes en los leads visibles ahora mismo (son privadas por asesor: no hay un catálogo único que listar). */
+  readonly etiquetasDisponibles = computed<Etiqueta[]>(() => {
+    const fuente = this.verArchivados() ? this.archivados() : this.leads();
+    const porId = new Map<number, Etiqueta>();
+    for (const lead of fuente) {
+      for (const et of lead.etiquetas) {
+        porId.set(et.id, et);
+      }
+    }
+    return [...porId.values()].sort((a, b) => a.nombre.localeCompare(b.nombre));
+  });
 
   readonly leadsFiltrados = computed(() => {
     const term = this.filtro().trim().toLowerCase();
     const asesorId = this.asesorId();
     const estadoFiltro = this.estadoFiltro();
+    const etiquetaFiltro = this.etiquetaFiltro();
     const fuente = this.verArchivados() ? this.archivados() : this.leads();
     return fuente.filter((l) => {
       if (estadoFiltro === 'FRIOS' && !l.frio) return false;
       if (estadoFiltro && estadoFiltro !== 'FRIOS' && l.estado !== estadoFiltro) return false;
       if (asesorId !== null && l.asesor.id !== asesorId) return false;
+      if (etiquetaFiltro !== null && !l.etiquetas.some((e) => e.id === etiquetaFiltro)) return false;
       if (term && !l.nombreCliente.toLowerCase().includes(term)) return false;
       return true;
     });
