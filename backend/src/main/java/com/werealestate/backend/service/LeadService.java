@@ -3,6 +3,10 @@ package com.werealestate.backend.service;
 import com.werealestate.backend.dto.AsignarEtiquetasRequest;
 import com.werealestate.backend.dto.LeadCreateRequest;
 import com.werealestate.backend.dto.LeadDto;
+import com.werealestate.backend.dto.LeadImportBatchRequest;
+import com.werealestate.backend.dto.LeadImportError;
+import com.werealestate.backend.dto.LeadImportRequest;
+import com.werealestate.backend.dto.LeadImportResultado;
 import com.werealestate.backend.dto.LeadUpdateRequest;
 import com.werealestate.backend.dto.MoverColumnaRequest;
 import com.werealestate.backend.dto.ReasignarLeadRequest;
@@ -17,6 +21,7 @@ import com.werealestate.backend.model.Lead;
 import com.werealestate.backend.model.Pais;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Seguimiento;
+import com.werealestate.backend.model.TipoSeguimiento;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.repository.ColumnaPersonalizadaRepository;
 import com.werealestate.backend.repository.ComisionRepository;
@@ -28,12 +33,14 @@ import com.werealestate.backend.repository.UsuarioRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -146,6 +153,60 @@ public class LeadService {
         lead.setEstadoRepublica(request.pais() == Pais.EXTRANJERO ? null : request.estadoRepublica());
 
         return toDto(leadRepository.save(lead));
+    }
+
+    /**
+     * Importa un lote de leads desde un archivo (Excel parseado en el frontend). Cada fila se
+     * guarda en su propia transacción (ver {@code Propagation.NOT_SUPPORTED} en la anotación del
+     * método) para que un error puntual no eche para atrás las filas que sí eran válidas.
+     */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public LeadImportResultado importar(LeadImportBatchRequest request) {
+        Usuario actual = currentUserProvider.getUsuarioActual();
+        Usuario asesor = actual;
+        if (request.asesorId() != null && !request.asesorId().equals(actual.getId())) {
+            if (actual.getRol() != Role.ADMIN) {
+                throw new ForbiddenOperationException("Solo un administrador puede importar leads para otro asesor");
+            }
+            asesor = usuarioRepository
+                    .findById(request.asesorId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        }
+
+        int creados = 0;
+        List<LeadImportError> errores = new ArrayList<>();
+        int fila = 0;
+        for (LeadImportRequest item : request.leads()) {
+            fila++;
+            try {
+                Desarrollo desarrollo = desarrolloRepository
+                        .findById(item.desarrolloId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Desarrollo no encontrado"));
+
+                Lead lead = new Lead(
+                        item.nombreCliente(),
+                        item.telefono(),
+                        item.email(),
+                        item.origen(),
+                        desarrollo,
+                        asesor,
+                        null);
+                lead = leadRepository.save(lead);
+
+                if (item.notas() != null && !item.notas().isBlank()) {
+                    Seguimiento seguimiento = new Seguimiento(
+                            lead, asesor, TipoSeguimiento.OTRO, item.notas(), null, null, null);
+                    seguimientoRepository.save(seguimiento);
+                }
+                creados++;
+            } catch (Exception e) {
+                String motivo = e instanceof ResourceNotFoundException || e instanceof ForbiddenOperationException
+                        ? e.getMessage()
+                        : "No se pudo crear este lead.";
+                errores.add(new LeadImportError(fila, item.nombreCliente(), motivo));
+            }
+        }
+        return new LeadImportResultado(creados, errores);
     }
 
     public LeadDto actualizar(Long id, LeadUpdateRequest request) {

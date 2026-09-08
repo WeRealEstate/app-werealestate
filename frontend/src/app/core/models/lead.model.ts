@@ -174,6 +174,31 @@ export interface LeadUpdateRequest {
   estadoRepublica?: string | null;
 }
 
+export interface LeadImportRequest {
+  nombreCliente: string;
+  telefono: string;
+  email?: string | null;
+  desarrolloId: number;
+  origen?: string | null;
+  notas?: string | null;
+}
+
+export interface LeadImportBatchRequest {
+  asesorId?: number | null;
+  leads: LeadImportRequest[];
+}
+
+export interface LeadImportError {
+  fila: number;
+  nombreCliente: string;
+  motivo: string;
+}
+
+export interface LeadImportResultado {
+  creados: number;
+  errores: LeadImportError[];
+}
+
 export interface Seguimiento {
   id: number;
   leadId: number;

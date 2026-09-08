@@ -6,6 +6,8 @@ import {
   Desarrollo,
   Lead,
   LeadCreateRequest,
+  LeadImportBatchRequest,
+  LeadImportResultado,
   LeadUpdateRequest,
   MoverColumnaRequest,
   Seguimiento,
@@ -52,6 +54,10 @@ export class LeadsService {
 
   actualizar(id: number, request: LeadUpdateRequest): Promise<Lead> {
     return firstValueFrom(this.http.put<Lead>(`${this.baseUrl}/${id}`, request));
+  }
+
+  importar(request: LeadImportBatchRequest): Promise<LeadImportResultado> {
+    return firstValueFrom(this.http.post<LeadImportResultado>(`${this.baseUrl}/importar`, request));
   }
 
   reasignar(id: number, nuevoAsesorId: number): Promise<Lead> {

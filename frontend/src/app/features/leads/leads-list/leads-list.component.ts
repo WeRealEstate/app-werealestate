@@ -186,9 +186,9 @@ export class LeadsListComponent {
     descargarCsv(`leads_${new Date().toISOString().slice(0, 10)}.csv`, encabezados, filas);
   }
 
-  exportarExcel(): void {
+  async exportarExcel(): Promise<void> {
     const { filas, encabezados } = this.datosExportacion();
-    descargarExcel(`leads_${new Date().toISOString().slice(0, 10)}.xlsx`, encabezados, filas, 'Leads');
+    await descargarExcel(`leads_${new Date().toISOString().slice(0, 10)}.xlsx`, encabezados, filas, 'Leads');
   }
 
   badgeClass(estado: Lead['estado']): string {

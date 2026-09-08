@@ -142,9 +142,9 @@ export class ComisionesComponent {
     descargarCsv(`comisiones_${new Date().toISOString().slice(0, 10)}.csv`, encabezados, filas);
   }
 
-  exportarExcel(): void {
+  async exportarExcel(): Promise<void> {
     const { filas, encabezados } = this.datosExportacion();
-    descargarExcel(`comisiones_${new Date().toISOString().slice(0, 10)}.xlsx`, encabezados, filas, 'Comisiones');
+    await descargarExcel(`comisiones_${new Date().toISOString().slice(0, 10)}.xlsx`, encabezados, filas, 'Comisiones');
   }
 
   async alternarPagada(comision: Comision): Promise<void> {

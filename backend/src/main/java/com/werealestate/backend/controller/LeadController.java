@@ -3,6 +3,8 @@ package com.werealestate.backend.controller;
 import com.werealestate.backend.dto.AsignarEtiquetasRequest;
 import com.werealestate.backend.dto.LeadCreateRequest;
 import com.werealestate.backend.dto.LeadDto;
+import com.werealestate.backend.dto.LeadImportBatchRequest;
+import com.werealestate.backend.dto.LeadImportResultado;
 import com.werealestate.backend.dto.LeadUpdateRequest;
 import com.werealestate.backend.dto.MoverColumnaRequest;
 import com.werealestate.backend.dto.ReasignarLeadRequest;
@@ -52,6 +54,11 @@ public class LeadController {
     @PostMapping
     public LeadDto crear(@Valid @RequestBody LeadCreateRequest request) {
         return leadService.crear(request);
+    }
+
+    @PostMapping("/importar")
+    public LeadImportResultado importar(@Valid @RequestBody LeadImportBatchRequest request) {
+        return leadService.importar(request);
     }
 
     @PutMapping("/{id}")
