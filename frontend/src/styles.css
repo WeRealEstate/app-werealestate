@@ -207,6 +207,14 @@ input, select, textarea {
   transform: rotate(-2deg) scale(1.03);
   border-radius: 0.5rem;
 }
+/* La vista previa es un clon de la tarjetita: al insertarse como nodo nuevo en el
+   <body>, la animación de entrada (card-enter) se vuelve a disparar sobre ella, y
+   su "transform" final (de mayor prioridad por ser una animación CSS) pisa el
+   transform en línea que el CDK usa para seguir al cursor — la vista previa
+   terminaba clavada en la esquina superior izquierda en vez de moverse. */
+.cdk-drag-preview.card-enter {
+  animation: none;
+}
 .cdk-drag-placeholder {
   opacity: 0.35;
   border: 1.5px dashed var(--border);
