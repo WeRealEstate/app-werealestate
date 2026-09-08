@@ -171,7 +171,7 @@ export class LeadsListComponent {
       pais: 'País',
       estadoRepublica: 'Estado (República)',
       origen: 'Origen',
-      valorEstimado: 'Valor estimado',
+      valorEstimado: 'Presupuesto',
       fechaCreacion: 'Fecha de creación',
       fechaUltimoContacto: 'Último contacto',
       diasSinContacto: 'Días sin contacto',
