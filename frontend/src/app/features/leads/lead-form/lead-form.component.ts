@@ -72,7 +72,6 @@ export class LeadFormComponent implements OnInit {
     if (idParam) {
       const id = Number(idParam);
       this.leadId.set(id);
-      this.form.controls.desarrolloId.disable();
       await this.cargarLeadParaEditar(id);
     } else if (this.esAdmin()) {
       this.form.controls.asesorId.addValidators(Validators.required);
@@ -126,6 +125,7 @@ export class LeadFormComponent implements OnInit {
           telefono: v.telefono,
           email: v.email || null,
           origen: v.origen || null,
+          desarrolloId: v.desarrolloId!,
           estado: this.leadOriginal!.estado,
           valorEstimado: v.valorEstimado,
           edad: v.edad,

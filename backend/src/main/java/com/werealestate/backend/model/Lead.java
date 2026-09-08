@@ -147,6 +147,10 @@ public class Lead {
         return desarrollo;
     }
 
+    public void setDesarrollo(Desarrollo desarrollo) {
+        this.desarrollo = desarrollo;
+    }
+
     public Usuario getAsesor() {
         return asesor;
     }

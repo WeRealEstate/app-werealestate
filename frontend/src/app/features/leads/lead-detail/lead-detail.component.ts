@@ -145,6 +145,7 @@ export class LeadDetailComponent implements OnInit {
         telefono: actual.telefono,
         email: actual.email,
         origen: actual.origen,
+        desarrolloId: actual.desarrollo.id,
         estado: nuevoEstado,
         valorEstimado: actual.valorEstimado,
         edad: actual.edad,

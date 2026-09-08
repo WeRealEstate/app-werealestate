@@ -166,6 +166,7 @@ export interface LeadUpdateRequest {
   telefono: string;
   email?: string | null;
   origen?: string | null;
+  desarrolloId: number;
   estado: EstadoLead;
   valorEstimado?: number | null;
   edad?: number | null;

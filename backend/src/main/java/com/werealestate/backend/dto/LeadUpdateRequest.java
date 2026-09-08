@@ -11,6 +11,7 @@ public record LeadUpdateRequest(
         @NotBlank String telefono,
         String email,
         String origen,
+        @NotNull Long desarrolloId,
         @NotNull EstadoLead estado,
         BigDecimal valorEstimado,
         Integer edad,

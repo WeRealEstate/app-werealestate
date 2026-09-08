@@ -151,11 +151,15 @@ public class LeadService {
     public LeadDto actualizar(Long id, LeadUpdateRequest request) {
         Lead lead = buscarLeadPermitido(id);
         boolean eraGanado = lead.getEstado() == EstadoLead.CERRADO_GANADO;
+        Desarrollo desarrollo = desarrolloRepository
+                .findById(request.desarrolloId())
+                .orElseThrow(() -> new ResourceNotFoundException("Desarrollo no encontrado"));
 
         lead.setNombreCliente(request.nombreCliente());
         lead.setTelefono(request.telefono());
         lead.setEmail(request.email());
         lead.setOrigen(request.origen());
+        lead.setDesarrollo(desarrollo);
         lead.setEstado(request.estado());
         lead.setValorEstimado(request.valorEstimado());
         lead.setEdad(request.edad());
