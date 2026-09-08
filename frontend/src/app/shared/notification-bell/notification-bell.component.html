@@ -31,8 +31,8 @@
           @for (n of notificaciones(); track $index) {
             <a
               [routerLink]="rutaDeNotificacion(n)"
-              (click)="close()"
-              class="flex items-start gap-2.5 border-b border-border px-4 py-3 text-sm last:border-b-0 hover:bg-surface-2 transition-colors duration-150"
+              (click)="alNavegar($index)"
+              class="group flex items-start gap-2.5 border-b border-border px-4 py-3 text-sm last:border-b-0 hover:bg-surface-2 transition-colors duration-150"
             >
               <span
                 class="mt-1 h-2 w-2 shrink-0 rounded-full"
@@ -41,7 +41,17 @@
                 [class.bg-we-blue-light]="n.tipo === 'TAREA_PENDIENTE'"
                 aria-hidden="true"
               ></span>
-              <span class="text-ink">{{ n.mensaje }}</span>
+              <span class="flex-1 text-ink">{{ n.mensaje }}</span>
+              <button
+                type="button"
+                (click)="eliminar($index, $event)"
+                aria-label="Eliminar notificación"
+                class="shrink-0 rounded p-0.5 text-ink-muted opacity-0 hover:text-red-600 group-hover:opacity-100 focus:opacity-100 transition-opacity duration-150"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
             </a>
           }
         }

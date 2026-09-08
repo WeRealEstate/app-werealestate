@@ -5,6 +5,7 @@ import { LeadsService } from '../../../core/services/leads.service';
 import { UsuariosService } from '../../../core/services/usuarios.service';
 import { descargarCsv } from '../../../core/utils/csv';
 import { descargarExcel } from '../../../core/utils/excel';
+import { generarPlantillaLeads } from '../../../core/utils/plantilla-leads';
 import {
   ESTADO_LEAD_LABELS,
   EstadoLead,
@@ -189,6 +190,11 @@ export class LeadsListComponent {
   async exportarExcel(): Promise<void> {
     const { filas, encabezados } = this.datosExportacion();
     await descargarExcel(`leads_${new Date().toISOString().slice(0, 10)}.xlsx`, encabezados, filas, 'Leads');
+  }
+
+  async descargarPlantilla(): Promise<void> {
+    const desarrollos = await this.leadsService.listarDesarrollos();
+    await generarPlantillaLeads(desarrollos.map((d) => d.nombre));
   }
 
   badgeClass(estado: Lead['estado']): string {

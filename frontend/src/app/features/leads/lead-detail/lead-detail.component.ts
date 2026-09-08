@@ -106,13 +106,19 @@ export class LeadDetailComponent implements OnInit {
     duracionSeguimiento: this.fb.control(DURACION_POR_DEFECTO, { nonNullable: true }),
   });
 
-  async ngOnInit(): Promise<void> {
-    this.leadId = Number(this.route.snapshot.paramMap.get('id'));
-    await this.cargar();
+  ngOnInit(): void {
+    // Angular reutiliza esta misma instancia al navegar de un lead a otro (misma ruta,
+    // distinto :id) — por eso el id se lee de forma reactiva y no solo una vez en el snapshot,
+    // si no la página se quedaba mostrando el primer lead abierto al abrir otra notificación.
+    this.route.paramMap.subscribe((params) => {
+      this.leadId = Number(params.get('id'));
+      this.cargar();
+    });
 
     if (this.esAdmin()) {
-      const usuarios = await this.usuariosService.listar();
-      this.asesores.set(usuarios.filter((u) => u.activo && ROLES_ASIGNABLES.has(u.rol)));
+      this.usuariosService.listar().then((usuarios) => {
+        this.asesores.set(usuarios.filter((u) => u.activo && ROLES_ASIGNABLES.has(u.rol)));
+      });
     }
   }
 

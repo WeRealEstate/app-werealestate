@@ -48,4 +48,17 @@ export class NotificationBellComponent {
     if (n.leadId !== null) return ['/panel/leads', String(n.leadId)];
     return ['/panel/equipo'];
   }
+
+  /** Al navegar desde una notificación, se quita de la lista visible (vuelve a aparecer si la
+   * condición que la generó sigue vigente la próxima vez que se recarguen las notificaciones). */
+  alNavegar(index: number): void {
+    this.close();
+    this.eliminar(index);
+  }
+
+  eliminar(index: number, event?: Event): void {
+    event?.preventDefault();
+    event?.stopPropagation();
+    this.notificaciones.update((lista) => lista.filter((_, i) => i !== index));
+  }
 }
