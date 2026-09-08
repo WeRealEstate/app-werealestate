@@ -1,11 +1,12 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
 import { UsuariosService } from '../../../core/services/usuarios.service';
-import { Desarrollo, ESTADOS_REPUBLICA, PAIS_LABELS, Pais } from '../../../core/models/lead.model';
+import { ToastService } from '../../../core/services/toast.service';
+import { Desarrollo, ESTADOS_REPUBLICA, Lead, PAIS_LABELS, Pais } from '../../../core/models/lead.model';
 import { Usuario } from '../../../core/models/user.model';
 
 /** Roles que efectivamente trabajan leads y por lo tanto pueden recibir la asignación. */
@@ -23,12 +24,19 @@ export class LeadFormComponent implements OnInit {
   private readonly usuariosService = inject(UsuariosService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly toast = inject(ToastService);
+
+  private leadOriginal: Lead | null = null;
 
   readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
 
+  readonly leadId = signal<number | null>(null);
+  readonly modoEdicion = computed(() => this.leadId() !== null);
   readonly desarrollos = signal<Desarrollo[]>([]);
   readonly asesores = signal<Usuario[]>([]);
   readonly isLoading = signal(false);
+  readonly isCargandoLead = signal(false);
   readonly errorMessage = signal<string | null>(null);
 
   readonly paisLabels = PAIS_LABELS;
@@ -49,14 +57,6 @@ export class LeadFormComponent implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
-    this.desarrollos.set(await this.leadsService.listarDesarrollos());
-
-    if (this.esAdmin()) {
-      this.form.controls.asesorId.addValidators(Validators.required);
-      const usuarios = await this.usuariosService.listar();
-      this.asesores.set(usuarios.filter((u) => u.activo && ROLES_ASIGNABLES.has(u.rol)));
-    }
-
     this.form.controls.pais.valueChanges.subscribe((pais) => {
       if (pais === 'EXTRANJERO') {
         this.form.controls.estadoRepublica.setValue(null);
@@ -65,6 +65,47 @@ export class LeadFormComponent implements OnInit {
         this.form.controls.estadoRepublica.enable();
       }
     });
+
+    this.desarrollos.set(await this.leadsService.listarDesarrollos());
+
+    const idParam = this.route.snapshot.paramMap.get('id');
+    if (idParam) {
+      const id = Number(idParam);
+      this.leadId.set(id);
+      this.form.controls.desarrolloId.disable();
+      await this.cargarLeadParaEditar(id);
+    } else if (this.esAdmin()) {
+      this.form.controls.asesorId.addValidators(Validators.required);
+    }
+
+    if (this.esAdmin() && !this.modoEdicion()) {
+      const usuarios = await this.usuariosService.listar();
+      this.asesores.set(usuarios.filter((u) => u.activo && ROLES_ASIGNABLES.has(u.rol)));
+    }
+  }
+
+  private async cargarLeadParaEditar(id: number): Promise<void> {
+    this.isCargandoLead.set(true);
+    this.errorMessage.set(null);
+    try {
+      const lead = await this.leadsService.obtener(id);
+      this.leadOriginal = lead;
+      this.form.patchValue({
+        nombreCliente: lead.nombreCliente,
+        telefono: lead.telefono,
+        email: lead.email ?? '',
+        origen: lead.origen ?? '',
+        desarrolloId: lead.desarrollo.id,
+        valorEstimado: lead.valorEstimado,
+        edad: lead.edad,
+        pais: lead.pais ?? 'MEXICANO',
+        estadoRepublica: lead.estadoRepublica,
+      });
+    } catch {
+      this.errorMessage.set('No se pudo cargar el lead a editar.');
+    } finally {
+      this.isCargandoLead.set(false);
+    }
   }
 
   async onSubmit(): Promise<void> {
@@ -76,26 +117,43 @@ export class LeadFormComponent implements OnInit {
     this.isLoading.set(true);
     this.errorMessage.set(null);
     const v = this.form.getRawValue();
+    const id = this.leadId();
 
     try {
-      const lead = await this.leadsService.crear({
-        nombreCliente: v.nombreCliente,
-        telefono: v.telefono,
-        email: v.email || null,
-        origen: v.origen || null,
-        desarrolloId: v.desarrolloId!,
-        valorEstimado: v.valorEstimado,
-        asesorId: v.asesorId,
-        edad: v.edad,
-        pais: v.pais,
-        estadoRepublica: v.estadoRepublica,
-      });
-      await this.router.navigate(['/panel/leads', lead.id]);
+      if (id !== null) {
+        const actualizado = await this.leadsService.actualizar(id, {
+          nombreCliente: v.nombreCliente,
+          telefono: v.telefono,
+          email: v.email || null,
+          origen: v.origen || null,
+          estado: this.leadOriginal!.estado,
+          valorEstimado: v.valorEstimado,
+          edad: v.edad,
+          pais: v.pais,
+          estadoRepublica: v.estadoRepublica,
+        });
+        this.toast.success('Lead actualizado.');
+        await this.router.navigate(['/panel/leads', actualizado.id]);
+      } else {
+        const lead = await this.leadsService.crear({
+          nombreCliente: v.nombreCliente,
+          telefono: v.telefono,
+          email: v.email || null,
+          origen: v.origen || null,
+          desarrolloId: v.desarrolloId!,
+          valorEstimado: v.valorEstimado,
+          asesorId: v.asesorId,
+          edad: v.edad,
+          pais: v.pais,
+          estadoRepublica: v.estadoRepublica,
+        });
+        await this.router.navigate(['/panel/leads', lead.id]);
+      }
     } catch (error) {
       this.errorMessage.set(
         error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
           ? error.error.message
-          : 'No se pudo crear el lead. Intenta de nuevo.',
+          : `No se pudo ${id !== null ? 'actualizar' : 'crear'} el lead. Intenta de nuevo.`,
       );
     } finally {
       this.isLoading.set(false);

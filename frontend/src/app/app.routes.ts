@@ -26,6 +26,11 @@ export const routes: Routes = [
           import('./features/leads/lead-form/lead-form.component').then((m) => m.LeadFormComponent),
       },
       {
+        path: 'leads/:id/editar',
+        loadComponent: () =>
+          import('./features/leads/lead-form/lead-form.component').then((m) => m.LeadFormComponent),
+      },
+      {
         path: 'leads/:id',
         loadComponent: () =>
           import('./features/leads/lead-detail/lead-detail.component').then((m) => m.LeadDetailComponent),
