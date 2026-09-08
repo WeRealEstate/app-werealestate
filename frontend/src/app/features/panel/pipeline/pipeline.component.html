@@ -112,26 +112,28 @@
                   </div>
                 </div>
                 <p class="mt-0.5 text-xs text-ink-muted">{{ lead.desarrollo.nombre }}</p>
-                @if (lead.etiquetas.length > 0) {
-                  <div class="mt-1.5 flex flex-wrap gap-1">
-                    @for (et of lead.etiquetas; track et.id) {
-                      <span class="inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium" [class]="badgeClasesEtiqueta[et.color]">
-                        {{ et.nombre }}
-                      </span>
-                    }
-                  </div>
-                }
 
                 <div class="mt-3 flex items-center justify-between gap-2">
-                  <span
-                    class="flex h-6 w-6 items-center justify-center rounded-full bg-we-primary/15 text-[10px] font-semibold text-we-primary dark:text-we-blue-light"
-                    [title]="lead.asesor.nombre"
-                  >
-                    {{ iniciales(lead.asesor.nombre) }}
-                  </span>
+                  <div class="flex min-w-0 flex-1 items-center gap-1.5">
+                    <span
+                      class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-we-primary/15 text-[10px] font-semibold text-we-primary dark:text-we-blue-light"
+                      [title]="lead.asesor.nombre"
+                    >
+                      {{ iniciales(lead.asesor.nombre) }}
+                    </span>
+                    @if (lead.etiquetas.length > 0) {
+                      <div class="flex min-w-0 flex-wrap gap-1">
+                        @for (et of lead.etiquetas; track et.id) {
+                          <span class="inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium" [class]="badgeClasesEtiqueta[et.color]">
+                            {{ et.nombre }}
+                          </span>
+                        }
+                      </div>
+                    }
+                  </div>
                   <a
                     [routerLink]="['/panel/leads', lead.id]"
-                    class="text-xs font-medium text-we-blue-light hover:underline"
+                    class="shrink-0 text-xs font-medium text-we-blue-light hover:underline"
                   >
                     Ver
                   </a>
@@ -226,26 +228,28 @@
                     </div>
                   </div>
                   <p class="mt-0.5 text-xs text-ink-muted">{{ lead.desarrollo.nombre }}</p>
-                @if (lead.etiquetas.length > 0) {
-                  <div class="mt-1.5 flex flex-wrap gap-1">
-                    @for (et of lead.etiquetas; track et.id) {
-                      <span class="inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium" [class]="badgeClasesEtiqueta[et.color]">
-                        {{ et.nombre }}
-                      </span>
-                    }
-                  </div>
-                }
 
                   <div class="mt-3 flex items-center justify-between gap-2">
-                    <span
-                      class="flex h-6 w-6 items-center justify-center rounded-full bg-we-primary/15 text-[10px] font-semibold text-we-primary dark:text-we-blue-light"
-                      [title]="lead.asesor.nombre"
-                    >
-                      {{ iniciales(lead.asesor.nombre) }}
-                    </span>
+                    <div class="flex min-w-0 flex-1 items-center gap-1.5">
+                      <span
+                        class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-we-primary/15 text-[10px] font-semibold text-we-primary dark:text-we-blue-light"
+                        [title]="lead.asesor.nombre"
+                      >
+                        {{ iniciales(lead.asesor.nombre) }}
+                      </span>
+                      @if (lead.etiquetas.length > 0) {
+                        <div class="flex min-w-0 flex-wrap gap-1">
+                          @for (et of lead.etiquetas; track et.id) {
+                            <span class="inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium" [class]="badgeClasesEtiqueta[et.color]">
+                              {{ et.nombre }}
+                            </span>
+                          }
+                        </div>
+                      }
+                    </div>
                     <a
                       [routerLink]="['/panel/leads', lead.id]"
-                      class="text-xs font-medium text-we-blue-light hover:underline"
+                      class="shrink-0 text-xs font-medium text-we-blue-light hover:underline"
                     >
                       Ver
                     </a>
