@@ -36,10 +36,10 @@ export const routes: Routes = [
           import('./features/panel/calendario/calendario.component').then((m) => m.CalendarioComponent),
       },
       {
-        path: 'tarjetas',
+        path: 'pipeline',
         canActivate: [roleGuard(['ASESOR', 'ADMIN'])],
         loadComponent: () =>
-          import('./features/panel/tarjetas/tarjetas.component').then((m) => m.TarjetasComponent),
+          import('./features/panel/pipeline/pipeline.component').then((m) => m.PipelineComponent),
       },
       {
         path: 'comisiones',

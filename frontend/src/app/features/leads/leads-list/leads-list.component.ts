@@ -4,6 +4,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
 import { UsuariosService } from '../../../core/services/usuarios.service';
 import { descargarCsv } from '../../../core/utils/csv';
+import { descargarExcel } from '../../../core/utils/excel';
 import {
   ESTADO_LEAD_LABELS,
   EstadoLead,
@@ -140,7 +141,7 @@ export class LeadsListComponent {
     }
   }
 
-  exportarCsv(): void {
+  private datosExportacion() {
     const filas = this.leadsFiltrados().map((l) => ({
       cliente: l.nombreCliente,
       telefono: l.telefono,
@@ -159,27 +160,35 @@ export class LeadsListComponent {
       frio: l.frio ? 'Sí' : 'No',
     }));
 
-    descargarCsv(
-      `leads_${new Date().toISOString().slice(0, 10)}.csv`,
-      {
-        cliente: 'Cliente',
-        telefono: 'Teléfono',
-        email: 'Correo',
-        desarrollo: 'Desarrollo',
-        estado: 'Estado',
-        asesor: 'Asesor',
-        edad: 'Edad',
-        pais: 'País',
-        estadoRepublica: 'Estado (República)',
-        origen: 'Origen',
-        valorEstimado: 'Valor estimado',
-        fechaCreacion: 'Fecha de creación',
-        fechaUltimoContacto: 'Último contacto',
-        diasSinContacto: 'Días sin contacto',
-        frio: 'Lead frío',
-      },
-      filas,
-    );
+    const encabezados = {
+      cliente: 'Cliente',
+      telefono: 'Teléfono',
+      email: 'Correo',
+      desarrollo: 'Desarrollo',
+      estado: 'Estado',
+      asesor: 'Asesor',
+      edad: 'Edad',
+      pais: 'País',
+      estadoRepublica: 'Estado (República)',
+      origen: 'Origen',
+      valorEstimado: 'Valor estimado',
+      fechaCreacion: 'Fecha de creación',
+      fechaUltimoContacto: 'Último contacto',
+      diasSinContacto: 'Días sin contacto',
+      frio: 'Lead frío',
+    };
+
+    return { filas, encabezados };
+  }
+
+  exportarCsv(): void {
+    const { filas, encabezados } = this.datosExportacion();
+    descargarCsv(`leads_${new Date().toISOString().slice(0, 10)}.csv`, encabezados, filas);
+  }
+
+  exportarExcel(): void {
+    const { filas, encabezados } = this.datosExportacion();
+    descargarExcel(`leads_${new Date().toISOString().slice(0, 10)}.xlsx`, encabezados, filas, 'Leads');
   }
 
   badgeClass(estado: Lead['estado']): string {

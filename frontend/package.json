@@ -22,7 +22,8 @@
     "jspdf-autotable": "^5.0.8",
     "motion": "^13.2.0",
     "rxjs": "~7.8.0",
-    "tslib": "^2.3.0"
+    "tslib": "^2.3.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@angular/build": "^21.2.20",

@@ -5,6 +5,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { ComisionesService } from '../../../core/services/comisiones.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { descargarCsv } from '../../../core/utils/csv';
+import { descargarExcel } from '../../../core/utils/excel';
 import { Comision } from '../../../core/models/comision.model';
 
 interface ResumenAsesor {
@@ -112,7 +113,7 @@ export class ComisionesComponent {
     }
   }
 
-  exportarCsv(): void {
+  private datosExportacion() {
     const filas = this.comisiones().map((c) => ({
       lead: c.leadNombreCliente,
       asesor: c.asesor.nombre,
@@ -123,19 +124,27 @@ export class ComisionesComponent {
       fechaPago: c.fechaPago ?? '',
     }));
 
-    descargarCsv(
-      `comisiones_${new Date().toISOString().slice(0, 10)}.csv`,
-      {
-        lead: 'Lead',
-        asesor: 'Asesor',
-        monto: 'Monto',
-        porcentajeAplicado: 'Porcentaje aplicado',
-        estado: 'Estado',
-        fechaCreacion: 'Fecha de generación',
-        fechaPago: 'Fecha de pago',
-      },
-      filas,
-    );
+    const encabezados = {
+      lead: 'Lead',
+      asesor: 'Asesor',
+      monto: 'Monto',
+      porcentajeAplicado: 'Porcentaje aplicado',
+      estado: 'Estado',
+      fechaCreacion: 'Fecha de generación',
+      fechaPago: 'Fecha de pago',
+    };
+
+    return { filas, encabezados };
+  }
+
+  exportarCsv(): void {
+    const { filas, encabezados } = this.datosExportacion();
+    descargarCsv(`comisiones_${new Date().toISOString().slice(0, 10)}.csv`, encabezados, filas);
+  }
+
+  exportarExcel(): void {
+    const { filas, encabezados } = this.datosExportacion();
+    descargarExcel(`comisiones_${new Date().toISOString().slice(0, 10)}.xlsx`, encabezados, filas, 'Comisiones');
   }
 
   async alternarPagada(comision: Comision): Promise<void> {

@@ -12,6 +12,7 @@ import { ConfirmService } from '../../../core/services/confirm.service';
 import {
   ColumnaPersonalizada,
   Desarrollo,
+  ETIQUETA_BADGE_CLASSES,
   Lead,
   TIPO_SEGUIMIENTO_LABELS,
   TipoSeguimiento,
@@ -58,12 +59,12 @@ type Tarjeta = { id: number; nombre: string; leads: Lead[] };
 type Destino = { tipo: 'tarjeta'; id: number; nombre: string } | { tipo: 'sin-asignar' };
 
 @Component({
-  selector: 'app-tarjetas',
+  selector: 'app-pipeline',
   standalone: true,
   imports: [RouterLink, DragDropModule, ReactiveFormsModule],
-  templateUrl: './tarjetas.component.html',
+  templateUrl: './pipeline.component.html',
 })
-export class TarjetasComponent {
+export class PipelineComponent {
   private readonly leadsService = inject(LeadsService);
   private readonly usuariosService = inject(UsuariosService);
   private readonly columnasService = inject(ColumnasService);
@@ -76,6 +77,7 @@ export class TarjetasComponent {
   readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
   readonly propioId = computed(() => this.auth.currentUser()?.id);
   readonly maxTarjetas = MAX_TARJETAS_POR_ASESOR;
+  readonly badgeClasesEtiqueta = ETIQUETA_BADGE_CLASSES;
 
   readonly leads = signal<Lead[]>([]);
   readonly isLoading = signal(true);
