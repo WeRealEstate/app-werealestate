@@ -15,6 +15,7 @@ export interface QuotePdfData {
   pricePerM2: number;
   totalPrice: number;
   paymentMethod: string;
+  downPaymentLabel: string;
   downPayment: number;
   financedAmount: number;
   months: number;
@@ -387,7 +388,7 @@ export class PdfService {
       ],
 
       [
-        'Enganche',
+        data.downPaymentLabel,
         this.money(data.downPayment)
       ],
 

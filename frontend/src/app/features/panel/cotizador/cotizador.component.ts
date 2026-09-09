@@ -9,7 +9,7 @@ import { PressDirective } from '../../../shared/motion/press.directive';
 import { ValuePulseDirective } from '../../../shared/motion/value-pulse.directive';
 
 export type ProjectId = 'samai' | 'nanuu';
-export type PaymentType = 'msi' | 'downpayment' | 'annualities' | 'cash';
+export type PaymentType = 'msi' | 'downpayment' | 'annualities' | 'cash' | 'initial';
 
 @Component({
   selector: 'app-cotizador',
@@ -41,6 +41,10 @@ export class CotizadorComponent {
   selectedPaymentType: PaymentType = 'msi';
 
   downPaymentPercentage: number = 10;
+
+  // Pago inicial: monto fijo en pesos (a diferencia del enganche, que es un %).
+  initialPayment: number = 0;
+  initialPaymentDisplay = '';
 
   selectedMonths: number = 60;
 
@@ -143,6 +147,34 @@ export class CotizadorComponent {
     this.customAreaDisplay = decimalPart !== undefined ? `${formattedInteger}.${decimalPart}` : formattedInteger;
   }
 
+  onInitialPaymentInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+
+    const rawValue = input.value.replace(/\D/g, '');
+
+    if (!rawValue) {
+      this.initialPayment = 0;
+      this.initialPaymentDisplay = '';
+      return;
+    }
+
+    this.initialPayment = Number(rawValue);
+
+    this.initialPaymentDisplay = this.initialPayment.toLocaleString('en-US');
+  }
+
+  get initialPaymentInvalid(): boolean {
+    if (this.selectedPaymentType !== 'initial') {
+      return false;
+    }
+
+    if (this.initialPayment <= 0) {
+      return true;
+    }
+
+    return this.initialPayment >= this.totalPrice;
+  }
+
   get totalPrice(): number {
     return this.selectedArea * this.pricePerM2;
   }
@@ -164,6 +196,11 @@ export class CotizadorComponent {
   }
 
   get downPayment(): number {
+    // Pago inicial: monto fijo capturado por el asesor, igual para ambos proyectos.
+    if (this.selectedPaymentType === 'initial') {
+      return this.initialPayment;
+    }
+
     if (this.selectedProject === 'nanuu') {
       if (this.selectedPaymentType === 'downpayment') {
         return this.totalPrice * 0.2;
@@ -191,7 +228,7 @@ export class CotizadorComponent {
       return this.totalPrice;
     }
 
-    if (this.selectedPaymentType === 'downpayment') {
+    if (this.selectedPaymentType === 'downpayment' || this.selectedPaymentType === 'initial') {
       return this.totalPrice - this.downPayment;
     }
 
@@ -210,7 +247,8 @@ export class CotizadorComponent {
     if (
       this.selectedPaymentType === 'msi' ||
       this.selectedPaymentType === 'downpayment' ||
-      this.selectedPaymentType === 'annualities'
+      this.selectedPaymentType === 'annualities' ||
+      this.selectedPaymentType === 'initial'
     ) {
       return this.selectedMonths;
     }
@@ -232,7 +270,11 @@ export class CotizadorComponent {
     }
 
     // SAMAI
-    if (this.selectedPaymentType === 'msi' || this.selectedPaymentType === 'downpayment') {
+    if (
+      this.selectedPaymentType === 'msi' ||
+      this.selectedPaymentType === 'downpayment' ||
+      this.selectedPaymentType === 'initial'
+    ) {
       return this.financedAmount / this.selectedMonths;
     }
 
@@ -256,6 +298,10 @@ export class CotizadorComponent {
       return `Con anualidades · ${this.selectedMonths} meses`;
     }
 
+    if (this.selectedPaymentType === 'initial') {
+      return `Pago inicial · ${this.selectedMonths} meses`;
+    }
+
     if (this.selectedPaymentType === 'cash') {
       return 'Contado';
     }
@@ -272,7 +318,7 @@ export class CotizadorComponent {
       return this.totalPrice;
     }
 
-    if (this.selectedPaymentType === 'downpayment') {
+    if (this.selectedPaymentType === 'downpayment' || this.selectedPaymentType === 'initial') {
       return this.downPayment + this.financedAmount;
     }
 
@@ -341,7 +387,11 @@ export class CotizadorComponent {
     const startDate = new Date(this.currentDate);
 
     for (let i = 1; i <= this.financingMonths; i++) {
-      const monthOffset = this.selectedPaymentType === 'downpayment' ? i : i - 1;
+      // El enganche y el pago inicial se cubren de entrada, aparte del calendario de
+      // mensualidades: no cuentan como la primera mensualidad, por eso el conteo de meses
+      // empieza después (offset i, no i - 1).
+      const monthOffset =
+        this.selectedPaymentType === 'downpayment' || this.selectedPaymentType === 'initial' ? i : i - 1;
 
       const paymentDate = new Date(startDate.getFullYear(), startDate.getMonth() + monthOffset, 1);
 
@@ -478,6 +528,8 @@ export class CotizadorComponent {
       totalPrice: this.displayedLandPrice,
 
       paymentMethod: this.paymentMethodLabel,
+
+      downPaymentLabel: this.selectedPaymentType === 'initial' ? 'Pago inicial' : 'Enganche',
 
       downPayment: this.downPayment,
 
@@ -756,6 +808,10 @@ export class CotizadorComponent {
     }
 
     if (this.isAnnualities && this.annualContributionInvalid) {
+      return false;
+    }
+
+    if (this.selectedPaymentType === 'initial' && this.initialPaymentInvalid) {
       return false;
     }
 
