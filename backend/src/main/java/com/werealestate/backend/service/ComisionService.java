@@ -74,11 +74,13 @@ public class ComisionService {
     }
 
     /**
-     * Genera la comisión de un lead la primera vez que cierra como ganado. No hace nada si ya
-     * existe una comisión para ese lead, si no cerró ganado, o si no tiene valor estimado.
+     * Genera la comisión de un lead la primera vez que cierra como ganado con un valor estimado
+     * capturado. No depende de si ya estaba ganado antes de este guardado (solo de si ya existe
+     * una comisión), porque un lead puede cerrarse como ganado sin presupuesto todavía y
+     * capturarlo después al editarlo; en ese momento sí debe generarse la comisión pendiente.
      */
-    void generarSiCorresponde(Lead lead, boolean eraGanadoAntes, boolean esGanadoAhora) {
-        if (eraGanadoAntes || !esGanadoAhora) return;
+    void generarSiCorresponde(Lead lead, boolean esGanadoAhora) {
+        if (!esGanadoAhora) return;
         if (lead.getValorEstimado() == null || lead.getValorEstimado().signum() <= 0) return;
         if (comisionRepository.existsByLeadId(lead.getId())) return;
 

@@ -253,6 +253,36 @@
       </div>
     </div>
 
+    @if (pendienteCierre(); as pendiente) {
+      <div class="mt-4 rounded-lg border border-we-primary/30 bg-we-primary/5 dark:bg-we-primary/10 px-3.5 py-3">
+        <p class="text-sm font-medium text-ink">Para generar la comisión, ingresa el monto de venta</p>
+        <p class="mt-0.5 text-xs text-ink-muted">Este lead no tiene un presupuesto registrado; sin un monto no se puede calcular la comisión.</p>
+        <div class="mt-2.5 flex flex-col gap-2.5 sm:flex-row sm:items-center">
+          <input
+            type="number"
+            min="1"
+            step="1"
+            [value]="pendiente.monto"
+            (input)="onMontoCierreInput($event)"
+            placeholder="Monto de venta en MXN"
+            class="w-full sm:max-w-xs rounded-lg border border-border px-3 py-2 text-sm text-ink bg-surface
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          />
+          <div class="flex justify-end gap-2">
+            <button type="button" (click)="cancelarCierre()" class="rounded-md px-2.5 py-1.5 text-xs text-ink-muted hover:text-ink">Cancelar</button>
+            <button
+              type="button"
+              (click)="confirmarCierreConPresupuesto()"
+              [disabled]="!pendiente.monto || +pendiente.monto <= 0 || isSavingEstado()"
+              class="rounded-md bg-we-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-we-primary/90 disabled:opacity-60"
+            >
+              Confirmar cierre
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
     @if (errorMessage()) {
       <div class="mt-4 rounded-lg bg-red-50 border border-red-200 px-3.5 py-2.5 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
         {{ errorMessage() }}

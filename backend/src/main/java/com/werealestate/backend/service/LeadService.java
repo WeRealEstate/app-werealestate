@@ -211,7 +211,6 @@ public class LeadService {
 
     public LeadDto actualizar(Long id, LeadUpdateRequest request) {
         Lead lead = buscarLeadPermitido(id);
-        boolean eraGanado = lead.getEstado() == EstadoLead.CERRADO_GANADO;
         Desarrollo desarrollo = desarrolloRepository
                 .findById(request.desarrolloId())
                 .orElseThrow(() -> new ResourceNotFoundException("Desarrollo no encontrado"));
@@ -228,7 +227,7 @@ public class LeadService {
         lead.setEstadoRepublica(request.pais() == Pais.EXTRANJERO ? null : request.estadoRepublica());
         Lead guardado = leadRepository.save(lead);
 
-        comisionService.generarSiCorresponde(guardado, eraGanado, request.estado() == EstadoLead.CERRADO_GANADO);
+        comisionService.generarSiCorresponde(guardado, request.estado() == EstadoLead.CERRADO_GANADO);
 
         return toDto(guardado);
     }
