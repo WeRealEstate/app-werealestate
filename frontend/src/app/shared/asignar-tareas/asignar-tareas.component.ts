@@ -9,7 +9,8 @@ import { UsuarioResumen } from '../../core/models/lead.model';
 
 /**
  * Formulario "Asignar una tarea" + lista "Tareas que has asignado". Lo usan tanto el líder de
- * área como el admin (misma dinámica para ambos): las tareas solo se pueden asignar a equipo interno.
+ * área (solo puede asignar a equipo interno) como el admin (puede asignar también a líderes de
+ * área) — el backend filtra la lista de asignables según el rol de quien la usa.
  */
 @Component({
   selector: 'app-asignar-tareas',

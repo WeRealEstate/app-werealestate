@@ -76,8 +76,10 @@ public class UsuarioService {
         if (actual.getRol() != Role.ADMIN && actual.getRol() != Role.LIDER_AREA) {
             throw new ForbiddenOperationException("No tienes acceso a la lista de usuarios");
         }
+        // El admin también puede asignar tareas a líderes de área, no solo a equipo interno.
+        boolean incluirLideres = actual.getRol() == Role.ADMIN;
         return usuarioRepository.findAll().stream()
-                .filter(u -> u.isActivo() && u.getRol() == Role.EQUIPO_INTERNO)
+                .filter(u -> u.isActivo() && (u.getRol() == Role.EQUIPO_INTERNO || (incluirLideres && u.getRol() == Role.LIDER_AREA)))
                 .sorted(Comparator.comparing(Usuario::getNombre))
                 .map(UsuarioResumenDto::from)
                 .toList();

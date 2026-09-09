@@ -58,12 +58,22 @@ public class TareaService {
         Usuario asignado = usuarioRepository
                 .findById(request.asignadoAId())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
-        if (asignado.getRol() != Role.EQUIPO_INTERNO) {
-            throw new ForbiddenOperationException("Las tareas solo se pueden asignar a equipo interno");
-        }
+        validarRolAsignable(actual, asignado);
 
         Tarea tarea = new Tarea(request.titulo(), request.descripcion(), asignado, actual, request.fechaLimite());
         return TareaDto.from(tareaRepository.save(tarea));
+    }
+
+    /** El admin puede asignar a líderes de área o a equipo interno; un líder de área solo a equipo interno. */
+    private void validarRolAsignable(Usuario creador, Usuario asignado) {
+        boolean valido = asignado.getRol() == Role.EQUIPO_INTERNO
+                || (creador.getRol() == Role.ADMIN && asignado.getRol() == Role.LIDER_AREA);
+        if (!valido) {
+            throw new ForbiddenOperationException(
+                    creador.getRol() == Role.ADMIN
+                            ? "Las tareas solo se pueden asignar a líderes de área o equipo interno"
+                            : "Las tareas solo se pueden asignar a equipo interno");
+        }
     }
 
     public TareaDto cambiarEstado(Long id, TareaEstadoRequest request) {
@@ -92,17 +102,15 @@ public class TareaService {
                 .toList();
     }
 
-    /** Reasigna la tarea a otro miembro de equipo interno. Solo admin; no cambia quién la creó. */
+    /** Reasigna la tarea a otro líder de área o miembro de equipo interno. Solo admin; no cambia quién la creó. */
     public TareaDto reasignar(Long id, TareaReasignarRequest request) {
-        exigirAdmin();
+        Usuario actual = exigirAdmin();
         Tarea tarea = tareaRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Tarea no encontrada"));
 
         Usuario nuevoAsignado = usuarioRepository
                 .findById(request.nuevoAsignadoAId())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
-        if (nuevoAsignado.getRol() != Role.EQUIPO_INTERNO) {
-            throw new ForbiddenOperationException("Las tareas solo se pueden asignar a equipo interno");
-        }
+        validarRolAsignable(actual, nuevoAsignado);
 
         tarea.setAsignadoA(nuevoAsignado);
         return TareaDto.from(tareaRepository.save(tarea));
