@@ -190,12 +190,37 @@
           </div>
         </div>
 
+        <!-- PRECIO POR M2 -->
+        <div class="mb-6">
+          <label class="mb-2 block text-sm font-medium text-ink">Precio por m2</label>
+
+          <div class="relative">
+            <select
+              [ngModel]="pricePerM2"
+              (ngModelChange)="selectPricePerM2($event)"
+              class="w-full appearance-none rounded-xl border border-border bg-surface-2 px-4 py-3.5 pr-12 text-sm font-medium text-ink outline-none transition-all focus:border-we-primary focus:bg-surface focus:ring-4 focus:ring-we-primary/10"
+            >
+              @if (selectedProject === 'samai') {
+                <option [ngValue]="800">$800 MXN - Lote</option>
+                <option [ngValue]="170">$170 MXN - Hectarea</option>
+              }
+              @if (selectedProject === 'nanuu') {
+                <option [ngValue]="3700">$3,700 MXN - Lote</option>
+              }
+            </select>
+
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+            </svg>
+          </div>
+        </div>
+
         <div class="grid gap-6 sm:grid-cols-2">
           <!-- SUPERFICIE -->
           <div>
             <label class="mb-2 block text-sm font-medium text-ink">Superficie del terreno</label>
 
-            <div class="grid grid-cols-3 gap-2">
+            <div class="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 weMotionPress
@@ -206,7 +231,7 @@
                 [disabled]="pricePerM2 === 170"
                 [class.opacity-40]="pricePerM2 === 170"
                 [class.cursor-not-allowed]="pricePerM2 === 170"
-                class="rounded-xl border border-border bg-surface px-6 py-2 font-normal transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                class="min-w-0 rounded-xl border border-border bg-surface px-3 py-3 text-sm font-normal leading-tight whitespace-nowrap transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
               >
                 200 m²
               </button>
@@ -221,7 +246,7 @@
                 [class.border-we-primary]="isCustomArea"
                 [class.text-we-primary]="isCustomArea"
                 [class.shadow-md]="isCustomArea"
-                class="rounded-xl border border-border bg-surface px-2 py-4 font-medium transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                class="min-w-0 rounded-xl border border-border bg-surface px-3 py-3 text-sm font-medium leading-tight whitespace-nowrap transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
               >
                 Personalizada
               </button>
@@ -250,31 +275,6 @@
                 class="w-full rounded-xl border border-border bg-surface px-4 py-3.5 pr-14 outline-none transition-all duration-200 focus:border-we-primary focus:ring-4 focus:ring-we-primary/10"
               />
               <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-ink-muted">m²</span>
-            </div>
-          </div>
-
-          <!-- PRECIO POR M2 -->
-          <div class="w-full">
-            <label class="mb-2 block text-sm font-medium text-ink">Precio por m2</label>
-
-            <div class="relative">
-              <select
-                [ngModel]="pricePerM2"
-                (ngModelChange)="selectPricePerM2($event)"
-                class="w-full appearance-none rounded-xl border border-border bg-surface-2 px-4 py-3.5 pr-12 text-sm font-medium text-ink outline-none transition-all focus:border-we-primary focus:bg-surface focus:ring-4 focus:ring-we-primary/10"
-              >
-                @if (selectedProject === 'samai') {
-                  <option [ngValue]="800">$800 MXN - Lote</option>
-                  <option [ngValue]="170">$170 MXN - Hectarea</option>
-                }
-                @if (selectedProject === 'nanuu') {
-                  <option [ngValue]="3700">$3,700 MXN - Lote</option>
-                }
-              </select>
-
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted">
-                <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-              </svg>
             </div>
           </div>
         </div>
