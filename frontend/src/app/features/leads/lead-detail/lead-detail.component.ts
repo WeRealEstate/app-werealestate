@@ -34,8 +34,9 @@ import {
   combinarFechaHora,
 } from '../../../core/utils/fecha-hora';
 
-/** Roles que efectivamente trabajan leads y por lo tanto pueden recibir una reasignación. */
-const ROLES_ASIGNABLES = new Set(['ASESOR', 'LIDER_AREA']);
+/** Roles que pueden recibir la reasignación de un lead: quienes trabajan leads, más el admin,
+ * que también tiene su propia bolsa de leads. */
+const ROLES_ASIGNABLES = new Set(['ASESOR', 'LIDER_AREA', 'ADMIN']);
 
 @Component({
   selector: 'app-lead-detail',

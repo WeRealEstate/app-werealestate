@@ -28,8 +28,9 @@ import {
   combinarFechaHora,
 } from '../../../core/utils/fecha-hora';
 
-/** Roles que efectivamente trabajan leads y por lo tanto pueden tener un tablero propio. */
-const ROLES_ASIGNABLES = new Set(['ASESOR', 'LIDER_AREA']);
+/** Roles que pueden tener un tablero propio: quienes trabajan leads, más el admin, que
+ * también tiene su propia bolsa de leads (por eso el tablero ya lo selecciona por defecto). */
+const ROLES_ASIGNABLES = new Set(['ASESOR', 'LIDER_AREA', 'ADMIN']);
 
 /** Tope de tarjetas (columnas 100% personalizadas) por asesor; debe coincidir con el límite del backend. */
 export const MAX_TARJETAS_POR_ASESOR = 20;

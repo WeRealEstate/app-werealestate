@@ -10,8 +10,9 @@ import { generarPlantillaLeads } from '../../../core/utils/plantilla-leads';
 import { Desarrollo, LeadImportResultado } from '../../../core/models/lead.model';
 import { Usuario } from '../../../core/models/user.model';
 
-/** Roles que efectivamente trabajan leads y por lo tanto pueden recibir la asignación. */
-const ROLES_ASIGNABLES = new Set(['ASESOR', 'LIDER_AREA']);
+/** Roles que pueden recibir la asignación de un lead: quienes trabajan leads, más el admin,
+ * que también tiene su propia bolsa de leads. */
+const ROLES_ASIGNABLES = new Set(['ASESOR', 'LIDER_AREA', 'ADMIN']);
 
 /** Una fila ya parseada del Excel, editable en la vista previa antes de confirmar la importación. */
 interface FilaImportacion {

@@ -19,8 +19,9 @@ import {
 /** Filtro de estado: un EstadoLead puntual, o 'FRIOS' para leads sin seguimiento reciente. */
 type FiltroEstado = EstadoLead | 'FRIOS';
 
-/** Roles que efectivamente trabajan leads y por lo tanto aparecen en el filtro por asesor. */
-const ROLES_ASIGNABLES = new Set(['ASESOR', 'LIDER_AREA']);
+/** Roles que aparecen en el filtro por asesor: quienes trabajan leads, más el admin, que
+ * también tiene su propia bolsa de leads. */
+const ROLES_ASIGNABLES = new Set(['ASESOR', 'LIDER_AREA', 'ADMIN']);
 
 @Component({
   selector: 'app-leads-list',
