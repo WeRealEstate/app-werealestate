@@ -30,6 +30,12 @@ export class UsuariosListComponent {
   readonly errorMessage = signal<string | null>(null);
   readonly savingId = signal<number | null>(null);
 
+  /** El error de "tiene actividad registrada" al borrar se resuelve borrando esa tarea en
+   * Inicio → "Todas las tareas del equipo", pero no queda obvio desde acá si no lo señalamos. */
+  readonly errorEsPorTareaBloqueando = computed(
+    () => this.errorMessage()?.includes('tiene actividad registrada') ?? false,
+  );
+
   readonly resetId = signal<number | null>(null);
   readonly nuevaPassword = signal('');
   readonly resetError = signal<string | null>(null);

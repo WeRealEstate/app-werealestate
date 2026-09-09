@@ -17,6 +17,11 @@
   @if (errorMessage()) {
     <div class="mt-6 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
       {{ errorMessage() }}
+      @if (errorEsPorTareaBloqueando()) {
+        <a routerLink="/panel/admin" class="ml-1 font-medium underline hover:no-underline">
+          Ve a Inicio → "Todas las tareas del equipo" para borrarla.
+        </a>
+      }
     </div>
   }
 
