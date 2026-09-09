@@ -55,7 +55,6 @@ public class LeadService {
     private final ComisionRepository comisionRepository;
     private final EtiquetaRepository etiquetaRepository;
     private final CurrentUserProvider currentUserProvider;
-    private final ComisionService comisionService;
     private final int diasFrio;
 
     public LeadService(
@@ -67,7 +66,6 @@ public class LeadService {
             ComisionRepository comisionRepository,
             EtiquetaRepository etiquetaRepository,
             CurrentUserProvider currentUserProvider,
-            ComisionService comisionService,
             @Value("${app.lead.dias-frio}") int diasFrio) {
         this.leadRepository = leadRepository;
         this.desarrolloRepository = desarrolloRepository;
@@ -77,7 +75,6 @@ public class LeadService {
         this.comisionRepository = comisionRepository;
         this.etiquetaRepository = etiquetaRepository;
         this.currentUserProvider = currentUserProvider;
-        this.comisionService = comisionService;
         this.diasFrio = diasFrio;
     }
 
@@ -226,8 +223,6 @@ public class LeadService {
         lead.setPais(request.pais());
         lead.setEstadoRepublica(request.pais() == Pais.EXTRANJERO ? null : request.estadoRepublica());
         Lead guardado = leadRepository.save(lead);
-
-        comisionService.generarSiCorresponde(guardado, request.estado() == EstadoLead.CERRADO_GANADO);
 
         return toDto(guardado);
     }

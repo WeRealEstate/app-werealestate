@@ -11,7 +11,7 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
 interface NavItem {
   label: string;
   route: string;
-  icon: 'home' | 'leads' | 'usuarios' | 'calendario' | 'comisiones' | 'pipeline' | 'cotizador';
+  icon: 'home' | 'leads' | 'usuarios' | 'calendario' | 'pipeline' | 'cotizador';
 }
 
 const NAV_BY_ROLE: Record<Role, NavItem[]> = {
@@ -20,7 +20,6 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
     { label: 'Leads', route: '/panel/leads', icon: 'leads' },
     { label: 'Pipeline', route: '/panel/pipeline', icon: 'pipeline' },
     { label: 'Calendario', route: '/panel/calendario', icon: 'calendario' },
-    { label: 'Comisiones', route: '/panel/comisiones', icon: 'comisiones' },
     { label: 'Cotizador', route: '/panel/cotizador', icon: 'cotizador' },
   ],
   LIDER_AREA: [
@@ -38,7 +37,6 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
     { label: 'Pipeline', route: '/panel/pipeline', icon: 'pipeline' },
     { label: 'Usuarios', route: '/panel/usuarios', icon: 'usuarios' },
     { label: 'Calendario', route: '/panel/calendario', icon: 'calendario' },
-    { label: 'Comisiones', route: '/panel/comisiones', icon: 'comisiones' },
     { label: 'Cotizador', route: '/panel/cotizador', icon: 'cotizador' },
   ],
 };

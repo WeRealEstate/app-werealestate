@@ -52,12 +52,6 @@ export const routes: Routes = [
           import('./features/panel/pipeline/pipeline.component').then((m) => m.PipelineComponent),
       },
       {
-        path: 'comisiones',
-        canActivate: [roleGuard(['ASESOR', 'ADMIN'])],
-        loadComponent: () =>
-          import('./features/panel/comisiones/comisiones.component').then((m) => m.ComisionesComponent),
-      },
-      {
         path: 'cotizador',
         canActivate: [roleGuard(['ASESOR', 'ADMIN'])],
         loadComponent: () =>

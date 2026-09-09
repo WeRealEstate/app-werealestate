@@ -86,8 +86,6 @@ export class LeadDetailComponent implements OnInit {
   readonly isArchivando = signal(false);
   readonly isEliminando = signal(false);
   readonly errorMessage = signal<string | null>(null);
-  /** Cierre "ganado" en espera de que se capture el monto de venta (sin eso no hay comisión que calcular). */
-  readonly pendienteCierre = signal<{ estado: EstadoLead; monto: string } | null>(null);
 
   /** Los asesores asignables, más el dueño actual del lead si por algún motivo no está en esa lista. */
   readonly opcionesAsesor = computed<UsuarioResumen[]>(() => {
@@ -147,38 +145,6 @@ export class LeadDetailComponent implements OnInit {
     const actual = this.lead();
     if (!actual || actual.estado === nuevoEstado) return;
 
-    // Al cerrar como ganado, la comisión se calcula sobre el presupuesto: si el lead no tiene uno
-    // registrado, se pide el monto de venta antes de confirmar para que la comisión sí se genere.
-    if (nuevoEstado === 'CERRADO_GANADO' && !actual.valorEstimado) {
-      this.pendienteCierre.set({ estado: nuevoEstado, monto: '' });
-      return;
-    }
-
-    await this.guardarEstado(nuevoEstado, actual.valorEstimado);
-  }
-
-  onMontoCierreInput(event: Event): void {
-    const valor = (event.target as HTMLInputElement).value;
-    this.pendienteCierre.update((p) => (p ? { ...p, monto: valor } : p));
-  }
-
-  cancelarCierre(): void {
-    this.pendienteCierre.set(null);
-  }
-
-  async confirmarCierreConPresupuesto(): Promise<void> {
-    const pendiente = this.pendienteCierre();
-    const monto = Number(pendiente?.monto);
-    if (!pendiente || !monto || monto <= 0) return;
-
-    this.pendienteCierre.set(null);
-    await this.guardarEstado(pendiente.estado, monto);
-  }
-
-  private async guardarEstado(nuevoEstado: EstadoLead, valorEstimado: number | null): Promise<void> {
-    const actual = this.lead();
-    if (!actual) return;
-
     this.isSavingEstado.set(true);
     try {
       const actualizado = await this.leadsService.actualizar(this.leadId, {
@@ -188,7 +154,7 @@ export class LeadDetailComponent implements OnInit {
         origen: actual.origen,
         desarrolloId: actual.desarrollo.id,
         estado: nuevoEstado,
-        valorEstimado,
+        valorEstimado: actual.valorEstimado,
         edad: actual.edad,
         pais: actual.pais,
         estadoRepublica: actual.estadoRepublica,
