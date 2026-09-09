@@ -91,6 +91,7 @@ export class CotizadorComponent {
     if (price === 170) {
       this.isCustomArea = true;
       this.selectedArea = 0;
+      this.customAreaDisplay = '0';
       this.selectedPaymentType = 'msi';
     }
 

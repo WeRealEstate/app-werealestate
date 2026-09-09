@@ -297,8 +297,8 @@
         <!-- PRECIO TOTAL -->
         <div class="mt-6 rounded-2xl border border-we-primary/20 dark:border-we-primary/25 bg-we-primary/5 dark:bg-we-primary/10 p-5 shadow-[0_6px_18px_rgba(36,63,184,0.06)]">
           <p class="text-xs font-semibold text-ink">Precio total del terreno</p>
-          <p class="mt-1 text-3xl font-bold text-we-primary">
-            ${{ displayedLandPrice.toLocaleString('en-US') }} MXN
+          <p class="mt-1 text-3xl font-bold text-we-primary dark:text-we-blue-light">
+            ${{ displayedLandPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
             <span class="text-sm font-medium">MXN</span>
           </p>
         </div>
@@ -414,17 +414,17 @@
               <div class="mt-5 grid gap-3 rounded-xl bg-surface p-4 sm:grid-cols-3">
                 <div>
                   <p class="text-xs text-ink-muted">Enganche</p>
-                  <p class="mt-1 font-semibold text-ink">${{ downPayment.toLocaleString('en-US', { maximumFractionDigits: 0 }) }}</p>
+                  <p class="mt-1 font-semibold text-ink">${{ downPayment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</p>
                 </div>
 
                 <div>
                   <p class="text-xs text-ink-muted">Saldo</p>
-                  <p class="mt-1 font-semibold text-ink">${{ financedAmount.toLocaleString('en-US', { maximumFractionDigits: 0 }) }}</p>
+                  <p class="mt-1 font-semibold text-ink">${{ financedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</p>
                 </div>
 
                 <div>
                   <p class="text-xs text-ink-muted">Mensualidad</p>
-                  <p class="mt-1 font-semibold text-we-primary">${{ monthlyPayment.toLocaleString('en-US', { maximumFractionDigits: 0 }) }}</p>
+                  <p class="mt-1 font-semibold text-we-primary dark:text-we-blue-light">${{ monthlyPayment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</p>
                 </div>
               </div>
             </div>
@@ -458,9 +458,9 @@
                 @if (isAnnualities && annualContribution <= 0) {
                   <p class="mt-1.5 text-xs text-red-500">Ingresa el monto de la anualidad.</p>
                 } @else if (isAnnualities && annualContribution < minimumAnnualContribution) {
-                  <p class="mt-1.5 text-xs text-red-500">La anualidad mínima es de ${{ minimumAnnualContribution.toLocaleString('en-US') }} MXN.</p>
+                  <p class="mt-1.5 text-xs text-red-500">La anualidad mínima es de ${{ minimumAnnualContribution.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} MXN.</p>
                 } @else if (isAnnualities && annualContribution > maximumAnnualContribution) {
-                  <p class="mt-1.5 text-xs text-red-500">La anualidad máxima es de ${{ maximumAnnualContribution.toLocaleString('en-US') }} MXN.</p>
+                  <p class="mt-1.5 text-xs text-red-500">La anualidad máxima es de ${{ maximumAnnualContribution.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} MXN.</p>
                 }
               </div>
 
@@ -497,13 +497,13 @@
 
               <div>
                 <p class="text-xs text-ink-muted">Total en anualidades</p>
-                <p class="mt-1 font-semibold text-ink">${{ annualContributionsTotal.toLocaleString('en-US') }}</p>
+                <p class="mt-1 font-semibold text-ink">${{ annualContributionsTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</p>
               </div>
 
               <div>
                 <p class="text-xs text-ink-muted">Mensualidad resultante</p>
-                <p class="mt-1 font-semibold text-we-primary">
-                  ${{ annualitiesMonthlyPayment.toLocaleString('en-US', { maximumFractionDigits: 0 }) }}
+                <p class="mt-1 font-semibold text-we-primary dark:text-we-blue-light">
+                  ${{ annualitiesMonthlyPayment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
                 </p>
               </div>
             </div>
@@ -570,18 +570,18 @@
         @if (selectedPaymentType !== 'cash') {
           <div class="flex justify-between gap-4">
             <span class="text-sm text-ink-muted">Precio por m²</span>
-            <strong class="text-sm text-ink">${{ pricePerM2.toLocaleString('en-US') }} MXN</strong>
+            <strong class="text-sm text-ink">${{ pricePerM2.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} MXN</strong>
           </div>
         } @else {
           <div class="flex justify-between gap-4">
             <span class="text-sm text-ink-muted">Modalidad de precio</span>
-            <strong class="text-sm text-we-primary">Precio especial de contado</strong>
+            <strong class="text-sm text-we-primary dark:text-we-blue-light">Precio especial de contado</strong>
           </div>
         }
 
         <div class="flex justify-between gap-4">
           <span class="text-sm text-ink-muted">Precio total del terreno</span>
-          <strong [weValuePulse]="displayedLandPrice" class="text-lg text-we-primary">${{ displayedLandPrice.toLocaleString('en-US') }} MXN</strong>
+          <strong [weValuePulse]="displayedLandPrice" class="text-lg text-we-primary dark:text-we-blue-light">${{ displayedLandPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} MXN</strong>
         </div>
 
         <div class="border-t border-border pt-5">
@@ -592,12 +592,12 @@
 
           <div class="mt-4 flex justify-between gap-4">
             <span class="text-sm text-ink-muted">Enganche</span>
-            <strong class="text-sm text-ink">${{ downPayment.toLocaleString('en-US') }} MXN</strong>
+            <strong class="text-sm text-ink">${{ downPayment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} MXN</strong>
           </div>
 
           <div class="mt-4 flex justify-between gap-4">
             <span class="text-sm text-ink-muted">Saldo</span>
-            <strong class="text-sm text-ink">${{ financedAmount.toLocaleString('en-US') }} MXN</strong>
+            <strong class="text-sm text-ink">${{ financedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} MXN</strong>
           </div>
         </div>
 
@@ -606,8 +606,8 @@
           <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p class="text-xs font-semibold text-ink">Mensualidad estimada</p>
-              <p [weValuePulse]="monthlyPayment" class="mt-1 text-3xl font-bold text-we-primary">
-                ${{ monthlyPayment.toLocaleString('en-US', { maximumFractionDigits: 0 }) }}
+              <p [weValuePulse]="monthlyPayment" class="mt-1 text-3xl font-bold text-we-primary dark:text-we-blue-light">
+                ${{ monthlyPayment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
                 <span class="text-sm">MXN</span>
               </p>
               <p class="mt-1 text-xs text-ink-muted">por {{ financingMonths }} meses</p>
@@ -624,20 +624,20 @@
         <div class="space-y-4">
           <div class="flex justify-between">
             <span class="text-sm text-ink-muted">Total a pagar</span>
-            <strong class="text-sm text-ink">${{ displayedLandPrice.toLocaleString('en-US') }} MXN</strong>
+            <strong class="text-sm text-ink">${{ displayedLandPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} MXN</strong>
           </div>
 
           <div class="flex justify-between">
             <span class="text-sm text-ink-muted">Intereses</span>
-            <strong class="text-sm text-ink">${{ interestAmount.toLocaleString('en-US', { maximumFractionDigits: 0 }) }} MXN</strong>
+            <strong class="text-sm text-ink">${{ interestAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} MXN</strong>
           </div>
         </div>
 
         <!-- TOTAL -->
         <div class="flex items-center justify-between rounded-xl bg-surface-2 px-4 py-4">
           <span class="text-sm font-semibold text-ink">Total de inversión</span>
-          <span [weValuePulse]="totalInvestment" class="text-xl font-bold text-we-primary">
-            ${{ totalInvestment.toLocaleString('en-US', { maximumFractionDigits: 0 }) }} MXN
+          <span [weValuePulse]="totalInvestment" class="text-xl font-bold text-we-primary dark:text-we-blue-light">
+            ${{ totalInvestment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} MXN
           </span>
         </div>
 
@@ -649,7 +649,7 @@
             [disabled]="!isQuoteValid"
             [class.opacity-40]="!isQuoteValid"
             [class.cursor-not-allowed]="!isQuoteValid"
-            class="rounded-xl border border-we-primary bg-surface px-3 py-3 text-xs font-semibold text-we-primary shadow-sm transition-all hover:-translate-y-0.5 hover:bg-we-primary/10"
+            class="rounded-xl border border-we-primary bg-surface px-3 py-3 text-xs font-semibold text-we-primary shadow-sm transition-all hover:-translate-y-0.5 hover:bg-we-primary/10 dark:border-we-blue-light dark:text-we-blue-light"
           >
             Generar PDF
           </button>
