@@ -1,17 +1,19 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { PdfService, QuotePdfData } from '../../../core/services/pdf-cotizacion.service';
 import { CotizacionesService } from '../../../core/services/cotizaciones.service';
+import { PromocionesService } from '../../../core/services/promociones.service';
+import { Promocion } from '../../../core/models/promocion.model';
 import { PROJECTS_CONFIG } from '../../../core/data/proyectos-cotizador.config';
 import { FadeInDirective } from '../../../shared/motion/fade-in.directive';
 import { PressDirective } from '../../../shared/motion/press.directive';
 import { ValuePulseDirective } from '../../../shared/motion/value-pulse.directive';
 
 export type ProjectId = 'samai' | 'nanuu';
-export type PaymentType = 'msi' | 'downpayment' | 'annualities' | 'cash' | 'initial';
+export type PaymentType = 'msi' | 'downpayment' | 'annualities' | 'cash' | 'initial' | 'promocion';
 
 @Component({
   selector: 'app-cotizador',
@@ -19,16 +21,30 @@ export type PaymentType = 'msi' | 'downpayment' | 'annualities' | 'cash' | 'init
   imports: [DatePipe, FormsModule, RouterLink, FadeInDirective, PressDirective, ValuePulseDirective],
   templateUrl: './cotizador.component.html',
 })
-export class CotizadorComponent {
+export class CotizadorComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly pdfService = inject(PdfService);
   private readonly cotizacionesService = inject(CotizacionesService);
+  private readonly promocionesService = inject(PromocionesService);
 
   readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
 
   showQuoteErrors = false;
 
   selectedProject: ProjectId = 'samai';
+
+  // Promociones vigentes (cargadas al iniciar) y cuál está aplicada a esta cotización, si acaso.
+  readonly promocionesActivas = signal<Promocion[]>([]);
+  readonly mostrarSelectorPromociones = signal(false);
+  promocionSeleccionada: Promocion | null = null;
+
+  async ngOnInit(): Promise<void> {
+    try {
+      this.promocionesActivas.set(await this.promocionesService.listarActivas());
+    } catch {
+      // Si fallan las promociones, el cotizador sigue funcionando normal sin ellas.
+    }
+  }
 
   currentDate = new Date();
 
@@ -63,6 +79,7 @@ export class CotizadorComponent {
   lotNumber: string = '';
 
   selectProject(project: ProjectId): void {
+    this.promocionSeleccionada = null;
     this.selectedProject = project;
 
     if (project === 'samai') {
@@ -230,6 +247,61 @@ export class CotizadorComponent {
     this.selectedPaymentType = type;
   }
 
+  /** Aplica una promoción: cambia al proyecto al que pertenece y activa el modo "promocion". */
+  seleccionarPromocion(promo: Promocion): void {
+    this.selectProject(promo.proyecto);
+    this.promocionSeleccionada = promo;
+    this.selectedPaymentType = 'promocion';
+    this.mostrarSelectorPromociones.set(false);
+  }
+
+  /** Botón "PROMOCIÓN" junto a SAMAI/NANUU: aplica directo si hay una sola activa, o abre el selector. */
+  togglePromocion(): void {
+    const activas = this.promocionesActivas();
+
+    if (activas.length === 0) {
+      return;
+    }
+
+    if (activas.length === 1) {
+      this.seleccionarPromocion(activas[0]);
+      return;
+    }
+
+    this.mostrarSelectorPromociones.update((visible) => !visible);
+  }
+
+  quitarPromocion(): void {
+    this.promocionSeleccionada = null;
+    this.selectedPaymentType = 'msi';
+    this.mostrarSelectorPromociones.set(false);
+  }
+
+  get isPromocion(): boolean {
+    return this.selectedPaymentType === 'promocion' && this.promocionSeleccionada !== null;
+  }
+
+  /** La promoción reparte el total entre aportaciones anuales y mensualidades; sin al menos
+   * una aportación disponible (plazo > 12 meses) no hay forma de aplicarla. */
+  get promocionInvalida(): boolean {
+    return this.isPromocion && this.annualContributionsCount <= 0;
+  }
+
+  /** Inverso de `annualitiesMonthlyPayment`: en vez de fijar la aportación y despejar la
+   * mensualidad, aquí la mensualidad viene fija de la promoción y se despeja la aportación
+   * anual necesaria para cubrir el resto del precio total. */
+  get promocionAnnualContribution(): number {
+    if (!this.promocionSeleccionada || this.annualContributionsCount <= 0) {
+      return 0;
+    }
+
+    const mensualidadFija = this.promocionSeleccionada.mensualidadFija;
+    const cubiertoPorMensualidades = mensualidadFija * this.regularPaymentMonths;
+    const requerido = (this.totalInvestment - cubiertoPorMensualidades) / this.annualContributionsCount;
+
+    return Math.max(requerido, 0);
+  }
+
   get downPayment(): number {
     // Pago inicial: monto fijo capturado por el asesor, igual para ambos proyectos.
     if (this.selectedPaymentType === 'initial') {
@@ -255,6 +327,12 @@ export class CotizadorComponent {
   }
 
   get financedAmount(): number {
+    // Promoción: el total (con intereses de Nanuu incluidos, si aplica) se reparte entre
+    // mensualidades fijas y aportaciones anuales, igual que "Con anualidades".
+    if (this.isPromocion) {
+      return this.totalInvestment;
+    }
+
     if (this.selectedProject === 'nanuu') {
       return this.totalInvestment - this.downPayment;
     }
@@ -283,7 +361,8 @@ export class CotizadorComponent {
       this.selectedPaymentType === 'msi' ||
       this.selectedPaymentType === 'downpayment' ||
       this.selectedPaymentType === 'annualities' ||
-      this.selectedPaymentType === 'initial'
+      this.selectedPaymentType === 'initial' ||
+      this.selectedPaymentType === 'promocion'
     ) {
       return this.selectedMonths;
     }
@@ -293,6 +372,11 @@ export class CotizadorComponent {
   get monthlyPayment(): number {
     if (this.financingMonths <= 0) {
       return 0;
+    }
+
+    // PROMOCIÓN: la mensualidad viene fija de la promoción, sin importar el proyecto.
+    if (this.isPromocion) {
+      return this.promocionSeleccionada?.mensualidadFija ?? 0;
     }
 
     // NANUU
@@ -317,6 +401,10 @@ export class CotizadorComponent {
   }
 
   get paymentMethodLabel(): string {
+    if (this.isPromocion) {
+      return `Promoción "${this.promocionSeleccionada?.nombre}" · ${this.selectedMonths} meses`;
+    }
+
     if (this.selectedProject === 'nanuu') {
       return `${this.selectedMonths} meses`;
     }
@@ -429,7 +517,27 @@ export class CotizadorComponent {
     // ==============================
 
     if (this.isAnnualities) {
-      return this.buildAnnualitiesAmortizationTable();
+      return this.buildAnnualContributionAmortizationTable(
+        this.totalPrice,
+        this.annualContribution,
+        this.annualitiesMonthlyPayment,
+      );
+    }
+
+    // ==============================
+    // PROMOCIÓN
+    // ==============================
+
+    if (this.isPromocion) {
+      if (this.promocionInvalida) {
+        return [];
+      }
+
+      return this.buildAnnualContributionAmortizationTable(
+        this.totalInvestment,
+        this.promocionAnnualContribution,
+        this.promocionSeleccionada?.mensualidadFija ?? 0,
+      );
     }
 
     // ==============================
@@ -483,12 +591,19 @@ export class CotizadorComponent {
     return rows;
   }
 
-  private buildAnnualitiesAmortizationTable(): AmortizationRow[] {
+  /** Genera la tabla de amortización para cualquier esquema de "mensualidad + aportación
+   * anual" (Con anualidades y Promoción comparten esta misma mecánica; solo cambia cuál de
+   * las dos cantidades es fija y cuál se calcula). */
+  private buildAnnualContributionAmortizationTable(
+    totalAmount: number,
+    annualContributionAmount: number,
+    monthlyPaymentAmount: number,
+  ): AmortizationRow[] {
     const rows: AmortizationRow[] = [];
 
     const startDate = new Date(this.currentDate);
 
-    let balance = this.totalPrice;
+    let balance = totalAmount;
 
     let accumulatedPayment = 0;
 
@@ -514,7 +629,7 @@ export class CotizadorComponent {
       // MONTO DEL PAGO
       // ==============================
 
-      let payment = isAnnuality ? this.annualContribution : this.annualitiesMonthlyPayment;
+      let payment = isAnnuality ? annualContributionAmount : monthlyPaymentAmount;
 
       // ==============================
       // ÚLTIMO PAGO
@@ -594,9 +709,13 @@ export class CotizadorComponent {
 
       paymentMethod: this.paymentMethodLabel,
 
-      downPaymentLabel: this.selectedPaymentType === 'initial' ? 'Pago inicial' : 'Enganche',
+      downPaymentLabel: this.isPromocion
+        ? 'Aportación anual'
+        : this.selectedPaymentType === 'initial'
+          ? 'Pago inicial'
+          : 'Enganche',
 
-      downPayment: this.downPayment,
+      downPayment: this.isPromocion ? this.promocionAnnualContribution : this.downPayment,
 
       financedAmount: this.financedAmount,
 
@@ -755,6 +874,22 @@ export class CotizadorComponent {
   // 1 = Enero ... 12 = Diciembre
   annualContributionMonth: number = 12;
 
+  // Reutilizado por el selector de "mes de la aportación" tanto en Anualidades como en Promoción.
+  readonly mesesDelAnio: { value: number; label: string }[] = [
+    { value: 1, label: 'Enero' },
+    { value: 2, label: 'Febrero' },
+    { value: 3, label: 'Marzo' },
+    { value: 4, label: 'Abril' },
+    { value: 5, label: 'Mayo' },
+    { value: 6, label: 'Junio' },
+    { value: 7, label: 'Julio' },
+    { value: 8, label: 'Agosto' },
+    { value: 9, label: 'Septiembre' },
+    { value: 10, label: 'Octubre' },
+    { value: 11, label: 'Noviembre' },
+    { value: 12, label: 'Diciembre' },
+  ];
+
   get annualContributionsCount(): number {
     return Math.max(Math.floor(this.selectedMonths / 12) - 1, 0);
   }
@@ -883,6 +1018,10 @@ export class CotizadorComponent {
     }
 
     if (this.selectedPaymentType === 'downpayment' && this.downPaymentAmountInvalid) {
+      return false;
+    }
+
+    if (this.isPromocion && this.promocionInvalida) {
       return false;
     }
 

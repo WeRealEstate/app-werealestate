@@ -90,6 +90,12 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'promociones',
+        canActivate: [roleGuard(['ADMIN'])],
+        loadComponent: () =>
+          import('./features/panel/promociones/promociones.component').then((m) => m.PromocionesComponent),
+      },
+      {
         path: 'usuarios/nuevo',
         canActivate: [roleGuard(['ADMIN'])],
         loadComponent: () =>

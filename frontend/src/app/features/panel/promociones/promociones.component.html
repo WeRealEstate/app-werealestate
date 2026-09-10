@@ -1,0 +1,159 @@
+<div class="page-enter">
+  <a routerLink="/panel/cotizador" class="text-sm text-we-blue-light hover:underline">&larr; Volver al cotizador</a>
+
+  <div class="mt-3">
+    <h1 class="font-heading text-2xl font-semibold text-ink">Promociones</h1>
+    <p class="mt-1 text-sm text-ink-muted">
+      Crea y administra las promociones del Cotizador. Solo puede haber una promoción activa por proyecto a la vez.
+    </p>
+  </div>
+
+  <!-- FORMULARIO -->
+  <div class="mt-6 rounded-2xl border border-border bg-surface p-5">
+    <p class="mb-4 text-sm font-semibold text-ink">{{ editandoId() !== null ? 'Editar promoción' : 'Nueva promoción' }}</p>
+
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label class="mb-1.5 block text-sm font-medium text-ink">Nombre</label>
+        <input
+          type="text"
+          [value]="nombre()"
+          (input)="nombre.set($any($event.target).value)"
+          placeholder="Ej. Mes Patrio"
+          class="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted
+                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+        />
+      </div>
+
+      <div>
+        <label class="mb-1.5 block text-sm font-medium text-ink">Proyecto</label>
+        <select
+          [value]="proyecto()"
+          (change)="proyecto.set($any($event.target).value)"
+          [disabled]="editandoId() !== null"
+          class="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary disabled:opacity-60"
+        >
+          <option value="samai">SAMAI Campestre</option>
+          <option value="nanuu">Aldea Nanuu</option>
+        </select>
+        @if (editandoId() !== null) {
+          <p class="mt-1.5 text-xs text-ink-muted">El proyecto no se puede cambiar; crea una nueva promoción si necesitas otro.</p>
+        }
+      </div>
+
+      <div>
+        <label class="mb-1.5 block text-sm font-medium text-ink">Mensualidad fija</label>
+        <div class="relative">
+          <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted">$</span>
+          <input
+            type="text"
+            inputmode="numeric"
+            [value]="mensualidadDisplay()"
+            (input)="onMensualidadInput($event)"
+            placeholder="Ej. 1,900"
+            class="w-full rounded-lg border border-border px-3.5 py-2.5 pl-7 pr-14 text-sm text-ink placeholder:text-ink-muted
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          />
+          <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-ink-muted">MXN</span>
+        </div>
+      </div>
+
+      <div>
+        <label class="mb-1.5 block text-sm font-medium text-ink">Descripción (opcional)</label>
+        <input
+          type="text"
+          [value]="descripcion()"
+          (input)="descripcion.set($any($event.target).value)"
+          placeholder="Ej. Basada en aportaciones anuales"
+          class="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted
+                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+        />
+      </div>
+    </div>
+
+    <div class="mt-4 flex gap-3">
+      <button
+        type="button"
+        (click)="guardar()"
+        [disabled]="!nombre().trim() || mensualidadFija() <= 0 || isSaving()"
+        class="inline-flex items-center justify-center rounded-lg bg-we-primary px-5 py-2.5 text-sm font-semibold text-white
+               hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
+               focus:outline-none focus:ring-2 focus:ring-we-primary/50
+               disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100 min-h-[44px]"
+      >
+        {{ isSaving() ? 'Guardando…' : (editandoId() !== null ? 'Guardar cambios' : 'Crear promoción') }}
+      </button>
+      @if (editandoId() !== null) {
+        <button
+          type="button"
+          (click)="cancelarEdicion()"
+          class="inline-flex items-center justify-center rounded-lg border border-border px-5 py-2.5 text-sm font-medium text-ink-muted
+                 hover:border-we-primary hover:text-we-blue-light active:scale-[0.97] transition-transform duration-150 min-h-[44px]"
+        >
+          Cancelar
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- LISTA -->
+  @if (isLoading()) {
+    <p class="mt-8 text-sm text-ink-muted">Cargando promociones…</p>
+  } @else if (errorMessage()) {
+    <div class="mt-8 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
+      {{ errorMessage() }}
+    </div>
+  } @else if (promociones().length === 0) {
+    <div class="mt-8 rounded-xl border border-dashed border-border p-10 text-center">
+      <p class="text-sm text-ink-muted">Todavía no has creado ninguna promoción.</p>
+    </div>
+  } @else {
+    <div class="mt-6 overflow-x-auto rounded-xl border border-border">
+      <table class="min-w-full divide-y divide-border text-sm">
+        <thead class="bg-surface-2">
+          <tr class="text-left text-xs font-medium uppercase tracking-wide text-ink-muted">
+            <th class="px-4 py-3">Nombre</th>
+            <th class="px-4 py-3">Proyecto</th>
+            <th class="px-4 py-3">Mensualidad fija</th>
+            <th class="px-4 py-3">Estado</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border bg-surface">
+          @for (promo of promociones(); track promo.id) {
+            <tr class="hover:bg-surface-2 transition-colors duration-150">
+              <td class="px-4 py-3">
+                <div class="font-medium text-ink">{{ promo.nombre }}</div>
+                @if (promo.descripcion) {
+                  <div class="text-xs text-ink-muted">{{ promo.descripcion }}</div>
+                }
+              </td>
+              <td class="px-4 py-3 text-ink-muted">{{ promo.proyecto === 'samai' ? 'SAMAI Campestre' : 'Aldea Nanuu' }}</td>
+              <td class="px-4 py-3 font-medium text-ink">${{ promo.mensualidadFija.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</td>
+              <td class="px-4 py-3">
+                <button
+                  type="button"
+                  (click)="toggleActiva(promo)"
+                  class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium transition-colors duration-200"
+                  [class.bg-green-100]="promo.activa"
+                  [class.text-green-700]="promo.activa"
+                  [class.dark:bg-green-500/15]="promo.activa"
+                  [class.dark:text-green-300]="promo.activa"
+                  [class.bg-surface-2]="!promo.activa"
+                  [class.text-ink-muted]="!promo.activa"
+                >
+                  {{ promo.activa ? 'Activa' : 'Inactiva' }}
+                </button>
+              </td>
+              <td class="px-4 py-3 text-right">
+                <button type="button" (click)="editar(promo)" class="text-we-blue-light hover:underline font-medium mr-3">Editar</button>
+                <button type="button" (click)="eliminar(promo)" class="text-red-600 hover:underline font-medium">Borrar</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>
