@@ -24,7 +24,7 @@ export class LeadsService {
    * etiquetas puede mandar el campo en null o ausente, y eso rompe cualquier
    * `for`/`.length` sobre él en los componentes. */
   private normalizar(lead: Lead): Lead {
-    return { ...lead, etiquetas: lead.etiquetas ?? [] };
+    return { ...lead, etiquetas: lead.etiquetas ?? [], desarrolloDetalle: lead.desarrolloDetalle ?? null };
   }
 
   listar(): Promise<Lead[]> {

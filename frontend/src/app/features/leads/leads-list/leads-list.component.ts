@@ -148,7 +148,7 @@ export class LeadsListComponent {
       cliente: l.nombreCliente,
       telefono: l.telefono,
       email: l.email ?? '',
-      desarrollo: l.desarrollo.nombre,
+      desarrollo: l.desarrolloDetalle ? `${l.desarrollo.nombre} (${l.desarrolloDetalle})` : l.desarrollo.nombre,
       estado: this.estadoLabels[l.estado],
       asesor: l.asesor.nombre,
       edad: l.edad ?? '',

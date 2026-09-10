@@ -70,6 +70,20 @@
       @if (form.controls.desarrolloId.invalid && form.controls.desarrolloId.touched) {
         <p class="mt-1.5 text-xs text-red-600">Selecciona un desarrollo.</p>
       }
+
+      @if (esDesarrolloOtro()) {
+        <div class="mt-3">
+          <label for="desarrolloDetalle" class="block text-sm font-medium text-ink mb-1.5">¿Cuál desarrollo? (opcional)</label>
+          <input
+            id="desarrolloDetalle"
+            type="text"
+            formControlName="desarrolloDetalle"
+            placeholder="Escribe el nombre del desarrollo"
+            class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          />
+        </div>
+      }
     </div>
 
     @if (esAdmin() && !modoEdicion()) {

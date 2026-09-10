@@ -61,7 +61,7 @@
         <p class="mt-1 text-sm text-ink-muted">
           {{ l.telefono }}
           @if (l.email) { &middot; {{ l.email }} }
-          &middot; {{ l.desarrollo.nombre }}
+          &middot; {{ l.desarrollo.nombre }}{{ l.desarrolloDetalle ? ' (' + l.desarrolloDetalle + ')' : '' }}
           @if (l.edad) { &middot; {{ l.edad }} años }
           @if (l.pais) { &middot; {{ l.pais === 'MEXICANO' ? (l.estadoRepublica || 'Mexicano') : 'Extranjero' }} }
         </p>

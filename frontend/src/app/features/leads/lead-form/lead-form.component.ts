@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -50,12 +51,21 @@ export class LeadFormComponent implements OnInit {
     email: this.fb.control('', { nonNullable: true, validators: [Validators.email] }),
     origen: this.fb.control('', { nonNullable: true }),
     desarrolloId: this.fb.control<number | null>(null, { validators: [Validators.required] }),
+    desarrolloDetalle: this.fb.control('', { nonNullable: true }),
     valorEstimado: this.fb.control<number | null>(null),
     asesorId: this.fb.control<number | null>(null),
     edad: this.fb.control<number | null>(null),
     pais: this.fb.control<Pais>('MEXICANO', { nonNullable: true }),
     estadoRepublica: this.fb.control<string | null>(null),
   });
+
+  /** Nombre real del desarrollo cuando se elige el catálogo genérico "Otro". */
+  private readonly desarrolloIdSeleccionado = toSignal(this.form.controls.desarrolloId.valueChanges, {
+    initialValue: this.form.controls.desarrolloId.value,
+  });
+  readonly esDesarrolloOtro = computed(
+    () => this.desarrollos().find((d) => d.id === this.desarrolloIdSeleccionado())?.nombre === 'Otro',
+  );
 
   async ngOnInit(): Promise<void> {
     this.form.controls.pais.valueChanges.subscribe((pais) => {
@@ -64,6 +74,13 @@ export class LeadFormComponent implements OnInit {
         this.form.controls.estadoRepublica.disable();
       } else {
         this.form.controls.estadoRepublica.enable();
+      }
+    });
+
+    this.form.controls.desarrolloId.valueChanges.subscribe((id) => {
+      const seleccionado = this.desarrollos().find((d) => d.id === id);
+      if (seleccionado?.nombre !== 'Otro') {
+        this.form.controls.desarrolloDetalle.setValue('');
       }
     });
 
@@ -96,6 +113,7 @@ export class LeadFormComponent implements OnInit {
         email: lead.email ?? '',
         origen: lead.origen ?? '',
         desarrolloId: lead.desarrollo.id,
+        desarrolloDetalle: lead.desarrolloDetalle ?? '',
         valorEstimado: lead.valorEstimado,
         edad: lead.edad,
         pais: lead.pais ?? 'MEXICANO',
@@ -127,6 +145,7 @@ export class LeadFormComponent implements OnInit {
           email: v.email || null,
           origen: v.origen || null,
           desarrolloId: v.desarrolloId!,
+          desarrolloDetalle: v.desarrolloDetalle || null,
           estado: this.leadOriginal!.estado,
           valorEstimado: v.valorEstimado,
           edad: v.edad,
@@ -142,6 +161,7 @@ export class LeadFormComponent implements OnInit {
           email: v.email || null,
           origen: v.origen || null,
           desarrolloId: v.desarrolloId!,
+          desarrolloDetalle: v.desarrolloDetalle || null,
           valorEstimado: v.valorEstimado,
           asesorId: v.asesorId,
           edad: v.edad,

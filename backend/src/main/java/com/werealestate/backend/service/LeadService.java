@@ -148,6 +148,7 @@ public class LeadService {
         lead.setEdad(request.edad());
         lead.setPais(request.pais());
         lead.setEstadoRepublica(request.pais() == Pais.EXTRANJERO ? null : request.estadoRepublica());
+        lead.setDesarrolloDetalle(normalizarDetalleDesarrollo(desarrollo, request.desarrolloDetalle()));
 
         return toDto(leadRepository.save(lead));
     }
@@ -217,6 +218,7 @@ public class LeadService {
         lead.setEmail(request.email());
         lead.setOrigen(request.origen());
         lead.setDesarrollo(desarrollo);
+        lead.setDesarrolloDetalle(normalizarDetalleDesarrollo(desarrollo, request.desarrolloDetalle()));
         lead.setEstado(request.estado());
         lead.setValorEstimado(request.valorEstimado());
         lead.setEdad(request.edad());
@@ -225,6 +227,18 @@ public class LeadService {
         Lead guardado = leadRepository.save(lead);
 
         return toDto(guardado);
+    }
+
+    /**
+     * El detalle escrito a mano solo tiene sentido cuando el desarrollo elegido es el catálogo
+     * genérico "Otro"; en cualquier otro caso se descarta para no dejar texto obsoleto si el lead
+     * cambia de desarrollo más adelante.
+     */
+    private String normalizarDetalleDesarrollo(Desarrollo desarrollo, String detalle) {
+        if (!"Otro".equals(desarrollo.getNombre()) || detalle == null || detalle.isBlank()) {
+            return null;
+        }
+        return detalle.trim();
     }
 
     /**

@@ -197,7 +197,7 @@
                   </div>
                 }
               </td>
-              <td class="px-4 py-3 text-ink-muted">{{ lead.desarrollo.nombre }}</td>
+              <td class="px-4 py-3 text-ink-muted">{{ lead.desarrollo.nombre }}{{ lead.desarrolloDetalle ? ' (' + lead.desarrolloDetalle + ')' : '' }}</td>
               <td class="px-4 py-3">
                 <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium transition-colors duration-200" [class]="badgeClass(lead.estado)">
                   {{ estadoLabels[lead.estado] }}

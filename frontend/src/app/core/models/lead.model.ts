@@ -31,6 +31,7 @@ export interface Lead {
   email: string | null;
   origen: string | null;
   desarrollo: Desarrollo;
+  desarrolloDetalle: string | null;
   asesor: UsuarioResumen;
   estado: EstadoLead;
   fechaCreacion: string;
@@ -154,6 +155,7 @@ export interface LeadCreateRequest {
   email?: string | null;
   origen?: string | null;
   desarrolloId: number;
+  desarrolloDetalle?: string | null;
   valorEstimado?: number | null;
   asesorId?: number | null;
   edad?: number | null;
@@ -167,6 +169,7 @@ export interface LeadUpdateRequest {
   email?: string | null;
   origen?: string | null;
   desarrolloId: number;
+  desarrolloDetalle?: string | null;
   estado: EstadoLead;
   valorEstimado?: number | null;
   edad?: number | null;

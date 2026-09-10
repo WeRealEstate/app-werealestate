@@ -69,6 +69,10 @@ public class Lead {
     @Column(name = "estado_republica", length = 50)
     private String estadoRepublica;
 
+    /** Nombre real del desarrollo cuando {@link #desarrollo} es el catálogo genérico "Otro". */
+    @Column(name = "desarrollo_detalle", length = 150)
+    private String desarrolloDetalle;
+
     /** Un lead archivado se conserva como métrica pero desaparece de la lista activa; no se elimina. */
     @Column(nullable = false)
     private boolean archivado = false;
@@ -209,6 +213,14 @@ public class Lead {
 
     public void setEstadoRepublica(String estadoRepublica) {
         this.estadoRepublica = estadoRepublica;
+    }
+
+    public String getDesarrolloDetalle() {
+        return desarrolloDetalle;
+    }
+
+    public void setDesarrolloDetalle(String desarrolloDetalle) {
+        this.desarrolloDetalle = desarrolloDetalle;
     }
 
     public boolean isArchivado() {
