@@ -276,9 +276,6 @@
             <select
               [ngModel]="pricePerM2"
               (ngModelChange)="selectPricePerM2($event)"
-              [disabled]="isPromocion"
-              [class.opacity-60]="isPromocion"
-              [class.cursor-not-allowed]="isPromocion"
               class="w-full appearance-none rounded-xl border border-border bg-surface-2 px-4 py-3.5 pr-12 text-sm font-medium text-ink outline-none transition-all focus:border-we-primary focus:bg-surface focus:ring-4 focus:ring-we-primary/10"
             >
               @if (selectedProject === 'samai') {
@@ -294,9 +291,6 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
             </svg>
           </div>
-          @if (isPromocion) {
-            <p class="mt-1.5 text-xs text-ink-muted">Bloqueado mientras la promoción esté activa.</p>
-          }
         </div>
 
         <div class="grid gap-6 sm:grid-cols-2">
@@ -312,9 +306,9 @@
                 [class.border-we-primary]="selectedArea === 200 && !isCustomArea"
                 [class.text-we-primary]="selectedArea === 200 && !isCustomArea"
                 [class.shadow-md]="selectedArea === 200 && !isCustomArea"
-                [disabled]="pricePerM2 === 170 || isPromocion"
-                [class.opacity-40]="pricePerM2 === 170 || isPromocion"
-                [class.cursor-not-allowed]="pricePerM2 === 170 || isPromocion"
+                [disabled]="pricePerM2 === 170"
+                [class.opacity-40]="pricePerM2 === 170"
+                [class.cursor-not-allowed]="pricePerM2 === 170"
                 class="min-w-0 rounded-xl border border-border bg-surface px-3 py-3 text-sm font-normal leading-tight whitespace-nowrap transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
               >
                 200 m²
@@ -324,9 +318,9 @@
                 type="button"
                 weMotionPress
                 (click)="selectCustomArea()"
-                [disabled]="selectedPaymentType === 'cash' || isPromocion"
-                [class.opacity-40]="selectedPaymentType === 'cash' || isPromocion"
-                [class.cursor-not-allowed]="selectedPaymentType === 'cash' || isPromocion"
+                [disabled]="selectedPaymentType === 'cash'"
+                [class.opacity-40]="selectedPaymentType === 'cash'"
+                [class.cursor-not-allowed]="selectedPaymentType === 'cash'"
                 [class.border-we-primary]="isCustomArea"
                 [class.text-we-primary]="isCustomArea"
                 [class.shadow-md]="isCustomArea"
@@ -335,9 +329,6 @@
                 Personalizada
               </button>
             </div>
-            @if (isPromocion) {
-              <p class="mt-1.5 text-xs text-ink-muted">Bloqueado mientras la promoción esté activa (lote estándar de 200 m²).</p>
-            }
           </div>
 
           <div
@@ -356,11 +347,10 @@
                 inputmode="numeric"
                 [value]="customAreaDisplay"
                 (input)="onCustomAreaInput($event)"
-                [disabled]="isPromocion"
                 min="1"
                 step="1"
                 placeholder="500"
-                class="w-full rounded-xl border border-border bg-surface px-4 py-3.5 pr-14 outline-none transition-all duration-200 focus:border-we-primary focus:ring-4 focus:ring-we-primary/10 disabled:opacity-60"
+                class="w-full rounded-xl border border-border bg-surface px-4 py-3.5 pr-14 outline-none transition-all duration-200 focus:border-we-primary focus:ring-4 focus:ring-we-primary/10"
               />
               <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-ink-muted">m²</span>
             </div>
