@@ -40,7 +40,9 @@ export class CotizadorComponent {
 
   selectedPaymentType: PaymentType = 'msi';
 
-  downPaymentPercentage: number = 10;
+  // Enganche de SAMAI: monto libre en pesos (Nanuu conserva su 20% fijo, ver downPayment()).
+  downPaymentAmount: number = 0;
+  downPaymentAmountDisplay = '';
 
   // Pago inicial: monto fijo en pesos (a diferencia del enganche, que es un %).
   initialPayment: number = 0;
@@ -175,6 +177,34 @@ export class CotizadorComponent {
     return this.initialPayment >= this.totalPrice;
   }
 
+  onDownPaymentAmountInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+
+    const rawValue = input.value.replace(/\D/g, '');
+
+    if (!rawValue) {
+      this.downPaymentAmount = 0;
+      this.downPaymentAmountDisplay = '';
+      return;
+    }
+
+    this.downPaymentAmount = Number(rawValue);
+
+    this.downPaymentAmountDisplay = this.downPaymentAmount.toLocaleString('en-US');
+  }
+
+  get downPaymentAmountInvalid(): boolean {
+    if (this.selectedProject !== 'samai' || this.selectedPaymentType !== 'downpayment') {
+      return false;
+    }
+
+    if (this.downPaymentAmount <= 0) {
+      return true;
+    }
+
+    return this.downPaymentAmount >= this.totalPrice;
+  }
+
   get totalPrice(): number {
     return this.selectedArea * this.pricePerM2;
   }
@@ -211,9 +241,9 @@ export class CotizadorComponent {
       }
     }
 
-    // SAMAI
+    // SAMAI: monto de enganche libre, capturado directamente por el asesor.
     if (this.selectedPaymentType === 'downpayment') {
-      return this.totalPrice * (this.downPaymentPercentage / 100);
+      return this.downPaymentAmount;
     }
 
     return 0;
@@ -812,6 +842,10 @@ export class CotizadorComponent {
     }
 
     if (this.selectedPaymentType === 'initial' && this.initialPaymentInvalid) {
+      return false;
+    }
+
+    if (this.selectedPaymentType === 'downpayment' && this.downPaymentAmountInvalid) {
       return false;
     }
 
