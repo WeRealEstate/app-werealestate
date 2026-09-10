@@ -252,6 +252,7 @@ export class CotizadorComponent implements OnInit {
     this.selectProject(promo.proyecto);
     this.promocionSeleccionada = promo;
     this.selectedPaymentType = 'promocion';
+    this.promocionAjuste = 'aportacion';
     this.mostrarSelectorPromociones.set(false);
   }
 
@@ -274,6 +275,7 @@ export class CotizadorComponent implements OnInit {
   quitarPromocion(): void {
     this.promocionSeleccionada = null;
     this.selectedPaymentType = 'msi';
+    this.promocionAjuste = 'aportacion';
     this.mostrarSelectorPromociones.set(false);
   }
 
@@ -281,15 +283,49 @@ export class CotizadorComponent implements OnInit {
     return this.selectedPaymentType === 'promocion' && this.promocionSeleccionada !== null;
   }
 
+  /** En modo promoción, qué se ajusta cuando el lote no es el estándar (más grande, más chico):
+   * la aportación anual (la mensualidad se queda fija en la de la promoción, comportamiento por
+   * defecto) o la mensualidad (la aportación anual queda fija y editable por el asesor). */
+  promocionAjuste: 'aportacion' | 'mensualidad' = 'aportacion';
+
+  /** Cambia qué cantidad se ajusta. Al pasar a "mensualidad", arrancamos la aportación editable
+   * con el valor que ya se estaba usando, para que el cambio de modo no altere de golpe la
+   * cotización que el asesor ya armó. */
+  seleccionarAjustePromocion(ajuste: 'aportacion' | 'mensualidad'): void {
+    if (ajuste === this.promocionAjuste) {
+      return;
+    }
+
+    if (ajuste === 'mensualidad' && this.annualContribution <= 0) {
+      const referencia = Math.round(this.promocionAnnualContribution);
+      this.annualContribution = referencia;
+      this.annualContributionDisplay = referencia.toLocaleString('en-US');
+    }
+
+    this.promocionAjuste = ajuste;
+  }
+
   /** La promoción reparte el total entre aportaciones anuales y mensualidades; sin al menos
    * una aportación disponible (plazo > 12 meses) no hay forma de aplicarla. */
   get promocionInvalida(): boolean {
-    return this.isPromocion && this.annualContributionsCount <= 0;
+    if (!this.isPromocion) {
+      return false;
+    }
+
+    if (this.annualContributionsCount <= 0) {
+      return true;
+    }
+
+    if (this.promocionAjuste === 'mensualidad') {
+      return this.annualContribution <= 0 || this.promocionMensualidadAjustada <= 0;
+    }
+
+    return false;
   }
 
   /** Inverso de `annualitiesMonthlyPayment`: en vez de fijar la aportación y despejar la
    * mensualidad, aquí la mensualidad viene fija de la promoción y se despeja la aportación
-   * anual necesaria para cubrir el resto del precio total. */
+   * anual necesaria para cubrir el resto del precio total. Aplica en modo "aportación". */
   get promocionAnnualContribution(): number {
     if (!this.promocionSeleccionada || this.annualContributionsCount <= 0) {
       return 0;
@@ -300,6 +336,31 @@ export class CotizadorComponent implements OnInit {
     const requerido = (this.totalInvestment - cubiertoPorMensualidades) / this.annualContributionsCount;
 
     return Math.max(requerido, 0);
+  }
+
+  /** Modo "mensualidad": la aportación anual la fija el asesor (`annualContribution`) y aquí se
+   * despeja la mensualidad necesaria para cubrir el resto — mismo cálculo que
+   * `annualitiesMonthlyPayment`, pero sobre el total de la promoción. */
+  get promocionMensualidadAjustada(): number {
+    if (this.annualContributionsCount <= 0 || this.selectedMonths <= 0) {
+      return 0;
+    }
+
+    const aportacionesTotal = this.annualContribution * this.annualContributionsCount;
+    const restante = this.totalInvestment - aportacionesTotal;
+    const mesesRegulares = this.regularPaymentMonths;
+
+    if (restante <= 0 || mesesRegulares <= 0) {
+      return 0;
+    }
+
+    return restante / mesesRegulares;
+  }
+
+  /** Aportación anual que efectivamente aplica según el modo elegido: la calculada (modo
+   * "aportación") o la que el asesor capturó a mano (modo "mensualidad"). */
+  get promocionAportacionAplicada(): number {
+    return this.promocionAjuste === 'mensualidad' ? this.annualContribution : this.promocionAnnualContribution;
   }
 
   get downPayment(): number {
@@ -374,8 +435,12 @@ export class CotizadorComponent implements OnInit {
       return 0;
     }
 
-    // PROMOCIÓN: la mensualidad viene fija de la promoción, sin importar el proyecto.
+    // PROMOCIÓN: por defecto la mensualidad viene fija de la promoción; en modo "mensualidad"
+    // se despeja a partir de la aportación anual que el asesor fijó.
     if (this.isPromocion) {
+      if (this.promocionAjuste === 'mensualidad') {
+        return this.promocionMensualidadAjustada;
+      }
       return this.promocionSeleccionada?.mensualidadFija ?? 0;
     }
 
@@ -535,8 +600,8 @@ export class CotizadorComponent implements OnInit {
 
       return this.buildAnnualContributionAmortizationTable(
         this.totalInvestment,
-        this.promocionAnnualContribution,
-        this.promocionSeleccionada?.mensualidadFija ?? 0,
+        this.promocionAportacionAplicada,
+        this.monthlyPayment,
       );
     }
 
@@ -715,7 +780,7 @@ export class CotizadorComponent implements OnInit {
           ? 'Pago inicial'
           : 'Enganche',
 
-      downPayment: this.isPromocion ? this.promocionAnnualContribution : this.downPayment,
+      downPayment: this.isPromocion ? this.promocionAportacionAplicada : this.downPayment,
 
       financedAmount: this.financedAmount,
 
