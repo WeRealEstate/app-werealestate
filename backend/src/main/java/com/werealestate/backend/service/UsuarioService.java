@@ -11,6 +11,7 @@ import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.repository.ComisionRepository;
+import com.werealestate.backend.repository.CotizacionRepository;
 import com.werealestate.backend.repository.EtiquetaRepository;
 import com.werealestate.backend.repository.EventoCalendarioRepository;
 import com.werealestate.backend.repository.LeadRepository;
@@ -32,6 +33,7 @@ public class UsuarioService {
     private final LeadRepository leadRepository;
     private final TareaRepository tareaRepository;
     private final ComisionRepository comisionRepository;
+    private final CotizacionRepository cotizacionRepository;
     private final EventoCalendarioRepository eventoCalendarioRepository;
     private final SeguimientoRepository seguimientoRepository;
     private final EtiquetaRepository etiquetaRepository;
@@ -43,6 +45,7 @@ public class UsuarioService {
             LeadRepository leadRepository,
             TareaRepository tareaRepository,
             ComisionRepository comisionRepository,
+            CotizacionRepository cotizacionRepository,
             EventoCalendarioRepository eventoCalendarioRepository,
             SeguimientoRepository seguimientoRepository,
             EtiquetaRepository etiquetaRepository,
@@ -52,6 +55,7 @@ public class UsuarioService {
         this.leadRepository = leadRepository;
         this.tareaRepository = tareaRepository;
         this.comisionRepository = comisionRepository;
+        this.cotizacionRepository = cotizacionRepository;
         this.eventoCalendarioRepository = eventoCalendarioRepository;
         this.seguimientoRepository = seguimientoRepository;
         this.etiquetaRepository = etiquetaRepository;
@@ -133,10 +137,11 @@ public class UsuarioService {
                 || tareaRepository.existsByAsignadoAId(id)
                 || tareaRepository.existsByCreadoPorId(id)
                 || comisionRepository.existsByAsesorId(id)
+                || cotizacionRepository.existsByAsesorId(id)
                 || seguimientoRepository.existsByAsesorId(id);
         if (tieneActividad) {
             throw new ConflictException("No se puede eliminar a " + usuario.getNombre()
-                    + ": tiene actividad registrada (leads, tareas, comisiones o seguimientos). "
+                    + ": tiene actividad registrada (leads, tareas, comisiones, cotizaciones o seguimientos). "
                     + "Desactívalo para quitarle el acceso sin perder ese historial.");
         }
 

@@ -1,0 +1,110 @@
+<div class="page-enter">
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="font-heading text-2xl font-semibold text-ink">Historial de cotizaciones</h1>
+      <p class="mt-1 text-sm text-ink-muted">Registro de cada cotización generada o compartida por el equipo.</p>
+    </div>
+    @if (!isLoading() && !errorMessage() && cotizacionesFiltradas().length > 0) {
+      <div class="flex items-center gap-2.5">
+        <button
+          type="button"
+          (click)="exportarCsv()"
+          class="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink
+                 hover:border-we-primary active:scale-[0.97] transition-transform duration-150
+                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
+        >
+          Exportar CSV
+        </button>
+        <button
+          type="button"
+          (click)="exportarExcel()"
+          class="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink
+                 hover:border-we-primary active:scale-[0.97] transition-transform duration-150
+                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
+        >
+          Exportar Excel
+        </button>
+      </div>
+    }
+  </div>
+
+  <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+    <input
+      type="search"
+      [value]="filtro()"
+      (input)="filtro.set($any($event.target).value)"
+      placeholder="Buscar por nombre de cliente…"
+      class="w-full max-w-sm rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted
+             focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+    />
+    @if (asesoresDisponibles().length > 0) {
+      <select
+        (change)="asesorId.set($any($event.target).value === '' ? null : +$any($event.target).value)"
+        class="w-full max-w-xs rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+               focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+      >
+        <option value="" [selected]="asesorId() === null">Todos los asesores</option>
+        @for (a of asesoresDisponibles(); track a.id) {
+          <option [value]="a.id" [selected]="a.id === asesorId()">{{ a.nombre }}</option>
+        }
+      </select>
+    }
+    @if (proyectosDisponibles().length > 0) {
+      <select
+        (change)="proyectoFiltro.set($any($event.target).value === '' ? null : $any($event.target).value)"
+        class="w-full max-w-xs rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+               focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+      >
+        <option value="" [selected]="proyectoFiltro() === null">Todos los proyectos</option>
+        @for (p of proyectosDisponibles(); track p) {
+          <option [value]="p" [selected]="p === proyectoFiltro()">{{ p }}</option>
+        }
+      </select>
+    }
+  </div>
+
+  @if (isLoading()) {
+    <p class="mt-8 text-sm text-ink-muted">Cargando historial…</p>
+  } @else if (errorMessage()) {
+    <div class="mt-8 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
+      {{ errorMessage() }}
+    </div>
+  } @else if (cotizacionesFiltradas().length === 0) {
+    <div class="mt-8 rounded-xl border border-dashed border-border p-10 text-center">
+      <p class="text-sm text-ink-muted">
+        {{ cotizaciones().length === 0 ? 'Todavía no se ha generado ninguna cotización.' : 'Ninguna cotización coincide con los filtros aplicados.' }}
+      </p>
+    </div>
+  } @else {
+    <div class="mt-6 overflow-x-auto rounded-xl border border-border">
+      <table class="min-w-full divide-y divide-border text-sm">
+        <thead class="bg-surface-2">
+          <tr class="text-left text-xs font-medium uppercase tracking-wide text-ink-muted">
+            <th class="px-4 py-3">Fecha</th>
+            <th class="px-4 py-3">Asesor</th>
+            <th class="px-4 py-3">Cliente</th>
+            <th class="px-4 py-3">Proyecto</th>
+            <th class="px-4 py-3">Manzana / Lote</th>
+            <th class="px-4 py-3">Forma de pago</th>
+            <th class="px-4 py-3">Mensualidad</th>
+            <th class="px-4 py-3">Total de inversión</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border bg-surface">
+          @for (c of cotizacionesFiltradas(); track c.id; let i = $index) {
+            <tr class="stagger-item hover:bg-surface-2 transition-colors duration-150" [style.animation-delay.ms]="i < 8 ? i * 40 : 0">
+              <td class="px-4 py-3 text-ink-muted">{{ c.fechaCreacion | date: 'd MMM y' }}</td>
+              <td class="px-4 py-3 text-ink-muted">{{ c.asesor.nombre }}</td>
+              <td class="px-4 py-3 font-medium text-ink">{{ c.nombreCliente }}</td>
+              <td class="px-4 py-3 text-ink-muted">{{ c.proyecto }}</td>
+              <td class="px-4 py-3 text-ink-muted">{{ c.manzana || '—' }} / {{ c.lote || '—' }}</td>
+              <td class="px-4 py-3 text-ink-muted">{{ c.formaPago }}</td>
+              <td class="px-4 py-3 font-medium text-ink">${{ money(c.mensualidad) }}</td>
+              <td class="px-4 py-3 font-medium text-we-primary dark:text-we-blue-light">${{ money(c.totalInversion) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

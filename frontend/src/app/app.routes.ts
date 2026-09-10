@@ -82,6 +82,14 @@ export const routes: Routes = [
           import('./features/usuarios/usuarios-list/usuarios-list.component').then((m) => m.UsuariosListComponent),
       },
       {
+        path: 'cotizaciones-historial',
+        canActivate: [roleGuard(['ADMIN'])],
+        loadComponent: () =>
+          import('./features/panel/historial-cotizaciones/historial-cotizaciones.component').then(
+            (m) => m.HistorialCotizacionesComponent,
+          ),
+      },
+      {
         path: 'usuarios/nuevo',
         canActivate: [roleGuard(['ADMIN'])],
         loadComponent: () =>

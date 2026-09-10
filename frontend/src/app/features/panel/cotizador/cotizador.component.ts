@@ -3,6 +3,7 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth.service';
 import { PdfService, QuotePdfData } from '../../../core/services/pdf-cotizacion.service';
+import { CotizacionesService } from '../../../core/services/cotizaciones.service';
 import { PROJECTS_CONFIG } from '../../../core/data/proyectos-cotizador.config';
 import { FadeInDirective } from '../../../shared/motion/fade-in.directive';
 import { PressDirective } from '../../../shared/motion/press.directive';
@@ -20,6 +21,7 @@ export type PaymentType = 'msi' | 'downpayment' | 'annualities' | 'cash' | 'init
 export class CotizadorComponent {
   private readonly auth = inject(AuthService);
   private readonly pdfService = inject(PdfService);
+  private readonly cotizacionesService = inject(CotizacionesService);
 
   showQuoteErrors = false;
 
@@ -370,7 +372,37 @@ export class CotizadorComponent {
       alert('Completa los datos de la cotización antes de generar el PDF.');
       return;
     }
-    await this.pdfService.downloadQuotePdf(this.getQuotePdfData());
+
+    const data = this.getQuotePdfData();
+    await this.pdfService.downloadQuotePdf(data);
+    await this.registrarHistorialCotizacion(data);
+  }
+
+  /** Bitácora para el admin: cada PDF generado o compartido queda registrado. No debe bloquear
+   * ni fallar visiblemente la descarga/envío del PDF, que para el asesor ya se completó. */
+  private async registrarHistorialCotizacion(data: QuotePdfData): Promise<void> {
+    try {
+      await this.cotizacionesService.registrar({
+        proyecto: data.project,
+        nombreCliente: data.clientName,
+        manzana: data.blockNumber || null,
+        lote: data.lotNumber || null,
+        superficie: data.area,
+        precioM2: data.pricePerM2,
+        precioTotal: data.totalPrice,
+        formaPago: data.paymentMethod,
+        engancheLabel: data.downPaymentLabel,
+        enganche: data.downPayment,
+        montoFinanciado: data.financedAmount,
+        meses: data.months,
+        mensualidad: data.monthlyPayment,
+        interesPorcentaje: data.interestPercentage,
+        interesMonto: data.interestAmount,
+        totalInversion: data.totalInvestment,
+      });
+    } catch (error) {
+      console.error('No se pudo registrar la cotización en el historial:', error);
+    }
   }
 
   private readonly monthNames = [
@@ -603,6 +635,8 @@ export class CotizadorComponent {
         text: `Te comparto la cotización de ${data.project}.`,
         files: [pdfFile],
       });
+
+      await this.registrarHistorialCotizacion(data);
     } catch (error) {
       // Si el usuario cerró el menú de compartir, no es realmente un error
       if (error instanceof DOMException && error.name === 'AbortError') {
