@@ -1,5 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { CotizacionesService } from '../../../core/services/cotizaciones.service';
 import { CotizacionAsesor, CotizacionHistorial } from '../../../core/models/cotizacion.model';
 import { descargarCsv } from '../../../core/utils/csv';
@@ -8,7 +9,7 @@ import { descargarExcel } from '../../../core/utils/excel';
 @Component({
   selector: 'app-historial-cotizaciones',
   standalone: true,
-  imports: [DatePipe],
+  imports: [DatePipe, RouterLink],
   templateUrl: './historial-cotizaciones.component.html',
 })
 export class HistorialCotizacionesComponent {

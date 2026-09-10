@@ -1,6 +1,7 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { PdfService, QuotePdfData } from '../../../core/services/pdf-cotizacion.service';
 import { CotizacionesService } from '../../../core/services/cotizaciones.service';
@@ -15,13 +16,15 @@ export type PaymentType = 'msi' | 'downpayment' | 'annualities' | 'cash' | 'init
 @Component({
   selector: 'app-cotizador',
   standalone: true,
-  imports: [DatePipe, FormsModule, FadeInDirective, PressDirective, ValuePulseDirective],
+  imports: [DatePipe, FormsModule, RouterLink, FadeInDirective, PressDirective, ValuePulseDirective],
   templateUrl: './cotizador.component.html',
 })
 export class CotizadorComponent {
   private readonly auth = inject(AuthService);
   private readonly pdfService = inject(PdfService);
   private readonly cotizacionesService = inject(CotizacionesService);
+
+  readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
 
   showQuoteErrors = false;
 
