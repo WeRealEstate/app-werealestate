@@ -1,7 +1,8 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { Pagina } from '../models/pagina.model';
 import {
   Desarrollo,
   Lead,
@@ -14,6 +15,16 @@ import {
   SeguimientoCreateRequest,
   SeguimientoProximo,
 } from '../models/lead.model';
+
+export interface BuscarLeadsParams {
+  busqueda?: string;
+  estado?: string | null;
+  asesorId?: number | null;
+  etiquetaId?: number | null;
+  archivados?: boolean;
+  pagina: number;
+  tamano: number;
+}
 
 @Injectable({ providedIn: 'root' })
 export class LeadsService {
@@ -29,6 +40,23 @@ export class LeadsService {
 
   listar(): Promise<Lead[]> {
     return firstValueFrom(this.http.get<Lead[]>(this.baseUrl).pipe(map((leads) => leads.map((l) => this.normalizar(l)))));
+  }
+
+  /** Lista principal, paginada: la búsqueda y los filtros corren en el servidor sobre el total,
+   * no solo sobre lo ya cargado con "Cargar más". */
+  buscarPaginado(params: BuscarLeadsParams): Promise<Pagina<Lead>> {
+    let httpParams = new HttpParams().set('pagina', params.pagina).set('tamano', params.tamano);
+    if (params.busqueda) httpParams = httpParams.set('busqueda', params.busqueda);
+    if (params.estado) httpParams = httpParams.set('estado', params.estado);
+    if (params.asesorId != null) httpParams = httpParams.set('asesorId', params.asesorId);
+    if (params.etiquetaId != null) httpParams = httpParams.set('etiquetaId', params.etiquetaId);
+    if (params.archivados) httpParams = httpParams.set('archivados', 'true');
+
+    return firstValueFrom(
+      this.http.get<Pagina<Lead>>(`${this.baseUrl}/buscar`, { params: httpParams }).pipe(
+        map((pagina) => ({ ...pagina, contenido: pagina.contenido.map((l) => this.normalizar(l)) })),
+      ),
+    );
   }
 
   listarFrios(): Promise<Lead[]> {

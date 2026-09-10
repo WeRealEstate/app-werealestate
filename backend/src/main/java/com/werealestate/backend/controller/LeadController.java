@@ -7,6 +7,7 @@ import com.werealestate.backend.dto.LeadImportBatchRequest;
 import com.werealestate.backend.dto.LeadImportResultado;
 import com.werealestate.backend.dto.LeadUpdateRequest;
 import com.werealestate.backend.dto.MoverColumnaRequest;
+import com.werealestate.backend.dto.PaginaDto;
 import com.werealestate.backend.dto.ReasignarLeadRequest;
 import com.werealestate.backend.service.LeadService;
 import jakarta.validation.Valid;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -34,6 +36,19 @@ public class LeadController {
     @GetMapping
     public List<LeadDto> listar() {
         return leadService.listar();
+    }
+
+    /** Lista principal, paginada y con filtros que corren en el servidor sobre el total. */
+    @GetMapping("/buscar")
+    public PaginaDto<LeadDto> buscar(
+            @RequestParam(required = false) String busqueda,
+            @RequestParam(required = false) String estado,
+            @RequestParam(required = false) Long asesorId,
+            @RequestParam(required = false) Long etiquetaId,
+            @RequestParam(defaultValue = "false") boolean archivados,
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "10") int tamano) {
+        return leadService.buscarPaginado(busqueda, estado, asesorId, etiquetaId, archivados, pagina, tamano);
     }
 
     @GetMapping("/frios")

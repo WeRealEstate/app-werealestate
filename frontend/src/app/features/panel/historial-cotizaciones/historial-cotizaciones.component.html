@@ -6,7 +6,7 @@
       <h1 class="font-heading text-2xl font-semibold text-ink">Historial de cotizaciones</h1>
       <p class="mt-1 text-sm text-ink-muted">Registro de cada cotización generada o compartida por el equipo.</p>
     </div>
-    @if (!isLoading() && !errorMessage() && cotizacionesFiltradas().length > 0) {
+    @if (!isLoading() && !errorMessage() && cotizaciones().length > 0) {
       <div class="flex items-center gap-2.5">
         <button
           type="button"
@@ -34,14 +34,14 @@
     <input
       type="search"
       [value]="filtro()"
-      (input)="filtro.set($any($event.target).value)"
+      (input)="onFiltroInput($any($event.target).value)"
       placeholder="Buscar por nombre de cliente…"
       class="w-full max-w-sm rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted
              focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
     />
     @if (asesoresDisponibles().length > 0) {
       <select
-        (change)="asesorId.set($any($event.target).value === '' ? null : +$any($event.target).value)"
+        (change)="onAsesorChange($any($event.target).value)"
         class="w-full max-w-xs rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
                focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
       >
@@ -53,7 +53,7 @@
     }
     @if (proyectosDisponibles().length > 0) {
       <select
-        (change)="proyectoFiltro.set($any($event.target).value === '' ? null : $any($event.target).value)"
+        (change)="onProyectoChange($any($event.target).value)"
         class="w-full max-w-xs rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
                focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
       >
@@ -71,10 +71,10 @@
     <div class="mt-8 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
       {{ errorMessage() }}
     </div>
-  } @else if (cotizacionesFiltradas().length === 0) {
+  } @else if (cotizaciones().length === 0) {
     <div class="mt-8 rounded-xl border border-dashed border-border p-10 text-center">
       <p class="text-sm text-ink-muted">
-        {{ cotizaciones().length === 0 ? 'Todavía no se ha generado ninguna cotización.' : 'Ninguna cotización coincide con los filtros aplicados.' }}
+        {{ hayFiltrosActivos() ? 'Ninguna cotización coincide con los filtros aplicados.' : 'Todavía no se ha generado ninguna cotización.' }}
       </p>
     </div>
   } @else {
@@ -93,7 +93,7 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-border bg-surface">
-          @for (c of cotizacionesFiltradas(); track c.id; let i = $index) {
+          @for (c of cotizaciones(); track c.id; let i = $index) {
             <tr class="stagger-item hover:bg-surface-2 transition-colors duration-150" [style.animation-delay.ms]="i < 8 ? i * 40 : 0">
               <td class="px-4 py-3 text-ink-muted">{{ c.fechaCreacion | date: 'd MMM y' }}</td>
               <td class="px-4 py-3 text-ink-muted">{{ c.asesor.nombre }}</td>
@@ -108,5 +108,21 @@
         </tbody>
       </table>
     </div>
+
+    @if (hayMas()) {
+      <div class="mt-4 flex justify-center">
+        <button
+          type="button"
+          (click)="cargarMas()"
+          [disabled]="isLoadingMore()"
+          class="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-5 py-2.5 text-sm font-semibold text-ink
+                 hover:border-we-primary active:scale-[0.97] transition-transform duration-150
+                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]
+                 disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
+        >
+          {{ isLoadingMore() ? 'Cargando…' : 'Cargar más' }}
+        </button>
+      </div>
+    }
   }
 </div>

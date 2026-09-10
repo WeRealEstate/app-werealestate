@@ -9,6 +9,7 @@ import com.werealestate.backend.dto.LeadImportRequest;
 import com.werealestate.backend.dto.LeadImportResultado;
 import com.werealestate.backend.dto.LeadUpdateRequest;
 import com.werealestate.backend.dto.MoverColumnaRequest;
+import com.werealestate.backend.dto.PaginaDto;
 import com.werealestate.backend.dto.ReasignarLeadRequest;
 import com.werealestate.backend.exception.ConflictException;
 import com.werealestate.backend.exception.ForbiddenOperationException;
@@ -39,6 +40,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -85,6 +91,56 @@ public class LeadService {
                 : leadRepository.findByAsesorIdAndArchivadoFalseOrderByFechaUltimoContactoDesc(actual.getId());
 
         return leads.stream().map(this::toDto).toList();
+    }
+
+    /**
+     * Versión paginada y con filtros de {@link #listar()} / {@link #listarArchivados()}, para la
+     * lista principal de leads: carga por lotes ("Cargar más") en vez de traer todo de un jalón,
+     * y la búsqueda/filtros corren en el servidor sobre el total, no solo sobre lo ya cargado.
+     */
+    public PaginaDto<LeadDto> buscarPaginado(
+            String busqueda, String estado, Long asesorIdFiltro, Long etiquetaId, boolean archivados, int pagina, int tamano) {
+        Usuario actual = currentUserProvider.getUsuarioActual();
+
+        Specification<Lead> spec = (root, query, cb) -> cb.equal(root.get("archivado"), archivados);
+
+        if (actual.getRol() == Role.ADMIN) {
+            if (asesorIdFiltro != null) {
+                spec = spec.and((root, query, cb) -> cb.equal(root.get("asesor").get("id"), asesorIdFiltro));
+            }
+        } else {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("asesor").get("id"), actual.getId()));
+        }
+
+        if (busqueda != null && !busqueda.isBlank()) {
+            String comodin = "%" + busqueda.trim().toLowerCase() + "%";
+            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("nombreCliente")), comodin));
+        }
+
+        if ("FRIOS".equalsIgnoreCase(estado)) {
+            LocalDateTime limite = LocalDateTime.now().minusDays(diasFrio);
+            List<EstadoLead> cerrados = List.of(EstadoLead.CERRADO_GANADO, EstadoLead.CERRADO_PERDIDO);
+            spec = spec.and((root, query, cb) -> cb.and(
+                    cb.lessThan(root.get("fechaUltimoContacto"), limite),
+                    cb.not(root.get("estado").in(cerrados))));
+        } else if (estado != null && !estado.isBlank()) {
+            EstadoLead estadoEnum = EstadoLead.valueOf(estado);
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("estado"), estadoEnum));
+        }
+
+        if (etiquetaId != null) {
+            spec = spec.and((root, query, cb) -> {
+                query.distinct(true);
+                return cb.equal(root.join("etiquetas").get("id"), etiquetaId);
+            });
+        }
+
+        Pageable pageable = PageRequest.of(
+                Math.max(pagina, 0), Math.max(tamano, 1), Sort.by(Sort.Direction.DESC, "fechaUltimoContacto"));
+        Page<Lead> resultado = leadRepository.findAll(spec, pageable);
+
+        List<LeadDto> contenido = resultado.getContent().stream().map(this::toDto).toList();
+        return new PaginaDto<>(contenido, resultado.hasNext());
     }
 
     /**
