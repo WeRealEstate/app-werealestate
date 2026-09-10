@@ -11,6 +11,7 @@ public record PromocionDto(
         BigDecimal mensualidadFija,
         String descripcion,
         boolean activa,
+        LocalDateTime fechaFin,
         LocalDateTime fechaCreacion) {
 
     public static PromocionDto from(Promocion promocion) {
@@ -21,6 +22,7 @@ public record PromocionDto(
                 promocion.getMensualidadFija(),
                 promocion.getDescripcion(),
                 promocion.isActiva(),
+                promocion.getFechaFin(),
                 promocion.getFechaCreacion());
     }
 }

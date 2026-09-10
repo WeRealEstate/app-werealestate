@@ -38,6 +38,10 @@ public class Promocion {
     @Column(nullable = false)
     private boolean activa = true;
 
+    /** Cuándo deja de aplicar la promoción; nulo = sin fecha de vencimiento. */
+    @Column(name = "fecha_fin")
+    private LocalDateTime fechaFin;
+
     @Column(name = "fecha_creacion", nullable = false)
     private LocalDateTime fechaCreacion = LocalDateTime.now();
 
@@ -45,11 +49,12 @@ public class Promocion {
         // JPA
     }
 
-    public Promocion(String nombre, String proyecto, BigDecimal mensualidadFija, String descripcion) {
+    public Promocion(String nombre, String proyecto, BigDecimal mensualidadFija, String descripcion, LocalDateTime fechaFin) {
         this.nombre = nombre;
         this.proyecto = proyecto;
         this.mensualidadFija = mensualidadFija;
         this.descripcion = descripcion;
+        this.fechaFin = fechaFin;
     }
 
     public Long getId() {
@@ -90,6 +95,14 @@ public class Promocion {
 
     public void setActiva(boolean activa) {
         this.activa = activa;
+    }
+
+    public LocalDateTime getFechaFin() {
+        return fechaFin;
+    }
+
+    public void setFechaFin(LocalDateTime fechaFin) {
+        this.fechaFin = fechaFin;
     }
 
     public LocalDateTime getFechaCreacion() {

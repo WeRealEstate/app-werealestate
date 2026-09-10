@@ -93,53 +93,52 @@
           ALDEA NANUU
         </button>
 
-        <!-- PROMOCIÓN -->
-        <div class="relative">
-          <button
-            type="button"
-            weMotionPress
-            (click)="togglePromocion()"
-            [disabled]="promocionesActivas().length === 0"
-            [class.opacity-40]="promocionesActivas().length === 0"
-            [class.cursor-not-allowed]="promocionesActivas().length === 0"
-            [class.bg-we-primary]="isPromocion"
-            [class.text-white]="isPromocion"
-            [class.shadow-[0_8px_20px_rgba(36,63,184,0.22)]]="isPromocion"
-            [class.bg-surface]="!isPromocion"
-            [class.text-ink]="!isPromocion"
-            [class.border]="!isPromocion"
-            [class.border-border]="!isPromocion"
-            class="flex min-w-[190px] items-center justify-center gap-3 rounded-2xl px-6 py-4 text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5"
-          >
-            <span
-              class="flex h-8 w-8 items-center justify-center rounded-full border"
-              [class.border-white/30]="isPromocion"
+        <!-- PROMOCIÓN: solo aparece si hay al menos una promoción activa -->
+        @if (promocionesActivas().length > 0) {
+          <div class="relative">
+            <button
+              type="button"
+              weMotionPress
+              (click)="togglePromocion()"
+              [class.bg-we-primary]="isPromocion"
+              [class.text-white]="isPromocion"
+              [class.shadow-[0_8px_20px_rgba(36,63,184,0.22)]]="isPromocion"
+              [class.bg-surface]="!isPromocion"
+              [class.text-ink]="!isPromocion"
+              [class.border]="!isPromocion"
               [class.border-border]="!isPromocion"
+              class="flex min-w-[190px] items-center justify-center gap-3 rounded-2xl px-6 py-4 text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5"
             >
-              %
-            </span>
-            {{ isPromocion ? promocionSeleccionada?.nombre : 'PROMOCIÓN' }}
-          </button>
+              <span
+                class="flex h-8 w-8 items-center justify-center rounded-full border"
+                [class.border-white/30]="isPromocion"
+                [class.border-border]="!isPromocion"
+              >
+                %
+              </span>
+              {{ isPromocion ? promocionSeleccionada?.nombre : 'PROMOCIÓN' }}
+            </button>
 
-          @if (mostrarSelectorPromociones()) {
-            <div class="fixed inset-0 z-10" (click)="mostrarSelectorPromociones.set(false)"></div>
+            @if (mostrarSelectorPromociones()) {
+              <div class="fixed inset-0 z-10" (click)="mostrarSelectorPromociones.set(false)"></div>
 
-            <div weFadeIn class="absolute left-0 z-20 mt-2 w-64 rounded-xl border border-border bg-surface p-2 shadow-lg">
-              @for (promo of promocionesActivas(); track promo.id) {
-                <button
-                  type="button"
-                  (click)="seleccionarPromocion(promo)"
-                  class="flex w-full flex-col rounded-lg px-3 py-2 text-left text-sm transition-colors duration-150 hover:bg-surface-2"
-                >
-                  <span class="font-medium text-ink">{{ promo.nombre }}</span>
-                  <span class="text-xs text-ink-muted">
-                    {{ promo.proyecto === 'samai' ? 'SAMAI Campestre' : 'Aldea Nanuu' }} · ${{ promo.mensualidadFija.toLocaleString('en-US') }}/mes
-                  </span>
-                </button>
-              }
-            </div>
-          }
-        </div>
+              <div weFadeIn class="absolute left-0 z-20 mt-2 w-64 rounded-xl border border-border bg-surface p-2 shadow-lg">
+                @for (promo of promocionesActivas(); track promo.id) {
+                  <button
+                    type="button"
+                    (click)="seleccionarPromocion(promo)"
+                    class="flex w-full flex-col rounded-lg px-3 py-2 text-left text-sm transition-colors duration-150 hover:bg-surface-2"
+                  >
+                    <span class="font-medium text-ink">{{ promo.nombre }}</span>
+                    <span class="text-xs text-ink-muted">
+                      {{ promo.proyecto === 'samai' ? 'SAMAI Campestre' : 'Aldea Nanuu' }} · ${{ promo.mensualidadFija.toLocaleString('en-US') }}/mes
+                    </span>
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        }
       </div>
     </div>
 

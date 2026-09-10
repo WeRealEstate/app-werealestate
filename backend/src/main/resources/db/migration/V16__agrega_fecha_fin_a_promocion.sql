@@ -1,0 +1,1 @@
+ALTER TABLE promocion ADD COLUMN fecha_fin TIMESTAMP NULL;

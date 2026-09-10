@@ -70,6 +70,99 @@
                  focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
         />
       </div>
+
+      <div class="sm:col-span-2">
+        <label class="mb-1.5 block text-sm font-medium text-ink">Fecha y hora de fin (opcional)</label>
+        <p class="mb-2 text-xs text-ink-muted">
+          Al llegar esta fecha la promoción se desactiva sola y deja de aparecer en el Cotizador. Déjalo vacío si no
+          tiene fecha de vencimiento.
+        </p>
+        <div class="grid grid-cols-[1fr_auto_auto] gap-2">
+          <input
+            type="date"
+            [value]="fechaFin()"
+            (input)="fechaFin.set($any($event.target).value)"
+            class="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          />
+
+          <select
+            [value]="horaFin()"
+            (change)="horaFin.set($any($event.target).value)"
+            [disabled]="!fechaFin()"
+            aria-label="Hora (24h)"
+            class="rounded-lg border border-border px-3 py-2.5 text-sm text-ink bg-surface
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary disabled:opacity-60"
+          >
+            @for (h of horasOpciones; track h) {
+              <option [value]="h">{{ h }}</option>
+            }
+          </select>
+
+          <select
+            [value]="minutoFin()"
+            (change)="minutoFin.set($any($event.target).value)"
+            [disabled]="!fechaFin()"
+            aria-label="Minuto"
+            class="rounded-lg border border-border px-3 py-2.5 text-sm text-ink bg-surface
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary disabled:opacity-60"
+          >
+            @for (m of minutosOpciones; track m) {
+              <option [value]="m">{{ m }}</option>
+            }
+          </select>
+        </div>
+        @if (fechaFin()) {
+          <p class="mt-1.5 text-xs text-ink-muted">Hora en formato 24h.</p>
+        }
+      </div>
+    </div>
+
+    <!-- VISTA PREVIA -->
+    <div class="mt-5 rounded-xl border border-we-primary/20 dark:border-we-primary/25 bg-we-primary/5 dark:bg-we-primary/10 p-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <p class="text-xs font-semibold text-ink">Vista previa: ¿en cuánto queda la aportación anual?</p>
+
+        <div class="flex items-center gap-2">
+          <label class="text-xs text-ink-muted">Plazo de referencia</label>
+          <select
+            [value]="plazoPreview()"
+            (change)="plazoPreview.set(+$any($event.target).value)"
+            class="rounded-lg border border-border px-2.5 py-1.5 text-xs text-ink bg-surface
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          >
+            @for (p of plazoPreviewOpciones; track p) {
+              <option [value]="p">{{ p }} meses</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      @if (mensualidadFija() <= 0) {
+        <p class="mt-3 text-xs text-ink-muted">Ingresa la mensualidad fija para ver la aportación anual estimada.</p>
+      } @else if (aportacionesCountPreview <= 0) {
+        <p class="mt-3 text-xs text-red-500">
+          A {{ plazoPreview() }} meses no hay aportaciones anuales disponibles (se necesitan más de 12 meses); esta
+          promoción no se podría aplicar a una cotización con ese plazo.
+        </p>
+      } @else {
+        <p class="mt-3 text-xs text-ink-muted">
+          En un lote estándar de 200 m² de {{ proyecto() === 'samai' ? 'SAMAI' : 'Nanuu' }} a {{ plazoPreview() }} meses
+          (precio de referencia ${{ precioReferenciaPreview.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}):
+        </p>
+        <div class="mt-3 grid gap-3 rounded-lg bg-surface p-3 sm:grid-cols-2">
+          <div>
+            <p class="text-xs text-ink-muted">Aportación anual requerida</p>
+            <p class="mt-1 font-semibold text-we-primary dark:text-we-blue-light">
+              ${{ aportacionAnualPreview!.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+            </p>
+          </div>
+          <div>
+            <p class="text-xs text-ink-muted">Número de aportaciones</p>
+            <p class="mt-1 font-semibold text-ink">{{ aportacionesCountPreview }}</p>
+          </div>
+        </div>
+      }
     </div>
 
     <div class="mt-4 flex gap-3">
@@ -116,6 +209,7 @@
             <th class="px-4 py-3">Nombre</th>
             <th class="px-4 py-3">Proyecto</th>
             <th class="px-4 py-3">Mensualidad fija</th>
+            <th class="px-4 py-3">Vence</th>
             <th class="px-4 py-3">Estado</th>
             <th class="px-4 py-3"></th>
           </tr>
@@ -131,6 +225,9 @@
               </td>
               <td class="px-4 py-3 text-ink-muted">{{ promo.proyecto === 'samai' ? 'SAMAI Campestre' : 'Aldea Nanuu' }}</td>
               <td class="px-4 py-3 font-medium text-ink">${{ promo.mensualidadFija.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</td>
+              <td class="px-4 py-3 text-ink-muted">
+                {{ promo.fechaFin ? (promo.fechaFin | date: 'dd/MM/yyyy HH:mm') : 'Sin vencimiento' }}
+              </td>
               <td class="px-4 py-3">
                 <button
                   type="button"

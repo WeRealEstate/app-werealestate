@@ -10,6 +10,7 @@ import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.repository.PromocionRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,25 +29,32 @@ public class PromocionService {
 
     /** Cualquier asesor o admin puede consultar qué promociones están vigentes para cotizar. */
     public List<PromocionDto> listarActivas() {
-        return promocionRepository.findByActivaTrue().stream().map(PromocionDto::from).toList();
+        return promocionRepository.findByActivaTrue().stream()
+                .peek(this::expirarSiVencida)
+                .filter(Promocion::isActiva)
+                .map(PromocionDto::from)
+                .toList();
     }
 
     /** Catálogo completo (activas e inactivas), solo para la pantalla de administración. */
     public List<PromocionDto> listar() {
         exigirAdmin();
         return promocionRepository.findAllByOrderByFechaCreacionDesc().stream()
+                .peek(this::expirarSiVencida)
                 .map(PromocionDto::from)
                 .toList();
     }
 
     public PromocionDto crear(PromocionCreateRequest request) {
         exigirAdmin();
-        Promocion promocion =
-                new Promocion(request.nombre(), request.proyecto(), request.mensualidadFija(), request.descripcion());
+        Promocion promocion = new Promocion(
+                request.nombre(), request.proyecto(), request.mensualidadFija(), request.descripcion(), request.fechaFin());
         if (promocion.isActiva()) {
             desactivarOtrasDelProyecto(promocion.getProyecto(), null);
         }
-        return PromocionDto.from(promocionRepository.save(promocion));
+        promocionRepository.save(promocion);
+        expirarSiVencida(promocion);
+        return PromocionDto.from(promocion);
     }
 
     public PromocionDto actualizar(Long id, PromocionUpdateRequest request) {
@@ -55,7 +63,19 @@ public class PromocionService {
         promocion.setNombre(request.nombre());
         promocion.setMensualidadFija(request.mensualidadFija());
         promocion.setDescripcion(request.descripcion());
-        return PromocionDto.from(promocionRepository.save(promocion));
+        promocion.setFechaFin(request.fechaFin());
+        promocionRepository.save(promocion);
+        expirarSiVencida(promocion);
+        return PromocionDto.from(promocion);
+    }
+
+    /** Si la promoción sigue marcada como activa pero ya pasó su fecha de fin, se desactiva sola:
+     * ni el cotizador ni la pantalla de administración deben seguir mostrándola como vigente. */
+    private void expirarSiVencida(Promocion promocion) {
+        if (promocion.isActiva() && promocion.getFechaFin() != null && !promocion.getFechaFin().isAfter(LocalDateTime.now())) {
+            promocion.setActiva(false);
+            promocionRepository.save(promocion);
+        }
     }
 
     /** Al activar una promoción, se desactiva cualquier otra activa del mismo proyecto: solo una
