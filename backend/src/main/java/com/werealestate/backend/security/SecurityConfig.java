@@ -2,6 +2,7 @@ package com.werealestate.backend.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -48,6 +49,10 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
+                        // Único endpoint público además del login: lo usa /cotizador-publico (sin
+                        // sesión) para mostrar las promociones vigentes. Todo lo demás, incluido
+                        // el resto de /api/promociones, sigue exigiendo autenticación.
+                        .requestMatchers(HttpMethod.GET, "/api/promociones/activas").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, authException) -> {
                     response.setContentType("application/json");

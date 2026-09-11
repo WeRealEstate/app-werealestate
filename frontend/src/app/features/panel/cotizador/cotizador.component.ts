@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { PdfService, QuotePdfData } from '../../../core/services/pdf-cotizacion.service';
 import { CotizacionesService } from '../../../core/services/cotizaciones.service';
@@ -28,6 +28,11 @@ export class CotizadorComponent implements OnInit {
   private readonly promocionesService = inject(PromocionesService);
 
   readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
+
+  /** true en la ruta pública sin login (/cotizador-publico, ver app.routes.ts). Ahí no hay un
+   * asesor de verdad detrás, así que no se registra la cotización en el historial del admin
+   * (esa escritura sigue exigiendo sesión en el backend). */
+  private readonly esPublico = inject(ActivatedRoute).snapshot.data['publico'] === true;
 
   showQuoteErrors = false;
 
@@ -502,7 +507,10 @@ export class CotizadorComponent implements OnInit {
 
     const data = this.getQuotePdfData();
     await this.pdfService.downloadQuotePdf(data);
-    await this.registrarHistorialCotizacion(data);
+
+    if (!this.esPublico) {
+      await this.registrarHistorialCotizacion(data);
+    }
   }
 
   /** Bitácora para el admin: cada PDF generado o compartido queda registrado. No debe bloquear
@@ -794,7 +802,9 @@ export class CotizadorComponent implements OnInit {
         files: [pdfFile],
       });
 
-      await this.registrarHistorialCotizacion(data);
+      if (!this.esPublico) {
+        await this.registrarHistorialCotizacion(data);
+      }
     } catch (error) {
       // Si el usuario cerró el menú de compartir, no es realmente un error
       if (error instanceof DOMException && error.name === 'AbortError') {

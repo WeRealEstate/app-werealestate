@@ -10,6 +10,13 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/login/login.component').then((m) => m.LoginComponent),
   },
   {
+    // Sin guard y fuera del layout del panel a propósito: cualquiera con el link puede generar
+    // cotizaciones, sin sesión ni acceso al resto de la app. Ver `esPublico` en CotizadorComponent.
+    path: 'cotizador-publico',
+    data: { publico: true },
+    loadComponent: () => import('./features/panel/cotizador/cotizador.component').then((m) => m.CotizadorComponent),
+  },
+  {
     path: 'panel',
     canActivate: [authGuard],
     loadComponent: () =>
