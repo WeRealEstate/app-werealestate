@@ -252,7 +252,6 @@ export class CotizadorComponent implements OnInit {
     this.selectProject(promo.proyecto);
     this.promocionSeleccionada = promo;
     this.selectedPaymentType = 'promocion';
-    this.promocionAjuste = 'aportacion';
     this.mostrarSelectorPromociones.set(false);
   }
 
@@ -275,7 +274,6 @@ export class CotizadorComponent implements OnInit {
   quitarPromocion(): void {
     this.promocionSeleccionada = null;
     this.selectedPaymentType = 'msi';
-    this.promocionAjuste = 'aportacion';
     this.mostrarSelectorPromociones.set(false);
   }
 
@@ -283,84 +281,60 @@ export class CotizadorComponent implements OnInit {
     return this.selectedPaymentType === 'promocion' && this.promocionSeleccionada !== null;
   }
 
-  /** En modo promoción, qué se ajusta cuando el lote no es el estándar (más grande, más chico):
-   * la aportación anual (la mensualidad se queda fija en la de la promoción, comportamiento por
-   * defecto) o la mensualidad (la aportación anual queda fija y editable por el asesor). */
-  promocionAjuste: 'aportacion' | 'mensualidad' = 'aportacion';
-
-  /** Cambia qué cantidad se ajusta. Al pasar a "mensualidad", arrancamos la aportación editable
-   * con el valor que ya se estaba usando, para que el cambio de modo no altere de golpe la
-   * cotización que el asesor ya armó. */
-  seleccionarAjustePromocion(ajuste: 'aportacion' | 'mensualidad'): void {
-    if (ajuste === this.promocionAjuste) {
-      return;
-    }
-
-    if (ajuste === 'mensualidad' && this.annualContribution <= 0) {
-      const referencia = Math.round(this.promocionAnnualContribution);
-      this.annualContribution = referencia;
-      this.annualContributionDisplay = referencia.toLocaleString('en-US');
-    }
-
-    this.promocionAjuste = ajuste;
+  /** Si el plazo no da para ninguna aportación anual, no hay forma de aplicar la promoción sin
+   * importar la superficie del lote — por eso oculta el panel entero (selector de mes, resumen)
+   * y solo muestra el aviso de que hace falta un plazo mayor. */
+  get promocionSinAportacionesDisponibles(): boolean {
+    return this.isPromocion && this.annualContributionsCount <= 0;
   }
 
-  /** La promoción reparte el total entre aportaciones anuales y mensualidades; sin al menos
-   * una aportación disponible (plazo > 12 meses) no hay forma de aplicarla. */
   get promocionInvalida(): boolean {
-    if (!this.isPromocion) {
-      return false;
-    }
-
-    if (this.annualContributionsCount <= 0) {
-      return true;
-    }
-
-    if (this.promocionAjuste === 'mensualidad') {
-      return this.annualContribution <= 0 || this.promocionMensualidadAjustada <= 0;
-    }
-
-    return false;
+    return this.promocionSinAportacionesDisponibles;
   }
 
-  /** Inverso de `annualitiesMonthlyPayment`: en vez de fijar la aportación y despejar la
-   * mensualidad, aquí la mensualidad viene fija de la promoción y se despeja la aportación
-   * anual necesaria para cubrir el resto del precio total. Aplica en modo "aportación". */
-  get promocionAnnualContribution(): number {
+  /** Precio total del lote estándar (200 m²) al precio por m² vigente: la mensualidad fija de la
+   * promoción está calibrada para este tamaño. Cualquier lote distinto (más grande o más chico)
+   * se reparte proporcionalmente entre mensualidad y aportación anual, ver `promocionFactorAjuste`. */
+  get promocionTotalEstandar(): number {
+    const totalEstandar = 200 * this.pricePerM2;
+
+    if (this.selectedProject === 'nanuu') {
+      return totalEstandar * (1 + this.interestPercentage / 100);
+    }
+
+    return totalEstandar;
+  }
+
+  /** Cuánto crece o baja el total a pagar respecto del lote estándar: 1 = mismo tamaño,
+   * mayor a 1 = lote más grande, menor a 1 = lote más chico. Mensualidad y aportación anual se
+   * escalan por este mismo factor, así que ambas suben o bajan juntas y de forma proporcional. */
+  get promocionFactorAjuste(): number {
+    if (this.promocionTotalEstandar <= 0) {
+      return 1;
+    }
+
+    return this.totalInvestment / this.promocionTotalEstandar;
+  }
+
+  /** Aportación anual que le correspondería al lote estándar, dada la mensualidad fija de la
+   * promoción: mismo cálculo que `annualitiesMonthlyPayment` pero despejando la aportación en
+   * vez de la mensualidad, y sobre el total del lote estándar (no el real). */
+  get promocionAnnualContributionEstandar(): number {
     if (!this.promocionSeleccionada || this.annualContributionsCount <= 0) {
       return 0;
     }
 
     const mensualidadFija = this.promocionSeleccionada.mensualidadFija;
     const cubiertoPorMensualidades = mensualidadFija * this.regularPaymentMonths;
-    const requerido = (this.totalInvestment - cubiertoPorMensualidades) / this.annualContributionsCount;
+    const requerido = (this.promocionTotalEstandar - cubiertoPorMensualidades) / this.annualContributionsCount;
 
     return Math.max(requerido, 0);
   }
 
-  /** Modo "mensualidad": la aportación anual la fija el asesor (`annualContribution`) y aquí se
-   * despeja la mensualidad necesaria para cubrir el resto — mismo cálculo que
-   * `annualitiesMonthlyPayment`, pero sobre el total de la promoción. */
-  get promocionMensualidadAjustada(): number {
-    if (this.annualContributionsCount <= 0 || this.selectedMonths <= 0) {
-      return 0;
-    }
-
-    const aportacionesTotal = this.annualContribution * this.annualContributionsCount;
-    const restante = this.totalInvestment - aportacionesTotal;
-    const mesesRegulares = this.regularPaymentMonths;
-
-    if (restante <= 0 || mesesRegulares <= 0) {
-      return 0;
-    }
-
-    return restante / mesesRegulares;
-  }
-
-  /** Aportación anual que efectivamente aplica según el modo elegido: la calculada (modo
-   * "aportación") o la que el asesor capturó a mano (modo "mensualidad"). */
-  get promocionAportacionAplicada(): number {
-    return this.promocionAjuste === 'mensualidad' ? this.annualContribution : this.promocionAnnualContribution;
+  /** Aportación anual real: la del lote estándar escalada por el factor de ajuste, para que un
+   * lote más grande o más chico la mueva en la misma proporción que la mensualidad. */
+  get promocionAnnualContribution(): number {
+    return this.promocionAnnualContributionEstandar * this.promocionFactorAjuste;
   }
 
   get downPayment(): number {
@@ -435,13 +409,10 @@ export class CotizadorComponent implements OnInit {
       return 0;
     }
 
-    // PROMOCIÓN: por defecto la mensualidad viene fija de la promoción; en modo "mensualidad"
-    // se despeja a partir de la aportación anual que el asesor fijó.
+    // PROMOCIÓN: la mensualidad fija de la promoción se escala por el mismo factor que la
+    // aportación anual, para que ambas suban o bajen juntas cuando el lote no es el estándar.
     if (this.isPromocion) {
-      if (this.promocionAjuste === 'mensualidad') {
-        return this.promocionMensualidadAjustada;
-      }
-      return this.promocionSeleccionada?.mensualidadFija ?? 0;
+      return (this.promocionSeleccionada?.mensualidadFija ?? 0) * this.promocionFactorAjuste;
     }
 
     // NANUU
@@ -600,7 +571,7 @@ export class CotizadorComponent implements OnInit {
 
       return this.buildAnnualContributionAmortizationTable(
         this.totalInvestment,
-        this.promocionAportacionAplicada,
+        this.promocionAnnualContribution,
         this.monthlyPayment,
       );
     }
@@ -780,7 +751,7 @@ export class CotizadorComponent implements OnInit {
           ? 'Pago inicial'
           : 'Enganche',
 
-      downPayment: this.isPromocion ? this.promocionAportacionAplicada : this.downPayment,
+      downPayment: this.isPromocion ? this.promocionAnnualContribution : this.downPayment,
 
       financedAmount: this.financedAmount,
 

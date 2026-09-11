@@ -425,43 +425,12 @@
               </button>
             </div>
 
-            @if (promocionInvalida) {
+            @if (promocionSinAportacionesDisponibles) {
               <p class="mt-4 text-xs text-red-500">
                 Esta promoción reparte el precio entre mensualidad fija y aportaciones anuales, así que necesita un
                 plazo de financiamiento mayor a 12 meses. Ajusta el plazo arriba para poder aplicarla.
               </p>
             } @else {
-              <!-- QUÉ SE AJUSTA CUANDO EL LOTE NO ES EL ESTÁNDAR -->
-              <div class="mt-5">
-                <label class="mb-2 block text-sm font-medium text-ink">Si el lote es más grande o más chico que el estándar, ¿qué se ajusta?</label>
-                <p class="mb-2 text-xs text-ink-muted">
-                  La mensualidad fija de la promoción y la aportación anual están pensadas para un lote estándar;
-                  con esta superficie, uno de los dos tiene que moverse.
-                </p>
-                <div class="inline-flex rounded-xl border border-border bg-surface p-1">
-                  <button
-                    type="button"
-                    (click)="seleccionarAjustePromocion('aportacion')"
-                    class="rounded-lg px-4 py-2 text-sm font-medium transition-colors duration-150"
-                    [class.bg-we-primary]="promocionAjuste === 'aportacion'"
-                    [class.text-white]="promocionAjuste === 'aportacion'"
-                    [class.text-ink-muted]="promocionAjuste !== 'aportacion'"
-                  >
-                    Aportación anual
-                  </button>
-                  <button
-                    type="button"
-                    (click)="seleccionarAjustePromocion('mensualidad')"
-                    class="rounded-lg px-4 py-2 text-sm font-medium transition-colors duration-150"
-                    [class.bg-we-primary]="promocionAjuste === 'mensualidad'"
-                    [class.text-white]="promocionAjuste === 'mensualidad'"
-                    [class.text-ink-muted]="promocionAjuste !== 'mensualidad'"
-                  >
-                    Mensualidad
-                  </button>
-                </div>
-              </div>
-
               <div class="mt-5 grid gap-5 sm:grid-cols-2">
                 <!-- MES DE APORTACIÓN -->
                 <div>
@@ -476,48 +445,26 @@
                     }
                   </select>
                 </div>
-
-                @if (promocionAjuste === 'mensualidad') {
-                  <div>
-                    <label class="mb-2 block text-sm font-medium text-ink">Monto de cada aportación anual</label>
-
-                    <div class="relative">
-                      <span class="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted">$</span>
-                      <input
-                        type="text"
-                        inputmode="numeric"
-                        [value]="annualContributionDisplay"
-                        (input)="onAnnualContributionInput($event)"
-                        placeholder="Ej. 14,200"
-                        [class.border-red-500]="annualContribution <= 0"
-                        [class.focus:border-red-500]="annualContribution <= 0"
-                        class="w-full rounded-xl border border-border bg-surface py-3.5 pl-8 pr-16 text-sm outline-none transition-all focus:border-we-primary focus:ring-4 focus:ring-we-primary/10"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-ink-muted">MXN</span>
-                    </div>
-
-                    @if (annualContribution <= 0) {
-                      <p class="mt-1.5 text-xs text-red-500">Ingresa el monto de la aportación anual.</p>
-                    } @else if (promocionMensualidadAjustada <= 0) {
-                      <p class="mt-1.5 text-xs text-red-500">La aportación es demasiado alta para este lote y plazo.</p>
-                    }
-                  </div>
-                }
               </div>
 
               <!-- RESUMEN DE LA PROMOCIÓN -->
               <div class="mt-5 grid gap-4 rounded-xl bg-surface p-4 sm:grid-cols-3">
                 <div>
-                  <p class="text-xs text-ink-muted">{{ promocionAjuste === 'mensualidad' ? 'Aportación anual' : 'Mensualidad fija' }}</p>
+                  <p class="text-xs text-ink-muted">Mensualidad fija</p>
                   <p class="mt-1 font-semibold text-we-primary dark:text-we-blue-light">
-                    ${{ (promocionAjuste === 'mensualidad' ? annualContribution : (promocionSeleccionada?.mensualidadFija ?? 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+                    ${{ monthlyPayment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
                   </p>
+                  @if (selectedArea !== 200) {
+                    <p class="mt-1 text-[11px] text-ink-muted">
+                      Ajustada proporcionalmente al tamaño del lote (estándar: ${{ (promocionSeleccionada?.mensualidadFija ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }})
+                    </p>
+                  }
                 </div>
 
                 <div>
-                  <p class="text-xs text-ink-muted">{{ promocionAjuste === 'mensualidad' ? 'Mensualidad requerida' : 'Aportación anual requerida' }}</p>
+                  <p class="text-xs text-ink-muted">Aportación anual requerida</p>
                   <p class="mt-1 font-semibold text-ink">
-                    ${{ (promocionAjuste === 'mensualidad' ? promocionMensualidadAjustada : promocionAnnualContribution).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+                    ${{ promocionAnnualContribution.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
                   </p>
                 </div>
 
@@ -893,7 +840,7 @@
           @if (isPromocion) {
             <div class="mt-4 flex justify-between gap-4">
               <span class="text-sm text-ink-muted">Aportación anual</span>
-              <strong class="text-sm text-ink">${{ promocionAportacionAplicada.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} MXN</strong>
+              <strong class="text-sm text-ink">${{ promocionAnnualContribution.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} MXN</strong>
             </div>
 
             <div class="mt-4 flex justify-between gap-4">
