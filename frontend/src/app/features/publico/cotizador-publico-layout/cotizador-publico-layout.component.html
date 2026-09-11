@@ -1,18 +1,9 @@
 <div class="flex min-h-screen flex-col bg-canvas">
-  <!-- Header de marca, sin navegación: esta página no tiene sesión ni sidebar. -->
-  <header class="border-b border-border bg-surface">
-    <div class="mx-auto flex max-w-6xl items-center gap-3 px-4 py-4 sm:px-6 lg:px-10">
-      <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-we-primary font-heading text-sm font-bold text-white">
-        We
-      </div>
-      <div class="leading-tight">
-        <p class="font-heading text-sm font-semibold text-ink">We Real Estate</p>
-        <p class="text-xs text-ink-muted">Cotizador de inversión</p>
-      </div>
-    </div>
-  </header>
+  <!-- Espejo literal del hero de cotizador.weinversiones.com; irAlCotizador() hace scroll hasta
+       el id="cotizador" de aquí abajo, igual que en el sitio original. -->
+  <app-hero-publico />
 
-  <main class="flex-1 p-4 sm:p-6 lg:p-10">
+  <main id="cotizador" class="flex-1 p-4 sm:p-6 lg:p-10">
     <div class="mx-auto max-w-6xl">
       <router-outlet />
     </div>
