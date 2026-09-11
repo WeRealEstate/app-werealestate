@@ -28,6 +28,14 @@ public class CotizacionController {
         return cotizacionService.registrar(request);
     }
 
+    /** Único endpoint que puede llamar /cotizador-publico (sin sesión, ver SecurityConfig):
+     * registra igual que {@link #registrar}, pero atribuido al usuario de sistema en vez de a un
+     * asesor autenticado. No expone lectura de ningún tipo. */
+    @PostMapping("/publica")
+    public CotizacionDto registrarPublica(@Valid @RequestBody CotizacionCreateRequest request) {
+        return cotizacionService.registrarPublica(request);
+    }
+
     @GetMapping
     public List<CotizacionDto> listar() {
         return cotizacionService.listar();

@@ -49,10 +49,13 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
-                        // Único endpoint público además del login: lo usa /cotizador-publico (sin
-                        // sesión) para mostrar las promociones vigentes. Todo lo demás, incluido
-                        // el resto de /api/promociones, sigue exigiendo autenticación.
+                        // Únicos endpoints públicos además del login, ambos para /cotizador-publico
+                        // (sin sesión): consultar las promociones vigentes y registrar la cotización
+                        // en el historial atribuida al usuario de sistema (ver CotizacionService).
+                        // Todo lo demás, incluido el resto de /api/promociones y /api/cotizaciones
+                        // (listar, buscar, registrar con sesión), sigue exigiendo autenticación.
                         .requestMatchers(HttpMethod.GET, "/api/promociones/activas").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/cotizaciones/publica").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, authException) -> {
                     response.setContentType("application/json");

@@ -8,6 +8,7 @@ import com.werealestate.backend.model.Cotizacion;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.repository.CotizacionRepository;
+import com.werealestate.backend.repository.UsuarioRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
 import java.util.List;
 import org.springframework.data.domain.Page;
@@ -26,19 +27,41 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class CotizacionService {
 
+    /** Usuario "de sistema" (ver migración V17) al que se atribuyen las cotizaciones generadas
+     * desde /cotizador-publico, donde no hay una sesión real detrás. */
+    private static final String EMAIL_USUARIO_COTIZADOR_PUBLICO = "cotizador-publico@weinversiones.com";
+
     private final CotizacionRepository cotizacionRepository;
+    private final UsuarioRepository usuarioRepository;
     private final CurrentUserProvider currentUserProvider;
 
-    public CotizacionService(CotizacionRepository cotizacionRepository, CurrentUserProvider currentUserProvider) {
+    public CotizacionService(
+            CotizacionRepository cotizacionRepository,
+            UsuarioRepository usuarioRepository,
+            CurrentUserProvider currentUserProvider) {
         this.cotizacionRepository = cotizacionRepository;
+        this.usuarioRepository = usuarioRepository;
         this.currentUserProvider = currentUserProvider;
     }
 
     public CotizacionDto registrar(CotizacionCreateRequest request) {
-        Usuario actual = currentUserProvider.getUsuarioActual();
+        return guardar(currentUserProvider.getUsuarioActual(), request);
+    }
 
+    /** Igual que {@link #registrar}, pero para /cotizador-publico: sin sesión iniciada, así que
+     * se atribuye al usuario de sistema en vez de buscar un autenticado. */
+    public CotizacionDto registrarPublica(CotizacionCreateRequest request) {
+        Usuario sistema = usuarioRepository
+                .findByEmail(EMAIL_USUARIO_COTIZADOR_PUBLICO)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Falta el usuario de sistema del cotizador público (migración V17)"));
+
+        return guardar(sistema, request);
+    }
+
+    private CotizacionDto guardar(Usuario asesor, CotizacionCreateRequest request) {
         Cotizacion cotizacion = new Cotizacion(
-                actual,
+                asesor,
                 request.proyecto(),
                 request.nombreCliente(),
                 request.manzana(),

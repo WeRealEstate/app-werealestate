@@ -22,6 +22,12 @@ export class CotizacionesService {
     return firstValueFrom(this.http.post<CotizacionHistorial>(this.baseUrl, request));
   }
 
+  /** Para /cotizador-publico (sin sesión iniciada): el backend la atribuye al usuario de sistema
+   * "Cotizador público" en vez de a un asesor autenticado, así que sí aparece en el historial. */
+  registrarPublica(request: CotizacionCreateRequest): Promise<CotizacionHistorial> {
+    return firstValueFrom(this.http.post<CotizacionHistorial>(`${this.baseUrl}/publica`, request));
+  }
+
   /** Solo el admin puede consultar el historial completo (lo exige el backend). */
   listar(): Promise<CotizacionHistorial[]> {
     return firstValueFrom(this.http.get<CotizacionHistorial[]>(this.baseUrl));

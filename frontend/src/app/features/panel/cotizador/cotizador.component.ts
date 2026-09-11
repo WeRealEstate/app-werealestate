@@ -28,11 +28,11 @@ export class CotizadorComponent implements OnInit {
   private readonly promocionesService = inject(PromocionesService);
 
   /** true en la ruta pública sin login (/cotizador-publico, ver app.routes.ts). Ahí no hay un
-   * asesor de verdad detrás, así que no se registra la cotización en el historial del admin
-   * (esa escritura sigue exigiendo sesión en el backend) y tampoco se muestran los accesos
-   * de admin (ver `esAdmin` abajo): si quien abre el link sigue con sesión de admin guardada
-   * en ese navegador de una visita anterior al panel interno, esta ruta pública no debe
-   * revelar ni ofrecer esos atajos de todos modos. */
+   * asesor de verdad detrás, así que la cotización se registra en el historial atribuida al
+   * usuario de sistema en vez de a un asesor autenticado (ver `registrarHistorialCotizacion`) y
+   * tampoco se muestran los accesos de admin (ver `esAdmin` abajo): si quien abre el link sigue
+   * con sesión de admin guardada en ese navegador de una visita anterior al panel interno, esta
+   * ruta pública no debe revelar ni ofrecer esos atajos de todos modos. */
   private readonly esPublico = inject(ActivatedRoute).snapshot.data['publico'] === true;
 
   readonly esAdmin = computed(() => !this.esPublico && this.auth.currentUser()?.rol === 'ADMIN');
@@ -510,34 +510,38 @@ export class CotizadorComponent implements OnInit {
 
     const data = this.getQuotePdfData();
     await this.pdfService.downloadQuotePdf(data);
-
-    if (!this.esPublico) {
-      await this.registrarHistorialCotizacion(data);
-    }
+    await this.registrarHistorialCotizacion(data);
   }
 
-  /** Bitácora para el admin: cada PDF generado o compartido queda registrado. No debe bloquear
-   * ni fallar visiblemente la descarga/envío del PDF, que para el asesor ya se completó. */
+  /** Bitácora para el admin: cada PDF generado o compartido queda registrado (en /cotizador-publico,
+   * sin sesión, atribuido al usuario de sistema — ver CotizacionesService.registrarPublica). No debe
+   * bloquear ni fallar visiblemente la descarga/envío del PDF, que para el asesor ya se completó. */
   private async registrarHistorialCotizacion(data: QuotePdfData): Promise<void> {
+    const request = {
+      proyecto: data.project,
+      nombreCliente: data.clientName,
+      manzana: data.blockNumber || null,
+      lote: data.lotNumber || null,
+      superficie: data.area,
+      precioM2: data.pricePerM2,
+      precioTotal: data.totalPrice,
+      formaPago: data.paymentMethod,
+      engancheLabel: data.downPaymentLabel,
+      enganche: data.downPayment,
+      montoFinanciado: data.financedAmount,
+      meses: data.months,
+      mensualidad: data.monthlyPayment,
+      interesPorcentaje: data.interestPercentage,
+      interesMonto: data.interestAmount,
+      totalInversion: data.totalInvestment,
+    };
+
     try {
-      await this.cotizacionesService.registrar({
-        proyecto: data.project,
-        nombreCliente: data.clientName,
-        manzana: data.blockNumber || null,
-        lote: data.lotNumber || null,
-        superficie: data.area,
-        precioM2: data.pricePerM2,
-        precioTotal: data.totalPrice,
-        formaPago: data.paymentMethod,
-        engancheLabel: data.downPaymentLabel,
-        enganche: data.downPayment,
-        montoFinanciado: data.financedAmount,
-        meses: data.months,
-        mensualidad: data.monthlyPayment,
-        interesPorcentaje: data.interestPercentage,
-        interesMonto: data.interestAmount,
-        totalInversion: data.totalInvestment,
-      });
+      if (this.esPublico) {
+        await this.cotizacionesService.registrarPublica(request);
+      } else {
+        await this.cotizacionesService.registrar(request);
+      }
     } catch (error) {
       console.error('No se pudo registrar la cotización en el historial:', error);
     }
@@ -805,9 +809,7 @@ export class CotizadorComponent implements OnInit {
         files: [pdfFile],
       });
 
-      if (!this.esPublico) {
-        await this.registrarHistorialCotizacion(data);
-      }
+      await this.registrarHistorialCotizacion(data);
     } catch (error) {
       // Si el usuario cerró el menú de compartir, no es realmente un error
       if (error instanceof DOMException && error.name === 'AbortError') {
