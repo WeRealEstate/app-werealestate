@@ -82,17 +82,23 @@ input, select, textarea {
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
-/* Entrada de pantalla: cada página del panel aparece con un fade + leve
-   desplazamiento — se re-dispara solo, porque Angular crea un nodo nuevo
-   en cada navegación (rutas con loadComponent). */
+/* Entrada de pantalla: cada página del panel aparece con un fade — se re-dispara
+   solo, porque Angular crea un nodo nuevo en cada navegación (rutas con loadComponent).
+
+   Solo opacity, sin transform/translate/scale/rotate a propósito: CUALQUIERA de esas
+   (incluida la propiedad `translate` por separado, no solo la función `transform`)
+   convierte al elemento en containing block de sus descendientes `position: fixed`
+   mientras tenga un valor distinto de "none" — y con fill-mode "both" el valor final
+   de la animación se queda aplicado para siempre, no solo mientras dura. El efecto:
+   cualquier modal fixed anidado dentro de una página con muchas tarjetas se centraba
+   según el alto TOTAL de la página en vez del viewport visible, y en páginas largas
+   (p. ej. el Pipeline con 100+ leads) terminaba renderizado fuera de la pantalla. */
 @keyframes page-enter {
   from {
     opacity: 0;
-    transform: translateY(6px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 .page-enter {

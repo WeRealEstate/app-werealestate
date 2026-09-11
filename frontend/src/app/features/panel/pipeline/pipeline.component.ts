@@ -100,6 +100,29 @@ export class PipelineComponent {
     return this.leads().filter((l) => l.asesor.id === asesorId);
   });
 
+  /** Búsqueda por nombre dentro del tablero: con muchos leads en "Sin asignar" (puede haber
+   * cientos) encontrar uno para arrastrarlo era prácticamente imposible a simple vista. Filtra
+   * las tarjetitas visibles en TODAS las columnas a la vez, sin tocar a qué columna pertenece
+   * cada lead ni el drag&drop en sí. */
+  readonly busqueda = signal('');
+
+  readonly hayBusqueda = computed(() => this.busqueda().trim().length > 0);
+
+  private readonly leadsFiltrados = computed(() => {
+    const termino = this.busqueda().trim().toLowerCase();
+    const leads = this.leadsDelAsesor();
+    if (!termino) return leads;
+    return leads.filter((l) => l.nombreCliente.toLowerCase().includes(termino));
+  });
+
+  buscar(valor: string): void {
+    this.busqueda.set(valor);
+  }
+
+  limpiarBusqueda(): void {
+    this.busqueda.set('');
+  }
+
   /** Solo las tarjetas (columnas personalizadas) cuentan para el tope; "Sin asignar" no es una tarjeta real. */
   readonly totalTarjetas = computed(() => this.columnasPersonalizadas().length);
   readonly limiteAlcanzado = computed(() => this.totalTarjetas() >= this.maxTarjetas);
@@ -161,10 +184,10 @@ export class PipelineComponent {
   });
 
   /** Leads que no están en ninguna tarjeta todavía; siempre visibles, no cuenta para el tope de 20. */
-  readonly sinAsignar = computed(() => this.leadsDelAsesor().filter((l) => l.columnaPersonalizadaId === null));
+  readonly sinAsignar = computed(() => this.leadsFiltrados().filter((l) => l.columnaPersonalizadaId === null));
 
   readonly tarjetas = computed<Tarjeta[]>(() => {
-    const leadsAsesor = this.leadsDelAsesor();
+    const leadsAsesor = this.leadsFiltrados();
     return this.columnasPersonalizadas().map((col) => ({
       id: col.id,
       nombre: col.nombre,

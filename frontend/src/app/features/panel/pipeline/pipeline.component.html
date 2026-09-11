@@ -4,7 +4,29 @@
       <h1 class="font-heading text-2xl font-semibold text-ink">Pipeline</h1>
       <p class="mt-1 text-sm text-ink-muted">Crea tus propias tarjetas y arrastra leads entre ellas para moverlos.</p>
     </div>
-    <div class="flex items-center gap-2.5">
+    <div class="flex flex-wrap items-center gap-2.5">
+      <div class="relative w-full max-w-[220px]">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input
+          type="text"
+          [value]="busqueda()"
+          (input)="buscar($any($event.target).value)"
+          placeholder="Buscar lead por nombre…"
+          aria-label="Buscar lead por nombre"
+          class="w-full rounded-lg border border-border bg-surface py-2.5 pl-9 pr-8 text-sm text-ink
+                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+        />
+        @if (hayBusqueda()) {
+          <button
+            type="button"
+            (click)="limpiarBusqueda()"
+            aria-label="Limpiar búsqueda"
+            class="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        }
+      </div>
       @if (esAdmin() && opcionesTablero().length > 1) {
         <select
           (change)="cambiarAsesor($any($event.target).value)"
@@ -141,7 +163,7 @@
               </div>
             } @empty {
               <div class="rounded-lg border border-dashed border-border p-4 text-center text-xs text-ink-muted">
-                Sin leads aquí
+                {{ hayBusqueda() ? 'Sin coincidencias' : 'Sin leads aquí' }}
               </div>
             }
           </div>
