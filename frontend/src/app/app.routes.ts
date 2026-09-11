@@ -12,9 +12,21 @@ export const routes: Routes = [
   {
     // Sin guard y fuera del layout del panel a propósito: cualquiera con el link puede generar
     // cotizaciones, sin sesión ni acceso al resto de la app. Ver `esPublico` en CotizadorComponent.
+    // El layout público solo pone el header/footer de marca y el ancho centrado (lo que
+    // PanelLayoutComponent le da al Cotizador interno); no exige login ni agrega navegación.
     path: 'cotizador-publico',
-    data: { publico: true },
-    loadComponent: () => import('./features/panel/cotizador/cotizador.component').then((m) => m.CotizadorComponent),
+    loadComponent: () =>
+      import('./features/publico/cotizador-publico-layout/cotizador-publico-layout.component').then(
+        (m) => m.CotizadorPublicoLayoutComponent,
+      ),
+    children: [
+      {
+        path: '',
+        data: { publico: true },
+        loadComponent: () =>
+          import('./features/panel/cotizador/cotizador.component').then((m) => m.CotizadorComponent),
+      },
+    ],
   },
   {
     path: 'panel',

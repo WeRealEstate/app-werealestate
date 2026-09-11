@@ -1,0 +1,29 @@
+<div class="flex min-h-screen flex-col bg-canvas">
+  <!-- Header de marca, sin navegación: esta página no tiene sesión ni sidebar. -->
+  <header class="border-b border-border bg-surface">
+    <div class="mx-auto flex max-w-6xl items-center gap-3 px-4 py-4 sm:px-6 lg:px-10">
+      <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-we-primary font-heading text-sm font-bold text-white">
+        We
+      </div>
+      <div class="leading-tight">
+        <p class="font-heading text-sm font-semibold text-ink">We Real Estate</p>
+        <p class="text-xs text-ink-muted">Cotizador de inversión</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 p-4 sm:p-6 lg:p-10">
+    <div class="mx-auto max-w-6xl">
+      <router-outlet />
+    </div>
+  </main>
+
+  <footer class="border-t border-border bg-surface-2">
+    <div
+      class="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-6 text-center text-xs text-ink-muted sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-10"
+    >
+      <p>© {{ currentYear }} We Real Estate. Todos los derechos reservados.</p>
+      <p>Cotizaciones sujetas a disponibilidad y condiciones vigentes.</p>
+    </div>
+  </footer>
+</div>
