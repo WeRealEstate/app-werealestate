@@ -27,12 +27,15 @@ export class CotizadorComponent implements OnInit {
   private readonly cotizacionesService = inject(CotizacionesService);
   private readonly promocionesService = inject(PromocionesService);
 
-  readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
-
   /** true en la ruta pública sin login (/cotizador-publico, ver app.routes.ts). Ahí no hay un
    * asesor de verdad detrás, así que no se registra la cotización en el historial del admin
-   * (esa escritura sigue exigiendo sesión en el backend). */
+   * (esa escritura sigue exigiendo sesión en el backend) y tampoco se muestran los accesos
+   * de admin (ver `esAdmin` abajo): si quien abre el link sigue con sesión de admin guardada
+   * en ese navegador de una visita anterior al panel interno, esta ruta pública no debe
+   * revelar ni ofrecer esos atajos de todos modos. */
   private readonly esPublico = inject(ActivatedRoute).snapshot.data['publico'] === true;
+
+  readonly esAdmin = computed(() => !this.esPublico && this.auth.currentUser()?.rol === 'ADMIN');
 
   showQuoteErrors = false;
 
