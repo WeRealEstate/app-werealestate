@@ -4,7 +4,6 @@ import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
 import { UsuariosService } from '../../../core/services/usuarios.service';
 import { descargarCsv } from '../../../core/utils/csv';
-import { linkWhatsApp } from '../../../core/utils/contacto';
 import { descargarExcel } from '../../../core/utils/excel';
 import { generarPlantillaLeads } from '../../../core/utils/plantilla-leads';
 import {
@@ -50,7 +49,6 @@ export class LeadsListComponent {
   readonly estados = Object.keys(ESTADO_LEAD_LABELS) as EstadoLead[];
   readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
   readonly badgeClasesEtiqueta = ETIQUETA_BADGE_CLASSES;
-  readonly linkWhatsApp = linkWhatsApp;
 
   /** Leads acumulados de los lotes cargados hasta ahora, ya filtrados por el servidor. */
   readonly leads = signal<Lead[]>([]);
@@ -273,12 +271,6 @@ export class LeadsListComponent {
   async descargarPlantilla(): Promise<void> {
     const desarrollos = await this.leadsService.listarDesarrollos();
     await generarPlantillaLeads(desarrollos.map((d) => d.nombre));
-  }
-
-  /** Mensaje prellenado del link de WhatsApp: se puede editar antes de enviarlo, solo evita
-   * empezar de cero. */
-  mensajeWhatsApp(lead: Lead): string {
-    return `Hola ${lead.nombreCliente}, te contacto de parte de We Real Estate sobre tu interés en ${lead.desarrollo.nombre}.`;
   }
 
   badgeClass(estado: Lead['estado']): string {
