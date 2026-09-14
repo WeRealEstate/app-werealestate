@@ -33,6 +33,7 @@ import {
   MINUTO_POR_DEFECTO,
   combinarFechaHora,
 } from '../../../core/utils/fecha-hora';
+import { linkLlamada, linkWhatsApp } from '../../../core/utils/contacto';
 
 /** Roles que pueden recibir la reasignación de un lead: quienes trabajan leads, más el admin,
  * que también tiene su propia bolsa de leads. */
@@ -66,6 +67,8 @@ export class LeadDetailComponent implements OnInit {
   readonly coloresEtiqueta = ETIQUETA_COLORES;
   readonly badgeClasesEtiqueta = ETIQUETA_BADGE_CLASSES;
   readonly swatchClasesEtiqueta = ETIQUETA_SWATCH_CLASSES;
+  readonly linkWhatsApp = linkWhatsApp;
+  readonly linkLlamada = linkLlamada;
 
   readonly lead = signal<Lead | null>(null);
   readonly catalogoEtiquetas = signal<Etiqueta[]>([]);
@@ -96,6 +99,12 @@ export class LeadDetailComponent implements OnInit {
   });
 
   private leadId!: number;
+
+  /** Mensaje prellenado del link de WhatsApp: se puede editar antes de enviarlo, solo evita
+   * empezar de cero. */
+  mensajeWhatsApp(lead: Lead): string {
+    return `Hola ${lead.nombreCliente}, te contacto de parte de We Real Estate sobre tu interés en ${lead.desarrollo.nombre}.`;
+  }
 
   readonly seguimientoForm = this.fb.group({
     tipo: this.fb.control<TipoSeguimiento>('LLAMADA', { nonNullable: true, validators: [Validators.required] }),
