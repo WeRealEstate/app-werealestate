@@ -60,6 +60,30 @@ export const routes: Routes = [
           import('./features/leads/lead-detail/lead-detail.component').then((m) => m.LeadDetailComponent),
       },
       {
+        path: 'lotes',
+        canActivate: [roleGuard(['ASESOR', 'ADMIN'])],
+        loadComponent: () =>
+          import('./features/lotes/lotes-list/lotes-list.component').then((m) => m.LotesListComponent),
+      },
+      {
+        path: 'lotes/nuevo',
+        canActivate: [roleGuard(['ADMIN'])],
+        loadComponent: () =>
+          import('./features/lotes/lote-form/lote-form.component').then((m) => m.LoteFormComponent),
+      },
+      {
+        path: 'lotes/importar',
+        canActivate: [roleGuard(['ADMIN'])],
+        loadComponent: () =>
+          import('./features/lotes/lote-import/lote-import.component').then((m) => m.LoteImportComponent),
+      },
+      {
+        path: 'lotes/:id/editar',
+        canActivate: [roleGuard(['ADMIN'])],
+        loadComponent: () =>
+          import('./features/lotes/lote-form/lote-form.component').then((m) => m.LoteFormComponent),
+      },
+      {
         path: 'calendario',
         loadComponent: () =>
           import('./features/panel/calendario/calendario.component').then((m) => m.CalendarioComponent),

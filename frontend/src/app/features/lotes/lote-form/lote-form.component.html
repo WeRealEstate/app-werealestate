@@ -1,0 +1,111 @@
+<div class="max-w-xl page-enter">
+  <a routerLink="/panel/lotes" class="text-sm text-we-blue-light hover:underline">&larr; Volver a lotes</a>
+
+  <h1 class="mt-3 font-heading text-2xl font-semibold text-ink">
+    {{ modoEdicion() ? 'Editar lote' : 'Nuevo lote' }}
+  </h1>
+
+  @if (isCargando()) {
+    <p class="mt-8 text-sm text-ink-muted">Cargando…</p>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="mt-6 space-y-4" novalidate>
+      <div>
+        <label for="desarrolloId" class="block text-sm font-medium text-ink mb-1.5">Desarrollo *</label>
+        <select
+          id="desarrolloId"
+          formControlName="desarrolloId"
+          class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary disabled:opacity-60"
+        >
+          <option [ngValue]="null">Selecciona un desarrollo</option>
+          @for (d of desarrollos(); track d.id) {
+            <option [ngValue]="d.id">{{ d.nombre }}</option>
+          }
+        </select>
+        @if (form.controls.desarrolloId.invalid && form.controls.desarrolloId.touched) {
+          <p class="mt-1.5 text-xs text-red-600">Elige un desarrollo.</p>
+        }
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label for="manzana" class="block text-sm font-medium text-ink mb-1.5">Manzana *</label>
+          <input
+            id="manzana"
+            type="text"
+            formControlName="manzana"
+            placeholder="Ej. 5"
+            class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          />
+          @if (form.controls.manzana.invalid && form.controls.manzana.touched) {
+            <p class="mt-1.5 text-xs text-red-600">Campo obligatorio.</p>
+          }
+        </div>
+        <div>
+          <label for="numeroLote" class="block text-sm font-medium text-ink mb-1.5">Lote *</label>
+          <input
+            id="numeroLote"
+            type="text"
+            formControlName="numeroLote"
+            placeholder="Ej. 11"
+            class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          />
+          @if (form.controls.numeroLote.invalid && form.controls.numeroLote.touched) {
+            <p class="mt-1.5 text-xs text-red-600">Campo obligatorio.</p>
+          }
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label for="superficie" class="block text-sm font-medium text-ink mb-1.5">Superficie (hectáreas) *</label>
+          <input
+            id="superficie"
+            type="number"
+            step="0.0001"
+            min="0.0001"
+            formControlName="superficie"
+            placeholder="Ej. 0.25"
+            class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          />
+          @if (form.controls.superficie.invalid && form.controls.superficie.touched) {
+            <p class="mt-1.5 text-xs text-red-600">Ingresa una superficie válida.</p>
+          }
+        </div>
+        <div>
+          <label for="precio" class="block text-sm font-medium text-ink mb-1.5">Precio (opcional)</label>
+          <input
+            id="precio"
+            type="number"
+            step="0.01"
+            min="0"
+            formControlName="precio"
+            placeholder="Se calcula automático si se deja vacío"
+            class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink placeholder:text-xs
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          />
+        </div>
+      </div>
+
+      @if (errorMessage()) {
+        <div class="rounded-lg bg-red-50 border border-red-200 px-3.5 py-2.5 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
+          {{ errorMessage() }}
+        </div>
+      }
+
+      <button
+        type="submit"
+        [disabled]="isLoading()"
+        class="inline-flex items-center justify-center rounded-lg bg-we-primary px-5 py-2.5 text-sm font-semibold text-white
+               hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
+               focus:outline-none focus:ring-2 focus:ring-we-primary/50
+               disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100 min-h-[44px]"
+      >
+        {{ isLoading() ? 'Guardando…' : (modoEdicion() ? 'Guardar cambios' : 'Crear lote') }}
+      </button>
+    </form>
+  }
+</div>

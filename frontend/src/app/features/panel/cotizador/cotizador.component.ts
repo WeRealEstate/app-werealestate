@@ -5,7 +5,11 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { PdfService, QuotePdfData } from '../../../core/services/pdf-cotizacion.service';
 import { CotizacionesService } from '../../../core/services/cotizaciones.service';
+import { LeadsService } from '../../../core/services/leads.service';
+import { LotesService } from '../../../core/services/lotes.service';
 import { PromocionesService } from '../../../core/services/promociones.service';
+import { Desarrollo } from '../../../core/models/lead.model';
+import { Lote } from '../../../core/models/lote.model';
 import { Promocion } from '../../../core/models/promocion.model';
 import { PROJECTS_CONFIG } from '../../../core/data/proyectos-cotizador.config';
 import { FadeInDirective } from '../../../shared/motion/fade-in.directive';
@@ -25,7 +29,14 @@ export class CotizadorComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly pdfService = inject(PdfService);
   private readonly cotizacionesService = inject(CotizacionesService);
+  private readonly leadsService = inject(LeadsService);
+  private readonly lotesService = inject(LotesService);
   private readonly promocionesService = inject(PromocionesService);
+
+  readonly desarrollos = signal<Desarrollo[]>([]);
+  readonly lotesDisponibles = signal<Lote[]>([]);
+  readonly loteSeleccionadoId = signal<number | null>(null);
+  readonly isCargandoLotes = signal(false);
 
   /** true en la ruta pública sin login (/cotizador-publico, ver app.routes.ts). Ahí no hay un
    * asesor de verdad detrás, así que la cotización se registra en el historial atribuida al
@@ -33,7 +44,7 @@ export class CotizadorComponent implements OnInit {
    * tampoco se muestran los accesos de admin (ver `esAdmin` abajo): si quien abre el link sigue
    * con sesión de admin guardada en ese navegador de una visita anterior al panel interno, esta
    * ruta pública no debe revelar ni ofrecer esos atajos de todos modos. */
-  private readonly esPublico = inject(ActivatedRoute).snapshot.data['publico'] === true;
+  readonly esPublico = inject(ActivatedRoute).snapshot.data['publico'] === true;
 
   readonly esAdmin = computed(() => !this.esPublico && this.auth.currentUser()?.rol === 'ADMIN');
 
@@ -51,6 +62,58 @@ export class CotizadorComponent implements OnInit {
       this.promocionesActivas.set(await this.promocionesService.listarActivas());
     } catch {
       // Si fallan las promociones, el cotizador sigue funcionando normal sin ellas.
+    }
+
+    if (!this.esPublico) {
+      try {
+        this.desarrollos.set(await this.leadsService.listarDesarrollos());
+        await this.cargarLotesDisponibles();
+      } catch {
+        // El selector de lote del inventario es una comodidad; si falla, se sigue capturando
+        // manzana/lote a mano como siempre.
+      }
+    }
+  }
+
+  /** 'SAMAI Campestre' / 'Aldea Nanuu': mismo mapeo que ya se usa para armar el PDF de la cotización. */
+  private nombreDesarrolloActual(): string {
+    return this.selectedProject === 'samai' ? 'SAMAI Campestre' : 'Aldea Nanuu';
+  }
+
+  private async cargarLotesDisponibles(): Promise<void> {
+    this.loteSeleccionadoId.set(null);
+    const desarrollo = this.desarrollos().find((d) => d.nombre === this.nombreDesarrolloActual());
+    if (!desarrollo) {
+      this.lotesDisponibles.set([]);
+      return;
+    }
+    this.isCargandoLotes.set(true);
+    try {
+      this.lotesDisponibles.set(await this.lotesService.listarDisponibles(desarrollo.id));
+    } catch {
+      this.lotesDisponibles.set([]);
+    } finally {
+      this.isCargandoLotes.set(false);
+    }
+  }
+
+  /** Al elegir un lote real del inventario, se autocompletan manzana/lote/superficie/precio —
+   * pero el lote en sí NO cambia de estado: es solo para no capturar todo a mano. */
+  onLoteSeleccionado(loteId: string): void {
+    const id = loteId === '' ? null : Number(loteId);
+    this.loteSeleccionadoId.set(id);
+    if (id === null) return;
+
+    const lote = this.lotesDisponibles().find((l) => l.id === id);
+    if (!lote) return;
+
+    this.blockNumber = lote.manzana;
+    this.lotNumber = lote.numeroLote;
+
+    const areaM2 = lote.superficie * 10000;
+    this.selectArea(areaM2);
+    if (lote.precio) {
+      this.pricePerM2 = lote.precio / areaM2;
     }
   }
 
