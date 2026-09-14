@@ -35,7 +35,8 @@ public class EventoCalendarioService {
 
     public EventoCalendarioDto crear(EventoCalendarioRequest request) {
         Usuario actual = currentUserProvider.getUsuarioActual();
-        EventoCalendario evento = new EventoCalendario(request.titulo(), request.descripcion(), request.fecha(), actual);
+        EventoCalendario evento = new EventoCalendario(
+                request.titulo(), request.descripcion(), request.fecha(), actual, request.recordatorio());
         return EventoCalendarioDto.from(eventoCalendarioRepository.save(evento));
     }
 
@@ -44,6 +45,7 @@ public class EventoCalendarioService {
         evento.setTitulo(request.titulo());
         evento.setDescripcion(request.descripcion());
         evento.setFecha(request.fecha());
+        evento.setRecordatorio(request.recordatorio());
         return EventoCalendarioDto.from(eventoCalendarioRepository.save(evento));
     }
 

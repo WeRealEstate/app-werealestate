@@ -46,19 +46,34 @@ export class NotificationBellComponent {
 
   rutaDeNotificacion(n: Notificacion): string[] {
     if (n.leadId !== null) return ['/panel/leads', String(n.leadId)];
+    if (n.eventoId !== null) return ['/panel/calendario'];
     return ['/panel/equipo'];
   }
 
-  /** Al navegar desde una notificación, se quita de la lista visible (vuelve a aparecer si la
-   * condición que la generó sigue vigente la próxima vez que se recarguen las notificaciones). */
+  /** Al navegar desde una notificación, o al descartarla con la "X", se marca como leída de
+   * verdad (queda registrada en el backend): no vuelve a aparecer, ni al recargar ni en otra
+   * sesión, a menos que la condición que la generó cambie de verdad (ver NotificacionService). */
   alNavegar(index: number): void {
     this.close();
-    this.eliminar(index);
+    this.marcarLeidaYQuitar(index);
   }
 
   eliminar(index: number, event?: Event): void {
     event?.preventDefault();
     event?.stopPropagation();
+    this.marcarLeidaYQuitar(index);
+  }
+
+  private marcarLeidaYQuitar(index: number): void {
+    const n = this.notificaciones()[index];
     this.notificaciones.update((lista) => lista.filter((_, i) => i !== index));
+    if (!n) return;
+
+    const entidadId = n.leadId ?? n.tareaId ?? n.eventoId;
+    if (entidadId === null) return;
+
+    this.notificacionesService.marcarLeida(n.tipo, entidadId, n.firma).catch(() => {
+      // Si falla, en el peor caso vuelve a aparecer la próxima vez que se recarguen las notificaciones.
+    });
   }
 }

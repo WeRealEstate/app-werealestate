@@ -163,6 +163,7 @@ export class CalendarioComponent {
     titulo: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
     descripcion: this.fb.control('', { nonNullable: true }),
     fecha: this.fb.control(toIso(this.selectedDate()), { nonNullable: true, validators: [Validators.required] }),
+    recordatorio: this.fb.control(false, { nonNullable: true }),
   });
 
   constructor() {
@@ -250,7 +251,7 @@ export class CalendarioComponent {
   seleccionarDia(date: Date): void {
     this.selectedDate.set(date);
     this.editandoId.set(null);
-    this.form.reset({ titulo: '', descripcion: '', fecha: toIso(date) }, { emitEvent: false });
+    this.form.reset({ titulo: '', descripcion: '', fecha: toIso(date), recordatorio: false }, { emitEvent: false });
   }
 
   diaClase(day: CalendarDay): string {
@@ -279,6 +280,7 @@ export class CalendarioComponent {
         titulo: evento.titulo,
         descripcion: evento.descripcion ?? '',
         fecha: evento.fecha.slice(0, 10),
+        recordatorio: evento.recordatorio,
       },
       { emitEvent: false },
     );
@@ -286,7 +288,10 @@ export class CalendarioComponent {
 
   cancelarEdicion(): void {
     this.editandoId.set(null);
-    this.form.reset({ titulo: '', descripcion: '', fecha: this.selectedIso() }, { emitEvent: false });
+    this.form.reset(
+      { titulo: '', descripcion: '', fecha: this.selectedIso(), recordatorio: false },
+      { emitEvent: false },
+    );
   }
 
   async guardarEvento(): Promise<void> {
@@ -297,7 +302,7 @@ export class CalendarioComponent {
 
     this.isGuardando.set(true);
     const v = this.form.getRawValue();
-    const request = { titulo: v.titulo, descripcion: v.descripcion || null, fecha: v.fecha };
+    const request = { titulo: v.titulo, descripcion: v.descripcion || null, fecha: v.fecha, recordatorio: v.recordatorio };
     try {
       const editandoId = this.editandoId();
       if (editandoId) {

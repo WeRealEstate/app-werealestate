@@ -37,15 +37,20 @@ public class EventoCalendario {
     @Column(name = "fecha_creacion", nullable = false)
     private LocalDateTime fechaCreacion = LocalDateTime.now();
 
+    // Si está activo, aparece en la campana de notificaciones un día antes del evento y el mismo día.
+    @Column(nullable = false)
+    private boolean recordatorio;
+
     protected EventoCalendario() {
         // JPA
     }
 
-    public EventoCalendario(String titulo, String descripcion, LocalDate fecha, Usuario usuario) {
+    public EventoCalendario(String titulo, String descripcion, LocalDate fecha, Usuario usuario, boolean recordatorio) {
         this.titulo = titulo;
         this.descripcion = descripcion;
         this.fecha = fecha;
         this.usuario = usuario;
+        this.recordatorio = recordatorio;
     }
 
     public Long getId() {
@@ -82,5 +87,13 @@ public class EventoCalendario {
 
     public LocalDateTime getFechaCreacion() {
         return fechaCreacion;
+    }
+
+    public boolean isRecordatorio() {
+        return recordatorio;
+    }
+
+    public void setRecordatorio(boolean recordatorio) {
+        this.recordatorio = recordatorio;
     }
 }
