@@ -88,8 +88,16 @@ export class LeadsListComponent {
   );
 
   constructor() {
-    if (this.route.snapshot.queryParamMap.get('frios') === '1') {
+    const params = this.route.snapshot.queryParamMap;
+    const quiereFrios = params.get('frios') === '1';
+    if (quiereFrios) {
       this.estadoFiltro.set('FRIOS');
+    }
+    // Por defecto, el admin ve su propia bolsa de leads (igual que un asesor), no la de todo el
+    // equipo. Se omite cuando viene de "Alertas de leads fríos" (que es de todo el equipo) o de
+    // "Leads de todos los asesores" (asesorId=todos), que explícitamente piden ver a todos.
+    if (this.esAdmin() && !quiereFrios && params.get('asesorId') !== 'todos') {
+      this.asesorId.set(this.auth.currentUser()!.id);
     }
     this.cargar();
     if (this.esAdmin()) {
