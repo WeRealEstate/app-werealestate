@@ -1,4 +1,9 @@
-export type TipoNotificacion = 'LEAD_FRIO' | 'SEGUIMIENTO_PENDIENTE' | 'TAREA_PENDIENTE' | 'EVENTO_PENDIENTE';
+export type TipoNotificacion =
+  | 'LEAD_FRIO'
+  | 'LEAD_SIN_CONTACTAR'
+  | 'SEGUIMIENTO_PENDIENTE'
+  | 'TAREA_PENDIENTE'
+  | 'EVENTO_PENDIENTE';
 
 export interface Notificacion {
   tipo: TipoNotificacion;

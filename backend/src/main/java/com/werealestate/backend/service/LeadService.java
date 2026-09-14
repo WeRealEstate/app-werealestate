@@ -62,6 +62,7 @@ public class LeadService {
     private final EtiquetaRepository etiquetaRepository;
     private final CurrentUserProvider currentUserProvider;
     private final int diasFrio;
+    private final int diasSinContactarNuevo;
 
     public LeadService(
             LeadRepository leadRepository,
@@ -72,7 +73,8 @@ public class LeadService {
             ComisionRepository comisionRepository,
             EtiquetaRepository etiquetaRepository,
             CurrentUserProvider currentUserProvider,
-            @Value("${app.lead.dias-frio}") int diasFrio) {
+            @Value("${app.lead.dias-frio}") int diasFrio,
+            @Value("${app.lead.dias-sin-contactar-nuevo}") int diasSinContactarNuevo) {
         this.leadRepository = leadRepository;
         this.desarrolloRepository = desarrolloRepository;
         this.usuarioRepository = usuarioRepository;
@@ -82,6 +84,7 @@ public class LeadService {
         this.etiquetaRepository = etiquetaRepository;
         this.currentUserProvider = currentUserProvider;
         this.diasFrio = diasFrio;
+        this.diasSinContactarNuevo = diasSinContactarNuevo;
     }
 
     public List<LeadDto> listar() {
@@ -331,10 +334,16 @@ public class LeadService {
                 request.tipo(),
                 request.nota(),
                 request.resultado(),
-                request.proximoSeguimiento(),
+                proximoSeguimientoOPorDefecto(request.proximoSeguimiento()),
                 request.duracionMinutos()));
 
         return toDto(guardado);
+    }
+
+    /** Regla 3 de automatización de seguimiento: si al mover la tarjeta no se agenda el próximo
+     * contacto, se agenda uno por defecto en vez de dejar al lead sin ninguna fecha futura. */
+    private LocalDateTime proximoSeguimientoOPorDefecto(LocalDateTime proximoSeguimiento) {
+        return proximoSeguimiento != null ? proximoSeguimiento : LocalDateTime.now().plusDays(diasSinContactarNuevo);
     }
 
     public LeadDto reasignar(Long id, ReasignarLeadRequest request) {

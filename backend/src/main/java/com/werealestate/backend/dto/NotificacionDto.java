@@ -9,6 +9,10 @@ public record NotificacionDto(String tipo, String mensaje, Long leadId, Long tar
         return new NotificacionDto("LEAD_FRIO", mensaje, leadId, null, null, firma);
     }
 
+    public static NotificacionDto leadSinContactar(String mensaje, Long leadId, String firma) {
+        return new NotificacionDto("LEAD_SIN_CONTACTAR", mensaje, leadId, null, null, firma);
+    }
+
     public static NotificacionDto seguimientoPendiente(String mensaje, Long leadId, String firma) {
         return new NotificacionDto("SEGUIMIENTO_PENDIENTE", mensaje, leadId, null, null, firma);
     }

@@ -46,6 +46,8 @@ public class NotificacionService {
     private final NotificacionLeidaRepository notificacionLeidaRepository;
     private final CurrentUserProvider currentUserProvider;
     private final int diasFrio;
+    private final int diasSinContactarNuevo;
+    private final int diasEscalarAdmin;
 
     public NotificacionService(
             LeadRepository leadRepository,
@@ -54,7 +56,9 @@ public class NotificacionService {
             EventoCalendarioRepository eventoCalendarioRepository,
             NotificacionLeidaRepository notificacionLeidaRepository,
             CurrentUserProvider currentUserProvider,
-            @Value("${app.lead.dias-frio}") int diasFrio) {
+            @Value("${app.lead.dias-frio}") int diasFrio,
+            @Value("${app.lead.dias-sin-contactar-nuevo}") int diasSinContactarNuevo,
+            @Value("${app.lead.dias-escalar-admin}") int diasEscalarAdmin) {
         this.leadRepository = leadRepository;
         this.seguimientoRepository = seguimientoRepository;
         this.tareaRepository = tareaRepository;
@@ -62,6 +66,8 @@ public class NotificacionService {
         this.notificacionLeidaRepository = notificacionLeidaRepository;
         this.currentUserProvider = currentUserProvider;
         this.diasFrio = diasFrio;
+        this.diasSinContactarNuevo = diasSinContactarNuevo;
+        this.diasEscalarAdmin = diasEscalarAdmin;
     }
 
     public List<NotificacionDto> listar() {
@@ -103,6 +109,24 @@ public class NotificacionService {
                     if (!leidas.contains(clave("SEGUIMIENTO_PENDIENTE", lead.getId(), firma))) {
                         notificaciones.add(NotificacionDto.seguimientoPendiente(
                                 "Seguimiento pendiente con " + lead.getNombreCliente() + ".", lead.getId(), firma));
+                    }
+                }
+            } else {
+                // Regla 1/2: nunca se le ha registrado ningún seguimiento. El asesor lo ve pasado
+                // el umbral normal; el admin solo lo ve si ya escaló (umbral mayor), para no
+                // saturarle la campana con cada lead nuevo de cada asesor.
+                long diasSinContactar = ChronoUnit.DAYS.between(lead.getFechaCreacion(), ahora);
+                boolean esAdmin = actual.getRol() == Role.ADMIN;
+                int umbral = esAdmin ? diasEscalarAdmin : diasSinContactarNuevo;
+                if (diasSinContactar >= umbral) {
+                    String firma = lead.getFechaCreacion().toString();
+                    String mensaje = esAdmin
+                            ? lead.getNombreCliente() + " (asesor: " + lead.getAsesor().getNombre() + ") lleva "
+                                    + diasSinContactar + " días sin ser contactado por primera vez."
+                            : lead.getNombreCliente() + " lleva " + diasSinContactar
+                                    + " días sin ser contactado por primera vez.";
+                    if (!leidas.contains(clave("LEAD_SIN_CONTACTAR", lead.getId(), firma))) {
+                        notificaciones.add(NotificacionDto.leadSinContactar(mensaje, lead.getId(), firma));
                     }
                 }
             }

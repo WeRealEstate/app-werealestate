@@ -11,6 +11,7 @@ import com.werealestate.backend.repository.SeguimientoRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,16 +23,19 @@ public class SeguimientoService {
     private final LeadRepository leadRepository;
     private final LeadService leadService;
     private final CurrentUserProvider currentUserProvider;
+    private final int diasSinContactarNuevo;
 
     public SeguimientoService(
             SeguimientoRepository seguimientoRepository,
             LeadRepository leadRepository,
             LeadService leadService,
-            CurrentUserProvider currentUserProvider) {
+            CurrentUserProvider currentUserProvider,
+            @Value("${app.lead.dias-sin-contactar-nuevo}") int diasSinContactarNuevo) {
         this.seguimientoRepository = seguimientoRepository;
         this.leadRepository = leadRepository;
         this.leadService = leadService;
         this.currentUserProvider = currentUserProvider;
+        this.diasSinContactarNuevo = diasSinContactarNuevo;
     }
 
     public List<SeguimientoDto> listarPorLead(Long leadId) {
@@ -52,7 +56,7 @@ public class SeguimientoService {
                 request.tipo(),
                 request.nota(),
                 request.resultado(),
-                request.proximoSeguimiento(),
+                proximoSeguimientoOPorDefecto(request.proximoSeguimiento()),
                 request.duracionMinutos());
         seguimientoRepository.save(seguimiento);
 
@@ -76,5 +80,12 @@ public class SeguimientoService {
                     case EQUIPO_INTERNO -> List.of();
                 };
         return seguimientos.stream().map(SeguimientoProximoDto::from).toList();
+    }
+
+    /** Regla 3 de automatización de seguimiento: si al cerrar un seguimiento no se agenda el
+     * próximo contacto, se agenda uno por defecto en vez de dejar al lead sin ninguna fecha futura
+     * (lo que lo dejaría invisible tanto en la agenda como en "seguimiento pendiente"). */
+    private LocalDateTime proximoSeguimientoOPorDefecto(LocalDateTime proximoSeguimiento) {
+        return proximoSeguimiento != null ? proximoSeguimiento : LocalDateTime.now().plusDays(diasSinContactarNuevo);
     }
 }
