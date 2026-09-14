@@ -73,6 +73,11 @@ export class LotesListComponent {
     this.cargar();
   }
 
+  /** El precio ya no se captura a mano: siempre es el precio por m² del desarrollo × la superficie. */
+  precioEstimado(lote: Lote): number {
+    return lote.desarrollo.precioM2 * lote.superficie;
+  }
+
   /** Un lote ya comprometido en un estado exclusivo de admin no lo puede tocar nadie más. */
   estadosDisponiblesPara(lote: Lote): EstadoLote[] {
     if (this.esAdmin()) return ESTADOS_TODOS;

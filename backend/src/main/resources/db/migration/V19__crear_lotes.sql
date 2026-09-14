@@ -4,7 +4,6 @@ CREATE TABLE lote (
     manzana VARCHAR(20) NOT NULL,
     numero_lote VARCHAR(20) NOT NULL,
     superficie NUMERIC(10, 4) NOT NULL,
-    precio NUMERIC(14, 2),
     estado VARCHAR(30) NOT NULL DEFAULT 'DISPONIBLE',
     fecha_cambio_estado TIMESTAMP NOT NULL DEFAULT now(),
     cambiado_por_id BIGINT REFERENCES usuario(id),

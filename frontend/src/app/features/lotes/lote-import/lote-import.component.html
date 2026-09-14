@@ -86,8 +86,7 @@
             <th class="px-3 py-2.5">Desarrollo</th>
             <th class="px-3 py-2.5">Manzana</th>
             <th class="px-3 py-2.5">Lote</th>
-            <th class="px-3 py-2.5">Superficie (ha)</th>
-            <th class="px-3 py-2.5">Precio</th>
+            <th class="px-3 py-2.5">Superficie (m²)</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-border bg-surface">
@@ -136,13 +135,6 @@
                   [(ngModel)]="fila.superficie"
                   (ngModelChange)="onCampoEditado()"
                   class="w-24 rounded-md border border-border bg-surface px-2 py-1 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
-                />
-              </td>
-              <td class="px-3 py-2">
-                <input
-                  type="text"
-                  [(ngModel)]="fila.precio"
-                  class="w-28 rounded-md border border-border bg-surface px-2 py-1 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
                 />
               </td>
             </tr>

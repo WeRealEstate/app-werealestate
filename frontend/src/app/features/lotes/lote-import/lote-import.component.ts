@@ -14,7 +14,6 @@ interface FilaImportacion {
   manzana: string;
   numeroLote: string;
   superficie: string;
-  precio: string;
   incluir: boolean;
 }
 
@@ -104,8 +103,7 @@ export class LoteImportComponent {
       const idxDesarrollo = indiceDe('desarrollo');
       const idxManzana = indiceDe('manzana');
       const idxLote = indiceDe('lote');
-      const idxSuperficie = indiceDe('superficie', 'hectarea');
-      const idxPrecio = indiceDe('precio');
+      const idxSuperficie = indiceDe('superficie', 'm2', 'metros');
 
       const celda = (fila: string[], idx: number): string =>
         idx >= 0 && fila[idx] !== undefined && fila[idx] !== null ? String(fila[idx]).trim() : '';
@@ -126,7 +124,6 @@ export class LoteImportComponent {
             manzana,
             numeroLote,
             superficie,
-            precio: celda(fila, idxPrecio),
             incluir: false,
           };
           filaParseada.incluir = !this.esFilaInvalida(filaParseada);
@@ -163,7 +160,6 @@ export class LoteImportComponent {
           manzana: f.manzana,
           numeroLote: f.numeroLote,
           superficie: Number(f.superficie),
-          precio: f.precio.trim() ? Number(f.precio) : null,
         })),
       });
       this.resultado.set(resultado);

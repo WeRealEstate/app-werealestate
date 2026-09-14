@@ -28,7 +28,6 @@ export interface Lote {
   manzana: string;
   numeroLote: string;
   superficie: number;
-  precio: number | null;
   estado: EstadoLote;
   fechaCambioEstado: string;
   cambiadoPor: UsuarioResumen | null;
@@ -39,14 +38,12 @@ export interface LoteCreateRequest {
   manzana: string;
   numeroLote: string;
   superficie: number;
-  precio: number | null;
 }
 
 export interface LoteUpdateRequest {
   manzana: string;
   numeroLote: string;
   superficie: number;
-  precio: number | null;
 }
 
 export interface LoteImportRequest {
@@ -54,7 +51,6 @@ export interface LoteImportRequest {
   manzana: string;
   numeroLote: string;
   superficie: number;
-  precio: number | null;
 }
 
 export interface LoteImportBatchRequest {

@@ -8,11 +8,10 @@ const COLUMNAS: { header: string; key: string; width: number; nota: string }[] =
   { header: 'Desarrollo', key: 'desarrollo', width: 20, nota: 'Obligatorio. Debe coincidir con uno de la lista.' },
   { header: 'Manzana', key: 'manzana', width: 14, nota: 'Obligatorio. Ej. 5' },
   { header: 'Lote', key: 'lote', width: 14, nota: 'Obligatorio. Ej. 11' },
-  { header: 'Superficie (ha)', key: 'superficie', width: 16, nota: 'Obligatorio. En hectáreas, ej. 0.25' },
-  { header: 'Precio', key: 'precio', width: 16, nota: 'Opcional. Si se deja vacío, se calcula con el precio por m² del desarrollo.' },
+  { header: 'Superficie (m2)', key: 'superficie', width: 16, nota: 'Obligatorio. En metros cuadrados, ej. 2500' },
 ];
 
-const FILA_EJEMPLO = ['SAMAI Campestre', '5', '11', '0.25', ''];
+const FILA_EJEMPLO = ['SAMAI Campestre', '5', '11', '2500'];
 
 /** Genera y descarga la plantilla .xlsx para importar lotes, con la lista de desarrollos disponibles como validación. */
 export async function generarPlantillaLotes(desarrollos: string[]): Promise<void> {

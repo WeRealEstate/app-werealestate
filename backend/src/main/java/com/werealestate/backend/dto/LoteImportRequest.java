@@ -8,6 +8,5 @@ public record LoteImportRequest(
         @NotNull Long desarrolloId,
         @NotBlank String manzana,
         @NotBlank String numeroLote,
-        @NotNull BigDecimal superficie,
-        BigDecimal precio) {
+        @NotNull BigDecimal superficie) {
 }

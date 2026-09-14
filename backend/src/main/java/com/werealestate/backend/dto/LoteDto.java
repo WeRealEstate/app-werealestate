@@ -11,7 +11,6 @@ public record LoteDto(
         String manzana,
         String numeroLote,
         BigDecimal superficie,
-        BigDecimal precio,
         EstadoLote estado,
         LocalDateTime fechaCambioEstado,
         UsuarioResumenDto cambiadoPor) {
@@ -23,7 +22,6 @@ public record LoteDto(
                 lote.getManzana(),
                 lote.getNumeroLote(),
                 lote.getSuperficie(),
-                lote.getPrecio(),
                 lote.getEstado(),
                 lote.getFechaCambioEstado(),
                 lote.getCambiadoPor() != null ? UsuarioResumenDto.from(lote.getCambiadoPor()) : null);

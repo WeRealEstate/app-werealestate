@@ -227,10 +227,10 @@
               >
                 <option [ngValue]="null">{{ isCargandoLotes() ? 'Cargando lotes…' : 'Capturar manzana/lote a mano' }}</option>
                 @for (l of lotesDisponibles(); track l.id) {
-                  <option [ngValue]="l.id">Manzana {{ l.manzana }} — Lote {{ l.numeroLote }} ({{ l.superficie }} ha)</option>
+                  <option [ngValue]="l.id">Manzana {{ l.manzana }} — Lote {{ l.numeroLote }} ({{ l.superficie }} m²)</option>
                 }
               </select>
-              <p class="mt-1.5 text-xs text-ink-muted">Al elegir uno, se completan manzana, lote, superficie y precio. El lote no cambia de estado por esto.</p>
+              <p class="mt-1.5 text-xs text-ink-muted">Al elegir uno, se completan manzana, lote y superficie. El lote no cambia de estado por esto.</p>
             </div>
           }
 

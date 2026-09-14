@@ -35,9 +35,6 @@ public class Lote {
     @Column(nullable = false, precision = 10, scale = 4)
     private BigDecimal superficie;
 
-    @Column(precision = 14, scale = 2)
-    private BigDecimal precio;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private EstadoLote estado = EstadoLote.DISPONIBLE;
@@ -53,12 +50,11 @@ public class Lote {
         // JPA
     }
 
-    public Lote(Desarrollo desarrollo, String manzana, String numeroLote, BigDecimal superficie, BigDecimal precio) {
+    public Lote(Desarrollo desarrollo, String manzana, String numeroLote, BigDecimal superficie) {
         this.desarrollo = desarrollo;
         this.manzana = manzana;
         this.numeroLote = numeroLote;
         this.superficie = superficie;
-        this.precio = precio;
     }
 
     public Long getId() {
@@ -91,14 +87,6 @@ public class Lote {
 
     public void setSuperficie(BigDecimal superficie) {
         this.superficie = superficie;
-    }
-
-    public BigDecimal getPrecio() {
-        return precio;
-    }
-
-    public void setPrecio(BigDecimal precio) {
-        this.precio = precio;
     }
 
     public void setDesarrollo(Desarrollo desarrollo) {

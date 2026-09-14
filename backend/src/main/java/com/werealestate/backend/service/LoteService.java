@@ -119,7 +119,7 @@ public class LoteService {
                 .orElseThrow(() -> new ResourceNotFoundException("Desarrollo no encontrado"));
         validarUnico(request.desarrolloId(), request.manzana(), request.numeroLote(), null);
 
-        Lote lote = new Lote(desarrollo, request.manzana().trim(), request.numeroLote().trim(), request.superficie(), request.precio());
+        Lote lote = new Lote(desarrollo, request.manzana().trim(), request.numeroLote().trim(), request.superficie());
         return LoteDto.from(loteRepository.save(lote));
     }
 
@@ -131,7 +131,6 @@ public class LoteService {
         lote.setManzana(request.manzana().trim());
         lote.setNumeroLote(request.numeroLote().trim());
         lote.setSuperficie(request.superficie());
-        lote.setPrecio(request.precio());
         return LoteDto.from(lote);
     }
 
@@ -206,7 +205,7 @@ public class LoteService {
                         .orElseThrow(() -> new ResourceNotFoundException("Desarrollo no encontrado"));
                 validarUnico(item.desarrolloId(), item.manzana(), item.numeroLote(), null);
 
-                Lote lote = new Lote(desarrollo, item.manzana().trim(), item.numeroLote().trim(), item.superficie(), item.precio());
+                Lote lote = new Lote(desarrollo, item.manzana().trim(), item.numeroLote().trim(), item.superficie());
                 loteRepository.save(lote);
                 creados++;
             } catch (Exception e) {

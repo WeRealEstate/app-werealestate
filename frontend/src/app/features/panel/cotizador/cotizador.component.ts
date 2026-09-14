@@ -97,8 +97,9 @@ export class CotizadorComponent implements OnInit {
     }
   }
 
-  /** Al elegir un lote real del inventario, se autocompletan manzana/lote/superficie/precio —
-   * pero el lote en sí NO cambia de estado: es solo para no capturar todo a mano. */
+  /** Al elegir un lote real del inventario, se autocompletan manzana/lote/superficie — el precio
+   * sigue siendo el precio por m² del desarrollo (nunca uno capturado a mano) — pero el lote en sí
+   * NO cambia de estado: es solo para no capturar todo a mano. */
   onLoteSeleccionado(loteId: string): void {
     const id = loteId === '' ? null : Number(loteId);
     this.loteSeleccionadoId.set(id);
@@ -109,12 +110,7 @@ export class CotizadorComponent implements OnInit {
 
     this.blockNumber = lote.manzana;
     this.lotNumber = lote.numeroLote;
-
-    const areaM2 = lote.superficie * 10000;
-    this.selectArea(areaM2);
-    if (lote.precio) {
-      this.pricePerM2 = lote.precio / areaM2;
-    }
+    this.selectArea(lote.superficie);
   }
 
   currentDate = new Date();
