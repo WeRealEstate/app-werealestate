@@ -1,7 +1,10 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-import { LeadsService } from '../../../../core/services/leads.service';
-import { ESTADO_LEAD_LABELS, EstadoLead, Lead } from '../../../../core/models/lead.model';
+import { ReportesService } from '../../../../core/services/reportes.service';
+import { ReporteDesempeno } from '../../../../core/models/reporte.model';
+import { ESTADO_LEAD_LABELS, EstadoLead } from '../../../../core/models/lead.model';
+
+type Periodo = 'mes' | '90d' | 'todo';
 
 interface BarDatum {
   label: string;
@@ -71,6 +74,25 @@ const PALETTE_BAR_CLASS = [
 ] as const;
 
 const DESARROLLO_BAR_CLASSES = [PALETTE_BAR_CLASS[0], PALETTE_BAR_CLASS[2]];
+const RIESGO_BAR_CLASS =
+  'bg-gradient-to-r from-[#fca5a5] to-[#f87171] shadow-[0_2px_12px_-2px_#f87171] dark:from-[#f87171] dark:to-[#ef4444] dark:shadow-[0_2px_12px_-2px_#ef4444]';
+
+function toIsoDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function bars(entradas: { etiqueta: string; total: number }[], clases: readonly string[]): BarDatum[] {
+  const max = Math.max(1, ...entradas.map((e) => e.total));
+  return entradas.map((e, i) => ({
+    label: e.etiqueta,
+    value: e.total,
+    pct: (e.total / max) * 100,
+    barClass: clases[i % clases.length],
+  }));
+}
 
 @Component({
   selector: 'app-desempeno-general',
@@ -79,7 +101,7 @@ const DESARROLLO_BAR_CLASSES = [PALETTE_BAR_CLASS[0], PALETTE_BAR_CLASS[2]];
   templateUrl: './desempeno-general.component.html',
 })
 export class DesempenoGeneralComponent {
-  private readonly leadsService = inject(LeadsService);
+  private readonly reportesService = inject(ReportesService);
 
   private readonly currencyFormatter = new Intl.NumberFormat('es-MX', {
     style: 'currency',
@@ -88,52 +110,34 @@ export class DesempenoGeneralComponent {
     maximumFractionDigits: 1,
   });
 
-  readonly leads = signal<Lead[]>([]);
+  readonly periodo = signal<Periodo>('mes');
   readonly isLoading = signal(true);
+  readonly reporte = signal<ReporteDesempeno | null>(null);
 
-  readonly totalLeads = computed(() => this.leads().length);
-
-  private readonly totalCerradosGanados = computed(
-    () => this.leads().filter((l) => l.estado === 'CERRADO_GANADO').length,
-  );
-
-  readonly tasaConversion = computed(() => {
-    const total = this.totalLeads();
-    return total === 0 ? 0 : (this.totalCerradosGanados() / total) * 100;
-  });
-
-  // Asesor con más ventas cerradas (CERRADO_GANADO). Sin desempate especial:
-  // el primero que alcanza el máximo conteo se queda con el lugar.
-  readonly asesorEstrella = computed(() => {
-    const conteo = new Map<string, number>();
-    for (const l of this.leads()) {
-      if (l.estado !== 'CERRADO_GANADO') continue;
-      conteo.set(l.asesor.nombre, (conteo.get(l.asesor.nombre) ?? 0) + 1);
+  readonly periodoLabel = computed(() => {
+    switch (this.periodo()) {
+      case 'mes':
+        return 'este mes';
+      case '90d':
+        return 'los últimos 90 días';
+      case 'todo':
+        return 'todo el historial';
     }
-    let mejor: { nombre: string; ventas: number } | null = null;
-    for (const [nombre, ventas] of conteo) {
-      if (!mejor || ventas > mejor.ventas) mejor = { nombre, ventas };
-    }
-    return mejor;
   });
 
-  // Número de ventas (no $). No hay una fecha de cierre dedicada: se usa
-  // fechaUltimoContacto, que se actualiza al cambiar el estado del lead
-  // (incluido al cerrarlo ganado).
-  readonly ventasDelMes = computed(() => {
-    const ahora = new Date();
-    return this.leads().filter((l) => {
-      if (l.estado !== 'CERRADO_GANADO') return false;
-      const fecha = new Date(l.fechaUltimoContacto);
-      return fecha.getFullYear() === ahora.getFullYear() && fecha.getMonth() === ahora.getMonth();
-    }).length;
-  });
+  readonly totalLeads = computed(() => this.reporte()?.totalLeadsCreados ?? 0);
+  readonly tasaConversion = computed(() => this.reporte()?.tasaConversion ?? 0);
+  readonly ventasCerradas = computed(() => this.reporte()?.ventasCerradas ?? 0);
+  readonly asesorEstrella = computed(() => this.reporte()?.asesorEstrella ?? null);
+  readonly riesgo = computed(() => this.reporte()?.riesgo ?? { total: 0, porAsesor: [] });
+  readonly cotizaciones = computed(() => this.reporte()?.cotizaciones ?? { total: 0, montoTotal: 0, porProyecto: [] });
+  readonly montoCotizadoFormateado = computed(() => this.currencyFormatter.format(this.cotizaciones().montoTotal));
 
   // Dona de "leads por estado": rebanadas con % acumulado (from/to) para
   // dibujar un conic-gradient, más una leyenda con texto (nunca solo color).
   readonly leadsPorEstadoPie = computed<EstadoSliceDatum[]>(() => {
     const conteo = {} as Record<EstadoLead, number>;
-    for (const l of this.leads()) conteo[l.estado] = (conteo[l.estado] ?? 0) + 1;
+    for (const c of this.reporte()?.leadsPorEstado ?? []) conteo[c.etiqueta as EstadoLead] = c.total;
     const total = this.totalLeads();
     let acumulado = 0;
     const slices: EstadoSliceDatum[] = [];
@@ -167,34 +171,49 @@ export class DesempenoGeneralComponent {
   readonly estadoConicLight = computed(() => this.buildConicGradient('light'));
   readonly estadoConicDark = computed(() => this.buildConicGradient('dark'));
 
-  readonly leadsPorAsesor = computed<BarDatum[]>(() => {
-    const conteo = new Map<string, number>();
-    for (const l of this.leads()) {
-      conteo.set(l.asesor.nombre, (conteo.get(l.asesor.nombre) ?? 0) + 1);
-    }
-    const entradas = [...conteo.entries()].sort((a, b) => b[1] - a[1]).slice(0, PALETTE_BAR_CLASS.length);
-    const max = Math.max(1, ...entradas.map(([, valor]) => valor));
-    return entradas.map(([nombre, value], i) => ({
-      label: nombre,
-      value,
-      pct: (value / max) * 100,
-      barClass: PALETTE_BAR_CLASS[i % PALETTE_BAR_CLASS.length],
-    }));
-  });
+  readonly leadsPorAsesor = computed<BarDatum[]>(() =>
+    bars((this.reporte()?.leadsPorAsesor ?? []).slice(0, PALETTE_BAR_CLASS.length), PALETTE_BAR_CLASS),
+  );
 
-  readonly leadsPorDesarrollo = computed<BarDatum[]>(() => {
-    const conteo = new Map<string, number>();
-    for (const l of this.leads()) {
-      conteo.set(l.desarrollo.nombre, (conteo.get(l.desarrollo.nombre) ?? 0) + 1);
-    }
-    const entradas = [...conteo.entries()].sort((a, b) => b[1] - a[1]);
-    const max = Math.max(1, ...entradas.map(([, valor]) => valor));
-    return entradas.map(([nombre, value], i) => ({
-      label: nombre,
-      value,
-      pct: (value / max) * 100,
-      barClass: DESARROLLO_BAR_CLASSES[i % DESARROLLO_BAR_CLASSES.length],
+  readonly leadsPorDesarrollo = computed<BarDatum[]>(() =>
+    bars(this.reporte()?.leadsPorDesarrollo ?? [], DESARROLLO_BAR_CLASSES),
+  );
+
+  readonly actividadPorAsesor = computed<BarDatum[]>(() =>
+    bars((this.reporte()?.actividadPorAsesor ?? []).slice(0, PALETTE_BAR_CLASS.length), PALETTE_BAR_CLASS),
+  );
+
+  readonly riesgoPorAsesor = computed<BarDatum[]>(() =>
+    bars(this.riesgo().porAsesor, [RIESGO_BAR_CLASS]),
+  );
+
+  readonly cotizacionesPorProyecto = computed<BarDatum[]>(() =>
+    bars(this.cotizaciones().porProyecto, DESARROLLO_BAR_CLASSES),
+  );
+
+  // Gráfica de tendencia: dos polylines (leads creados / ventas cerradas) en un
+  // viewBox de 100x100, más las etiquetas del eje X (se muestran salteadas si
+  // hay muchos puntos, para no amontonar texto).
+  readonly tendencia = computed(() => {
+    const puntos = this.reporte()?.tendencia ?? [];
+    if (puntos.length === 0) return null;
+
+    const maxValor = Math.max(1, ...puntos.map((p) => Math.max(p.leadsCreados, p.ventasCerradas)));
+    const pasoX = puntos.length > 1 ? 100 / (puntos.length - 1) : 0;
+    const y = (v: number) => 96 - (v / maxValor) * 92;
+
+    const leadsPuntos = puntos.map((p, i) => `${i * pasoX},${y(p.leadsCreados)}`).join(' ');
+    const ventasPuntos = puntos.map((p, i) => `${i * pasoX},${y(p.ventasCerradas)}`).join(' ');
+
+    // Como máximo ~6 etiquetas visibles en el eje, para que no se amontonen.
+    const saltar = Math.max(1, Math.ceil(puntos.length / 6));
+    const etiquetas = puntos.map((p, i) => ({
+      texto: p.etiqueta,
+      x: i * pasoX,
+      visible: i % saltar === 0 || i === puntos.length - 1,
     }));
+
+    return { leadsPuntos, ventasPuntos, etiquetas, maxValor };
   });
 
   // Anillo de "tasa de conversión": circunferencia fija del SVG (r=30) y el
@@ -216,10 +235,28 @@ export class DesempenoGeneralComponent {
     this.cargar();
   }
 
+  cambiarPeriodo(periodo: Periodo): void {
+    if (periodo === this.periodo()) return;
+    this.periodo.set(periodo);
+    this.cargar();
+  }
+
+  private rangoPeriodo(): { desde?: string; hasta?: string } {
+    const hoy = new Date();
+    if (this.periodo() === 'todo') return {};
+    if (this.periodo() === 'mes') {
+      return { desde: toIsoDate(new Date(hoy.getFullYear(), hoy.getMonth(), 1)), hasta: toIsoDate(hoy) };
+    }
+    const hace90 = new Date(hoy);
+    hace90.setDate(hace90.getDate() - 90);
+    return { desde: toIsoDate(hace90), hasta: toIsoDate(hoy) };
+  }
+
   private async cargar(): Promise<void> {
     this.isLoading.set(true);
     try {
-      this.leads.set(await this.leadsService.listar());
+      const { desde, hasta } = this.rangoPeriodo();
+      this.reporte.set(await this.reportesService.obtenerDesempeno(desde, hasta));
       setTimeout(() => this.displayedRingOffset.set(this.ringOffset()), 60);
     } catch {
       // El dashboard es informativo: si falla, el resto del panel sigue usable.

@@ -31,4 +31,12 @@ public interface LeadRepository extends JpaRepository<Lead, Long>, JpaSpecificat
     boolean existsByAsesorId(Long asesorId);
 
     long countByAsesorIdAndArchivadoFalse(Long asesorId);
+
+    /** Cohorte de leads creados en el periodo, para el dashboard de desempeño. */
+    List<Lead> findByFechaCreacionBetween(LocalDateTime desde, LocalDateTime hasta);
+
+    /** Leads cerrados (ganados o perdidos) en el periodo: se usa fechaUltimoContacto como
+     * aproximación de la fecha de cierre, ya que el modelo no tiene una dedicada. */
+    List<Lead> findByEstadoInAndFechaUltimoContactoBetween(
+            List<com.werealestate.backend.model.EstadoLead> estados, LocalDateTime desde, LocalDateTime hasta);
 }
