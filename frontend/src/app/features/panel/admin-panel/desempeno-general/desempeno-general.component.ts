@@ -103,13 +103,6 @@ function bars(entradas: { etiqueta: string; total: number }[], clases: readonly 
 export class DesempenoGeneralComponent {
   private readonly reportesService = inject(ReportesService);
 
-  private readonly currencyFormatter = new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    notation: 'compact',
-    maximumFractionDigits: 1,
-  });
-
   readonly periodo = signal<Periodo>('mes');
   readonly isLoading = signal(true);
   readonly reporte = signal<ReporteDesempeno | null>(null);
@@ -129,9 +122,11 @@ export class DesempenoGeneralComponent {
   readonly tasaConversion = computed(() => this.reporte()?.tasaConversion ?? 0);
   readonly ventasCerradas = computed(() => this.reporte()?.ventasCerradas ?? 0);
   readonly asesorEstrella = computed(() => this.reporte()?.asesorEstrella ?? null);
+  // leadsPorAsesor ya viene ordenado descendente desde el backend (ver ReporteService.agrupar),
+  // así que el primero es directamente el asesor con más leads del periodo.
+  readonly asesorConMasLeads = computed(() => this.reporte()?.leadsPorAsesor[0] ?? null);
   readonly riesgo = computed(() => this.reporte()?.riesgo ?? { total: 0, porAsesor: [] });
   readonly cotizaciones = computed(() => this.reporte()?.cotizaciones ?? { total: 0, montoTotal: 0, porProyecto: [] });
-  readonly montoCotizadoFormateado = computed(() => this.currencyFormatter.format(this.cotizaciones().montoTotal));
 
   // Dona de "leads por estado": rebanadas con % acumulado (from/to) para
   // dibujar un conic-gradient, más una leyenda con texto (nunca solo color).
