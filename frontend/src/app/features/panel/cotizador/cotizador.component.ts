@@ -941,8 +941,27 @@ export class CotizadorComponent implements OnInit {
     { value: 12, label: 'Diciembre' },
   ];
 
-  get annualContributionsCount(): number {
+  // El asesor puede editar el número de aportaciones (compartido entre "Con anualidades" y
+  // "Promoción", igual que antes de ser editable). null = todavía no lo ha tocado, así que
+  // sigue el cálculo automático según el plazo.
+  private annualContributionsCountOverride: number | null = null;
+
+  /** Tope de aportaciones según el plazo actual: un año completo de mensualidades regulares
+   * antes de terminar de pagar. Es el mismo valor que antes se calculaba siempre, ahora es
+   * también el máximo que el asesor puede capturar a mano. */
+  get annualContributionsCountMax(): number {
     return Math.max(Math.floor(this.selectedMonths / 12) - 1, 0);
+  }
+
+  get annualContributionsCount(): number {
+    if (this.annualContributionsCountOverride === null) {
+      return this.annualContributionsCountMax;
+    }
+    return Math.min(Math.max(this.annualContributionsCountOverride, 0), this.annualContributionsCountMax);
+  }
+
+  set annualContributionsCount(value: number) {
+    this.annualContributionsCountOverride = Number.isFinite(value) ? Math.trunc(value) : 0;
   }
 
   get annualitiesAvailable(): boolean {

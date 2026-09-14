@@ -445,10 +445,24 @@
                     }
                   </select>
                 </div>
+
+                <!-- NÚMERO DE APORTACIONES -->
+                <div>
+                  <label class="mb-2 block text-sm font-medium text-ink">Número de aportaciones</label>
+
+                  <input
+                    type="number"
+                    min="0"
+                    [max]="annualContributionsCountMax"
+                    [(ngModel)]="annualContributionsCount"
+                    class="w-full rounded-xl border border-border bg-surface px-4 py-3.5 text-sm outline-none transition-all focus:border-we-primary focus:ring-4 focus:ring-we-primary/10"
+                  />
+                  <p class="mt-1.5 text-xs text-ink-muted">Máximo {{ annualContributionsCountMax }} para el plazo actual.</p>
+                </div>
               </div>
 
               <!-- RESUMEN DE LA PROMOCIÓN -->
-              <div class="mt-5 grid gap-4 rounded-xl bg-surface p-4 sm:grid-cols-3">
+              <div class="mt-5 grid gap-4 rounded-xl bg-surface p-4 sm:grid-cols-2">
                 <div>
                   <p class="text-xs text-ink-muted">Mensualidad fija</p>
                   <p class="mt-1 font-semibold text-we-primary dark:text-we-blue-light">
@@ -466,11 +480,6 @@
                   <p class="mt-1 font-semibold text-ink">
                     ${{ promocionAnnualContribution.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
                   </p>
-                </div>
-
-                <div>
-                  <p class="text-xs text-ink-muted">Número de aportaciones</p>
-                  <p class="mt-1 font-semibold text-ink">{{ annualContributionsCount }}</p>
                 </div>
               </div>
             }
@@ -612,7 +621,7 @@
           <div weFadeIn class="mt-6 rounded-2xl border border-we-primary/20 dark:border-we-primary/25 bg-we-primary/5 dark:bg-we-primary/10 p-5 shadow-[0_6px_18px_rgba(36,63,184,0.06)]">
             <p class="text-sm font-semibold text-ink">Configura las anualidades</p>
 
-            <div class="mt-5 grid gap-5 sm:grid-cols-2">
+            <div class="mt-5 grid gap-5 sm:grid-cols-3">
               <!-- MONTO DE ANUALIDAD -->
               <div>
                 <label class="mb-2 block text-sm font-medium text-ink">Monto de cada anualidad</label>
@@ -663,15 +672,24 @@
                   <option [ngValue]="12">Diciembre</option>
                 </select>
               </div>
+
+              <!-- NÚMERO DE APORTACIONES -->
+              <div>
+                <label class="mb-2 block text-sm font-medium text-ink">Número de aportaciones</label>
+
+                <input
+                  type="number"
+                  min="0"
+                  [max]="annualContributionsCountMax"
+                  [(ngModel)]="annualContributionsCount"
+                  class="w-full rounded-xl border border-border bg-surface px-4 py-3.5 text-sm outline-none transition-all focus:border-we-primary focus:ring-4 focus:ring-we-primary/10"
+                />
+                <p class="mt-1.5 text-xs text-ink-muted">Máximo {{ annualContributionsCountMax }} para el plazo actual.</p>
+              </div>
             </div>
 
             <!-- RESUMEN DE ANUALIDADES -->
-            <div class="mt-5 grid gap-4 rounded-xl bg-surface p-4 sm:grid-cols-3">
-              <div>
-                <p class="text-xs text-ink-muted">Número de anualidades</p>
-                <p class="mt-1 font-semibold text-ink">{{ annualContributionsCount }}</p>
-              </div>
-
+            <div class="mt-5 grid gap-4 rounded-xl bg-surface p-4 sm:grid-cols-2">
               <div>
                 <p class="text-xs text-ink-muted">Total en anualidades</p>
                 <p class="mt-1 font-semibold text-ink">${{ annualContributionsTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</p>
