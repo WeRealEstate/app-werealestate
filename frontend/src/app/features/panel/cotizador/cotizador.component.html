@@ -221,6 +221,7 @@
             <input
               type="text"
               [(ngModel)]="blockNumber"
+              (input)="desbloquearLote()"
               list="manzanas-cotizador"
               placeholder="Ej. 5"
               [class.border-red-500]="blockNumberInvalid"
@@ -243,6 +244,7 @@
             <input
               type="text"
               [(ngModel)]="lotNumber"
+              (input)="desbloquearLote()"
               (change)="onLoteNumberChange()"
               list="lotes-cotizador"
               placeholder="Ej. 11"
@@ -289,9 +291,9 @@
             <select
               [ngModel]="pricePerM2"
               (ngModelChange)="selectPricePerM2($event)"
-              [disabled]="isPromocion"
-              [class.opacity-60]="isPromocion"
-              [class.cursor-not-allowed]="isPromocion"
+              [disabled]="isPromocion || loteBloqueado"
+              [class.opacity-60]="isPromocion || loteBloqueado"
+              [class.cursor-not-allowed]="isPromocion || loteBloqueado"
               class="w-full appearance-none rounded-xl border border-border bg-surface-2 px-4 py-3.5 pr-12 text-sm font-medium text-ink outline-none transition-all focus:border-we-primary focus:bg-surface focus:ring-4 focus:ring-we-primary/10"
             >
               @if (selectedProject === 'samai') {
@@ -309,6 +311,8 @@
           </div>
           @if (isPromocion) {
             <p class="mt-1.5 text-xs text-ink-muted">Bloqueado mientras la promoción esté activa.</p>
+          } @else if (loteBloqueado) {
+            <p class="mt-1.5 text-xs text-ink-muted">Bloqueado: viene del lote seleccionado del inventario.</p>
           }
         </div>
 
@@ -325,9 +329,9 @@
                 [class.border-we-primary]="selectedArea === 200 && !isCustomArea"
                 [class.text-we-primary]="selectedArea === 200 && !isCustomArea"
                 [class.shadow-md]="selectedArea === 200 && !isCustomArea"
-                [disabled]="pricePerM2 === 170"
-                [class.opacity-40]="pricePerM2 === 170"
-                [class.cursor-not-allowed]="pricePerM2 === 170"
+                [disabled]="pricePerM2 === 170 || loteBloqueado"
+                [class.opacity-40]="pricePerM2 === 170 || loteBloqueado"
+                [class.cursor-not-allowed]="pricePerM2 === 170 || loteBloqueado"
                 class="min-w-0 rounded-xl border border-border bg-surface px-3 py-3 text-sm font-normal leading-tight whitespace-nowrap transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
               >
                 200 m²
@@ -337,9 +341,9 @@
                 type="button"
                 weMotionPress
                 (click)="selectCustomArea()"
-                [disabled]="selectedPaymentType === 'cash'"
-                [class.opacity-40]="selectedPaymentType === 'cash'"
-                [class.cursor-not-allowed]="selectedPaymentType === 'cash'"
+                [disabled]="selectedPaymentType === 'cash' || loteBloqueado"
+                [class.opacity-40]="selectedPaymentType === 'cash' || loteBloqueado"
+                [class.cursor-not-allowed]="selectedPaymentType === 'cash' || loteBloqueado"
                 [class.border-we-primary]="isCustomArea"
                 [class.text-we-primary]="isCustomArea"
                 [class.shadow-md]="isCustomArea"
@@ -348,6 +352,9 @@
                 Personalizada
               </button>
             </div>
+            @if (loteBloqueado) {
+              <p class="mt-1.5 text-xs text-ink-muted">Bloqueado: viene del lote seleccionado del inventario.</p>
+            }
           </div>
 
           <div
@@ -366,6 +373,9 @@
                 inputmode="numeric"
                 [value]="customAreaDisplay"
                 (input)="onCustomAreaInput($event)"
+                [disabled]="loteBloqueado"
+                [class.opacity-60]="loteBloqueado"
+                [class.cursor-not-allowed]="loteBloqueado"
                 min="1"
                 step="1"
                 placeholder="500"

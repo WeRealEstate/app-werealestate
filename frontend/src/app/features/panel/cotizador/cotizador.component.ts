@@ -19,6 +19,10 @@ import { ValuePulseDirective } from '../../../shared/motion/value-pulse.directiv
 export type ProjectId = 'samai' | 'nanuu';
 export type PaymentType = 'msi' | 'downpayment' | 'annualities' | 'cash' | 'initial' | 'promocion';
 
+/** A partir de esta superficie (m²), SAMAI cobra la tarifa de macrolote ($170/m², la misma tarifa
+ * que antes solo se elegía a mano como "Hectarea") en vez del precio de lote normal ($800/m²). */
+const SUPERFICIE_MACROLOTE_M2 = 8000;
+
 /** Compara manzana/lote como números cuando se puede (así "2" queda antes que "10" en vez del
  * orden alfabético de texto); si alguno no es numérico, cae a orden alfabético normal. */
 function compararNatural(a: string, b: string): number {
@@ -124,11 +128,25 @@ export class CotizadorComponent implements OnInit {
 
   /** Si el lote capturado coincide con uno real del inventario, se autocompleta la superficie —
    * el precio sigue siendo el precio por m² del desarrollo (nunca uno capturado a mano) — pero el
-   * lote en sí NO cambia de estado: es solo para no capturar todo a mano. */
+   * lote en sí NO cambia de estado: es solo para no capturar todo a mano. Como la superficie ya es
+   * un dato real del lote, se bloquean el precio por m² y la superficie: ya no tiene sentido que el
+   * asesor los edite a mano. */
   onLoteNumberChange(): void {
     const numeroLote = this.lotNumber.trim().toLowerCase();
     const lote = this.lotesDeManzanaActual.find((l) => l.numeroLote.trim().toLowerCase() === numeroLote);
-    if (lote) this.selectArea(lote.superficie);
+    if (!lote) return;
+    this.selectArea(lote.superficie);
+    // El precio de un lote real se determina siempre por su superficie, sin importar qué precio
+    // por m² hubiera quedado seleccionado antes a mano.
+    this.pricePerM2 =
+      this.selectedProject === 'nanuu' ? 3700 : lote.superficie > SUPERFICIE_MACROLOTE_M2 ? 170 : 800;
+    this.loteBloqueado = true;
+  }
+
+  /** Al editar manzana o lote a mano, se desbloquea: si el nuevo valor vuelve a coincidir con un
+   * lote real, onLoteNumberChange() lo vuelve a bloquear al confirmarlo. */
+  desbloquearLote(): void {
+    this.loteBloqueado = false;
   }
 
   currentDate = new Date();
@@ -163,9 +181,14 @@ export class CotizadorComponent implements OnInit {
   blockNumber: string = '';
   lotNumber: string = '';
 
+  // true cuando manzana/lote coinciden con un lote real del inventario: mientras esté así, precio
+  // por m² y superficie quedan bloqueados porque ya vienen del lote, no se capturan a mano.
+  loteBloqueado = false;
+
   selectProject(project: ProjectId): void {
     this.promocionSeleccionada = null;
     this.selectedProject = project;
+    this.loteBloqueado = false;
 
     if (project === 'samai') {
       this.pricePerM2 = 800;
@@ -194,6 +217,15 @@ export class CotizadorComponent implements OnInit {
     this.selectedArea = area;
     this.isCustomArea = false;
     this.customAreaDisplay = area.toLocaleString('en-US');
+    this.aplicarPrecioMacrolote();
+  }
+
+  /** SAMAI cobra $170/m² (tarifa de macrolote) en cuanto la superficie pasa de
+   * SUPERFICIE_MACROLOTE_M2, sin importar si se escribió a mano o vino de un lote del inventario. */
+  private aplicarPrecioMacrolote(): void {
+    if (this.selectedProject === 'samai' && this.selectedArea > SUPERFICIE_MACROLOTE_M2) {
+      this.pricePerM2 = 170;
+    }
   }
 
   selectCustomArea(): void {
@@ -251,6 +283,7 @@ export class CotizadorComponent implements OnInit {
 
     // Valor REAL para los cálculos
     this.selectedArea = Number(rawValue);
+    this.aplicarPrecioMacrolote();
 
     // Valor VISUAL con comas y decimales
     const [integerPart, decimalPart] = rawValue.split('.');
