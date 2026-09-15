@@ -13,7 +13,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,10 +22,9 @@ import org.springframework.web.multipart.MultipartFile;
 @Transactional
 public class DesarrolloService {
 
-    /** Únicas extensiones aceptadas para la imagen del plano; el nombre en disco es siempre
-     * "desarrollo-{id}.{ext}" (nunca el nombre original) para no depender de entrada del cliente. */
-    private static final Map<String, String> EXTENSION_POR_CONTENT_TYPE =
-            Map.of("image/png", "png", "image/jpeg", "jpg", "image/webp", "webp");
+    private static final byte[] FIRMA_PNG = {(byte) 0x89, 0x50, 0x4E, 0x47};
+    private static final byte[] FIRMA_JPEG = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF};
+    private static final byte[] FIRMA_RIFF = {0x52, 0x49, 0x46, 0x46}; // "RIFF", contenedor de WEBP
 
     private final DesarrolloRepository desarrolloRepository;
     private final CurrentUserProvider currentUserProvider;
@@ -56,7 +54,18 @@ public class DesarrolloService {
         if (archivo == null || archivo.isEmpty()) {
             throw new ValidationException("El archivo del plano es obligatorio");
         }
-        String extension = EXTENSION_POR_CONTENT_TYPE.get(archivo.getContentType());
+
+        byte[] bytes;
+        try {
+            bytes = archivo.getBytes();
+        } catch (IOException e) {
+            throw new UncheckedIOException("No se pudo leer la imagen del plano", e);
+        }
+
+        // Se valida por los primeros bytes del archivo, no por el Content-Type que manda el
+        // navegador (que puede venir vacío o genérico según cómo se haya creado/exportado la
+        // imagen, aunque sí sea un PNG/JPG/WEBP válido).
+        String extension = detectarExtension(bytes);
         if (extension == null) {
             throw new ValidationException("El plano debe ser una imagen PNG, JPG o WEBP");
         }
@@ -65,12 +74,39 @@ public class DesarrolloService {
             Path carpeta = Path.of(uploadsDir, "planos");
             Files.createDirectories(carpeta);
             Path destino = carpeta.resolve("desarrollo-" + id + "." + extension);
-            archivo.transferTo(destino);
+            Files.write(destino, bytes);
         } catch (IOException e) {
             throw new UncheckedIOException("No se pudo guardar la imagen del plano", e);
         }
 
         desarrollo.setPlanoUrl("/uploads/planos/desarrollo-" + id + "." + extension + "?v=" + System.currentTimeMillis());
         return DesarrolloDto.from(desarrollo);
+    }
+
+    /** null si no reconoce ninguna de las tres firmas de archivo (magic bytes) que aceptamos. */
+    private static String detectarExtension(byte[] bytes) {
+        if (empiezaCon(bytes, FIRMA_PNG)) {
+            return "png";
+        }
+        if (empiezaCon(bytes, FIRMA_JPEG)) {
+            return "jpg";
+        }
+        if (empiezaCon(bytes, FIRMA_RIFF) && bytes.length >= 12 && bytes[8] == 'W' && bytes[9] == 'E' && bytes[10] == 'B'
+                && bytes[11] == 'P') {
+            return "webp";
+        }
+        return null;
+    }
+
+    private static boolean empiezaCon(byte[] bytes, byte[] firma) {
+        if (bytes.length < firma.length) {
+            return false;
+        }
+        for (int i = 0; i < firma.length; i++) {
+            if (bytes[i] != firma[i]) {
+                return false;
+            }
+        }
+        return true;
     }
 }

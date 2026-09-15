@@ -1,4 +1,5 @@
 import { DecimalPipe } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Desarrollo } from '../../../core/models/lead.model';
@@ -98,8 +99,12 @@ export class PlanoComponent {
       await this.leadsService.subirPlano(id, archivo);
       await this.cargarMapa();
       this.toast.success('Plano actualizado.');
-    } catch {
-      this.toast.error('No se pudo subir el plano. Verifica que sea una imagen PNG, JPG o WEBP.');
+    } catch (error) {
+      this.toast.error(
+        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+          ? error.error.message
+          : 'No se pudo subir el plano. Intenta de nuevo.',
+      );
     } finally {
       this.subiendoPlano.set(false);
       input.value = '';
