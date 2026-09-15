@@ -1,0 +1,151 @@
+<div class="page-enter">
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="font-heading text-2xl font-semibold text-ink">Plano interactivo</h1>
+      <p class="mt-1 text-sm text-ink-muted">
+        El color de cada lote sigue su estado real. Haz clic en un lote para ver sus datos.
+      </p>
+    </div>
+    <select
+      [ngModel]="desarrolloId()"
+      (ngModelChange)="onDesarrolloChange($any($event) + '')"
+      class="w-full max-w-xs rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+             focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+    >
+      @for (d of desarrollos(); track d.id) {
+        <option [value]="d.id">{{ d.nombre }}</option>
+      }
+    </select>
+  </div>
+
+  @if (isLoading()) {
+    <p class="mt-8 text-sm text-ink-muted">Cargando plano…</p>
+  } @else if (plano()) {
+    @if (esAdmin()) {
+      <div class="mt-6 flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex flex-wrap items-center gap-3">
+          <label
+            class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink
+                   hover:border-we-primary active:scale-[0.97] transition-transform duration-150 min-h-[44px]"
+          >
+            {{ plano()!.planoUrl ? 'Reemplazar plano' : 'Subir plano' }}
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              class="hidden"
+              [disabled]="subiendoPlano()"
+              (change)="onArchivoPlanoSeleccionado($event)"
+            />
+          </label>
+          @if (subiendoPlano()) {
+            <span class="text-sm text-ink-muted">Subiendo…</span>
+          }
+          @if (plano()!.planoUrl) {
+            <button
+              type="button"
+              (click)="toggleModoEdicion()"
+              class="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform duration-150
+                     active:scale-[0.97] min-h-[44px]"
+              [class]="modoEdicion()
+                ? 'bg-we-primary text-white hover:bg-we-primary/90'
+                : 'border border-border text-ink hover:border-we-primary'"
+            >
+              {{ modoEdicion() ? 'Terminar de delimitar' : 'Delimitar lotes' }}
+            </button>
+          }
+        </div>
+        @if (plano()!.planoUrl) {
+          <p class="text-sm text-ink-muted">{{ totalUbicados() }} de {{ totalLotes() }} lotes ubicados</p>
+        }
+      </div>
+
+      @if (modoEdicion()) {
+        <div class="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-we-primary/30 bg-we-primary/5 p-4">
+          <label class="text-sm font-medium text-ink">Lote a ubicar:</label>
+          <select
+            [ngModel]="loteAUbicarId()"
+            (ngModelChange)="onSeleccionarLoteAUbicar($any($event) + '')"
+            class="w-full max-w-xs rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          >
+            <option value="">Selecciona un lote…</option>
+            @for (l of plano()!.lotes; track l.id) {
+              <option [value]="l.id">
+                MZ {{ l.manzana }} - Lote {{ l.numeroLote }}{{ l.mapaX != null ? ' (ya ubicado)' : '' }}
+              </option>
+            }
+          </select>
+          <p class="text-sm text-ink-muted">
+            {{ loteAUbicarId() ? 'Ahora haz clic sobre el plano para ubicarlo.' : 'Faltan ' + lotesSinUbicar().length + ' lotes por ubicar.' }}
+          </p>
+        </div>
+      }
+    }
+
+    @if (!plano()!.planoUrl) {
+      <div class="mt-8 rounded-xl border border-dashed border-border bg-surface p-10 text-center">
+        <p class="text-sm text-ink-muted">Este desarrollo todavía no tiene un plano subido.</p>
+      </div>
+    } @else {
+      <div class="mt-6 grid gap-4 lg:grid-cols-[1fr_260px]">
+        <div
+          class="relative w-full overflow-hidden rounded-xl border border-border bg-surface"
+          [class.cursor-crosshair]="modoEdicion() && loteAUbicarId() !== null"
+          (click)="onClickImagen($event)"
+        >
+          <img [src]="plano()!.planoUrl" alt="Plano de {{ plano()!.desarrolloNombre }}" class="block w-full select-none" draggable="false" />
+
+          @for (lote of plano()!.lotes; track lote.id) {
+            @if (lote.mapaX != null && lote.mapaY != null) {
+              <button
+                type="button"
+                (click)="onClickPin(lote, $event)"
+                class="absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 shadow transition-transform duration-150 hover:scale-125"
+                [class]="pinClases[lote.estado]"
+                [class.scale-150]="loteAUbicarId() === lote.id || loteActivo()?.id === lote.id"
+                [style.left.%]="lote.mapaX"
+                [style.top.%]="lote.mapaY"
+                [attr.title]="'MZ ' + lote.manzana + ' - Lote ' + lote.numeroLote"
+              ></button>
+            }
+          }
+        </div>
+
+        <div class="flex flex-col gap-4">
+          @if (loteActivo(); as lote) {
+            <div class="rounded-xl border border-border bg-surface p-4">
+              <p class="text-sm font-semibold text-ink">Manzana {{ lote.manzana }} - Lote {{ lote.numeroLote }}</p>
+              <p class="mt-1 text-sm text-ink-muted">{{ lote.superficie | number: '1.2-2' }} m²</p>
+              <p class="mt-2 inline-block rounded-full px-2.5 py-1 text-xs font-semibold" [class]="'bg-we-primary/10 text-ink'">
+                {{ estadoLabels[lote.estado] }}
+              </p>
+              @if (esAdmin()) {
+                <button
+                  type="button"
+                  (click)="quitarPin(lote)"
+                  class="mt-3 block text-sm font-semibold text-red-600 hover:underline"
+                >
+                  Quitar pin
+                </button>
+              }
+            </div>
+          }
+
+          <div class="rounded-xl border border-border bg-surface p-4">
+            <p class="text-sm font-semibold text-ink">Estados</p>
+            <ul class="mt-3 flex flex-col gap-2">
+              @for (estado of estadosLote; track estado) {
+                <li class="flex items-center gap-2 text-sm text-ink-muted">
+                  <span class="h-3 w-3 rounded-full ring-2" [class]="pinClases[estado]"></span>
+                  {{ estadoLabels[estado] }}
+                </li>
+              }
+            </ul>
+          </div>
+        </div>
+      </div>
+    }
+  } @else {
+    <p class="mt-8 text-sm text-ink-muted">No hay desarrollos disponibles.</p>
+  }
+</div>

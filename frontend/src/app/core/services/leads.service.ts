@@ -127,6 +127,16 @@ export class LeadsService {
     return firstValueFrom(this.http.get<Desarrollo[]>(`${environment.apiUrl}/desarrollos`));
   }
 
+  /** Sube/reemplaza la imagen del plano de un desarrollo, para /panel/lotes/plano. Exclusivo de
+   * admin (ver DesarrolloService). */
+  subirPlano(desarrolloId: number, archivo: File): Promise<Desarrollo> {
+    const formData = new FormData();
+    formData.append('archivo', archivo);
+    return firstValueFrom(
+      this.http.post<Desarrollo>(`${environment.apiUrl}/desarrollos/${desarrolloId}/plano`, formData),
+    );
+  }
+
   proximosSeguimientos(): Promise<SeguimientoProximo[]> {
     return firstValueFrom(this.http.get<SeguimientoProximo[]>(`${environment.apiUrl}/seguimientos/proximos`));
   }

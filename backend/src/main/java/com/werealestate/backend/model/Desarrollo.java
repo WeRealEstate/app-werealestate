@@ -28,6 +28,9 @@ public class Desarrollo {
     @Column(name = "area_minima", nullable = false)
     private BigDecimal areaMinima;
 
+    @Column(name = "plano_url", length = 300)
+    private String planoUrl;
+
     protected Desarrollo() {
         // JPA
     }
@@ -50,5 +53,13 @@ public class Desarrollo {
 
     public BigDecimal getAreaMinima() {
         return areaMinima;
+    }
+
+    public String getPlanoUrl() {
+        return planoUrl;
+    }
+
+    public void setPlanoUrl(String planoUrl) {
+        this.planoUrl = planoUrl;
     }
 }

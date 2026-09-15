@@ -3,7 +3,8 @@ package com.werealestate.backend.dto;
 import com.werealestate.backend.model.Desarrollo;
 import java.math.BigDecimal;
 
-public record DesarrolloDto(Long id, String nombre, String ubicacion, BigDecimal precioM2, BigDecimal areaMinima) {
+public record DesarrolloDto(
+        Long id, String nombre, String ubicacion, BigDecimal precioM2, BigDecimal areaMinima, String planoUrl) {
 
     public static DesarrolloDto from(Desarrollo desarrollo) {
         return new DesarrolloDto(
@@ -11,6 +12,7 @@ public record DesarrolloDto(Long id, String nombre, String ubicacion, BigDecimal
                 desarrollo.getNombre(),
                 desarrollo.getUbicacion(),
                 desarrollo.getPrecioM2(),
-                desarrollo.getAreaMinima());
+                desarrollo.getAreaMinima(),
+                desarrollo.getPlanoUrl());
     }
 }

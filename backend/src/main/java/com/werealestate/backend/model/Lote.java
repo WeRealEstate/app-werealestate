@@ -46,6 +46,14 @@ public class Lote {
     @JoinColumn(name = "cambiado_por_id")
     private Usuario cambiadoPor;
 
+    /** Posición (0-100, porcentaje del ancho/alto de la imagen) del pin de este lote sobre el plano
+     * de {@link Desarrollo#getPlanoUrl()}; null si todavía no se ha delimitado en el editor. */
+    @Column(name = "mapa_x", precision = 6, scale = 3)
+    private BigDecimal mapaX;
+
+    @Column(name = "mapa_y", precision = 6, scale = 3)
+    private BigDecimal mapaY;
+
     protected Lote() {
         // JPA
     }
@@ -103,6 +111,20 @@ public class Lote {
 
     public Usuario getCambiadoPor() {
         return cambiadoPor;
+    }
+
+    public BigDecimal getMapaX() {
+        return mapaX;
+    }
+
+    public BigDecimal getMapaY() {
+        return mapaY;
+    }
+
+    /** Fija (o borra, pasando ambos en null) la posición del pin de este lote en el plano. */
+    public void actualizarPosicionMapa(BigDecimal mapaX, BigDecimal mapaY) {
+        this.mapaX = mapaX;
+        this.mapaY = mapaY;
     }
 
     /** Único punto de cambio de estado: siempre actualiza también la fecha y quién lo hizo, para

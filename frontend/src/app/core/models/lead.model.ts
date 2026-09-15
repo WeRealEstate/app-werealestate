@@ -17,6 +17,7 @@ export interface Desarrollo {
   ubicacion: string;
   precioM2: number;
   areaMinima: number;
+  planoUrl: string | null;
 }
 
 export interface UsuarioResumen {

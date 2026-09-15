@@ -1,5 +1,6 @@
 package com.werealestate.backend.controller;
 
+import com.werealestate.backend.dto.ActualizarPosicionMapaRequest;
 import com.werealestate.backend.dto.CambiarEstadoLotePublicoRequest;
 import com.werealestate.backend.dto.CambiarEstadoLoteRequest;
 import com.werealestate.backend.dto.LoteCreateRequest;
@@ -9,6 +10,7 @@ import com.werealestate.backend.dto.LoteImportResultado;
 import com.werealestate.backend.dto.LoteUpdateRequest;
 import com.werealestate.backend.dto.MovimientoLoteDto;
 import com.werealestate.backend.dto.PaginaDto;
+import com.werealestate.backend.dto.PlanoDesarrolloDto;
 import com.werealestate.backend.service.LoteService;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
@@ -77,6 +79,12 @@ public class LoteController {
         return loteService.buscarMovimientos(manzana, numeroLote, desarrolloId, pagina, tamano);
     }
 
+    /** Plano interactivo de un desarrollo, para /panel/lotes/plano. */
+    @GetMapping("/mapa")
+    public PlanoDesarrolloDto obtenerMapa(@RequestParam Long desarrolloId) {
+        return loteService.obtenerMapa(desarrolloId);
+    }
+
     @GetMapping("/{id}")
     public LoteDto obtener(@PathVariable Long id) {
         return loteService.obtener(id);
@@ -100,6 +108,12 @@ public class LoteController {
     @PutMapping("/{id}/estado")
     public LoteDto cambiarEstado(@PathVariable Long id, @Valid @RequestBody CambiarEstadoLoteRequest request) {
         return loteService.cambiarEstado(id, request);
+    }
+
+    @PutMapping("/{id}/mapa")
+    public LoteDto actualizarPosicionMapa(
+            @PathVariable Long id, @Valid @RequestBody ActualizarPosicionMapaRequest request) {
+        return loteService.actualizarPosicionMapa(id, request);
     }
 
     @DeleteMapping("/{id}")

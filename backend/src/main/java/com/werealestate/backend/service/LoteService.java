@@ -1,5 +1,6 @@
 package com.werealestate.backend.service;
 
+import com.werealestate.backend.dto.ActualizarPosicionMapaRequest;
 import com.werealestate.backend.dto.CambiarEstadoLotePublicoRequest;
 import com.werealestate.backend.dto.CambiarEstadoLoteRequest;
 import com.werealestate.backend.dto.LoteCreateRequest;
@@ -11,6 +12,7 @@ import com.werealestate.backend.dto.LoteImportResultado;
 import com.werealestate.backend.dto.LoteUpdateRequest;
 import com.werealestate.backend.dto.MovimientoLoteDto;
 import com.werealestate.backend.dto.PaginaDto;
+import com.werealestate.backend.dto.PlanoDesarrolloDto;
 import com.werealestate.backend.exception.ConflictException;
 import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
@@ -308,6 +310,32 @@ public class LoteService {
             }
             throw new ConflictException("Ya existe un lote con esa manzana y número en este desarrollo");
         }
+    }
+
+    /** Plano interactivo de un desarrollo (imagen + pin de cada lote) para /panel/lotes/plano,
+     * tanto para verlo (cualquier rol) como para editarlo (solo admin, ver
+     * {@link #actualizarPosicionMapa}). */
+    public PlanoDesarrolloDto obtenerMapa(Long desarrolloId) {
+        Desarrollo desarrollo = desarrolloRepository
+                .findById(desarrolloId)
+                .orElseThrow(() -> new ResourceNotFoundException("Desarrollo no encontrado"));
+        List<LoteDto> lotes = loteRepository.findByDesarrolloId(desarrolloId).stream()
+                .sorted(ORDEN_NATURAL_LOTES)
+                .map(LoteDto::from)
+                .toList();
+        return new PlanoDesarrolloDto(desarrollo.getId(), desarrollo.getNombre(), desarrollo.getPlanoUrl(), lotes);
+    }
+
+    /** Ubica (o borra, con ambos en null) el pin de un lote sobre el plano de su desarrollo;
+     * exclusivo de admin, igual que dar de alta/editar/importar lotes. */
+    public LoteDto actualizarPosicionMapa(Long id, ActualizarPosicionMapaRequest request) {
+        exigirAdmin("delimitar lotes en el plano");
+        if ((request.mapaX() == null) != (request.mapaY() == null)) {
+            throw new ValidationException("mapaX y mapaY deben venir juntos, o ambos en null para borrar el pin");
+        }
+        Lote lote = obtenerEntidad(id);
+        lote.actualizarPosicionMapa(request.mapaX(), request.mapaY());
+        return LoteDto.from(lote);
     }
 
     private void exigirAdmin(String accion) {

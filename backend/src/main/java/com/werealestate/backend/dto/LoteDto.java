@@ -13,7 +13,9 @@ public record LoteDto(
         BigDecimal superficie,
         EstadoLote estado,
         LocalDateTime fechaCambioEstado,
-        UsuarioResumenDto cambiadoPor) {
+        UsuarioResumenDto cambiadoPor,
+        BigDecimal mapaX,
+        BigDecimal mapaY) {
 
     public static LoteDto from(Lote lote) {
         return new LoteDto(
@@ -24,6 +26,8 @@ public record LoteDto(
                 lote.getSuperficie(),
                 lote.getEstado(),
                 lote.getFechaCambioEstado(),
-                lote.getCambiadoPor() != null ? UsuarioResumenDto.from(lote.getCambiadoPor()) : null);
+                lote.getCambiadoPor() != null ? UsuarioResumenDto.from(lote.getCambiadoPor()) : null,
+                lote.getMapaX(),
+                lote.getMapaY());
     }
 }

@@ -10,6 +10,7 @@ import {
   LoteImportResultado,
   LoteUpdateRequest,
   MovimientoLote,
+  PlanoDesarrollo,
 } from '../models/lote.model';
 
 export interface BuscarLotesParams {
@@ -104,5 +105,15 @@ export class LotesService {
 
   importar(request: LoteImportBatchRequest): Promise<LoteImportResultado> {
     return firstValueFrom(this.http.post<LoteImportResultado>(`${this.baseUrl}/importar`, request));
+  }
+
+  /** Plano interactivo de un desarrollo (imagen + pin de cada lote), para /panel/lotes/plano. */
+  obtenerMapa(desarrolloId: number): Promise<PlanoDesarrollo> {
+    return firstValueFrom(this.http.get<PlanoDesarrollo>(`${this.baseUrl}/mapa`, { params: { desarrolloId } }));
+  }
+
+  /** Ubica el pin de un lote en el plano; pasar ambos en null lo borra. Exclusivo de admin. */
+  actualizarPosicionMapa(id: number, mapaX: number | null, mapaY: number | null): Promise<Lote> {
+    return firstValueFrom(this.http.put<Lote>(`${this.baseUrl}/${id}/mapa`, { mapaX, mapaY }));
   }
 }

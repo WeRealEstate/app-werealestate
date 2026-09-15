@@ -60,6 +60,9 @@ public class SecurityConfig {
                         // sin sesión, con las mismas restricciones que un asesor (ver LoteService).
                         .requestMatchers(HttpMethod.GET, "/api/lotes/publico").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/lotes/publico/*/estado").permitAll()
+                        // Imágenes de los planos de los desarrollos (ver WebConfig): son material de
+                        // venta, no datos sensibles, y un <img src> no puede mandar el Authorization.
+                        .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, authException) -> {
                     response.setContentType("application/json");

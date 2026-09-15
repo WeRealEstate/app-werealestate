@@ -81,6 +81,12 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'lotes/plano',
+        canActivate: [roleGuard(['ASESOR', 'ADMIN'])],
+        loadComponent: () =>
+          import('./features/lotes/lotes-plano/lotes-plano.component').then((m) => m.LotesPlanoComponent),
+      },
+      {
         path: 'lotes/nuevo',
         canActivate: [roleGuard(['ADMIN'])],
         loadComponent: () =>
