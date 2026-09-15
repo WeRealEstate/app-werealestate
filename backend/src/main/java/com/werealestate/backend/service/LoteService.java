@@ -22,13 +22,13 @@ import com.werealestate.backend.repository.LoteRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +42,20 @@ public class LoteService {
 
     private static final Set<EstadoLote> ESTADOS_SOLO_ADMIN =
             Set.of(EstadoLote.APARTADO_CON_DINERO, EstadoLote.EN_PROCESO_DE_FIRMA);
+
+    /** Compara manzana/número de lote como números cuando se puede (así "2" queda antes que "10"
+     * en vez del orden alfabético de VARCHAR, donde "10" queda antes que "2"); si alguno no es
+     * numérico, cae a orden alfabético normal. */
+    private static final Comparator<String> ORDEN_NATURAL = (a, b) -> {
+        try {
+            return Integer.compare(Integer.parseInt(a.trim()), Integer.parseInt(b.trim()));
+        } catch (NumberFormatException e) {
+            return a.compareToIgnoreCase(b);
+        }
+    };
+
+    private static final Comparator<Lote> ORDEN_NATURAL_LOTES = Comparator.comparing(Lote::getManzana, ORDEN_NATURAL)
+            .thenComparing(Lote::getNumeroLote, ORDEN_NATURAL);
 
     private final LoteRepository loteRepository;
     private final DesarrolloRepository desarrolloRepository;
@@ -89,17 +103,30 @@ public class LoteService {
             spec = spec.and((root, query, cb) -> cb.lessThanOrEqualTo(root.get("superficie"), superficieMax));
         }
 
-        Pageable pageable = PageRequest.of(
-                Math.max(pagina, 0), Math.max(tamano, 1), Sort.by(Sort.Direction.ASC, "manzana", "numeroLote"));
+        // Manzana y número de lote son VARCHAR, así que un ORDER BY normal los trata como texto
+        // ("10" antes que "2"). Ordenar primero por longitud y luego alfabéticamente da el orden
+        // numérico esperado para los valores puramente numéricos que se capturan en la práctica.
+        spec = spec.and((root, query, cb) -> {
+            query.orderBy(
+                    cb.asc(cb.length(root.get("manzana"))),
+                    cb.asc(root.get("manzana")),
+                    cb.asc(cb.length(root.get("numeroLote"))),
+                    cb.asc(root.get("numeroLote")));
+            return cb.conjunction();
+        });
+
+        Pageable pageable = PageRequest.of(Math.max(pagina, 0), Math.max(tamano, 1));
         Page<Lote> resultado = loteRepository.findAll(spec, pageable);
         return new PaginaDto<>(resultado.getContent().stream().map(LoteDto::from).toList(), resultado.hasNext());
     }
 
-    /** Lotes disponibles de un desarrollo, para elegir uno al cotizar. */
+    /** Lotes disponibles de un desarrollo, para elegir uno al cotizar. Se reordenan en Java con
+     * ORDEN_NATURAL_LOTES (no es una lista paginada, así que no hace falta resolverlo en SQL). */
     public List<LoteDto> listarDisponibles(Long desarrolloId) {
         return loteRepository
                 .findByDesarrolloIdAndEstadoOrderByManzanaAscNumeroLoteAsc(desarrolloId, EstadoLote.DISPONIBLE)
                 .stream()
+                .sorted(ORDEN_NATURAL_LOTES)
                 .map(LoteDto::from)
                 .toList();
     }

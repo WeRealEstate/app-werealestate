@@ -216,35 +216,23 @@
             }
           </div>
 
-          @if (!esPublico && (lotesDisponibles().length > 0 || isCargandoLotes())) {
-            <div class="sm:col-span-2">
-              <label class="mb-2 block text-sm font-medium text-ink">Elegir del inventario (opcional)</label>
-              <select
-                [ngModel]="loteSeleccionadoId()"
-                (ngModelChange)="onLoteSeleccionado($event)"
-                [ngModelOptions]="{ standalone: true }"
-                class="w-full rounded-xl border border-border bg-surface-2/50 px-4 py-3.5 text-sm text-ink outline-none transition-all focus:border-we-primary focus:bg-surface focus:ring-4 focus:ring-we-primary/10"
-              >
-                <option [ngValue]="null">{{ isCargandoLotes() ? 'Cargando lotes…' : 'Capturar manzana/lote a mano' }}</option>
-                @for (l of lotesDisponibles(); track l.id) {
-                  <option [ngValue]="l.id">Manzana {{ l.manzana }} — Lote {{ l.numeroLote }} ({{ l.superficie }} m²)</option>
-                }
-              </select>
-              <p class="mt-1.5 text-xs text-ink-muted">Al elegir uno, se completan manzana, lote y superficie. El lote no cambia de estado por esto.</p>
-            </div>
-          }
-
           <div>
             <label class="mb-2 block text-sm font-medium text-ink">Manzana *</label>
             <input
               type="text"
               [(ngModel)]="blockNumber"
+              list="manzanas-cotizador"
               placeholder="Ej. 5"
               [class.border-red-500]="blockNumberInvalid"
               [class.focus:border-red-500]="blockNumberInvalid"
               [class.focus:ring-red-500]="blockNumberInvalid"
               class="w-full rounded-xl border border-border bg-surface-2/50 px-4 py-3.5 text-sm text-ink outline-none transition-all placeholder:text-ink-muted focus:border-we-primary focus:bg-surface focus:ring-4 focus:ring-we-primary/10"
             />
+            <datalist id="manzanas-cotizador">
+              @for (m of manzanasDisponibles; track m) {
+                <option [value]="m"></option>
+              }
+            </datalist>
             @if (blockNumberInvalid) {
               <p class="mt-1.5 text-xs text-red-500">Campo obligatorio</p>
             }
@@ -255,12 +243,19 @@
             <input
               type="text"
               [(ngModel)]="lotNumber"
+              (change)="onLoteNumberChange()"
+              list="lotes-cotizador"
               placeholder="Ej. 11"
               [class.border-red-500]="lotNumberInvalid"
               [class.focus:border-red-500]="lotNumberInvalid"
               [class.focus:ring-red-500]="lotNumberInvalid"
               class="w-full rounded-xl border border-border bg-surface-2/50 px-4 py-3.5 text-sm text-ink outline-none transition-all placeholder:text-ink-muted focus:border-we-primary focus:bg-surface focus:ring-4 focus:ring-we-primary/10"
             />
+            <datalist id="lotes-cotizador">
+              @for (l of lotesDeManzanaActual; track l.id) {
+                <option [value]="l.numeroLote">Lote {{ l.numeroLote }} ({{ l.superficie }} m²)</option>
+              }
+            </datalist>
             @if (lotNumberInvalid) {
               <p class="mt-1.5 text-xs text-red-500">Campo obligatorio</p>
             }

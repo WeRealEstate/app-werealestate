@@ -19,6 +19,15 @@ import { ValuePulseDirective } from '../../../shared/motion/value-pulse.directiv
 export type ProjectId = 'samai' | 'nanuu';
 export type PaymentType = 'msi' | 'downpayment' | 'annualities' | 'cash' | 'initial' | 'promocion';
 
+/** Compara manzana/lote como números cuando se puede (así "2" queda antes que "10" en vez del
+ * orden alfabético de texto); si alguno no es numérico, cae a orden alfabético normal. */
+function compararNatural(a: string, b: string): number {
+  const numeroA = Number(a);
+  const numeroB = Number(b);
+  if (!Number.isNaN(numeroA) && !Number.isNaN(numeroB)) return numeroA - numeroB;
+  return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+}
+
 @Component({
   selector: 'app-cotizador',
   standalone: true,
@@ -35,7 +44,6 @@ export class CotizadorComponent implements OnInit {
 
   readonly desarrollos = signal<Desarrollo[]>([]);
   readonly lotesDisponibles = signal<Lote[]>([]);
-  readonly loteSeleccionadoId = signal<number | null>(null);
   readonly isCargandoLotes = signal(false);
 
   /** true en la ruta pública sin login (/cotizador-publico, ver app.routes.ts). Ahí no hay un
@@ -80,8 +88,8 @@ export class CotizadorComponent implements OnInit {
     return this.selectedProject === 'samai' ? 'SAMAI Campestre' : 'Aldea Nanuu';
   }
 
+  /** Lotes disponibles del desarrollo actual: alimentan las sugerencias de manzana/lote de abajo. */
   private async cargarLotesDisponibles(): Promise<void> {
-    this.loteSeleccionadoId.set(null);
     const desarrollo = this.desarrollos().find((d) => d.nombre === this.nombreDesarrolloActual());
     if (!desarrollo) {
       this.lotesDisponibles.set([]);
@@ -97,20 +105,30 @@ export class CotizadorComponent implements OnInit {
     }
   }
 
-  /** Al elegir un lote real del inventario, se autocompletan manzana/lote/superficie — el precio
-   * sigue siendo el precio por m² del desarrollo (nunca uno capturado a mano) — pero el lote en sí
-   * NO cambia de estado: es solo para no capturar todo a mano. */
-  onLoteSeleccionado(loteId: string): void {
-    const id = loteId === '' ? null : Number(loteId);
-    this.loteSeleccionadoId.set(id);
-    if (id === null) return;
+  /** Manzanas del inventario disponibles del desarrollo actual, en orden numérico, para sugerirlas
+   * mientras el asesor escribe en el campo Manzana. */
+  get manzanasDisponibles(): string[] {
+    const unicas = new Set(this.lotesDisponibles().map((l) => l.manzana.trim()));
+    return Array.from(unicas).sort(compararNatural);
+  }
 
-    const lote = this.lotesDisponibles().find((l) => l.id === id);
-    if (!lote) return;
+  /** Lotes del inventario que pertenecen a la manzana capturada, en orden numérico, para sugerirlos
+   * en el campo Lote junto con su superficie. */
+  get lotesDeManzanaActual(): Lote[] {
+    const manzana = this.blockNumber.trim().toLowerCase();
+    if (!manzana) return [];
+    return this.lotesDisponibles()
+      .filter((l) => l.manzana.trim().toLowerCase() === manzana)
+      .sort((a, b) => compararNatural(a.numeroLote, b.numeroLote));
+  }
 
-    this.blockNumber = lote.manzana;
-    this.lotNumber = lote.numeroLote;
-    this.selectArea(lote.superficie);
+  /** Si el lote capturado coincide con uno real del inventario, se autocompleta la superficie —
+   * el precio sigue siendo el precio por m² del desarrollo (nunca uno capturado a mano) — pero el
+   * lote en sí NO cambia de estado: es solo para no capturar todo a mano. */
+  onLoteNumberChange(): void {
+    const numeroLote = this.lotNumber.trim().toLowerCase();
+    const lote = this.lotesDeManzanaActual.find((l) => l.numeroLote.trim().toLowerCase() === numeroLote);
+    if (lote) this.selectArea(lote.superficie);
   }
 
   currentDate = new Date();
@@ -166,6 +184,10 @@ export class CotizadorComponent implements OnInit {
     this.customAreaDisplay = this.selectedArea.toLocaleString('en-US');
 
     this.isCustomArea = false;
+
+    if (!this.esPublico) {
+      void this.cargarLotesDisponibles();
+    }
   }
 
   selectArea(area: number): void {
