@@ -20,12 +20,12 @@ import { ToastService } from '../../../core/services/toast.service';
  * coordenadas geográficas ni el archivo original (CAD/KML): solo dónde cae cada lote dentro de esa
  * imagen. */
 @Component({
-  selector: 'app-lotes-plano',
+  selector: 'app-plano',
   standalone: true,
   imports: [FormsModule, DecimalPipe],
-  templateUrl: './lotes-plano.component.html',
+  templateUrl: './plano.component.html',
 })
-export class LotesPlanoComponent {
+export class PlanoComponent {
   private readonly lotesService = inject(LotesService);
   private readonly leadsService = inject(LeadsService);
   private readonly auth = inject(AuthService);

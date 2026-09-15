@@ -79,7 +79,7 @@ public class LoteController {
         return loteService.buscarMovimientos(manzana, numeroLote, desarrolloId, pagina, tamano);
     }
 
-    /** Plano interactivo de un desarrollo, para /panel/lotes/plano. */
+    /** Plano interactivo de un desarrollo, para /panel/plano. */
     @GetMapping("/mapa")
     public PlanoDesarrolloDto obtenerMapa(@RequestParam Long desarrolloId) {
         return loteService.obtenerMapa(desarrolloId);

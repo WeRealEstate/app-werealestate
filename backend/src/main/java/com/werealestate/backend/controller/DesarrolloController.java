@@ -30,7 +30,7 @@ public class DesarrolloController {
         return desarrolloRepository.findAll().stream().map(DesarrolloDto::from).toList();
     }
 
-    /** Subir/reemplazar la imagen del plano de un desarrollo, para /panel/lotes/plano; exclusivo de
+    /** Subir/reemplazar la imagen del plano de un desarrollo, para /panel/plano; exclusivo de
      * admin, ver DesarrolloService. */
     @PostMapping(value = "/{id}/plano", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public DesarrolloDto subirPlano(@PathVariable Long id, @RequestParam("archivo") MultipartFile archivo) {

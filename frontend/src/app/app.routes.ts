@@ -81,12 +81,6 @@ export const routes: Routes = [
           ),
       },
       {
-        path: 'lotes/plano',
-        canActivate: [roleGuard(['ASESOR', 'ADMIN'])],
-        loadComponent: () =>
-          import('./features/lotes/lotes-plano/lotes-plano.component').then((m) => m.LotesPlanoComponent),
-      },
-      {
         path: 'lotes/nuevo',
         canActivate: [roleGuard(['ADMIN'])],
         loadComponent: () =>
@@ -103,6 +97,11 @@ export const routes: Routes = [
         canActivate: [roleGuard(['ADMIN'])],
         loadComponent: () =>
           import('./features/lotes/lote-form/lote-form.component').then((m) => m.LoteFormComponent),
+      },
+      {
+        path: 'plano',
+        canActivate: [roleGuard(['ASESOR', 'ADMIN'])],
+        loadComponent: () => import('./features/panel/plano/plano.component').then((m) => m.PlanoComponent),
       },
       {
         path: 'calendario',

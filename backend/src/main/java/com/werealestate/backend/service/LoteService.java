@@ -312,7 +312,7 @@ public class LoteService {
         }
     }
 
-    /** Plano interactivo de un desarrollo (imagen + pin de cada lote) para /panel/lotes/plano,
+    /** Plano interactivo de un desarrollo (imagen + pin de cada lote) para /panel/plano,
      * tanto para verlo (cualquier rol) como para editarlo (solo admin, ver
      * {@link #actualizarPosicionMapa}). */
     public PlanoDesarrolloDto obtenerMapa(Long desarrolloId) {

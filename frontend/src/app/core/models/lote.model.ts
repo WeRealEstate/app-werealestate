@@ -54,7 +54,7 @@ export interface Lote {
 }
 
 /** El plano interactivo de un desarrollo: la imagen subida por un admin y el pin de cada lote (si
- * ya se delimitó), para /panel/lotes/plano. */
+ * ya se delimitó), para /panel/plano. */
 export interface PlanoDesarrollo {
   desarrolloId: number;
   desarrolloNombre: string;

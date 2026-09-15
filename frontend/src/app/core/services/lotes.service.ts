@@ -107,7 +107,7 @@ export class LotesService {
     return firstValueFrom(this.http.post<LoteImportResultado>(`${this.baseUrl}/importar`, request));
   }
 
-  /** Plano interactivo de un desarrollo (imagen + pin de cada lote), para /panel/lotes/plano. */
+  /** Plano interactivo de un desarrollo (imagen + pin de cada lote), para /panel/plano. */
   obtenerMapa(desarrolloId: number): Promise<PlanoDesarrollo> {
     return firstValueFrom(this.http.get<PlanoDesarrollo>(`${this.baseUrl}/mapa`, { params: { desarrolloId } }));
   }
