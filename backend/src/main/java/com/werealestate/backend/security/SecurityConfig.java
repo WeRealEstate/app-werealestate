@@ -56,6 +56,10 @@ public class SecurityConfig {
                         // (listar, buscar, registrar con sesión), sigue exigiendo autenticación.
                         .requestMatchers(HttpMethod.GET, "/api/promociones/activas").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/cotizaciones/publica").permitAll()
+                        // /cotizador-publico/lotes: ver disponibilidad y apartar/liberar un lote,
+                        // sin sesión, con las mismas restricciones que un asesor (ver LoteService).
+                        .requestMatchers(HttpMethod.GET, "/api/lotes/publico").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/lotes/publico/*/estado").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, authException) -> {
                     response.setContentType("application/json");

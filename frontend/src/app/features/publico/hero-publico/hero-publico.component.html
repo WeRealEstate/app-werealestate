@@ -366,7 +366,7 @@
 
 
       <!-- CTA -->
-      <div class="hero-item mt-7">
+      <div class="hero-item mt-7 flex flex-col gap-3 sm:flex-row">
         <button
           type="button"
           weMotionPress
@@ -403,6 +403,44 @@
             →
           </span>
         </button>
+
+        <a
+          routerLink="/cotizador-publico/lotes"
+          weMotionPress
+          class="
+            group
+            flex
+            items-center
+            justify-center
+            gap-3
+            rounded-xl
+            border
+            border-white/25
+            bg-white/10
+            px-6
+            py-4
+            text-sm
+            font-semibold
+            text-white
+            backdrop-blur-md
+            transition-all
+            duration-300
+            hover:-translate-y-0.5
+            hover:bg-white/15
+          "
+        >
+          Ver disponibilidad de lotes
+
+          <span
+            class="
+              transition-transform
+              duration-300
+              group-hover:translate-x-1
+            "
+          >
+            →
+          </span>
+        </a>
       </div>
 
 

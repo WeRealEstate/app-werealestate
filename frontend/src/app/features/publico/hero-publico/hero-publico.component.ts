@@ -1,4 +1,5 @@
 import { AfterViewInit, Component, ElementRef } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { animate, stagger } from 'motion';
 import { PressDirective } from '../../../shared/motion/press.directive';
 
@@ -7,7 +8,7 @@ import { PressDirective } from '../../../shared/motion/press.directive';
 @Component({
   selector: 'app-hero-publico',
   standalone: true,
-  imports: [PressDirective],
+  imports: [PressDirective, RouterLink],
   templateUrl: './hero-publico.component.html',
   styles: [
     `

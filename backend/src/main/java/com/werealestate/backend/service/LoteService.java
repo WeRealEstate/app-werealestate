@@ -19,12 +19,14 @@ import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.repository.DesarrolloRepository;
 import com.werealestate.backend.repository.LoteRepository;
+import com.werealestate.backend.repository.UsuarioRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -57,16 +59,29 @@ public class LoteService {
     private static final Comparator<Lote> ORDEN_NATURAL_LOTES = Comparator.comparing(Lote::getManzana, ORDEN_NATURAL)
             .thenComparing(Lote::getNumeroLote, ORDEN_NATURAL);
 
+    /** Mismo usuario "de sistema" (ver migración V17) que atribuye las cotizaciones generadas desde
+     * /cotizador-publico: aquí se reutiliza para atribuir los cambios de estado que haga un
+     * visitante público en /cotizador-publico/lotes, donde tampoco hay una sesión real detrás. */
+    private static final String EMAIL_USUARIO_PUBLICO = "cotizador-publico@weinversiones.com";
+
+    /** Nombre exacto de Desarrollo (ver catálogo sembrado) para cada valor de "proyecto" que usa
+     * el público en /cotizador-publico/lotes — el mismo mapeo que ya usa CotizadorComponent. */
+    private static final Map<String, String> DESARROLLO_POR_PROYECTO =
+            Map.of("samai", "SAMAI Campestre", "nanuu", "Aldea Nanuu");
+
     private final LoteRepository loteRepository;
     private final DesarrolloRepository desarrolloRepository;
+    private final UsuarioRepository usuarioRepository;
     private final CurrentUserProvider currentUserProvider;
 
     public LoteService(
             LoteRepository loteRepository,
             DesarrolloRepository desarrolloRepository,
+            UsuarioRepository usuarioRepository,
             CurrentUserProvider currentUserProvider) {
         this.loteRepository = loteRepository;
         this.desarrolloRepository = desarrolloRepository;
+        this.usuarioRepository = usuarioRepository;
         this.currentUserProvider = currentUserProvider;
     }
 
@@ -129,6 +144,45 @@ public class LoteService {
                 .sorted(ORDEN_NATURAL_LOTES)
                 .map(LoteDto::from)
                 .toList();
+    }
+
+    /** Todos los lotes de un desarrollo (cualquier estado) para /cotizador-publico/lotes: a
+     * diferencia de {@link #listarDisponibles}, aquí también se muestran los apartados para que el
+     * visitante vea la disponibilidad real, aunque solo pueda actuar sobre los disponibles. */
+    public List<LoteDto> listarPublicoPorProyecto(String proyecto) {
+        String nombreDesarrollo = DESARROLLO_POR_PROYECTO.get(proyecto == null ? "" : proyecto.trim().toLowerCase());
+        if (nombreDesarrollo == null) {
+            throw new ResourceNotFoundException("Proyecto no válido");
+        }
+        Desarrollo desarrollo = desarrolloRepository
+                .findByNombre(nombreDesarrollo)
+                .orElseThrow(() -> new ResourceNotFoundException("Desarrollo no encontrado"));
+
+        return loteRepository.findByDesarrolloId(desarrollo.getId()).stream()
+                .sorted(ORDEN_NATURAL_LOTES)
+                .map(LoteDto::from)
+                .toList();
+    }
+
+    /** Igual que {@link #cambiarEstado}, pero para /cotizador-publico/lotes: sin sesión iniciada,
+     * así que un visitante nunca puede tocar un lote exclusivo de admin (ni para entrar ni para
+     * salir de esos estados) y el cambio se atribuye al usuario de sistema. */
+    public LoteDto cambiarEstadoPublico(Long id, CambiarEstadoLoteRequest request) {
+        Lote lote = obtenerEntidad(id);
+
+        boolean tocaEstadoDeAdmin =
+                ESTADOS_SOLO_ADMIN.contains(request.estado()) || ESTADOS_SOLO_ADMIN.contains(lote.getEstado());
+        if (tocaEstadoDeAdmin) {
+            throw new ForbiddenOperationException("Este lote no se puede modificar desde la disponibilidad pública");
+        }
+
+        Usuario sistema = usuarioRepository
+                .findByEmail(EMAIL_USUARIO_PUBLICO)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Falta el usuario de sistema del cotizador público (migración V17)"));
+
+        lote.cambiarEstado(request.estado(), sistema);
+        return LoteDto.from(lote);
     }
 
     public LoteDto obtener(Long id) {

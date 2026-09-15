@@ -51,6 +51,18 @@ public class LoteController {
         return loteService.listarDisponibles(desarrolloId);
     }
 
+    /** Únicos dos endpoints públicos de este controlador, sin sesión (ver SecurityConfig): la
+     * disponibilidad de lotes en /cotizador-publico/lotes. */
+    @GetMapping("/publico")
+    public List<LoteDto> listarPublico(@RequestParam String proyecto) {
+        return loteService.listarPublicoPorProyecto(proyecto);
+    }
+
+    @PutMapping("/publico/{id}/estado")
+    public LoteDto cambiarEstadoPublico(@PathVariable Long id, @Valid @RequestBody CambiarEstadoLoteRequest request) {
+        return loteService.cambiarEstadoPublico(id, request);
+    }
+
     @GetMapping("/{id}")
     public LoteDto obtener(@PathVariable Long id) {
         return loteService.obtener(id);

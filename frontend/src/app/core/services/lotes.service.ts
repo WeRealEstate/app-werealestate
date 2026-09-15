@@ -45,6 +45,15 @@ export class LotesService {
     );
   }
 
+  /** Para /cotizador-publico/lotes: sin sesión, ver LoteController/SecurityConfig. */
+  listarPublicoPorProyecto(proyecto: 'samai' | 'nanuu'): Promise<Lote[]> {
+    return firstValueFrom(this.http.get<Lote[]>(`${this.baseUrl}/publico`, { params: { proyecto } }));
+  }
+
+  cambiarEstadoPublico(id: number, estado: string): Promise<Lote> {
+    return firstValueFrom(this.http.put<Lote>(`${this.baseUrl}/publico/${id}/estado`, { estado }));
+  }
+
   obtener(id: number): Promise<Lote> {
     return firstValueFrom(this.http.get<Lote>(`${this.baseUrl}/${id}`));
   }

@@ -26,6 +26,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/panel/cotizador/cotizador.component').then((m) => m.CotizadorComponent),
       },
+      {
+        // Ver disponibilidad de lotes de SAMAI/Nanuu y apartar/liberar uno, sin sesión — mismas
+        // restricciones que un asesor, ver LoteService.cambiarEstadoPublico.
+        path: 'lotes',
+        loadComponent: () =>
+          import('./features/publico/lotes-publico/lotes-publico.component').then((m) => m.LotesPublicoComponent),
+      },
     ],
   },
   {

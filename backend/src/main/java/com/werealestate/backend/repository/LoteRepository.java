@@ -15,4 +15,6 @@ public interface LoteRepository extends JpaRepository<Lote, Long>, JpaSpecificat
     List<Lote> findByEstadoAndFechaCambioEstadoBefore(EstadoLote estado, LocalDateTime limite);
 
     List<Lote> findByDesarrolloIdAndEstadoOrderByManzanaAscNumeroLoteAsc(Long desarrolloId, EstadoLote estado);
+
+    List<Lote> findByDesarrolloId(Long desarrolloId);
 }
