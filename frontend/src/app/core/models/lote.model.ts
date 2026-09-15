@@ -1,18 +1,25 @@
 import { Desarrollo, UsuarioResumen } from './lead.model';
 
-export type EstadoLote = 'DISPONIBLE' | 'APARTADO' | 'APARTADO_CON_DINERO' | 'EN_PROCESO_DE_FIRMA';
+export type EstadoLote =
+  | 'DISPONIBLE'
+  | 'APARTADO'
+  | 'APARTADO_CON_DINERO'
+  | 'EN_PROCESO_DE_FIRMA'
+  | 'VENDIDO';
 
 export const ESTADO_LOTE_LABELS: Record<EstadoLote, string> = {
   DISPONIBLE: 'Disponible',
   APARTADO: 'Apartado',
   APARTADO_CON_DINERO: 'Apartado con dinero',
   EN_PROCESO_DE_FIRMA: 'En proceso de firma',
+  VENDIDO: 'Vendido',
 };
 
-/** Solo un admin puede establecer estos dos; DISPONIBLE y APARTADO los puede mover cualquiera. */
+/** Solo un admin puede establecer estos; DISPONIBLE y APARTADO los puede mover cualquiera. */
 export const ESTADOS_LOTE_SOLO_ADMIN: ReadonlySet<EstadoLote> = new Set([
   'APARTADO_CON_DINERO',
   'EN_PROCESO_DE_FIRMA',
+  'VENDIDO',
 ]);
 
 export const ESTADO_LOTE_BADGE_CLASSES: Record<EstadoLote, string> = {
@@ -20,6 +27,7 @@ export const ESTADO_LOTE_BADGE_CLASSES: Record<EstadoLote, string> = {
   APARTADO: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
   APARTADO_CON_DINERO: 'bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300',
   EN_PROCESO_DE_FIRMA: 'bg-we-primary/15 text-we-primary dark:text-we-blue-light',
+  VENDIDO: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300',
 };
 
 export interface Lote {

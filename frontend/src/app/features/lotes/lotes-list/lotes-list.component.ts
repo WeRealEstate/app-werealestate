@@ -12,10 +12,16 @@ import { ESTADO_LOTE_BADGE_CLASSES, ESTADO_LOTE_LABELS, ESTADOS_LOTE_SOLO_ADMIN,
 
 const TAMANO_PAGINA = 20;
 
-/** Los 4 estados los puede ver cualquiera; para elegir uno nuevo, un no-admin solo puede moverse
+/** Los 5 estados los puede ver cualquiera; para elegir uno nuevo, un no-admin solo puede moverse
  * entre Disponible/Apartado (y solo si el lote no está ya en un estado exclusivo de admin). */
 const ESTADOS_ASESOR: EstadoLote[] = ['DISPONIBLE', 'APARTADO'];
-const ESTADOS_TODOS: EstadoLote[] = ['DISPONIBLE', 'APARTADO', 'APARTADO_CON_DINERO', 'EN_PROCESO_DE_FIRMA'];
+const ESTADOS_TODOS: EstadoLote[] = [
+  'DISPONIBLE',
+  'APARTADO',
+  'APARTADO_CON_DINERO',
+  'EN_PROCESO_DE_FIRMA',
+  'VENDIDO',
+];
 
 @Component({
   selector: 'app-lotes-list',

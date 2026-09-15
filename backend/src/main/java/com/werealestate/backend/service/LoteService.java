@@ -40,15 +40,15 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Los estados APARTADO_CON_DINERO y EN_PROCESO_DE_FIRMA solo los puede establecer un admin;
- * DISPONIBLE y APARTADO los puede mover cualquiera (es el uso diario de un asesor). Dar de
+/** Los estados APARTADO_CON_DINERO, EN_PROCESO_DE_FIRMA y VENDIDO solo los puede establecer un
+ * admin; DISPONIBLE y APARTADO los puede mover cualquiera (es el uso diario de un asesor). Dar de
  * alta/editar/importar lotes es exclusivo de admin. */
 @Service
 @Transactional
 public class LoteService {
 
     private static final Set<EstadoLote> ESTADOS_SOLO_ADMIN =
-            Set.of(EstadoLote.APARTADO_CON_DINERO, EstadoLote.EN_PROCESO_DE_FIRMA);
+            Set.of(EstadoLote.APARTADO_CON_DINERO, EstadoLote.EN_PROCESO_DE_FIRMA, EstadoLote.VENDIDO);
 
     /** Compara manzana/número de lote como números cuando se puede (así "2" queda antes que "10"
      * en vez del orden alfabético de VARCHAR, donde "10" queda antes que "2"); si alguno no es
