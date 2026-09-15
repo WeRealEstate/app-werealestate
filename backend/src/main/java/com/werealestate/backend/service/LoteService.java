@@ -97,10 +97,11 @@ public class LoteService {
      * historial siempre queda consistente con el estado real del lote, sin importar desde dónde se
      * haya originado el cambio (asesor/admin autenticado, visitante público o el revertido
      * automático por vencimiento). */
-    private void cambiarEstadoConHistorial(Lote lote, EstadoLote nuevoEstado, Usuario usuario, String nombreAsesor) {
+    private void cambiarEstadoConHistorial(
+            Lote lote, EstadoLote nuevoEstado, Usuario usuario, String nombreAsesor, String nota) {
         EstadoLote anterior = lote.getEstado();
         lote.cambiarEstado(nuevoEstado, usuario);
-        movimientoLoteRepository.save(new MovimientoLote(lote, anterior, nuevoEstado, usuario, nombreAsesor));
+        movimientoLoteRepository.save(new MovimientoLote(lote, anterior, nuevoEstado, usuario, nombreAsesor, nota));
     }
 
     public PaginaDto<LoteDto> buscarPaginado(
@@ -199,22 +200,43 @@ public class LoteService {
         if (request.estado() == EstadoLote.APARTADO && (nombreAsesor == null || nombreAsesor.isBlank())) {
             throw new ValidationException("El nombre del asesor es obligatorio para apartar un lote");
         }
+        String nota = request.nota() == null || request.nota().isBlank() ? null : request.nota().trim();
 
         Usuario sistema = usuarioRepository
                 .findByEmail(EMAIL_USUARIO_PUBLICO)
                 .orElseThrow(() -> new IllegalStateException(
                         "Falta el usuario de sistema del cotizador público (migración V17)"));
 
-        cambiarEstadoConHistorial(lote, request.estado(), sistema, nombreAsesor);
+        cambiarEstadoConHistorial(lote, request.estado(), sistema, nombreAsesor, nota);
         return LoteDto.from(lote);
     }
 
-    /** Historial de movimientos de un lote (quién cambió qué y cuándo), para /panel/lotes. */
-    public List<MovimientoLoteDto> listarMovimientos(Long loteId) {
-        obtenerEntidad(loteId);
-        return movimientoLoteRepository.findByLoteIdOrderByFechaDesc(loteId).stream()
-                .map(MovimientoLoteDto::from)
-                .toList();
+    /** Historial de movimientos de todos los lotes (quién cambió qué y cuándo), para /panel/lotes.
+     * Filtrable por manzana/lote/desarrollo igual que {@link #buscarPaginado}. */
+    public PaginaDto<MovimientoLoteDto> buscarMovimientos(
+            String manzana, String numeroLote, Long desarrolloId, int pagina, int tamano) {
+        Specification<MovimientoLote> spec = (root, query, cb) -> cb.conjunction();
+
+        if (manzana != null && !manzana.isBlank()) {
+            String comodin = "%" + manzana.trim().toLowerCase() + "%";
+            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("lote").get("manzana")), comodin));
+        }
+        if (numeroLote != null && !numeroLote.isBlank()) {
+            String comodin = "%" + numeroLote.trim().toLowerCase() + "%";
+            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("lote").get("numeroLote")), comodin));
+        }
+        if (desarrolloId != null) {
+            spec = spec.and(
+                    (root, query, cb) -> cb.equal(root.get("lote").get("desarrollo").get("id"), desarrolloId));
+        }
+        spec = spec.and((root, query, cb) -> {
+            query.orderBy(cb.desc(root.get("fecha")));
+            return cb.conjunction();
+        });
+
+        Pageable pageable = PageRequest.of(Math.max(pagina, 0), Math.max(tamano, 1));
+        Page<MovimientoLote> resultado = movimientoLoteRepository.findAll(spec, pageable);
+        return new PaginaDto<>(resultado.getContent().stream().map(MovimientoLoteDto::from).toList(), resultado.hasNext());
     }
 
     public LoteDto obtener(Long id) {
@@ -266,7 +288,7 @@ public class LoteService {
             throw new ForbiddenOperationException("Solo un administrador puede cambiar el estado de este lote");
         }
 
-        cambiarEstadoConHistorial(lote, request.estado(), actual, null);
+        cambiarEstadoConHistorial(lote, request.estado(), actual, null, null);
         return LoteDto.from(lote);
     }
 

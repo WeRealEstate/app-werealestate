@@ -43,7 +43,7 @@ public class LoteAutoLiberacionScheduler {
         for (Lote lote : vencidos) {
             EstadoLote anterior = lote.getEstado();
             lote.cambiarEstado(EstadoLote.DISPONIBLE, null);
-            movimientoLoteRepository.save(new MovimientoLote(lote, anterior, EstadoLote.DISPONIBLE, null, null));
+            movimientoLoteRepository.save(new MovimientoLote(lote, anterior, EstadoLote.DISPONIBLE, null, null, null));
         }
     }
 }

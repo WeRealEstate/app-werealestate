@@ -66,9 +66,15 @@ public class LoteController {
         return loteService.cambiarEstadoPublico(id, request);
     }
 
-    @GetMapping("/{id}/movimientos")
-    public List<MovimientoLoteDto> listarMovimientos(@PathVariable Long id) {
-        return loteService.listarMovimientos(id);
+    /** Historial de movimientos de todos los lotes (no solo uno), para /panel/lotes/historial. */
+    @GetMapping("/movimientos")
+    public PaginaDto<MovimientoLoteDto> buscarMovimientos(
+            @RequestParam(required = false) String manzana,
+            @RequestParam(required = false) String numeroLote,
+            @RequestParam(required = false) Long desarrolloId,
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "20") int tamano) {
+        return loteService.buscarMovimientos(manzana, numeroLote, desarrolloId, pagina, tamano);
     }
 
     @GetMapping("/{id}")

@@ -43,6 +43,9 @@ public class MovimientoLote {
     @Column(name = "nombre_asesor", length = 150)
     private String nombreAsesor;
 
+    @Column(length = 500)
+    private String nota;
+
     @Column(nullable = false)
     private LocalDateTime fecha = LocalDateTime.now();
 
@@ -51,12 +54,18 @@ public class MovimientoLote {
     }
 
     public MovimientoLote(
-            Lote lote, EstadoLote estadoAnterior, EstadoLote estadoNuevo, Usuario usuario, String nombreAsesor) {
+            Lote lote,
+            EstadoLote estadoAnterior,
+            EstadoLote estadoNuevo,
+            Usuario usuario,
+            String nombreAsesor,
+            String nota) {
         this.lote = lote;
         this.estadoAnterior = estadoAnterior;
         this.estadoNuevo = estadoNuevo;
         this.usuario = usuario;
         this.nombreAsesor = nombreAsesor;
+        this.nota = nota;
     }
 
     public Long getId() {
@@ -81,6 +90,10 @@ public class MovimientoLote {
 
     public String getNombreAsesor() {
         return nombreAsesor;
+    }
+
+    public String getNota() {
+        return nota;
     }
 
     public LocalDateTime getFecha() {

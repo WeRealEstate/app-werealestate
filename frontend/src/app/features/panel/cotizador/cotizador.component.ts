@@ -79,11 +79,16 @@ export class CotizadorComponent implements OnInit {
     if (!this.esPublico) {
       try {
         this.desarrollos.set(await this.leadsService.listarDesarrollos());
-        await this.cargarLotesDisponibles();
       } catch {
         // El selector de lote del inventario es una comodidad; si falla, se sigue capturando
         // manzana/lote a mano como siempre.
       }
+    }
+
+    try {
+      await this.cargarLotesDisponibles();
+    } catch {
+      // Igual: si falla, se sigue capturando manzana/lote a mano.
     }
   }
 
@@ -92,15 +97,23 @@ export class CotizadorComponent implements OnInit {
     return this.selectedProject === 'samai' ? 'SAMAI Campestre' : 'Aldea Nanuu';
   }
 
-  /** Lotes disponibles del desarrollo actual: alimentan las sugerencias de manzana/lote de abajo. */
+  /** Lotes disponibles del desarrollo actual: alimentan las sugerencias de manzana/lote de abajo.
+   * En /cotizador-publico no hay sesión, así que usa el mismo endpoint público que alimenta
+   * /cotizador-publico/lotes (que trae cualquier estado) y aquí se filtra a solo disponibles. */
   private async cargarLotesDisponibles(): Promise<void> {
-    const desarrollo = this.desarrollos().find((d) => d.nombre === this.nombreDesarrolloActual());
-    if (!desarrollo) {
-      this.lotesDisponibles.set([]);
-      return;
-    }
     this.isCargandoLotes.set(true);
     try {
+      if (this.esPublico) {
+        const lotes = await this.lotesService.listarPublicoPorProyecto(this.selectedProject);
+        this.lotesDisponibles.set(lotes.filter((l) => l.estado === 'DISPONIBLE'));
+        return;
+      }
+
+      const desarrollo = this.desarrollos().find((d) => d.nombre === this.nombreDesarrolloActual());
+      if (!desarrollo) {
+        this.lotesDisponibles.set([]);
+        return;
+      }
       this.lotesDisponibles.set(await this.lotesService.listarDisponibles(desarrollo.id));
     } catch {
       this.lotesDisponibles.set([]);
@@ -208,9 +221,7 @@ export class CotizadorComponent implements OnInit {
 
     this.isCustomArea = false;
 
-    if (!this.esPublico) {
-      void this.cargarLotesDisponibles();
-    }
+    void this.cargarLotesDisponibles();
   }
 
   selectArea(area: number): void {

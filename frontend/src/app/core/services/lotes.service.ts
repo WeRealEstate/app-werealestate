@@ -23,6 +23,14 @@ export interface BuscarLotesParams {
   tamano: number;
 }
 
+export interface BuscarMovimientosParams {
+  manzana?: string;
+  numeroLote?: string;
+  desarrolloId?: number | null;
+  pagina: number;
+  tamano: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class LotesService {
   private readonly http = inject(HttpClient);
@@ -51,15 +59,27 @@ export class LotesService {
     return firstValueFrom(this.http.get<Lote[]>(`${this.baseUrl}/publico`, { params: { proyecto } }));
   }
 
-  /** nombreAsesor es obligatorio para apartar (no para liberar) — ver LoteService.cambiarEstadoPublico. */
-  cambiarEstadoPublico(id: number, estado: string, nombreAsesor?: string): Promise<Lote> {
+  /** nombreAsesor es obligatorio para apartar (no para liberar); nota siempre es opcional — ver
+   * LoteService.cambiarEstadoPublico. */
+  cambiarEstadoPublico(id: number, estado: string, nombreAsesor?: string, nota?: string): Promise<Lote> {
     return firstValueFrom(
-      this.http.put<Lote>(`${this.baseUrl}/publico/${id}/estado`, { estado, nombreAsesor: nombreAsesor ?? null }),
+      this.http.put<Lote>(`${this.baseUrl}/publico/${id}/estado`, {
+        estado,
+        nombreAsesor: nombreAsesor ?? null,
+        nota: nota ?? null,
+      }),
     );
   }
 
-  listarMovimientos(id: number): Promise<MovimientoLote[]> {
-    return firstValueFrom(this.http.get<MovimientoLote[]>(`${this.baseUrl}/${id}/movimientos`));
+  buscarMovimientos(params: BuscarMovimientosParams): Promise<Pagina<MovimientoLote>> {
+    let httpParams = new HttpParams().set('pagina', params.pagina).set('tamano', params.tamano);
+    if (params.manzana) httpParams = httpParams.set('manzana', params.manzana);
+    if (params.numeroLote) httpParams = httpParams.set('numeroLote', params.numeroLote);
+    if (params.desarrolloId != null) httpParams = httpParams.set('desarrolloId', params.desarrolloId);
+
+    return firstValueFrom(
+      this.http.get<Pagina<MovimientoLote>>(`${this.baseUrl}/movimientos`, { params: httpParams }),
+    );
   }
 
   obtener(id: number): Promise<Lote> {

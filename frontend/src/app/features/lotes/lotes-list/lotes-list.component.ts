@@ -1,4 +1,4 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -8,14 +8,7 @@ import { LeadsService } from '../../../core/services/leads.service';
 import { LotesService } from '../../../core/services/lotes.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { Desarrollo } from '../../../core/models/lead.model';
-import {
-  ESTADO_LOTE_BADGE_CLASSES,
-  ESTADO_LOTE_LABELS,
-  ESTADOS_LOTE_SOLO_ADMIN,
-  EstadoLote,
-  Lote,
-  MovimientoLote,
-} from '../../../core/models/lote.model';
+import { ESTADO_LOTE_BADGE_CLASSES, ESTADO_LOTE_LABELS, ESTADOS_LOTE_SOLO_ADMIN, EstadoLote, Lote } from '../../../core/models/lote.model';
 
 const TAMANO_PAGINA = 20;
 
@@ -27,7 +20,7 @@ const ESTADOS_TODOS: EstadoLote[] = ['DISPONIBLE', 'APARTADO', 'APARTADO_CON_DIN
 @Component({
   selector: 'app-lotes-list',
   standalone: true,
-  imports: [FormsModule, RouterLink, DecimalPipe, DatePipe],
+  imports: [FormsModule, RouterLink, DecimalPipe],
   templateUrl: './lotes-list.component.html',
 })
 export class LotesListComponent {
@@ -65,11 +58,6 @@ export class LotesListComponent {
       this.superficieMin() !== null ||
       this.superficieMax() !== null,
   );
-
-  // Modal "Historial de movimientos": quién apartó/liberó/etc. cada lote y cuándo.
-  readonly loteConHistorial = signal<Lote | null>(null);
-  readonly movimientos = signal<MovimientoLote[]>([]);
-  readonly isLoadingHistorial = signal(false);
 
   private pagina = 0;
   private debounceHandle: ReturnType<typeof setTimeout> | undefined;
@@ -171,35 +159,6 @@ export class LotesListComponent {
     } catch {
       this.toast.error('No se pudo cambiar el estado del lote.');
     }
-  }
-
-  async verHistorial(lote: Lote): Promise<void> {
-    this.loteConHistorial.set(lote);
-    this.isLoadingHistorial.set(true);
-    this.movimientos.set([]);
-    try {
-      this.movimientos.set(await this.lotesService.listarMovimientos(lote.id));
-    } catch {
-      this.toast.error('No se pudo cargar el historial de este lote.');
-    } finally {
-      this.isLoadingHistorial.set(false);
-    }
-  }
-
-  cerrarHistorial(): void {
-    this.loteConHistorial.set(null);
-    this.movimientos.set([]);
-  }
-
-  /** Quién hizo el movimiento: el usuario autenticado, el nombre de asesor capturado desde
-   * /cotizador-publico/lotes, o nadie (reversión automática por vencimiento). */
-  autorMovimiento(movimiento: MovimientoLote): string {
-    if (movimiento.usuario) {
-      return movimiento.nombreAsesor
-        ? `${movimiento.nombreAsesor} (vía disponibilidad pública)`
-        : movimiento.usuario.nombre;
-    }
-    return 'Sistema (reversión automática)';
   }
 
   async eliminar(lote: Lote): Promise<void> {

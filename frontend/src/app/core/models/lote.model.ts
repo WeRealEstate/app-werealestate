@@ -69,14 +69,19 @@ export interface LoteImportResultado {
   errores: LoteImportError[];
 }
 
-/** Un renglón del historial de movimientos de un lote: qué cambió, quién y cuándo. `usuario` es
- * null en la reversión automática por vencimiento; `nombreAsesor` solo viene de un apartado hecho
- * desde /cotizador-publico/lotes, donde no hay una sesión real detrás. */
+/** Un renglón del historial de movimientos de lotes: de qué lote, qué cambió, quién y cuándo.
+ * `usuario` es null en la reversión automática por vencimiento; `nombreAsesor`/`nota` solo vienen
+ * de un apartado hecho desde /cotizador-publico/lotes, donde no hay una sesión real detrás. */
 export interface MovimientoLote {
   id: number;
+  loteId: number;
+  manzana: string;
+  numeroLote: string;
+  desarrolloNombre: string;
   estadoAnterior: EstadoLote;
   estadoNuevo: EstadoLote;
   usuario: UsuarioResumen | null;
   nombreAsesor: string | null;
+  nota: string | null;
   fecha: string;
 }

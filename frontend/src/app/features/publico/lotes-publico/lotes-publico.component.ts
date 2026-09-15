@@ -13,10 +13,13 @@ import {
 
 type ProyectoPublico = 'samai' | 'nanuu';
 
-/** Disponibilidad de lotes para /cotizador-publico/lotes: cualquiera con el link puede ver el
- * inventario y apartar o liberar un lote, sin sesión — con las mismas restricciones que un
- * asesor (nunca puede tocar un lote exclusivo de admin), nunca las de un admin (crear, editar,
- * eliminar o importar lotes, que solo existen en /panel/lotes). */
+const NOTA_MAX_LENGTH = 500;
+
+/** Disponibilidad de lotes para /cotizador-publico/lotes: pensada para que la use el ASESOR
+ * EXTERNO (no el cliente final) mientras atiende a su cliente — por eso se pide el nombre de quien
+ * está operando la página y, opcionalmente, una nota, antes de dejar un lote como apartado. Mismas
+ * restricciones que un asesor interno (nunca puede tocar un lote exclusivo de admin), nunca las de
+ * un admin (crear, editar, eliminar o importar lotes, que solo existen en /panel/lotes). */
 @Component({
   selector: 'app-lotes-publico',
   standalone: true,
@@ -40,10 +43,12 @@ export class LotesPublicoComponent {
   readonly filtroNumeroLote = signal('');
   readonly idEnProceso = signal<number | null>(null);
 
-  // Modal "Apartar lote": pide el nombre del asesor antes de confirmar.
+  // Modal "Apartar lote": pide el nombre del asesor y, opcionalmente, una nota antes de confirmar.
   readonly loteAApartar = signal<Lote | null>(null);
   readonly nombreAsesorInput = signal('');
+  readonly notaInput = signal('');
   readonly isApartando = signal(false);
+  readonly notaMaxLength = NOTA_MAX_LENGTH;
 
   readonly lotesFiltrados = computed(() => {
     const manzana = this.filtroManzana().trim().toLowerCase();
@@ -92,11 +97,13 @@ export class LotesPublicoComponent {
   abrirApartar(lote: Lote): void {
     this.loteAApartar.set(lote);
     this.nombreAsesorInput.set('');
+    this.notaInput.set('');
   }
 
   cancelarApartar(): void {
     this.loteAApartar.set(null);
     this.nombreAsesorInput.set('');
+    this.notaInput.set('');
   }
 
   async confirmarApartar(): Promise<void> {
@@ -109,6 +116,7 @@ export class LotesPublicoComponent {
         lote.id,
         'APARTADO',
         this.nombreAsesorInput().trim(),
+        this.notaInput().trim() || undefined,
       );
       this.lotes.update((lista) => lista.map((l) => (l.id === lote.id ? actualizado : l)));
       this.toast.success('Lote apartado.');
