@@ -8,7 +8,6 @@ import {
   ESTADO_LOTE_BADGE_CLASSES,
   ESTADO_LOTE_LABELS,
   ESTADOS_LOTE_SOLO_ADMIN,
-  EstadoLote,
   Lote,
 } from '../../../core/models/lote.model';
 
@@ -37,16 +36,26 @@ export class LotesPublicoComponent {
   readonly lotes = signal<Lote[]>([]);
   readonly isLoading = signal(true);
   readonly errorMessage = signal<string | null>(null);
-  readonly busqueda = signal('');
+  readonly filtroManzana = signal('');
+  readonly filtroNumeroLote = signal('');
   readonly idEnProceso = signal<number | null>(null);
 
+  // Modal "Apartar lote": pide el nombre del asesor antes de confirmar.
+  readonly loteAApartar = signal<Lote | null>(null);
+  readonly nombreAsesorInput = signal('');
+  readonly isApartando = signal(false);
+
   readonly lotesFiltrados = computed(() => {
-    const texto = this.busqueda().trim().toLowerCase();
-    if (!texto) return this.lotes();
+    const manzana = this.filtroManzana().trim().toLowerCase();
+    const numeroLote = this.filtroNumeroLote().trim().toLowerCase();
     return this.lotes().filter(
-      (l) => l.manzana.toLowerCase().includes(texto) || l.numeroLote.toLowerCase().includes(texto),
+      (l) =>
+        (!manzana || l.manzana.toLowerCase().includes(manzana)) &&
+        (!numeroLote || l.numeroLote.toLowerCase().includes(numeroLote)),
     );
   });
+
+  readonly nombreAsesorInvalido = computed(() => this.nombreAsesorInput().trim().length === 0);
 
   constructor() {
     this.cargar();
@@ -55,7 +64,8 @@ export class LotesPublicoComponent {
   elegirProyecto(proyecto: ProyectoPublico): void {
     if (proyecto === this.proyecto()) return;
     this.proyecto.set(proyecto);
-    this.busqueda.set('');
+    this.filtroManzana.set('');
+    this.filtroNumeroLote.set('');
     this.cargar();
   }
 
@@ -77,14 +87,37 @@ export class LotesPublicoComponent {
     return !this.estadosSoloAdmin.has(lote.estado);
   }
 
-  async apartar(lote: Lote): Promise<void> {
-    const confirmado = await this.confirmService.confirm({
-      titulo: 'Apartar lote',
-      mensaje: `¿Apartar el lote Manzana ${lote.manzana}, Lote ${lote.numeroLote}? Un asesor se pondrá en contacto contigo para continuar con el proceso.`,
-      textoConfirmar: 'Apartar',
-    });
-    if (!confirmado) return;
-    await this.cambiarEstado(lote, 'APARTADO');
+  /** Abre el modal que pide el nombre del asesor antes de apartar — no hay sesión real detrás, así
+   * que es la única forma de saber a quién le corresponde este apartado en el historial. */
+  abrirApartar(lote: Lote): void {
+    this.loteAApartar.set(lote);
+    this.nombreAsesorInput.set('');
+  }
+
+  cancelarApartar(): void {
+    this.loteAApartar.set(null);
+    this.nombreAsesorInput.set('');
+  }
+
+  async confirmarApartar(): Promise<void> {
+    const lote = this.loteAApartar();
+    if (!lote || this.nombreAsesorInvalido()) return;
+
+    this.isApartando.set(true);
+    try {
+      const actualizado = await this.lotesService.cambiarEstadoPublico(
+        lote.id,
+        'APARTADO',
+        this.nombreAsesorInput().trim(),
+      );
+      this.lotes.update((lista) => lista.map((l) => (l.id === lote.id ? actualizado : l)));
+      this.toast.success('Lote apartado.');
+      this.cancelarApartar();
+    } catch {
+      this.toast.error('No se pudo apartar el lote. Intenta de nuevo.');
+    } finally {
+      this.isApartando.set(false);
+    }
   }
 
   async liberar(lote: Lote): Promise<void> {
@@ -94,15 +127,12 @@ export class LotesPublicoComponent {
       textoConfirmar: 'Liberar',
     });
     if (!confirmado) return;
-    await this.cambiarEstado(lote, 'DISPONIBLE');
-  }
 
-  private async cambiarEstado(lote: Lote, estado: EstadoLote): Promise<void> {
     this.idEnProceso.set(lote.id);
     try {
-      const actualizado = await this.lotesService.cambiarEstadoPublico(lote.id, estado);
+      const actualizado = await this.lotesService.cambiarEstadoPublico(lote.id, 'DISPONIBLE');
       this.lotes.update((lista) => lista.map((l) => (l.id === lote.id ? actualizado : l)));
-      this.toast.success(estado === 'APARTADO' ? 'Lote apartado.' : 'Lote liberado.');
+      this.toast.success('Lote liberado.');
     } catch {
       this.toast.error('No se pudo actualizar el lote. Intenta de nuevo.');
     } finally {

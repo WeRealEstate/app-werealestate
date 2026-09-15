@@ -1,5 +1,6 @@
 package com.werealestate.backend.service;
 
+import com.werealestate.backend.dto.CambiarEstadoLotePublicoRequest;
 import com.werealestate.backend.dto.CambiarEstadoLoteRequest;
 import com.werealestate.backend.dto.LoteCreateRequest;
 import com.werealestate.backend.dto.LoteDto;
@@ -8,17 +9,21 @@ import com.werealestate.backend.dto.LoteImportError;
 import com.werealestate.backend.dto.LoteImportRequest;
 import com.werealestate.backend.dto.LoteImportResultado;
 import com.werealestate.backend.dto.LoteUpdateRequest;
+import com.werealestate.backend.dto.MovimientoLoteDto;
 import com.werealestate.backend.dto.PaginaDto;
 import com.werealestate.backend.exception.ConflictException;
 import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
+import com.werealestate.backend.exception.ValidationException;
 import com.werealestate.backend.model.Desarrollo;
 import com.werealestate.backend.model.EstadoLote;
 import com.werealestate.backend.model.Lote;
+import com.werealestate.backend.model.MovimientoLote;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.repository.DesarrolloRepository;
 import com.werealestate.backend.repository.LoteRepository;
+import com.werealestate.backend.repository.MovimientoLoteRepository;
 import com.werealestate.backend.repository.UsuarioRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
 import java.math.BigDecimal;
@@ -72,17 +77,30 @@ public class LoteService {
     private final LoteRepository loteRepository;
     private final DesarrolloRepository desarrolloRepository;
     private final UsuarioRepository usuarioRepository;
+    private final MovimientoLoteRepository movimientoLoteRepository;
     private final CurrentUserProvider currentUserProvider;
 
     public LoteService(
             LoteRepository loteRepository,
             DesarrolloRepository desarrolloRepository,
             UsuarioRepository usuarioRepository,
+            MovimientoLoteRepository movimientoLoteRepository,
             CurrentUserProvider currentUserProvider) {
         this.loteRepository = loteRepository;
         this.desarrolloRepository = desarrolloRepository;
         this.usuarioRepository = usuarioRepository;
+        this.movimientoLoteRepository = movimientoLoteRepository;
         this.currentUserProvider = currentUserProvider;
+    }
+
+    /** Único punto que cambia el estado de un lote Y dejar registro en la bitácora: así el
+     * historial siempre queda consistente con el estado real del lote, sin importar desde dónde se
+     * haya originado el cambio (asesor/admin autenticado, visitante público o el revertido
+     * automático por vencimiento). */
+    private void cambiarEstadoConHistorial(Lote lote, EstadoLote nuevoEstado, Usuario usuario, String nombreAsesor) {
+        EstadoLote anterior = lote.getEstado();
+        lote.cambiarEstado(nuevoEstado, usuario);
+        movimientoLoteRepository.save(new MovimientoLote(lote, anterior, nuevoEstado, usuario, nombreAsesor));
     }
 
     public PaginaDto<LoteDto> buscarPaginado(
@@ -166,8 +184,9 @@ public class LoteService {
 
     /** Igual que {@link #cambiarEstado}, pero para /cotizador-publico/lotes: sin sesión iniciada,
      * así que un visitante nunca puede tocar un lote exclusivo de admin (ni para entrar ni para
-     * salir de esos estados) y el cambio se atribuye al usuario de sistema. */
-    public LoteDto cambiarEstadoPublico(Long id, CambiarEstadoLoteRequest request) {
+     * salir de esos estados), el cambio se atribuye al usuario de sistema, y apartar exige el
+     * nombre del asesor que atendió al visitante (para liberar no hace falta). */
+    public LoteDto cambiarEstadoPublico(Long id, CambiarEstadoLotePublicoRequest request) {
         Lote lote = obtenerEntidad(id);
 
         boolean tocaEstadoDeAdmin =
@@ -176,13 +195,26 @@ public class LoteService {
             throw new ForbiddenOperationException("Este lote no se puede modificar desde la disponibilidad pública");
         }
 
+        String nombreAsesor = request.nombreAsesor() == null ? null : request.nombreAsesor().trim();
+        if (request.estado() == EstadoLote.APARTADO && (nombreAsesor == null || nombreAsesor.isBlank())) {
+            throw new ValidationException("El nombre del asesor es obligatorio para apartar un lote");
+        }
+
         Usuario sistema = usuarioRepository
                 .findByEmail(EMAIL_USUARIO_PUBLICO)
                 .orElseThrow(() -> new IllegalStateException(
                         "Falta el usuario de sistema del cotizador público (migración V17)"));
 
-        lote.cambiarEstado(request.estado(), sistema);
+        cambiarEstadoConHistorial(lote, request.estado(), sistema, nombreAsesor);
         return LoteDto.from(lote);
+    }
+
+    /** Historial de movimientos de un lote (quién cambió qué y cuándo), para /panel/lotes. */
+    public List<MovimientoLoteDto> listarMovimientos(Long loteId) {
+        obtenerEntidad(loteId);
+        return movimientoLoteRepository.findByLoteIdOrderByFechaDesc(loteId).stream()
+                .map(MovimientoLoteDto::from)
+                .toList();
     }
 
     public LoteDto obtener(Long id) {
@@ -234,7 +266,7 @@ public class LoteService {
             throw new ForbiddenOperationException("Solo un administrador puede cambiar el estado de este lote");
         }
 
-        lote.cambiarEstado(request.estado(), actual);
+        cambiarEstadoConHistorial(lote, request.estado(), actual, null);
         return LoteDto.from(lote);
     }
 

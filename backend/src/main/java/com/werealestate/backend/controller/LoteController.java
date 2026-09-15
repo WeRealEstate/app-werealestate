@@ -1,11 +1,13 @@
 package com.werealestate.backend.controller;
 
+import com.werealestate.backend.dto.CambiarEstadoLotePublicoRequest;
 import com.werealestate.backend.dto.CambiarEstadoLoteRequest;
 import com.werealestate.backend.dto.LoteCreateRequest;
 import com.werealestate.backend.dto.LoteDto;
 import com.werealestate.backend.dto.LoteImportBatchRequest;
 import com.werealestate.backend.dto.LoteImportResultado;
 import com.werealestate.backend.dto.LoteUpdateRequest;
+import com.werealestate.backend.dto.MovimientoLoteDto;
 import com.werealestate.backend.dto.PaginaDto;
 import com.werealestate.backend.service.LoteService;
 import jakarta.validation.Valid;
@@ -59,8 +61,14 @@ public class LoteController {
     }
 
     @PutMapping("/publico/{id}/estado")
-    public LoteDto cambiarEstadoPublico(@PathVariable Long id, @Valid @RequestBody CambiarEstadoLoteRequest request) {
+    public LoteDto cambiarEstadoPublico(
+            @PathVariable Long id, @Valid @RequestBody CambiarEstadoLotePublicoRequest request) {
         return loteService.cambiarEstadoPublico(id, request);
+    }
+
+    @GetMapping("/{id}/movimientos")
+    public List<MovimientoLoteDto> listarMovimientos(@PathVariable Long id) {
+        return loteService.listarMovimientos(id);
     }
 
     @GetMapping("/{id}")

@@ -37,14 +37,22 @@
     </button>
   </div>
 
-  <!-- BUSCADOR -->
-  <div class="mt-5">
+  <!-- BUSCADORES -->
+  <div class="mt-5 flex flex-col gap-3 sm:flex-row">
     <input
       type="search"
-      [ngModel]="busqueda()"
-      (ngModelChange)="busqueda.set($event)"
-      placeholder="Buscar por manzana o lote…"
-      class="w-full max-w-xs rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted
+      [ngModel]="filtroManzana()"
+      (ngModelChange)="filtroManzana.set($event)"
+      placeholder="Buscar por manzana…"
+      class="w-full max-w-[200px] rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted
+             focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+    />
+    <input
+      type="search"
+      [ngModel]="filtroNumeroLote()"
+      (ngModelChange)="filtroNumeroLote.set($event)"
+      placeholder="Buscar por lote…"
+      class="w-full max-w-[200px] rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted
              focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
     />
   </div>
@@ -58,7 +66,7 @@
   } @else if (lotesFiltrados().length === 0) {
     <div class="mt-8 rounded-xl border border-dashed border-border p-10 text-center">
       <p class="text-sm text-ink-muted">
-        @if (busqueda()) {
+        @if (filtroManzana() || filtroNumeroLote()) {
           Ningún lote coincide con tu búsqueda.
         } @else {
           Todavía no hay lotes registrados para este proyecto.
@@ -93,13 +101,11 @@
                   @if (lote.estado === 'DISPONIBLE') {
                     <button
                       type="button"
-                      [disabled]="idEnProceso() === lote.id"
-                      (click)="apartar(lote)"
+                      (click)="abrirApartar(lote)"
                       class="inline-flex items-center justify-center rounded-lg bg-we-primary px-3.5 py-2 text-xs font-semibold text-white
-                             hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
-                             disabled:opacity-60 disabled:cursor-not-allowed"
+                             hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150"
                     >
-                      {{ idEnProceso() === lote.id ? 'Apartando…' : 'Apartar' }}
+                      Apartar
                     </button>
                   } @else if (lote.estado === 'APARTADO') {
                     <button
@@ -119,6 +125,59 @@
           }
         </tbody>
       </table>
+    </div>
+  }
+
+  <!-- MODAL "APARTAR LOTE": pide el nombre del asesor antes de confirmar. -->
+  @if (loteAApartar(); as lote) {
+    <button
+      type="button"
+      (click)="cancelarApartar()"
+      aria-label="Cerrar"
+      class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"
+    ></button>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="apartar-lote-titulo">
+      <div class="modal-panel-enter w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <h2 id="apartar-lote-titulo" class="font-heading text-lg font-semibold text-ink">Apartar lote</h2>
+        <p class="mt-2 text-sm text-ink-muted">
+          Manzana {{ lote.manzana }}, Lote {{ lote.numeroLote }} ({{ lote.superficie }} m²). Un asesor se pondrá en
+          contacto contigo para continuar con el proceso.
+        </p>
+
+        <div class="mt-4">
+          <label class="mb-1.5 block text-sm font-medium text-ink">Nombre del asesor *</label>
+          <input
+            type="text"
+            [ngModel]="nombreAsesorInput()"
+            (ngModelChange)="nombreAsesorInput.set($event)"
+            placeholder="Ej. Juan Pérez García"
+            autofocus
+            class="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition-all
+                   focus:border-we-primary focus:ring-2 focus:ring-we-primary/50"
+          />
+          <p class="mt-1.5 text-xs text-ink-muted">Necesario para saber quién te atendió.</p>
+        </div>
+
+        <div class="flex justify-end gap-2.5 pt-5">
+          <button
+            type="button"
+            (click)="cancelarApartar()"
+            class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary
+                   active:scale-[0.97] transition-transform duration-150"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            [disabled]="nombreAsesorInvalido() || isApartando()"
+            (click)="confirmarApartar()"
+            class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90
+                   active:scale-[0.97] transition-transform duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {{ isApartando() ? 'Apartando…' : 'Apartar' }}
+          </button>
+        </div>
+      </div>
     </div>
   }
 </div>

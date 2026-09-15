@@ -2,7 +2,9 @@ package com.werealestate.backend.service;
 
 import com.werealestate.backend.model.EstadoLote;
 import com.werealestate.backend.model.Lote;
+import com.werealestate.backend.model.MovimientoLote;
 import com.werealestate.backend.repository.LoteRepository;
+import com.werealestate.backend.repository.MovimientoLoteRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,12 +23,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class LoteAutoLiberacionScheduler {
 
     private final LoteRepository loteRepository;
+    private final MovimientoLoteRepository movimientoLoteRepository;
     private final int diasApartadoExpira;
 
     public LoteAutoLiberacionScheduler(
             LoteRepository loteRepository,
+            MovimientoLoteRepository movimientoLoteRepository,
             @Value("${app.lote.dias-apartado-expira}") int diasApartadoExpira) {
         this.loteRepository = loteRepository;
+        this.movimientoLoteRepository = movimientoLoteRepository;
         this.diasApartadoExpira = diasApartadoExpira;
     }
 
@@ -36,7 +41,9 @@ public class LoteAutoLiberacionScheduler {
         LocalDateTime limite = LocalDateTime.now().minusDays(diasApartadoExpira);
         List<Lote> vencidos = loteRepository.findByEstadoAndFechaCambioEstadoBefore(EstadoLote.APARTADO, limite);
         for (Lote lote : vencidos) {
+            EstadoLote anterior = lote.getEstado();
             lote.cambiarEstado(EstadoLote.DISPONIBLE, null);
+            movimientoLoteRepository.save(new MovimientoLote(lote, anterior, EstadoLote.DISPONIBLE, null, null));
         }
     }
 }

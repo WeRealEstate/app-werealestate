@@ -9,6 +9,7 @@ import {
   LoteImportBatchRequest,
   LoteImportResultado,
   LoteUpdateRequest,
+  MovimientoLote,
 } from '../models/lote.model';
 
 export interface BuscarLotesParams {
@@ -50,8 +51,15 @@ export class LotesService {
     return firstValueFrom(this.http.get<Lote[]>(`${this.baseUrl}/publico`, { params: { proyecto } }));
   }
 
-  cambiarEstadoPublico(id: number, estado: string): Promise<Lote> {
-    return firstValueFrom(this.http.put<Lote>(`${this.baseUrl}/publico/${id}/estado`, { estado }));
+  /** nombreAsesor es obligatorio para apartar (no para liberar) — ver LoteService.cambiarEstadoPublico. */
+  cambiarEstadoPublico(id: number, estado: string, nombreAsesor?: string): Promise<Lote> {
+    return firstValueFrom(
+      this.http.put<Lote>(`${this.baseUrl}/publico/${id}/estado`, { estado, nombreAsesor: nombreAsesor ?? null }),
+    );
+  }
+
+  listarMovimientos(id: number): Promise<MovimientoLote[]> {
+    return firstValueFrom(this.http.get<MovimientoLote[]>(`${this.baseUrl}/${id}/movimientos`));
   }
 
   obtener(id: number): Promise<Lote> {
