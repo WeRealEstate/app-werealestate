@@ -10,7 +10,7 @@ import { LotesService } from '../../../core/services/lotes.service';
 import { PromocionesService } from '../../../core/services/promociones.service';
 import { Desarrollo } from '../../../core/models/lead.model';
 import { Lote } from '../../../core/models/lote.model';
-import { Promocion } from '../../../core/models/promocion.model';
+import { Promocion, TipoPrecioPromocion } from '../../../core/models/promocion.model';
 import { PROJECTS_CONFIG } from '../../../core/data/proyectos-cotizador.config';
 import { FadeInDirective } from '../../../shared/motion/fade-in.directive';
 import { PressDirective } from '../../../shared/motion/press.directive';
@@ -154,6 +154,7 @@ export class CotizadorComponent implements OnInit {
     this.pricePerM2 =
       this.selectedProject === 'nanuu' ? 3700 : lote.superficie > SUPERFICIE_MACROLOTE_M2 ? 170 : 800;
     this.loteBloqueado = true;
+    this.revisarPromocionCompatible();
   }
 
   /** Al editar manzana o lote a mano, se desbloquea: si el nuevo valor vuelve a coincidir con un
@@ -229,6 +230,7 @@ export class CotizadorComponent implements OnInit {
     this.isCustomArea = false;
     this.customAreaDisplay = area.toLocaleString('en-US');
     this.aplicarPrecioMacrolote();
+    this.revisarPromocionCompatible();
   }
 
   /** SAMAI cobra $170/m² (tarifa de macrolote) en cuanto la superficie pasa de
@@ -261,6 +263,8 @@ export class CotizadorComponent implements OnInit {
       this.selectedArea = 200;
       this.customAreaDisplay = '200';
     }
+
+    this.revisarPromocionCompatible();
   }
 
   onCustomAreaInput(event: Event): void {
@@ -295,6 +299,7 @@ export class CotizadorComponent implements OnInit {
     // Valor REAL para los cálculos
     this.selectedArea = Number(rawValue);
     this.aplicarPrecioMacrolote();
+    this.revisarPromocionCompatible();
 
     // Valor VISUAL con comas y decimales
     const [integerPart, decimalPart] = rawValue.split('.');
@@ -380,24 +385,31 @@ export class CotizadorComponent implements OnInit {
     this.selectedPaymentType = type;
   }
 
-  /** Aplica una promoción: cambia al proyecto al que pertenece y activa el modo "promocion". */
+  /** Aplica una promoción: cambia al proyecto al que pertenece y activa el modo "promocion".
+   * selectProject() deja la tarifa en la normal (Lotes) por defecto; una promoción de Hectáreas
+   * necesita quedar en tarifa de macrolote para no contradecirse con la tarifa que exige. */
   seleccionarPromocion(promo: Promocion): void {
     this.selectProject(promo.proyecto);
+    if (promo.tipoPrecio === 'HECTAREA') {
+      this.selectPricePerM2(170);
+      // selectPricePerM2(170) fuerza selectedPaymentType a 'msi'; lo volvemos a poner en 'promocion'
+      // un par de líneas abajo, junto con el resto de las demás promociones.
+    }
     this.promocionSeleccionada = promo;
     this.selectedPaymentType = 'promocion';
     this.mostrarSelectorPromociones.set(false);
   }
 
-  /** Botón "PROMOCIÓN" junto a SAMAI/NANUU: aplica directo si hay una sola activa, o abre el selector. */
+  /** Botón "PROMOCIÓN" junto a SAMAI/NANUU: aplica directo si hay una sola elegible, o abre el selector. */
   togglePromocion(): void {
-    const activas = this.promocionesActivas();
+    const elegibles = this.promocionesElegibles;
 
-    if (activas.length === 0) {
+    if (elegibles.length === 0) {
       return;
     }
 
-    if (activas.length === 1) {
-      this.seleccionarPromocion(activas[0]);
+    if (elegibles.length === 1) {
+      this.seleccionarPromocion(elegibles[0]);
       return;
     }
 
@@ -412,6 +424,30 @@ export class CotizadorComponent implements OnInit {
 
   get isPromocion(): boolean {
     return this.selectedPaymentType === 'promocion' && this.promocionSeleccionada !== null;
+  }
+
+  /** LOTE (precio normal por m²) o HECTAREA (tarifa de macrolote): solo SAMAI llega a HECTAREA,
+   * cuando el precio por m² vigente ya es el de macrolote (ver aplicarPrecioMacrolote/selectPricePerM2). */
+  get tipoPrecioActual(): TipoPrecioPromocion {
+    return this.selectedProject === 'samai' && this.pricePerM2 === 170 ? 'HECTAREA' : 'LOTE';
+  }
+
+  /** Promociones activas que de verdad aplican a la cotización actual: una promoción de Hectáreas
+   * solo se ofrece mientras la tarifa de macrolote está vigente, y una de Lotes solo mientras no lo
+   * está. No cambia la superficie/tarifa por sí sola, solo filtra qué se puede elegir. */
+  get promocionesElegibles(): Promocion[] {
+    return this.promocionesActivas().filter((promo) => promo.tipoPrecio === this.tipoPrecioActual);
+  }
+
+  /** Si un cambio de superficie o precio por m² deja de calificar para la tarifa de la promoción ya
+   * aplicada, se quita sola: seguir mostrándola sería incoherente con el nuevo precio. */
+  private revisarPromocionCompatible(): void {
+    if (this.promocionSeleccionada && this.promocionSeleccionada.tipoPrecio !== this.tipoPrecioActual) {
+      this.promocionSeleccionada = null;
+      if (this.selectedPaymentType === 'promocion') {
+        this.selectedPaymentType = 'msi';
+      }
+    }
   }
 
   /** Si el plazo no da para ninguna aportación anual, no hay forma de aplicar la promoción sin

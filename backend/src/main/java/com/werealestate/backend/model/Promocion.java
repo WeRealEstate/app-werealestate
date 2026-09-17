@@ -2,6 +2,8 @@ package com.werealestate.backend.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -29,6 +31,12 @@ public class Promocion {
     @Column(nullable = false, length = 20)
     private String proyecto;
 
+    /** A qué tarifa del proyecto aplica: LOTE (precio normal) o HECTAREA (tarifa de macrolote,
+     * solo posible en SAMAI). Fijo desde la creación, igual que `proyecto`. */
+    @Column(name = "tipo_precio", nullable = false, length = 20)
+    @Enumerated(EnumType.STRING)
+    private TipoPrecioPromocion tipoPrecio = TipoPrecioPromocion.LOTE;
+
     @Column(name = "mensualidad_fija", nullable = false, precision = 14, scale = 2)
     private BigDecimal mensualidadFija;
 
@@ -49,9 +57,16 @@ public class Promocion {
         // JPA
     }
 
-    public Promocion(String nombre, String proyecto, BigDecimal mensualidadFija, String descripcion, LocalDateTime fechaFin) {
+    public Promocion(
+            String nombre,
+            String proyecto,
+            TipoPrecioPromocion tipoPrecio,
+            BigDecimal mensualidadFija,
+            String descripcion,
+            LocalDateTime fechaFin) {
         this.nombre = nombre;
         this.proyecto = proyecto;
+        this.tipoPrecio = tipoPrecio;
         this.mensualidadFija = mensualidadFija;
         this.descripcion = descripcion;
         this.fechaFin = fechaFin;
@@ -71,6 +86,10 @@ public class Promocion {
 
     public String getProyecto() {
         return proyecto;
+    }
+
+    public TipoPrecioPromocion getTipoPrecio() {
+        return tipoPrecio;
     }
 
     public BigDecimal getMensualidadFija() {

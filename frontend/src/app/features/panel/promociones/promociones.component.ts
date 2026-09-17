@@ -3,7 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { PromocionesService } from '../../../core/services/promociones.service';
-import { Promocion, ProyectoPromocion } from '../../../core/models/promocion.model';
+import { Promocion, ProyectoPromocion, TipoPrecioPromocion } from '../../../core/models/promocion.model';
 import { ToastService } from '../../../core/services/toast.service';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { PROJECTS_CONFIG } from '../../../core/data/proyectos-cotizador.config';
@@ -38,6 +38,7 @@ export class PromocionesComponent {
 
   readonly nombre = signal('');
   readonly proyecto = signal<ProyectoPromocion>('samai');
+  readonly tipoPrecio = signal<TipoPrecioPromocion>('LOTE');
   readonly mensualidadFija = signal(0);
   readonly mensualidadDisplay = signal('');
   readonly descripcion = signal('');
@@ -101,6 +102,15 @@ export class PromocionesComponent {
     }
   }
 
+  /** Aldea Nanuu nunca tiene tarifa de macrolote, así que una promoción suya solo puede ser de tipo
+   * "Lotes" — si el admin cambia el proyecto a Nanuu con "Hectáreas" ya elegido, se corrige solo. */
+  onProyectoChange(valor: string): void {
+    this.proyecto.set(valor as ProyectoPromocion);
+    if (valor === 'nanuu') {
+      this.tipoPrecio.set('LOTE');
+    }
+  }
+
   onMensualidadInput(event: Event): void {
     const rawValue = (event.target as HTMLInputElement).value.replace(/\D/g, '');
     if (!rawValue) {
@@ -116,6 +126,7 @@ export class PromocionesComponent {
     this.editandoId.set(promo.id);
     this.nombre.set(promo.nombre);
     this.proyecto.set(promo.proyecto);
+    this.tipoPrecio.set(promo.tipoPrecio);
     this.mensualidadFija.set(promo.mensualidadFija);
     this.mensualidadDisplay.set(promo.mensualidadFija.toLocaleString('en-US'));
     this.descripcion.set(promo.descripcion ?? '');
@@ -137,6 +148,7 @@ export class PromocionesComponent {
     this.editandoId.set(null);
     this.nombre.set('');
     this.proyecto.set('samai');
+    this.tipoPrecio.set('LOTE');
     this.mensualidadFija.set(0);
     this.mensualidadDisplay.set('');
     this.descripcion.set('');
@@ -168,14 +180,17 @@ export class PromocionesComponent {
         const nueva = await this.promocionesService.crear({
           nombre,
           proyecto: this.proyecto(),
+          tipoPrecio: this.tipoPrecio(),
           mensualidadFija: monto,
           descripcion: this.descripcion().trim() || null,
           fechaFin,
         });
-        // Crear una promoción activa desactiva cualquier otra del mismo proyecto (lo hace el backend).
+        // Crear una promoción activa desactiva cualquier otra del mismo proyecto Y tarifa (lo hace el backend).
         this.promociones.update((lista) => [
           nueva,
-          ...lista.map((p) => (p.proyecto === nueva.proyecto ? { ...p, activa: false } : p)),
+          ...lista.map((p) =>
+            p.proyecto === nueva.proyecto && p.tipoPrecio === nueva.tipoPrecio ? { ...p, activa: false } : p,
+          ),
         ]);
         this.toast.success(`Promoción "${nueva.nombre}" creada.`);
       }

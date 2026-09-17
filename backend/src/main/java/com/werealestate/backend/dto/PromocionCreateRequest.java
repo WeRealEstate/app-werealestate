@@ -1,5 +1,6 @@
 package com.werealestate.backend.dto;
 
+import com.werealestate.backend.model.TipoPrecioPromocion;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -10,6 +11,7 @@ import java.time.LocalDateTime;
 public record PromocionCreateRequest(
         @NotBlank String nombre,
         @NotBlank @Pattern(regexp = "samai|nanuu", message = "Debe ser 'samai' o 'nanuu'") String proyecto,
+        @NotNull TipoPrecioPromocion tipoPrecio,
         @NotNull @Positive BigDecimal mensualidadFija,
         String descripcion,
         /** Nulo = la promoción no vence automáticamente. */

@@ -5,8 +5,10 @@ import com.werealestate.backend.dto.PromocionDto;
 import com.werealestate.backend.dto.PromocionUpdateRequest;
 import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
+import com.werealestate.backend.exception.ValidationException;
 import com.werealestate.backend.model.Promocion;
 import com.werealestate.backend.model.Role;
+import com.werealestate.backend.model.TipoPrecioPromocion;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.repository.PromocionRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
@@ -47,10 +49,18 @@ public class PromocionService {
 
     public PromocionDto crear(PromocionCreateRequest request) {
         exigirAdmin();
+        if (request.tipoPrecio() == TipoPrecioPromocion.HECTAREA && !"samai".equals(request.proyecto())) {
+            throw new ValidationException("La tarifa de hectárea solo existe en SAMAI Campestre");
+        }
         Promocion promocion = new Promocion(
-                request.nombre(), request.proyecto(), request.mensualidadFija(), request.descripcion(), request.fechaFin());
+                request.nombre(),
+                request.proyecto(),
+                request.tipoPrecio(),
+                request.mensualidadFija(),
+                request.descripcion(),
+                request.fechaFin());
         if (promocion.isActiva()) {
-            desactivarOtrasDelProyecto(promocion.getProyecto(), null);
+            desactivarOtrasDelProyecto(promocion.getProyecto(), promocion.getTipoPrecio(), null);
         }
         promocionRepository.save(promocion);
         expirarSiVencida(promocion);
@@ -84,7 +94,7 @@ public class PromocionService {
         exigirAdmin();
         Promocion promocion = buscar(id);
         if (activa) {
-            desactivarOtrasDelProyecto(promocion.getProyecto(), id);
+            desactivarOtrasDelProyecto(promocion.getProyecto(), promocion.getTipoPrecio(), id);
         }
         promocion.setActiva(activa);
         return PromocionDto.from(promocionRepository.save(promocion));
@@ -96,8 +106,10 @@ public class PromocionService {
         promocionRepository.delete(promocion);
     }
 
-    private void desactivarOtrasDelProyecto(String proyecto, Long exceptoId) {
-        for (Promocion otra : promocionRepository.findByProyectoAndActivaTrue(proyecto)) {
+    /** Solo una promoción activa por proyecto Y tarifa (LOTE u HECTAREA) a la vez: una promoción de
+     * LOTE y otra de HECTAREA del mismo proyecto pueden estar activas al mismo tiempo sin pisarse. */
+    private void desactivarOtrasDelProyecto(String proyecto, TipoPrecioPromocion tipoPrecio, Long exceptoId) {
+        for (Promocion otra : promocionRepository.findByProyectoAndTipoPrecioAndActivaTrue(proyecto, tipoPrecio)) {
             if (exceptoId == null || !otra.getId().equals(exceptoId)) {
                 otra.setActiva(false);
                 promocionRepository.save(otra);
