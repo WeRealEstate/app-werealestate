@@ -100,10 +100,10 @@ export class PipelineComponent {
     return this.leads().filter((l) => l.asesor.id === asesorId);
   });
 
-  /** Búsqueda por nombre dentro del tablero: con muchos leads en "Sin asignar" (puede haber
-   * cientos) encontrar uno para arrastrarlo era prácticamente imposible a simple vista. Filtra
-   * las tarjetitas visibles en TODAS las columnas a la vez, sin tocar a qué columna pertenece
-   * cada lead ni el drag&drop en sí. */
+  /** Búsqueda por nombre o teléfono dentro del tablero: con muchos leads en "Sin asignar" (puede
+   * haber cientos) encontrar uno para arrastrarlo era prácticamente imposible a simple vista.
+   * Filtra las tarjetitas visibles en TODAS las columnas a la vez, sin tocar a qué columna
+   * pertenece cada lead ni el drag&drop en sí. */
   readonly busqueda = signal('');
 
   readonly hayBusqueda = computed(() => this.busqueda().trim().length > 0);
@@ -112,7 +112,9 @@ export class PipelineComponent {
     const termino = this.busqueda().trim().toLowerCase();
     const leads = this.leadsDelAsesor();
     if (!termino) return leads;
-    return leads.filter((l) => l.nombreCliente.toLowerCase().includes(termino));
+    return leads.filter(
+      (l) => l.nombreCliente.toLowerCase().includes(termino) || l.telefono.toLowerCase().includes(termino),
+    );
   });
 
   buscar(valor: string): void {
