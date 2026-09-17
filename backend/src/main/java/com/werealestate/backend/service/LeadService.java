@@ -117,7 +117,9 @@ public class LeadService {
 
         if (busqueda != null && !busqueda.isBlank()) {
             String comodin = "%" + busqueda.trim().toLowerCase() + "%";
-            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("nombreCliente")), comodin));
+            spec = spec.and((root, query, cb) -> cb.or(
+                    cb.like(cb.lower(root.get("nombreCliente")), comodin),
+                    cb.like(cb.lower(root.get("telefono")), comodin)));
         }
 
         if ("FRIOS".equalsIgnoreCase(estado)) {
