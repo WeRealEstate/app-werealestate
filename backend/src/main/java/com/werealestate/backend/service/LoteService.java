@@ -29,6 +29,7 @@ import com.werealestate.backend.repository.MovimientoLoteRepository;
 import com.werealestate.backend.repository.UsuarioRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -43,14 +44,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /** Los estados APARTADO_CON_DINERO, EN_PROCESO_DE_FIRMA y VENDIDO solo los puede establecer un
- * admin; DISPONIBLE y APARTADO los puede mover cualquiera (es el uso diario de un asesor). Dar de
- * alta/editar/importar lotes es exclusivo de admin. */
+ * admin; APARTADO_A_PLAZO solo un admin o un líder de área; DISPONIBLE y APARTADO los puede mover
+ * cualquiera (es el uso diario de un asesor). Dar de alta/editar/importar lotes es exclusivo de
+ * admin. */
 @Service
 @Transactional
 public class LoteService {
 
     private static final Set<EstadoLote> ESTADOS_SOLO_ADMIN =
             Set.of(EstadoLote.APARTADO_CON_DINERO, EstadoLote.EN_PROCESO_DE_FIRMA, EstadoLote.VENDIDO);
+
+    private static final Set<EstadoLote> ESTADOS_ADMIN_O_LIDER = Set.of(EstadoLote.APARTADO_A_PLAZO);
 
     /** Compara manzana/número de lote como números cuando se puede (así "2" queda antes que "10"
      * en vez del orden alfabético de VARCHAR, donde "10" queda antes que "2"); si alguno no es
@@ -192,9 +196,11 @@ public class LoteService {
     public LoteDto cambiarEstadoPublico(Long id, CambiarEstadoLotePublicoRequest request) {
         Lote lote = obtenerEntidad(id);
 
-        boolean tocaEstadoDeAdmin =
-                ESTADOS_SOLO_ADMIN.contains(request.estado()) || ESTADOS_SOLO_ADMIN.contains(lote.getEstado());
-        if (tocaEstadoDeAdmin) {
+        boolean tocaEstadoRestringido = ESTADOS_SOLO_ADMIN.contains(request.estado())
+                || ESTADOS_SOLO_ADMIN.contains(lote.getEstado())
+                || ESTADOS_ADMIN_O_LIDER.contains(request.estado())
+                || ESTADOS_ADMIN_O_LIDER.contains(lote.getEstado());
+        if (tocaEstadoRestringido) {
             throw new ForbiddenOperationException("Este lote no se puede modificar desde la disponibilidad pública");
         }
 
@@ -283,14 +289,30 @@ public class LoteService {
         // No solo se restringe ENTRAR a un estado exclusivo de admin: una vez que un lote ya está
         // ahí (comprometido con dinero real o en firma), solo un admin puede moverlo a cualquier
         // otro estado. Si no, cualquier asesor podría "liberar" un lote que un admin apartó en
-        // firme con solo marcarlo de vuelta a Disponible.
+        // firme con solo marcarlo de vuelta a Disponible. Mismo razonamiento para
+        // ESTADOS_ADMIN_O_LIDER, solo que ahí basta con admin o líder de área.
         boolean requiereAdmin =
                 ESTADOS_SOLO_ADMIN.contains(request.estado()) || ESTADOS_SOLO_ADMIN.contains(lote.getEstado());
         if (requiereAdmin && actual.getRol() != Role.ADMIN) {
             throw new ForbiddenOperationException("Solo un administrador puede cambiar el estado de este lote");
         }
+        boolean requiereAdminOLider =
+                ESTADOS_ADMIN_O_LIDER.contains(request.estado()) || ESTADOS_ADMIN_O_LIDER.contains(lote.getEstado());
+        if (requiereAdminOLider && actual.getRol() != Role.ADMIN && actual.getRol() != Role.LIDER_AREA) {
+            throw new ForbiddenOperationException(
+                    "Solo un administrador o un líder de área puede cambiar el estado de este lote");
+        }
+
+        if (request.estado() == EstadoLote.APARTADO_A_PLAZO) {
+            if (request.fechaExpiraApartado() == null || !request.fechaExpiraApartado().isAfter(LocalDateTime.now())) {
+                throw new ValidationException(
+                        "Para apartar a plazo hay que indicar una fecha de vencimiento futura");
+            }
+        }
 
         cambiarEstadoConHistorial(lote, request.estado(), actual, null, null);
+        lote.setFechaExpiraApartado(
+                request.estado() == EstadoLote.APARTADO_A_PLAZO ? request.fechaExpiraApartado() : null);
         return LoteDto.from(lote);
     }
 

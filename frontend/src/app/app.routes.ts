@@ -68,13 +68,13 @@ export const routes: Routes = [
       },
       {
         path: 'lotes',
-        canActivate: [roleGuard(['ASESOR', 'ADMIN'])],
+        canActivate: [roleGuard(['ASESOR', 'LIDER_AREA', 'ADMIN'])],
         loadComponent: () =>
           import('./features/lotes/lotes-list/lotes-list.component').then((m) => m.LotesListComponent),
       },
       {
         path: 'lotes/historial',
-        canActivate: [roleGuard(['ASESOR', 'ADMIN'])],
+        canActivate: [roleGuard(['ASESOR', 'LIDER_AREA', 'ADMIN'])],
         loadComponent: () =>
           import('./features/lotes/lotes-historial/lotes-historial.component').then(
             (m) => m.LotesHistorialComponent,

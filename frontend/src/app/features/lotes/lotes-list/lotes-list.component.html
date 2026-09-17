@@ -149,6 +149,9 @@
                     {{ estadoLabels[lote.estado] }}
                   </span>
                 }
+                @if (lote.estado === 'APARTADO_A_PLAZO' && lote.fechaExpiraApartado) {
+                  <p class="mt-1 text-xs text-ink-muted">Vence: {{ lote.fechaExpiraApartado | date: 'dd/MM/yy HH:mm' }}</p>
+                }
               </td>
               <td class="px-4 py-3 text-right">
                 <div class="flex items-center justify-end gap-3">
@@ -190,5 +193,71 @@
         </button>
       </div>
     }
+  }
+
+  @if (loteParaPlazo(); as lote) {
+    <button type="button" (click)="cancelarPlazo()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-40 bg-black/40"></button>
+    <div class="fixed inset-0 z-40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="plazo-titulo">
+      <div class="modal-panel-enter w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <h2 id="plazo-titulo" class="font-heading text-lg font-semibold text-ink">Apartar a plazo</h2>
+        <p class="mt-1 text-sm text-ink-muted">
+          Manzana {{ lote.manzana }}, Lote {{ lote.numeroLote }}. Elige hasta cuándo queda apartado; al llegar esa
+          fecha el lote vuelve solo a Disponible.
+        </p>
+
+        <label class="mb-1.5 mt-4 block text-sm font-medium text-ink">Fecha y hora de vencimiento</label>
+        <div class="grid grid-cols-[1fr_auto_auto] gap-2">
+          <input
+            type="date"
+            [value]="fechaPlazo()"
+            (input)="fechaPlazo.set($any($event.target).value)"
+            class="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          />
+          <select
+            [value]="horaPlazo()"
+            (change)="horaPlazo.set($any($event.target).value)"
+            aria-label="Hora (24h)"
+            class="rounded-lg border border-border px-3 py-2.5 text-sm text-ink bg-surface
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          >
+            @for (h of horasOpciones; track h) {
+              <option [value]="h">{{ h }}</option>
+            }
+          </select>
+          <select
+            [value]="minutoPlazo()"
+            (change)="minutoPlazo.set($any($event.target).value)"
+            aria-label="Minuto"
+            class="rounded-lg border border-border px-3 py-2.5 text-sm text-ink bg-surface
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          >
+            @for (m of minutosOpciones; track m) {
+              <option [value]="m">{{ m }}</option>
+            }
+          </select>
+        </div>
+        <p class="mt-1.5 text-xs text-ink-muted">Hora en formato 24h.</p>
+
+        <div class="mt-5 flex justify-end gap-2.5">
+          <button
+            type="button"
+            (click)="cancelarPlazo()"
+            class="rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink hover:border-we-primary active:scale-[0.97] transition-transform duration-150"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            (click)="confirmarPlazo()"
+            [disabled]="!fechaPlazo() || guardandoPlazo()"
+            class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90
+                   active:scale-[0.97] transition-transform duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {{ guardandoPlazo() ? 'Guardando…' : 'Apartar' }}
+          </button>
+        </div>
+      </div>
+    </div>
   }
 </div>

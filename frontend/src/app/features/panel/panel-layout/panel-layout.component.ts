@@ -27,6 +27,7 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
   LIDER_AREA: [
     { label: 'Inicio', route: '/panel/equipo', icon: 'home' },
     { label: 'Leads', route: '/panel/leads', icon: 'leads' },
+    { label: 'Lotes', route: '/panel/lotes', icon: 'lotes' },
     { label: 'Calendario', route: '/panel/calendario', icon: 'calendario' },
   ],
   EQUIPO_INTERNO: [

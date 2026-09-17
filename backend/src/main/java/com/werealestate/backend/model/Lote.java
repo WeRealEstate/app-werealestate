@@ -54,6 +54,12 @@ public class Lote {
     @Column(name = "mapa_y", precision = 6, scale = 3)
     private BigDecimal mapaY;
 
+    /** Solo tiene valor mientras estado == APARTADO_A_PLAZO; el scheduler la usa para revertir a
+     * DISPONIBLE justo como hace con el APARTADO simple, pero con una fecha propia por lote en vez
+     * del plazo fijo global. Se limpia a null en cualquier otro estado. */
+    @Column(name = "fecha_expira_apartado")
+    private LocalDateTime fechaExpiraApartado;
+
     protected Lote() {
         // JPA
     }
@@ -119,6 +125,14 @@ public class Lote {
 
     public BigDecimal getMapaY() {
         return mapaY;
+    }
+
+    public LocalDateTime getFechaExpiraApartado() {
+        return fechaExpiraApartado;
+    }
+
+    public void setFechaExpiraApartado(LocalDateTime fechaExpiraApartado) {
+        this.fechaExpiraApartado = fechaExpiraApartado;
     }
 
     /** Fija (o borra, pasando ambos en null) la posición del pin de este lote en el plano. */

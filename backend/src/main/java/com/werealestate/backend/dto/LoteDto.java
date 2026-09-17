@@ -15,7 +15,8 @@ public record LoteDto(
         LocalDateTime fechaCambioEstado,
         UsuarioResumenDto cambiadoPor,
         BigDecimal mapaX,
-        BigDecimal mapaY) {
+        BigDecimal mapaY,
+        LocalDateTime fechaExpiraApartado) {
 
     public static LoteDto from(Lote lote) {
         return new LoteDto(
@@ -28,6 +29,7 @@ public record LoteDto(
                 lote.getFechaCambioEstado(),
                 lote.getCambiadoPor() != null ? UsuarioResumenDto.from(lote.getCambiadoPor()) : null,
                 lote.getMapaX(),
-                lote.getMapaY());
+                lote.getMapaY(),
+                lote.getFechaExpiraApartado());
     }
 }

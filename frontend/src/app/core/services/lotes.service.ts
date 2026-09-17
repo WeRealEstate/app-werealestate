@@ -95,8 +95,11 @@ export class LotesService {
     return firstValueFrom(this.http.put<Lote>(`${this.baseUrl}/${id}`, request));
   }
 
-  cambiarEstado(id: number, estado: string): Promise<Lote> {
-    return firstValueFrom(this.http.put<Lote>(`${this.baseUrl}/${id}/estado`, { estado }));
+  /** fechaExpiraApartado solo aplica (y es obligatoria) para estado === 'APARTADO_A_PLAZO'. */
+  cambiarEstado(id: number, estado: string, fechaExpiraApartado?: string | null): Promise<Lote> {
+    return firstValueFrom(
+      this.http.put<Lote>(`${this.baseUrl}/${id}/estado`, { estado, fechaExpiraApartado: fechaExpiraApartado ?? null }),
+    );
   }
 
   eliminar(id: number): Promise<void> {

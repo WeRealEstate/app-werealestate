@@ -1,4 +1,5 @@
-import { DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -8,16 +9,33 @@ import { LeadsService } from '../../../core/services/leads.service';
 import { LotesService } from '../../../core/services/lotes.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { Desarrollo } from '../../../core/models/lead.model';
-import { ESTADO_LOTE_BADGE_CLASSES, ESTADO_LOTE_LABELS, ESTADOS_LOTE_SOLO_ADMIN, EstadoLote, Lote } from '../../../core/models/lote.model';
+import {
+  ESTADO_LOTE_BADGE_CLASSES,
+  ESTADO_LOTE_LABELS,
+  ESTADOS_LOTE_ADMIN_O_LIDER,
+  ESTADOS_LOTE_SOLO_ADMIN,
+  EstadoLote,
+  Lote,
+} from '../../../core/models/lote.model';
+import {
+  HORAS_OPCIONES,
+  HORA_POR_DEFECTO,
+  MINUTOS_OPCIONES,
+  MINUTO_POR_DEFECTO,
+  combinarFechaHora,
+} from '../../../core/utils/fecha-hora';
 
 const TAMANO_PAGINA = 20;
 
-/** Los 5 estados los puede ver cualquiera; para elegir uno nuevo, un no-admin solo puede moverse
- * entre Disponible/Apartado (y solo si el lote no está ya en un estado exclusivo de admin). */
+/** Los 6 estados los puede ver cualquiera; para elegir uno nuevo, un no-admin/líder solo puede
+ * moverse entre Disponible/Apartado (y solo si el lote no está ya en un estado exclusivo de
+ * admin, o de admin/líder). */
 const ESTADOS_ASESOR: EstadoLote[] = ['DISPONIBLE', 'APARTADO'];
+const ESTADOS_LIDER: EstadoLote[] = ['DISPONIBLE', 'APARTADO', 'APARTADO_A_PLAZO'];
 const ESTADOS_TODOS: EstadoLote[] = [
   'DISPONIBLE',
   'APARTADO',
+  'APARTADO_A_PLAZO',
   'APARTADO_CON_DINERO',
   'EN_PROCESO_DE_FIRMA',
   'VENDIDO',
@@ -26,7 +44,7 @@ const ESTADOS_TODOS: EstadoLote[] = [
 @Component({
   selector: 'app-lotes-list',
   standalone: true,
-  imports: [FormsModule, RouterLink, DecimalPipe],
+  imports: [FormsModule, RouterLink, DecimalPipe, DatePipe],
   templateUrl: './lotes-list.component.html',
 })
 export class LotesListComponent {
@@ -40,6 +58,18 @@ export class LotesListComponent {
   readonly badgeClases = ESTADO_LOTE_BADGE_CLASSES;
   readonly estadosLote = ESTADOS_TODOS;
   readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
+  readonly esLider = computed(() => this.auth.currentUser()?.rol === 'LIDER_AREA');
+
+  readonly horasOpciones = HORAS_OPCIONES;
+  readonly minutosOpciones = MINUTOS_OPCIONES;
+
+  /** Lote al que se le está por fijar (o ya tiene) un "Apartado a plazo": abre el modal de
+   * fecha/hora de vencimiento. null cuando el modal está cerrado. */
+  readonly loteParaPlazo = signal<Lote | null>(null);
+  readonly fechaPlazo = signal('');
+  readonly horaPlazo = signal(HORA_POR_DEFECTO);
+  readonly minutoPlazo = signal(MINUTO_POR_DEFECTO);
+  readonly guardandoPlazo = signal(false);
 
   readonly lotes = signal<Lote[]>([]);
   readonly desarrollos = signal<Desarrollo[]>([]);
@@ -78,10 +108,16 @@ export class LotesListComponent {
     return lote.desarrollo.precioM2 * lote.superficie;
   }
 
-  /** Un lote ya comprometido en un estado exclusivo de admin no lo puede tocar nadie más. */
+  /** Un lote ya comprometido en un estado exclusivo de admin (o de admin/líder) no lo puede tocar
+   * nadie de menor rango, ni siquiera para sacarlo de ahí. */
   estadosDisponiblesPara(lote: Lote): EstadoLote[] {
     if (this.esAdmin()) return ESTADOS_TODOS;
-    return ESTADOS_LOTE_SOLO_ADMIN.has(lote.estado) ? [lote.estado] : ESTADOS_ASESOR;
+    if (this.esLider()) {
+      return ESTADOS_LOTE_SOLO_ADMIN.has(lote.estado) ? [lote.estado] : ESTADOS_LIDER;
+    }
+    const bloqueadoParaAsesor =
+      ESTADOS_LOTE_SOLO_ADMIN.has(lote.estado) || ESTADOS_LOTE_ADMIN_O_LIDER.has(lote.estado);
+    return bloqueadoParaAsesor ? [lote.estado] : ESTADOS_ASESOR;
   }
 
   onFiltroTextoInput(campo: 'manzana' | 'numeroLote', valor: string): void {
@@ -159,12 +195,57 @@ export class LotesListComponent {
 
   async cambiarEstado(lote: Lote, nuevoEstado: string): Promise<void> {
     if (nuevoEstado === lote.estado) return;
+
+    // Apartado a plazo necesita una fecha de vencimiento: se pide en un modal aparte antes de
+    // llamar a la API. El <select> ya quedó visualmente en la nueva opción, pero como no tocamos
+    // `lote.estado` (el array `lotes()` no cambia) vuelve solo a mostrar el estado real si se
+    // cancela el modal.
+    if (nuevoEstado === 'APARTADO_A_PLAZO') {
+      this.abrirModalPlazo(lote);
+      return;
+    }
+
     try {
       const actualizado = await this.lotesService.cambiarEstado(lote.id, nuevoEstado);
       this.lotes.update((lista) => lista.map((l) => (l.id === lote.id ? actualizado : l)));
-    } catch {
-      this.toast.error('No se pudo cambiar el estado del lote.');
+    } catch (error) {
+      this.toast.error(this.mensajeError(error, 'No se pudo cambiar el estado del lote.'));
     }
+  }
+
+  abrirModalPlazo(lote: Lote): void {
+    this.loteParaPlazo.set(lote);
+    this.fechaPlazo.set('');
+    this.horaPlazo.set(HORA_POR_DEFECTO);
+    this.minutoPlazo.set(MINUTO_POR_DEFECTO);
+  }
+
+  cancelarPlazo(): void {
+    this.loteParaPlazo.set(null);
+  }
+
+  async confirmarPlazo(): Promise<void> {
+    const lote = this.loteParaPlazo();
+    if (!lote || !this.fechaPlazo()) return;
+
+    this.guardandoPlazo.set(true);
+    try {
+      const fechaExpira = combinarFechaHora(this.fechaPlazo(), this.horaPlazo(), this.minutoPlazo());
+      const actualizado = await this.lotesService.cambiarEstado(lote.id, 'APARTADO_A_PLAZO', fechaExpira);
+      this.lotes.update((lista) => lista.map((l) => (l.id === lote.id ? actualizado : l)));
+      this.loteParaPlazo.set(null);
+      this.toast.success('Lote apartado a plazo.');
+    } catch (error) {
+      this.toast.error(this.mensajeError(error, 'No se pudo apartar el lote a plazo.'));
+    } finally {
+      this.guardandoPlazo.set(false);
+    }
+  }
+
+  private mensajeError(error: unknown, porDefecto: string): string {
+    return error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+      ? error.error.message
+      : porDefecto;
   }
 
   async eliminar(lote: Lote): Promise<void> {
