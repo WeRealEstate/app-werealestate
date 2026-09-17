@@ -1,6 +1,6 @@
 import { DecimalPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Desarrollo } from '../../../core/models/lead.model';
 import {
@@ -115,8 +115,10 @@ export class PlanoComponent {
     this.loteAUbicarId.set(valor === '' ? null : +valor);
   }
 
-  /** En modo edición, con un lote elegido en el select, un clic sobre la imagen fija su posición
-   * (en % del ancho/alto, no en píxeles, para que sirva a cualquier tamaño de pantalla). */
+  /** En modo edición, con un lote elegido, un clic sobre la imagen fija su posición exacta (en %
+   * del ancho/alto, no en píxeles, para que sirva a cualquier tamaño de pantalla) y la guarda de
+   * inmediato — el lote sigue seleccionado después para poder corregir con otro clic si hace
+   * falta; Enter confirma y pasa al siguiente lote sin ubicar (ver onEnterKey). */
   async onClickImagen(event: MouseEvent): Promise<void> {
     if (!this.modoEdicion()) return;
     const loteId = this.loteAUbicarId();
@@ -130,10 +132,38 @@ export class PlanoComponent {
     try {
       const actualizado = await this.lotesService.actualizarPosicionMapa(loteId, x, y);
       this.plano.update((p) => (p ? { ...p, lotes: p.lotes.map((l) => (l.id === loteId ? actualizado : l)) } : p));
-      this.loteAUbicarId.set(null);
     } catch {
       this.toast.error('No se pudo ubicar el lote en el plano.');
     }
+  }
+
+  /** Enter avanza al siguiente lote sin ubicar (o al primero, si no hay ninguno elegido todavía),
+   * saltándose los que ya tienen pin; así el flujo completo es clic-clic-Enter-clic-Enter... sin
+   * volver a tocar el selector. Se ignora si el foco está en el <select> para no interferir con su
+   * navegación nativa por teclado. */
+  @HostListener('document:keydown.enter', ['$event'])
+  onEnterKey(event: Event): void {
+    if (!this.modoEdicion() || document.activeElement instanceof HTMLSelectElement) return;
+    event.preventDefault();
+    this.avanzarSiguienteLote();
+  }
+
+  /** Botón "Siguiente lote" en la plantilla: mismo salto que Enter, para quien prefiera el mouse. */
+  avanzarSiguienteLote(): void {
+    const lotes = this.plano()?.lotes ?? [];
+    if (lotes.length === 0) return;
+
+    const actualId = this.loteAUbicarId();
+    const indiceActual = actualId === null ? -1 : lotes.findIndex((l) => l.id === actualId);
+    for (let i = 1; i <= lotes.length; i++) {
+      const candidato = lotes[(indiceActual + i) % lotes.length];
+      if (candidato.mapaX == null) {
+        this.loteAUbicarId.set(candidato.id);
+        return;
+      }
+    }
+    this.loteAUbicarId.set(null);
+    this.toast.success('Todos los lotes están ubicados.');
   }
 
   onClickPin(lote: Lote, event: MouseEvent): void {

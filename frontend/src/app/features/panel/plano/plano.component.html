@@ -75,8 +75,23 @@
               </option>
             }
           </select>
+          <button
+            type="button"
+            (click)="avanzarSiguienteLote()"
+            class="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm font-semibold text-ink
+                   hover:border-we-primary active:scale-[0.97] transition-transform duration-150"
+          >
+            Siguiente lote
+            <kbd class="rounded border border-border bg-black/5 px-1.5 py-0.5 text-xs font-normal dark:bg-white/10">Enter</kbd>
+          </button>
           <p class="text-sm text-ink-muted">
-            {{ loteAUbicarId() ? 'Ahora haz clic sobre el plano para ubicarlo.' : 'Faltan ' + lotesSinUbicar().length + ' lotes por ubicar.' }}
+            @if (loteAUbicarId()) {
+              Haz clic sobre el plano para ubicarlo (puedes volver a hacer clic para corregirlo). Cuando quede bien,
+              presiona <kbd class="rounded border border-border px-1 py-0.5 text-xs">Enter</kbd> para pasar al siguiente.
+            } @else {
+              Presiona <kbd class="rounded border border-border px-1 py-0.5 text-xs">Enter</kbd> para empezar, o elige un lote arriba.
+              Faltan {{ lotesSinUbicar().length }} por ubicar.
+            }
           </p>
         </div>
       }
