@@ -55,13 +55,13 @@
           }
         </div>
         @if (plano()!.planoUrl) {
-          <p class="text-sm text-ink-muted">{{ totalUbicados() }} de {{ totalLotes() }} lotes ubicados</p>
+          <p class="text-sm text-ink-muted">{{ totalUbicados() }} de {{ totalLotes() }} lotes delimitados</p>
         }
       </div>
 
       @if (modoEdicion()) {
         <div class="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-we-primary/30 bg-we-primary/5 p-4">
-          <label class="text-sm font-medium text-ink">Lote a ubicar:</label>
+          <label class="text-sm font-medium text-ink">Lote a delimitar:</label>
           <select
             [ngModel]="loteAUbicarId()"
             (ngModelChange)="onSeleccionarLoteAUbicar($any($event) + '')"
@@ -71,26 +71,45 @@
             <option value="">Selecciona un lote…</option>
             @for (l of plano()!.lotes; track l.id) {
               <option [value]="l.id">
-                MZ {{ l.manzana }} - Lote {{ l.numeroLote }}{{ l.mapaX != null ? ' (ya ubicado)' : '' }}
+                MZ {{ l.manzana }} - Lote {{ l.numeroLote }}{{ tienePoligono(l) ? ' (ya delimitado)' : '' }}
               </option>
             }
           </select>
-          <button
-            type="button"
-            (click)="avanzarSiguienteLote()"
-            class="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm font-semibold text-ink
-                   hover:border-we-primary active:scale-[0.97] transition-transform duration-150"
-          >
-            Siguiente lote
-            <kbd class="rounded border border-border bg-black/5 px-1.5 py-0.5 text-xs font-normal dark:bg-white/10">Enter</kbd>
-          </button>
+
+          @if (puntosEnProgreso().length > 0) {
+            <button
+              type="button"
+              (click)="quitarUltimoPunto()"
+              class="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm font-semibold text-ink
+                     hover:border-we-primary active:scale-[0.97] transition-transform duration-150"
+            >
+              Deshacer último punto
+              <kbd class="rounded border border-border bg-black/5 px-1.5 py-0.5 text-xs font-normal dark:bg-white/10">Esc</kbd>
+            </button>
+          } @else {
+            <button
+              type="button"
+              (click)="avanzarSiguienteLote()"
+              class="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm font-semibold text-ink
+                     hover:border-we-primary active:scale-[0.97] transition-transform duration-150"
+            >
+              Siguiente lote
+              <kbd class="rounded border border-border bg-black/5 px-1.5 py-0.5 text-xs font-normal dark:bg-white/10">Enter</kbd>
+            </button>
+          }
+
           <p class="text-sm text-ink-muted">
-            @if (loteAUbicarId()) {
-              Haz clic sobre el plano para ubicarlo (puedes volver a hacer clic para corregirlo). Cuando quede bien,
-              presiona <kbd class="rounded border border-border px-1 py-0.5 text-xs">Enter</kbd> para pasar al siguiente.
+            @if (puntosEnProgreso().length > 0) {
+              Ya pusiste {{ puntosEnProgreso().length }} punto{{ puntosEnProgreso().length === 1 ? '' : 's' }}. Sigue haciendo
+              clic en cada esquina del lote; cuando lleves al menos 3, haz clic de nuevo sobre el
+              primer punto (el más grande) para cerrar la figura y guardarla.
+            } @else if (loteAUbicarId() !== null) {
+              Haz clic sobre el plano para empezar a dibujar el contorno del lote, esquina por
+              esquina. Si el lote ya tiene un polígono, arrastra sus vértices para corregirlo, o
+              quítalo del panel de la derecha para volver a dibujarlo desde cero.
             } @else {
               Presiona <kbd class="rounded border border-border px-1 py-0.5 text-xs">Enter</kbd> para empezar, o elige un lote arriba.
-              Faltan {{ lotesSinUbicar().length }} por ubicar.
+              Faltan {{ lotesSinUbicar().length }} por delimitar.
             }
           </p>
         </div>
@@ -104,24 +123,69 @@
     } @else {
       <div class="mt-6 grid gap-4 lg:grid-cols-[1fr_260px]">
         <div
+          #contenedorPlano
           class="relative w-full overflow-hidden rounded-xl border border-border bg-surface"
           [class.cursor-crosshair]="modoEdicion() && loteAUbicarId() !== null"
           (click)="onClickImagen($event)"
         >
           <img [src]="plano()!.planoUrl" alt="Plano de {{ plano()!.desarrolloNombre }}" class="block w-full select-none" draggable="false" />
 
-          @for (lote of plano()!.lotes; track lote.id) {
-            @if (lote.mapaX != null && lote.mapaY != null) {
-              <button
-                type="button"
-                (click)="onClickPin(lote, $event)"
-                class="absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 shadow transition-transform duration-150 hover:scale-125"
-                [class]="pinClases[lote.estado]"
-                [class.scale-150]="loteAUbicarId() === lote.id || loteActivo()?.id === lote.id"
-                [style.left.%]="lote.mapaX"
-                [style.top.%]="lote.mapaY"
-                [attr.title]="'MZ ' + lote.manzana + ' - Lote ' + lote.numeroLote"
-              ></button>
+          <!-- Polígonos guardados: relleno según estado, clic para seleccionar/editar -->
+          <svg class="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+            @for (lote of plano()!.lotes; track lote.id) {
+              @if (tienePoligono(lote)) {
+                <polygon
+                  [attr.points]="puntosSvg(lote.mapaPoligono!)"
+                  (click)="onClickPoligono(lote, $event)"
+                  class="pointer-events-auto cursor-pointer transition-opacity duration-150 hover:opacity-80"
+                  [class]="poligonoClases[lote.estado]"
+                  [attr.stroke-width]="loteAUbicarId() === lote.id || loteActivo()?.id === lote.id ? 1.2 : 0.6"
+                  vector-effect="non-scaling-stroke"
+                >
+                  <title>MZ {{ lote.manzana }} - Lote {{ lote.numeroLote }}</title>
+                </polygon>
+              }
+            }
+
+            <!-- Polígono a medio dibujar: línea abierta que sigue el orden de los clics -->
+            @if (puntosEnProgreso().length > 1) {
+              <polyline
+                [attr.points]="puntosSvg(puntosEnProgreso())"
+                fill="none"
+                class="stroke-we-primary"
+                stroke-width="0.6"
+                stroke-dasharray="1.2,1.2"
+                vector-effect="non-scaling-stroke"
+              />
+            }
+          </svg>
+
+          <!-- Vértices del polígono a medio dibujar (decorativos: el clic real lo procesa el contenedor) -->
+          @for (punto of puntosEnProgreso(); track $index) {
+            <span
+              class="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-we-primary bg-white shadow dark:bg-surface"
+              [class]="$index === 0 ? 'h-4 w-4' : 'h-2.5 w-2.5'"
+              [style.left.%]="punto.x"
+              [style.top.%]="punto.y"
+              [attr.title]="$index === 0 ? 'Haz clic aquí para cerrar la figura' : ''"
+            ></span>
+          }
+
+          <!-- Vértices arrastrables del lote que se está corrigiendo -->
+          @if (modoEdicion() && loteAUbicarId() !== null && puntosEnProgreso().length === 0) {
+            @for (lote of plano()!.lotes; track lote.id) {
+              @if (lote.id === loteAUbicarId() && tienePoligono(lote)) {
+                @for (punto of lote.mapaPoligono!; track $index) {
+                  <span
+                    (pointerdown)="iniciarArrastreVertice(lote, $index, $event)"
+                    (click)="$event.stopPropagation()"
+                    class="absolute h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 cursor-grab rounded-full border-2 border-we-primary bg-white shadow transition-transform duration-100 hover:scale-125 active:cursor-grabbing dark:bg-surface"
+                    [class.scale-125]="loteIdArrastrando() === lote.id"
+                    [style.left.%]="punto.x"
+                    [style.top.%]="punto.y"
+                  ></span>
+                }
+              }
             }
           }
         </div>
@@ -137,10 +201,10 @@
               @if (esAdmin()) {
                 <button
                   type="button"
-                  (click)="quitarPin(lote)"
+                  (click)="quitarDelimitacion(lote)"
                   class="mt-3 block text-sm font-semibold text-red-600 hover:underline"
                 >
-                  Quitar pin
+                  Quitar delimitación
                 </button>
               }
             </div>
@@ -151,7 +215,9 @@
             <ul class="mt-3 flex flex-col gap-2">
               @for (estado of estadosLote; track estado) {
                 <li class="flex items-center gap-2 text-sm text-ink-muted">
-                  <span class="h-3 w-3 rounded-full ring-2" [class]="pinClases[estado]"></span>
+                  <svg viewBox="0 0 10 10" class="h-3.5 w-3.5">
+                    <rect x="0.5" y="0.5" width="9" height="9" rx="1.5" [class]="poligonoClases[estado]" stroke-width="1" />
+                  </svg>
                   {{ estadoLabels[estado] }}
                 </li>
               }

@@ -1,6 +1,6 @@
 package com.werealestate.backend.controller;
 
-import com.werealestate.backend.dto.ActualizarPosicionMapaRequest;
+import com.werealestate.backend.dto.ActualizarPoligonoMapaRequest;
 import com.werealestate.backend.dto.CambiarEstadoLotePublicoRequest;
 import com.werealestate.backend.dto.CambiarEstadoLoteRequest;
 import com.werealestate.backend.dto.LoteCreateRequest;
@@ -111,9 +111,9 @@ public class LoteController {
     }
 
     @PutMapping("/{id}/mapa")
-    public LoteDto actualizarPosicionMapa(
-            @PathVariable Long id, @Valid @RequestBody ActualizarPosicionMapaRequest request) {
-        return loteService.actualizarPosicionMapa(id, request);
+    public LoteDto actualizarPoligonoMapa(
+            @PathVariable Long id, @Valid @RequestBody ActualizarPoligonoMapaRequest request) {
+        return loteService.actualizarPoligonoMapa(id, request);
     }
 
     @DeleteMapping("/{id}")

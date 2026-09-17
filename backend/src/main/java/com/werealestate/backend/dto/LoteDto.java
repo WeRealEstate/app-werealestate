@@ -4,6 +4,7 @@ import com.werealestate.backend.model.EstadoLote;
 import com.werealestate.backend.model.Lote;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record LoteDto(
         Long id,
@@ -14,8 +15,7 @@ public record LoteDto(
         EstadoLote estado,
         LocalDateTime fechaCambioEstado,
         UsuarioResumenDto cambiadoPor,
-        BigDecimal mapaX,
-        BigDecimal mapaY,
+        List<PuntoMapaDto> mapaPoligono,
         LocalDateTime fechaExpiraApartado) {
 
     public static LoteDto from(Lote lote) {
@@ -28,8 +28,7 @@ public record LoteDto(
                 lote.getEstado(),
                 lote.getFechaCambioEstado(),
                 lote.getCambiadoPor() != null ? UsuarioResumenDto.from(lote.getCambiadoPor()) : null,
-                lote.getMapaX(),
-                lote.getMapaY(),
+                PoligonoMapaJson.deserializar(lote.getMapaPoligonoJson()),
                 lote.getFechaExpiraApartado());
     }
 }

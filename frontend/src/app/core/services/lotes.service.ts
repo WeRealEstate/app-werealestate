@@ -11,6 +11,7 @@ import {
   LoteUpdateRequest,
   MovimientoLote,
   PlanoDesarrollo,
+  PuntoMapa,
 } from '../models/lote.model';
 
 export interface BuscarLotesParams {
@@ -110,13 +111,14 @@ export class LotesService {
     return firstValueFrom(this.http.post<LoteImportResultado>(`${this.baseUrl}/importar`, request));
   }
 
-  /** Plano interactivo de un desarrollo (imagen + pin de cada lote), para /panel/plano. */
+  /** Plano interactivo de un desarrollo (imagen + polígono de cada lote), para /panel/plano. */
   obtenerMapa(desarrolloId: number): Promise<PlanoDesarrollo> {
     return firstValueFrom(this.http.get<PlanoDesarrollo>(`${this.baseUrl}/mapa`, { params: { desarrolloId } }));
   }
 
-  /** Ubica el pin de un lote en el plano; pasar ambos en null lo borra. Exclusivo de admin. */
-  actualizarPosicionMapa(id: number, mapaX: number | null, mapaY: number | null): Promise<Lote> {
-    return firstValueFrom(this.http.put<Lote>(`${this.baseUrl}/${id}/mapa`, { mapaX, mapaY }));
+  /** Delimita un lote en el plano con su polígono; puntos vacío o null borra la delimitación.
+   * Exclusivo de admin. */
+  actualizarPoligonoMapa(id: number, puntos: PuntoMapa[] | null): Promise<Lote> {
+    return firstValueFrom(this.http.put<Lote>(`${this.baseUrl}/${id}/mapa`, { puntos }));
   }
 }

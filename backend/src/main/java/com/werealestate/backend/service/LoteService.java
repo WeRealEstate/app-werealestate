@@ -1,6 +1,6 @@
 package com.werealestate.backend.service;
 
-import com.werealestate.backend.dto.ActualizarPosicionMapaRequest;
+import com.werealestate.backend.dto.ActualizarPoligonoMapaRequest;
 import com.werealestate.backend.dto.CambiarEstadoLotePublicoRequest;
 import com.werealestate.backend.dto.CambiarEstadoLoteRequest;
 import com.werealestate.backend.dto.LoteCreateRequest;
@@ -13,6 +13,8 @@ import com.werealestate.backend.dto.LoteUpdateRequest;
 import com.werealestate.backend.dto.MovimientoLoteDto;
 import com.werealestate.backend.dto.PaginaDto;
 import com.werealestate.backend.dto.PlanoDesarrolloDto;
+import com.werealestate.backend.dto.PoligonoMapaJson;
+import com.werealestate.backend.dto.PuntoMapaDto;
 import com.werealestate.backend.exception.ConflictException;
 import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
@@ -348,15 +350,16 @@ public class LoteService {
         return new PlanoDesarrolloDto(desarrollo.getId(), desarrollo.getNombre(), desarrollo.getPlanoUrl(), lotes);
     }
 
-    /** Ubica (o borra, con ambos en null) el pin de un lote sobre el plano de su desarrollo;
-     * exclusivo de admin, igual que dar de alta/editar/importar lotes. */
-    public LoteDto actualizarPosicionMapa(Long id, ActualizarPosicionMapaRequest request) {
+    /** Delimita (o borra, con una lista vacía o nula) el polígono de un lote sobre el plano de su
+     * desarrollo; exclusivo de admin, igual que dar de alta/editar/importar lotes. */
+    public LoteDto actualizarPoligonoMapa(Long id, ActualizarPoligonoMapaRequest request) {
         exigirAdmin("delimitar lotes en el plano");
-        if ((request.mapaX() == null) != (request.mapaY() == null)) {
-            throw new ValidationException("mapaX y mapaY deben venir juntos, o ambos en null para borrar el pin");
+        List<PuntoMapaDto> puntos = request.puntos();
+        if (puntos != null && !puntos.isEmpty() && puntos.size() < 3) {
+            throw new ValidationException("Un polígono necesita al menos 3 puntos");
         }
         Lote lote = obtenerEntidad(id);
-        lote.actualizarPosicionMapa(request.mapaX(), request.mapaY());
+        lote.actualizarPoligonoMapa(PoligonoMapaJson.serializar(puntos));
         return LoteDto.from(lote);
     }
 

@@ -46,13 +46,11 @@ public class Lote {
     @JoinColumn(name = "cambiado_por_id")
     private Usuario cambiadoPor;
 
-    /** Posición (0-100, porcentaje del ancho/alto de la imagen) del pin de este lote sobre el plano
-     * de {@link Desarrollo#getPlanoUrl()}; null si todavía no se ha delimitado en el editor. */
-    @Column(name = "mapa_x", precision = 6, scale = 3)
-    private BigDecimal mapaX;
-
-    @Column(name = "mapa_y", precision = 6, scale = 3)
-    private BigDecimal mapaY;
+    /** Vértices (0-100, porcentaje del ancho/alto de la imagen) del polígono que delimita este lote
+     * sobre el plano de {@link Desarrollo#getPlanoUrl()}, en JSON; null si todavía no se ha
+     * delimitado en el editor. Ver com.werealestate.backend.dto.PoligonoMapaJson. */
+    @Column(name = "mapa_poligono", columnDefinition = "TEXT")
+    private String mapaPoligonoJson;
 
     /** Solo tiene valor mientras estado == APARTADO_A_PLAZO; el scheduler la usa para revertir a
      * DISPONIBLE justo como hace con el APARTADO simple, pero con una fecha propia por lote en vez
@@ -119,12 +117,8 @@ public class Lote {
         return cambiadoPor;
     }
 
-    public BigDecimal getMapaX() {
-        return mapaX;
-    }
-
-    public BigDecimal getMapaY() {
-        return mapaY;
+    public String getMapaPoligonoJson() {
+        return mapaPoligonoJson;
     }
 
     public LocalDateTime getFechaExpiraApartado() {
@@ -135,10 +129,9 @@ public class Lote {
         this.fechaExpiraApartado = fechaExpiraApartado;
     }
 
-    /** Fija (o borra, pasando ambos en null) la posición del pin de este lote en el plano. */
-    public void actualizarPosicionMapa(BigDecimal mapaX, BigDecimal mapaY) {
-        this.mapaX = mapaX;
-        this.mapaY = mapaY;
+    /** Fija (o borra, pasando null) el polígono que delimita este lote en el plano. */
+    public void actualizarPoligonoMapa(String mapaPoligonoJson) {
+        this.mapaPoligonoJson = mapaPoligonoJson;
     }
 
     /** Único punto de cambio de estado: siempre actualiza también la fecha y quién lo hizo, para
