@@ -188,15 +188,23 @@ export class PlanoComponent {
 
   /** En modo edición, con un lote elegido que todavía no tiene polígono guardado (o se está
    * redibujando tras quitar el anterior), cada clic sobre la imagen agrega un vértice; un clic
-   * cerca del primer vértice, con al menos 3 ya puestos, cierra la figura y la guarda. */
+   * cerca del primer vértice, con al menos 3 ya puestos, cierra la figura y la guarda. Si el lote
+   * ya tiene un polígono, un clic sobre el fondo (fuera de cualquier figura) le agrega un vértice
+   * de más en el borde más cercano — para lotes que necesitan más esquinas de las que ya tiene. */
   async onClickImagen(event: MouseEvent): Promise<void> {
     if (!this.modoEdicion()) return;
     const loteId = this.loteAUbicarId();
     if (loteId === null) return;
     const lote = this.plano()?.lotes.find((l) => l.id === loteId);
-    if (!lote || (this.tienePoligono(lote) && this.puntosEnProgreso().length === 0)) return;
+    if (!lote) return;
 
     const punto = this.posicionRelativa(event.clientX, event.clientY);
+
+    if (this.tienePoligono(lote) && this.puntosEnProgreso().length === 0) {
+      await this.agregarVerticeEnBorde(loteId, lote.mapaPoligono!, punto);
+      return;
+    }
+
     const puntos = this.puntosEnProgreso();
 
     if (puntos.length >= 3 && this.cercaDe(punto, puntos[0])) {
@@ -207,13 +215,39 @@ export class PlanoComponent {
     this.puntosEnProgreso.set([...puntos, punto]);
   }
 
-  private async guardarPoligono(loteId: number, puntos: PuntoMapa[]): Promise<void> {
+  /** Inserta un vértice nuevo justo después del borde más cercano al punto dado, para poder
+   * agregarle más esquinas a un polígono ya guardado sin borrarlo y volver a dibujarlo entero. */
+  private async agregarVerticeEnBorde(loteId: number, puntos: PuntoMapa[], nuevo: PuntoMapa): Promise<void> {
+    let mejorIndice = 0;
+    let mejorDistancia = Infinity;
+    for (let i = 0; i < puntos.length; i++) {
+      const distancia = this.distanciaPuntoSegmento(nuevo, puntos[i], puntos[(i + 1) % puntos.length]);
+      if (distancia < mejorDistancia) {
+        mejorDistancia = distancia;
+        mejorIndice = i;
+      }
+    }
+    const actualizados = [...puntos];
+    actualizados.splice(mejorIndice + 1, 0, nuevo);
+    await this.guardarPoligono(loteId, actualizados, 'Vértice agregado.');
+  }
+
+  private distanciaPuntoSegmento(p: PuntoMapa, a: PuntoMapa, b: PuntoMapa): number {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const largoCuadrado = dx * dx + dy * dy;
+    if (largoCuadrado === 0) return Math.hypot(p.x - a.x, p.y - a.y);
+    const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / largoCuadrado));
+    return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+  }
+
+  private async guardarPoligono(loteId: number, puntos: PuntoMapa[], mensajeExito = 'Lote delimitado.'): Promise<void> {
     try {
       const actualizado = await this.lotesService.actualizarPoligonoMapa(loteId, puntos);
       this.plano.update((p) => (p ? { ...p, lotes: p.lotes.map((l) => (l.id === loteId ? actualizado : l)) } : p));
       this.puntosEnProgreso.set([]);
       this.posicionCursor.set(null);
-      this.toast.success('Lote delimitado.');
+      this.toast.success(mensajeExito);
     } catch {
       this.toast.error('No se pudo guardar la delimitación del lote.');
     }
@@ -260,12 +294,19 @@ export class PlanoComponent {
     this.toast.success('Todos los lotes están delimitados.');
   }
 
-  /** Clic sobre el polígono de un lote: en modo edición cambia cuál se está delimitando (salvo que
-   * haya un dibujo a medias, para no perderlo sin querer); si no, lo selecciona para ver sus datos. */
+  /** Clic sobre el polígono de un lote. En modo edición: si es el lote que ya se está corrigiendo,
+   * le agrega un vértice de más ahí mismo (en vez de solo re-seleccionarlo); si es otro lote,
+   * cambia cuál se está delimitando (salvo que haya un dibujo a medias, para no perderlo sin
+   * querer). Fuera de modo edición, lo selecciona para ver sus datos. */
   onClickPoligono(lote: Lote, event: MouseEvent): void {
     event.stopPropagation();
     if (this.modoEdicion()) {
       if (this.puntosEnProgreso().length > 0 && this.loteAUbicarId() !== lote.id) return;
+      if (this.loteAUbicarId() === lote.id && this.tienePoligono(lote)) {
+        const punto = this.posicionRelativa(event.clientX, event.clientY);
+        void this.agregarVerticeEnBorde(lote.id, lote.mapaPoligono!, punto);
+        return;
+      }
       this.onSeleccionarLoteAUbicar(String(lote.id));
     } else {
       this.loteActivo.set(this.loteActivo()?.id === lote.id ? null : lote);
