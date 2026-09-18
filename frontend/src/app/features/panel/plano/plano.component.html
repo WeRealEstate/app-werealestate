@@ -149,13 +149,13 @@
               }
             }
 
-            <!-- Polígono a medio dibujar: vértices ya puestos + tramo "goma elástica" hasta el
-                 cursor, animada para que se note por dónde va a pasar exactamente la línea. -->
+            <!-- Polígono a medio dibujar: vértices ya puestos + tramo recto hasta el cursor, para
+                 ver por dónde va a pasar exactamente la línea antes de hacer clic. -->
             @if (puntosLineaTrazando().length > 1) {
               <polyline
                 [attr.points]="puntosSvg(puntosLineaTrazando())"
                 fill="none"
-                class="mapa-linea-trazando stroke-we-primary"
+                class="stroke-we-primary"
                 stroke-width="0.5"
                 vector-effect="non-scaling-stroke"
               />
@@ -167,7 +167,6 @@
             <span
               class="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-we-primary bg-white shadow dark:bg-surface"
               [class]="$index === 0 ? 'h-2.5 w-2.5' : 'h-1.5 w-1.5'"
-              [class.mapa-vertice-listo]="$index === 0 && listoParaCerrar()"
               [style.left.%]="punto.x"
               [style.top.%]="punto.y"
               [attr.title]="$index === 0 ? 'Haz clic aquí para cerrar la figura' : ''"

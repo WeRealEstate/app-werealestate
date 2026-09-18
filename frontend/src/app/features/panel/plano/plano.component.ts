@@ -177,23 +177,13 @@ export class PlanoComponent {
     this.posicionCursor.set(null);
   }
 
-  /** true cuando el cursor ya está lo bastante cerca del primer vértice como para cerrar la
-   * figura con el próximo clic; resalta ese vértice para avisarlo. */
-  listoParaCerrar(): boolean {
-    const cursor = this.posicionCursor();
-    const puntos = this.puntosEnProgreso();
-    return puntos.length >= 3 && !!cursor && this.cercaDe(cursor, puntos[0]);
-  }
-
-  /** Puntos a unir en la línea "goma elástica": los vértices ya puestos más el tramo hasta el
-   * cursor, que se ajusta (snap) al primer vértice en cuanto queda lo bastante cerca, para que se
-   * vea con exactitud dónde va a caer si se cierra la figura ahí mismo. */
+  /** Puntos a unir en la línea de vista previa: los vértices ya puestos más el tramo recto hasta
+   * la posición real del cursor (sin ajustarla al primer vértice ni resaltar nada, para no
+   * insinuar un cierre automático que no ocurre: cerrar la figura sigue siendo un clic aparte). */
   puntosLineaTrazando(): PuntoMapa[] {
     const puntos = this.puntosEnProgreso();
     const cursor = this.posicionCursor();
-    if (!cursor) return puntos;
-    const puntoPreview = this.listoParaCerrar() ? puntos[0] : cursor;
-    return [...puntos, puntoPreview];
+    return cursor ? [...puntos, cursor] : puntos;
   }
 
   /** En modo edición, con un lote elegido que todavía no tiene polígono guardado (o se está
