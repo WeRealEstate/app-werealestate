@@ -45,6 +45,7 @@ export class CotizadorComponent implements OnInit {
   private readonly leadsService = inject(LeadsService);
   private readonly lotesService = inject(LotesService);
   private readonly promocionesService = inject(PromocionesService);
+  private readonly route = inject(ActivatedRoute);
 
   readonly desarrollos = signal<Desarrollo[]>([]);
   readonly lotesDisponibles = signal<Lote[]>([]);
@@ -56,7 +57,7 @@ export class CotizadorComponent implements OnInit {
    * tampoco se muestran los accesos de admin (ver `esAdmin` abajo): si quien abre el link sigue
    * con sesión de admin guardada en ese navegador de una visita anterior al panel interno, esta
    * ruta pública no debe revelar ni ofrecer esos atajos de todos modos. */
-  readonly esPublico = inject(ActivatedRoute).snapshot.data['publico'] === true;
+  readonly esPublico = this.route.snapshot.data['publico'] === true;
 
   readonly esAdmin = computed(() => !this.esPublico && this.auth.currentUser()?.rol === 'ADMIN');
 
@@ -85,10 +86,25 @@ export class CotizadorComponent implements OnInit {
       }
     }
 
+    // Llegar desde el botón "Cotizar" de un lote en el Plano: ?proyecto=samai&manzana=5&lote=11
+    const params = this.route.snapshot.queryParamMap;
+    const proyectoParam = params.get('proyecto');
+    if (proyectoParam === 'samai' || proyectoParam === 'nanuu') {
+      this.selectProject(proyectoParam);
+    }
+
     try {
       await this.cargarLotesDisponibles();
     } catch {
       // Igual: si falla, se sigue capturando manzana/lote a mano.
+    }
+
+    const manzanaParam = params.get('manzana');
+    const loteParam = params.get('lote');
+    if (manzanaParam) this.blockNumber = manzanaParam;
+    if (loteParam) {
+      this.lotNumber = loteParam;
+      this.onLoteNumberChange();
     }
   }
 

@@ -1,11 +1,16 @@
-import { DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, ElementRef, HostListener, ViewChild, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { Desarrollo } from '../../../core/models/lead.model';
 import {
+  ESTADO_LOTE_BADGE_CLASSES,
+  ESTADO_LOTE_COLOR_RGB,
   ESTADO_LOTE_LABELS,
   ESTADO_LOTE_POLIGONO_CLASSES,
+  ESTADOS_LOTE_ADMIN_O_LIDER,
+  ESTADOS_LOTE_SOLO_ADMIN,
   EstadoLote,
   Lote,
   PlanoDesarrollo,
@@ -14,11 +19,39 @@ import {
 import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
 import { LotesService } from '../../../core/services/lotes.service';
+import { PdfService } from '../../../core/services/pdf-cotizacion.service';
 import { ToastService } from '../../../core/services/toast.service';
+import {
+  HORAS_OPCIONES,
+  HORA_POR_DEFECTO,
+  MINUTOS_OPCIONES,
+  MINUTO_POR_DEFECTO,
+  combinarFechaHora,
+} from '../../../core/utils/fecha-hora';
 
 /** Qué tan cerca (en % del ancho/alto de la imagen) hay que hacer clic del primer vértice para
  * cerrar el polígono que se está dibujando. */
 const UMBRAL_CIERRE_PORCENTAJE = 3;
+
+/** Igual que en Lotes: un no-admin/líder solo puede moverse entre Disponible/Apartado, y solo si
+ * el lote no está ya en un estado exclusivo de admin o de admin/líder. */
+const ESTADOS_ASESOR: EstadoLote[] = ['DISPONIBLE', 'APARTADO'];
+const ESTADOS_LIDER: EstadoLote[] = ['DISPONIBLE', 'APARTADO', 'APARTADO_A_PLAZO'];
+const ESTADOS_TODOS: EstadoLote[] = [
+  'DISPONIBLE',
+  'APARTADO',
+  'APARTADO_A_PLAZO',
+  'APARTADO_CON_DINERO',
+  'EN_PROCESO_DE_FIRMA',
+  'VENDIDO',
+];
+
+/** 'SAMAI Campestre'/'Aldea Nanuu' son los únicos desarrollos que el Cotizador sabe cotizar (ver
+ * PROJECTS_CONFIG); cualquier otro (p. ej. "Otro") no tiene un botón "Cotizar" en el Plano. */
+const NOMBRE_DESARROLLO_A_PROYECTO: Record<string, 'samai' | 'nanuu'> = {
+  'SAMAI Campestre': 'samai',
+  'Aldea Nanuu': 'nanuu',
+};
 
 /** Editor + visor del plano interactivo de un desarrollo: un admin sube la imagen (el plano de
  * ventas que ya usan en marketing) y delimita cada lote dibujando su polígono real, clic por clic,
@@ -28,7 +61,7 @@ const UMBRAL_CIERRE_PORCENTAJE = 3;
 @Component({
   selector: 'app-plano',
   standalone: true,
-  imports: [FormsModule, DecimalPipe],
+  imports: [FormsModule, DecimalPipe, DatePipe],
   templateUrl: './plano.component.html',
 })
 export class PlanoComponent {
@@ -36,13 +69,30 @@ export class PlanoComponent {
   private readonly leadsService = inject(LeadsService);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
+  private readonly router = inject(Router);
+  private readonly pdfService = inject(PdfService);
 
   @ViewChild('contenedorPlano') private readonly contenedorPlano?: ElementRef<HTMLElement>;
 
   readonly estadoLabels = ESTADO_LOTE_LABELS;
+  readonly badgeClases = ESTADO_LOTE_BADGE_CLASSES;
   readonly poligonoClases = ESTADO_LOTE_POLIGONO_CLASSES;
   readonly estadosLote = Object.keys(ESTADO_LOTE_LABELS) as EstadoLote[];
   readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
+  readonly esLider = computed(() => this.auth.currentUser()?.rol === 'LIDER_AREA');
+
+  readonly horasOpciones = HORAS_OPCIONES;
+  readonly minutosOpciones = MINUTOS_OPCIONES;
+
+  /** Lote al que se le está por fijar (o ya tiene) un "Apartado a plazo" desde el panel de detalle:
+   * abre el modal de fecha/hora de vencimiento. null cuando el modal está cerrado. */
+  readonly loteParaPlazo = signal<Lote | null>(null);
+  readonly fechaPlazo = signal('');
+  readonly horaPlazo = signal(HORA_POR_DEFECTO);
+  readonly minutoPlazo = signal(MINUTO_POR_DEFECTO);
+  readonly guardandoPlazo = signal(false);
+
+  readonly generandoPdf = signal(false);
 
   readonly desarrollos = signal<Desarrollo[]>([]);
   readonly desarrolloId = signal<number | null>(null);
@@ -324,6 +374,168 @@ export class PlanoComponent {
     } catch {
       this.toast.error('No se pudo quitar la delimitación de este lote.');
     }
+  }
+
+  // ---- Cambiar el estado de un lote desde el panel de detalle ----
+
+  /** Un lote ya comprometido en un estado exclusivo de admin (o de admin/líder) no lo puede tocar
+   * nadie de menor rango, ni siquiera para sacarlo de ahí. */
+  estadosDisponiblesPara(lote: Lote): EstadoLote[] {
+    if (this.esAdmin()) return ESTADOS_TODOS;
+    if (this.esLider()) {
+      return ESTADOS_LOTE_SOLO_ADMIN.has(lote.estado) ? [lote.estado] : ESTADOS_LIDER;
+    }
+    const bloqueado = ESTADOS_LOTE_SOLO_ADMIN.has(lote.estado) || ESTADOS_LOTE_ADMIN_O_LIDER.has(lote.estado);
+    return bloqueado ? [lote.estado] : ESTADOS_ASESOR;
+  }
+
+  async cambiarEstado(lote: Lote, nuevoEstado: string): Promise<void> {
+    if (nuevoEstado === lote.estado) return;
+
+    if (nuevoEstado === 'APARTADO_A_PLAZO') {
+      this.abrirModalPlazo(lote);
+      return;
+    }
+
+    try {
+      const actualizado = await this.lotesService.cambiarEstado(lote.id, nuevoEstado);
+      this.aplicarLoteActualizado(actualizado);
+    } catch (error) {
+      this.toast.error(this.mensajeError(error, 'No se pudo cambiar el estado del lote.'));
+    }
+  }
+
+  abrirModalPlazo(lote: Lote): void {
+    this.loteParaPlazo.set(lote);
+    this.fechaPlazo.set('');
+    this.horaPlazo.set(HORA_POR_DEFECTO);
+    this.minutoPlazo.set(MINUTO_POR_DEFECTO);
+  }
+
+  cancelarPlazo(): void {
+    this.loteParaPlazo.set(null);
+  }
+
+  async confirmarPlazo(): Promise<void> {
+    const lote = this.loteParaPlazo();
+    if (!lote || !this.fechaPlazo()) return;
+
+    this.guardandoPlazo.set(true);
+    try {
+      const fechaExpira = combinarFechaHora(this.fechaPlazo(), this.horaPlazo(), this.minutoPlazo());
+      const actualizado = await this.lotesService.cambiarEstado(lote.id, 'APARTADO_A_PLAZO', fechaExpira);
+      this.aplicarLoteActualizado(actualizado);
+      this.loteParaPlazo.set(null);
+      this.toast.success('Lote apartado a plazo.');
+    } catch (error) {
+      this.toast.error(this.mensajeError(error, 'No se pudo apartar el lote a plazo.'));
+    } finally {
+      this.guardandoPlazo.set(false);
+    }
+  }
+
+  /** Refleja el lote actualizado tanto en la lista del plano como en el panel de detalle abierto. */
+  private aplicarLoteActualizado(actualizado: Lote): void {
+    this.plano.update((p) => (p ? { ...p, lotes: p.lotes.map((l) => (l.id === actualizado.id ? actualizado : l)) } : p));
+    if (this.loteActivo()?.id === actualizado.id) {
+      this.loteActivo.set(actualizado);
+    }
+  }
+
+  private mensajeError(error: unknown, porDefecto: string): string {
+    return error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+      ? error.error.message
+      : porDefecto;
+  }
+
+  /** El precio ya no se captura a mano: siempre es el precio por m² del desarrollo × la superficie. */
+  precioEstimado(lote: Lote): number {
+    return lote.desarrollo.precioM2 * lote.superficie;
+  }
+
+  /** Proyecto que entiende el Cotizador para este lote; null si su desarrollo no es SAMAI ni Nanuu. */
+  proyectoCotizador(lote: Lote): 'samai' | 'nanuu' | null {
+    return NOMBRE_DESARROLLO_A_PROYECTO[lote.desarrollo.nombre] ?? null;
+  }
+
+  /** Botón "Cotizar este lote": abre el Cotizador con el proyecto, manzana y lote ya precargados. */
+  cotizarLote(lote: Lote): void {
+    const proyecto = this.proyectoCotizador(lote);
+    if (!proyecto) return;
+    void this.router.navigate(['/panel/cotizador'], {
+      queryParams: { proyecto, manzana: lote.manzana, lote: lote.numeroLote },
+    });
+  }
+
+  // ---- Descargar el plano completo como PDF, coloreado por estado ----
+
+  async descargarPdf(): Promise<void> {
+    const planoActual = this.plano();
+    if (!planoActual?.planoUrl) return;
+
+    this.generandoPdf.set(true);
+    try {
+      const canvas = await this.dibujarCanvasPlano(planoActual);
+      await this.pdfService.downloadPlanoPdf({
+        desarrolloNombre: planoActual.desarrolloNombre,
+        fecha: new Date().toLocaleDateString('es-MX'),
+        imagenDataUrl: canvas.toDataURL('image/jpeg', 0.85),
+        anchoImagen: canvas.width,
+        altoImagen: canvas.height,
+        leyenda: this.estadosLote.map((estado) => ({
+          label: this.estadoLabels[estado],
+          color: ESTADO_LOTE_COLOR_RGB[estado],
+        })),
+      });
+    } catch {
+      this.toast.error('No se pudo generar el PDF del plano.');
+    } finally {
+      this.generandoPdf.set(false);
+    }
+  }
+
+  /** Dibuja la imagen del plano y, encima, el polígono de cada lote ya delimitado con el color de
+   * su estado — el mismo <canvas> que después se convierte en imagen para el PDF. */
+  private dibujarCanvasPlano(plano: PlanoDesarrollo): Promise<HTMLCanvasElement> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Este navegador no soporta canvas 2D'));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0);
+
+        for (const lote of plano.lotes) {
+          if (!this.tienePoligono(lote)) continue;
+          const [r, g, b] = ESTADO_LOTE_COLOR_RGB[lote.estado];
+
+          ctx.beginPath();
+          lote.mapaPoligono!.forEach((punto, i) => {
+            const x = (punto.x / 100) * canvas.width;
+            const y = (punto.y / 100) * canvas.height;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          });
+          ctx.closePath();
+
+          ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.45)`;
+          ctx.fill();
+          ctx.strokeStyle = `rgb(${r}, ${g}, ${b})`;
+          ctx.lineWidth = Math.max(canvas.width, canvas.height) * 0.0025;
+          ctx.stroke();
+        }
+
+        resolve(canvas);
+      };
+      img.onerror = () => reject(new Error('No se pudo cargar la imagen del plano'));
+      img.src = plano.planoUrl!;
+    });
   }
 
   // ---- Arrastrar vértices de un polígono ya guardado, para corregirlo ----

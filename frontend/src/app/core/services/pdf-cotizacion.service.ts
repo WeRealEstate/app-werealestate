@@ -36,6 +36,16 @@ export interface QuotePdfData {
     }[];
 }
 
+export interface PlanoPdfData {
+  desarrolloNombre: string;
+  fecha: string;
+  /** Imagen del plano YA con los polígonos de cada lote pintados encima (canvas.toDataURL). */
+  imagenDataUrl: string;
+  anchoImagen: number;
+  altoImagen: number;
+  leyenda: { label: string; color: [number, number, number] }[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -1590,6 +1600,86 @@ private addNanuuFinancingTable(
         .toUpperCase();
 
     return `Cotizacion-${project}.pdf`;
+  }
+
+  // ==============================
+  // PDF DEL PLANO INTERACTIVO
+  // ==============================
+
+  private async buildPlanoPdf(data: PlanoPdfData): Promise<jsPDF> {
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' });
+    await this.loadFonts(doc);
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 12;
+    const headerHeight = 18;
+
+    // HEADER
+    doc.setFillColor(...this.WE_DARK);
+    doc.rect(0, 0, pageWidth, headerHeight, 'F');
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFont(this.FONT, 'bold');
+    doc.setFontSize(13);
+    doc.text(`Plano interactivo · ${data.desarrolloNombre}`, margin, headerHeight / 2 + 3);
+
+    doc.setFont(this.FONT, 'normal');
+    doc.setFontSize(8);
+    doc.text(`Generado el ${data.fecha}`, pageWidth - margin, headerHeight / 2 + 3, { align: 'right' });
+
+    // IMAGEN DEL PLANO (con los polígonos ya pintados encima)
+    const legendHeight = 14;
+    const availableWidth = pageWidth - margin * 2;
+    const availableHeight = pageHeight - headerHeight - legendHeight - margin * 2;
+
+    const aspecto = data.anchoImagen / data.altoImagen;
+    let drawWidth = availableWidth;
+    let drawHeight = drawWidth / aspecto;
+    if (drawHeight > availableHeight) {
+      drawHeight = availableHeight;
+      drawWidth = drawHeight * aspecto;
+    }
+    const drawX = (pageWidth - drawWidth) / 2;
+    const drawY = headerHeight + margin;
+
+    doc.addImage(data.imagenDataUrl, 'JPEG', drawX, drawY, drawWidth, drawHeight);
+    doc.setDrawColor(...this.BORDER);
+    doc.rect(drawX, drawY, drawWidth, drawHeight);
+
+    // LEYENDA
+    const legendY = drawY + drawHeight + 8;
+    let legendX = margin;
+    const swatchSize = 4;
+
+    doc.setFontSize(8);
+    for (const item of data.leyenda) {
+      doc.setFillColor(...item.color);
+      doc.rect(legendX, legendY - swatchSize + 1, swatchSize, swatchSize, 'F');
+
+      doc.setTextColor(...this.TEXT);
+      doc.setFont(this.FONT, 'normal');
+      doc.text(item.label, legendX + swatchSize + 2, legendY);
+
+      legendX += swatchSize + 2 + doc.getTextWidth(item.label) + 10;
+    }
+
+    // FOOTER
+    doc.setDrawColor(...this.BORDER);
+    doc.line(margin, pageHeight - 8, pageWidth - margin, pageHeight - 8);
+
+    doc.setTextColor(...this.MUTED);
+    doc.setFont(this.FONT, 'normal');
+    doc.setFontSize(6.5);
+    doc.text('WE Real Estate · Plano informativo, sujeto a cambios', margin, pageHeight - 4);
+
+    return doc;
+  }
+
+  async downloadPlanoPdf(data: PlanoPdfData): Promise<void> {
+    const doc = await this.buildPlanoPdf(data);
+    const nombre = data.desarrolloNombre.replace(/\s+/g, '-');
+    doc.save(`Plano-${nombre}.pdf`);
   }
 
 }

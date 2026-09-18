@@ -6,16 +6,30 @@
         El color de cada lote sigue su estado real. Haz clic en un lote para ver sus datos.
       </p>
     </div>
-    <select
-      [ngModel]="desarrolloId()"
-      (ngModelChange)="onDesarrolloChange($any($event) + '')"
-      class="w-full max-w-xs rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
-             focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
-    >
-      @for (d of desarrollos(); track d.id) {
-        <option [value]="d.id">{{ d.nombre }}</option>
+    <div class="flex items-center gap-2.5">
+      <select
+        [ngModel]="desarrolloId()"
+        (ngModelChange)="onDesarrolloChange($any($event) + '')"
+        class="w-full max-w-xs rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+               focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+      >
+        @for (d of desarrollos(); track d.id) {
+          <option [value]="d.id">{{ d.nombre }}</option>
+        }
+      </select>
+      @if (plano()?.planoUrl) {
+        <button
+          type="button"
+          (click)="descargarPdf()"
+          [disabled]="generandoPdf()"
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-ink
+                 hover:border-we-primary active:scale-[0.97] transition-transform duration-150 min-h-[44px]
+                 disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
+        >
+          {{ generandoPdf() ? 'Generando…' : 'Descargar PDF' }}
+        </button>
       }
-    </select>
+    </div>
   </div>
 
   @if (isLoading()) {
@@ -201,25 +215,6 @@
         </div>
 
         <div class="flex flex-col gap-4">
-          @if (loteActivo(); as lote) {
-            <div class="rounded-xl border border-border bg-surface p-4">
-              <p class="text-sm font-semibold text-ink">Manzana {{ lote.manzana }} - Lote {{ lote.numeroLote }}</p>
-              <p class="mt-1 text-sm text-ink-muted">{{ lote.superficie | number: '1.2-2' }} m²</p>
-              <p class="mt-2 inline-block rounded-full px-2.5 py-1 text-xs font-semibold" [class]="'bg-we-primary/10 text-ink'">
-                {{ estadoLabels[lote.estado] }}
-              </p>
-              @if (esAdmin()) {
-                <button
-                  type="button"
-                  (click)="quitarDelimitacion(lote)"
-                  class="mt-3 block text-sm font-semibold text-red-600 hover:underline"
-                >
-                  Quitar delimitación
-                </button>
-              }
-            </div>
-          }
-
           <div class="rounded-xl border border-border bg-surface p-4">
             <p class="text-sm font-semibold text-ink">Estados</p>
             <ul class="mt-3 flex flex-col gap-2">
@@ -238,5 +233,153 @@
     }
   } @else {
     <p class="mt-8 text-sm text-ink-muted">No hay desarrollos disponibles.</p>
+  }
+
+  <!-- Detalle del lote seleccionado: más visible como modal, con el estado editable y el atajo a
+       Cotizar, en vez del recuadro chico que antes vivía en la barra lateral. -->
+  @if (loteActivo(); as lote) {
+    <button type="button" (click)="loteActivo.set(null)" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-40 bg-black/40"></button>
+    <div class="fixed inset-0 z-40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="lote-detalle-titulo">
+      <div class="modal-panel-enter w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h2 id="lote-detalle-titulo" class="font-heading text-lg font-semibold text-ink">
+              Manzana {{ lote.manzana }} - Lote {{ lote.numeroLote }}
+            </h2>
+            <p class="mt-0.5 text-sm text-ink-muted">{{ lote.desarrollo.nombre }}</p>
+          </div>
+          <button type="button" (click)="loteActivo.set(null)" aria-label="Cerrar" class="text-ink-muted hover:text-ink">✕</button>
+        </div>
+
+        <div class="mt-4 flex items-center justify-between gap-3 rounded-lg bg-surface-2/60 px-3.5 py-3">
+          <div>
+            <p class="text-xs text-ink-muted">Superficie</p>
+            <p class="text-sm font-semibold text-ink">{{ lote.superficie | number: '1.2-2' }} m²</p>
+          </div>
+          <div class="text-right">
+            <p class="text-xs text-ink-muted">Precio estimado</p>
+            <p class="text-sm font-semibold text-ink">{{ precioEstimado(lote) | number: '1.0-0' }} MXN</p>
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <label class="mb-1.5 block text-sm font-medium text-ink">Estado</label>
+          @if (estadosDisponiblesPara(lote).length > 1) {
+            <select
+              [ngModel]="lote.estado"
+              (ngModelChange)="cambiarEstado(lote, $event)"
+              class="w-full rounded-full border-0 px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+              [class]="badgeClases[lote.estado]"
+            >
+              @for (e of estadosDisponiblesPara(lote); track e) {
+                <option [ngValue]="e">{{ estadoLabels[e] }}</option>
+              }
+            </select>
+          } @else {
+            <span
+              class="inline-flex rounded-full px-3 py-1.5 text-sm font-medium"
+              [class]="badgeClases[lote.estado]"
+              title="Solo un administrador (o un líder de área, para apartados a plazo) puede cambiar este estado"
+            >
+              {{ estadoLabels[lote.estado] }}
+            </span>
+          }
+          @if (lote.estado === 'APARTADO_A_PLAZO' && lote.fechaExpiraApartado) {
+            <p class="mt-1.5 text-xs text-ink-muted">Vence: {{ lote.fechaExpiraApartado | date: 'dd/MM/yy HH:mm' }}</p>
+          }
+        </div>
+
+        <p class="mt-4 text-xs text-ink-muted">
+          Último cambio: {{ lote.fechaCambioEstado | date: 'dd/MM/yy HH:mm' }}
+          @if (lote.cambiadoPor) {
+            · {{ lote.cambiadoPor.nombre }}
+          }
+        </p>
+
+        <div class="mt-5 flex flex-wrap items-center justify-between gap-3">
+          @if (esAdmin()) {
+            <button type="button" (click)="quitarDelimitacion(lote)" class="text-sm font-semibold text-red-600 hover:underline">
+              Quitar delimitación
+            </button>
+          }
+          @if (proyectoCotizador(lote)) {
+            <button
+              type="button"
+              (click)="cotizarLote(lote)"
+              class="ml-auto inline-flex items-center justify-center gap-2 rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
+                     hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150"
+            >
+              Cotizar este lote
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (loteParaPlazo(); as lote) {
+    <button type="button" (click)="cancelarPlazo()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="plazo-titulo">
+      <div class="modal-panel-enter w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <h2 id="plazo-titulo" class="font-heading text-lg font-semibold text-ink">Apartar a plazo</h2>
+        <p class="mt-1 text-sm text-ink-muted">
+          Manzana {{ lote.manzana }}, Lote {{ lote.numeroLote }}. Elige hasta cuándo queda apartado; al llegar esa
+          fecha el lote vuelve solo a Disponible.
+        </p>
+
+        <label class="mb-1.5 mt-4 block text-sm font-medium text-ink">Fecha y hora de vencimiento</label>
+        <div class="grid grid-cols-[1fr_auto_auto] gap-2">
+          <input
+            type="date"
+            [value]="fechaPlazo()"
+            (input)="fechaPlazo.set($any($event.target).value)"
+            class="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          />
+          <select
+            [value]="horaPlazo()"
+            (change)="horaPlazo.set($any($event.target).value)"
+            aria-label="Hora (24h)"
+            class="rounded-lg border border-border px-3 py-2.5 text-sm text-ink bg-surface
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          >
+            @for (h of horasOpciones; track h) {
+              <option [value]="h">{{ h }}</option>
+            }
+          </select>
+          <select
+            [value]="minutoPlazo()"
+            (change)="minutoPlazo.set($any($event.target).value)"
+            aria-label="Minuto"
+            class="rounded-lg border border-border px-3 py-2.5 text-sm text-ink bg-surface
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          >
+            @for (m of minutosOpciones; track m) {
+              <option [value]="m">{{ m }}</option>
+            }
+          </select>
+        </div>
+        <p class="mt-1.5 text-xs text-ink-muted">Hora en formato 24h.</p>
+
+        <div class="mt-5 flex justify-end gap-2.5">
+          <button
+            type="button"
+            (click)="cancelarPlazo()"
+            class="rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink hover:border-we-primary active:scale-[0.97] transition-transform duration-150"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            (click)="confirmarPlazo()"
+            [disabled]="!fechaPlazo() || guardandoPlazo()"
+            class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90
+                   active:scale-[0.97] transition-transform duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {{ guardandoPlazo() ? 'Guardando…' : 'Apartar' }}
+          </button>
+        </div>
+      </div>
+    </div>
   }
 </div>

@@ -48,6 +48,17 @@ export const ESTADO_LOTE_POLIGONO_CLASSES: Record<EstadoLote, string> = {
   VENDIDO: 'fill-red-500/35 stroke-red-500 dark:fill-red-400/30 dark:stroke-red-400',
 };
 
+/** Los mismos colores que ESTADO_LOTE_POLIGONO_CLASSES, pero como RGB plano: para pintar el
+ * polígono de cada lote sobre un <canvas> (el PDF del plano), donde no sirven clases de Tailwind. */
+export const ESTADO_LOTE_COLOR_RGB: Record<EstadoLote, [number, number, number]> = {
+  DISPONIBLE: [34, 197, 94],
+  APARTADO: [245, 158, 11],
+  APARTADO_A_PLAZO: [168, 85, 247],
+  APARTADO_CON_DINERO: [249, 115, 22],
+  EN_PROCESO_DE_FIRMA: [36, 63, 184],
+  VENDIDO: [239, 68, 68],
+};
+
 /** Un vértice del polígono que delimita un lote sobre el plano, en % (0-100) del ancho/alto de la
  * imagen — así sirve para cualquier tamaño de pantalla. */
 export interface PuntoMapa {
