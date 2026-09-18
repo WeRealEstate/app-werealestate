@@ -145,7 +145,7 @@
                     }
                   </select>
                 } @else {
-                  <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" [class]="badgeClases[lote.estado]" [title]="'Solo un admin puede cambiar este estado'">
+                  <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" [class]="badgeClases[lote.estado]" [title]="'Solo un administrador o un líder de área puede cambiar este estado'">
                     {{ estadoLabels[lote.estado] }}
                   </span>
                 }

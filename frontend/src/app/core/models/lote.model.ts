@@ -17,15 +17,16 @@ export const ESTADO_LOTE_LABELS: Record<EstadoLote, string> = {
   VENDIDO: 'Vendido',
 };
 
-/** Solo un admin puede establecer estos; DISPONIBLE y APARTADO los puede mover cualquiera. */
+/** Un asesor no puede establecer estos (ni sacar un lote de aquí); un admin o un líder de área sí
+ * pueden, con control total. El nombre queda por compatibilidad, aunque ya no es "solo admin". */
 export const ESTADOS_LOTE_SOLO_ADMIN: ReadonlySet<EstadoLote> = new Set([
   'APARTADO_CON_DINERO',
   'EN_PROCESO_DE_FIRMA',
   'VENDIDO',
 ]);
 
-/** Solo un admin o un líder de área puede establecer estos (o moverlos a cualquier otro estado,
- * una vez que ya están aquí). */
+/** Igual que {@link ESTADOS_LOTE_SOLO_ADMIN}: un admin o un líder de área puede establecer estos
+ * (o moverlos a cualquier otro estado, una vez que ya están aquí); un asesor no. */
 export const ESTADOS_LOTE_ADMIN_O_LIDER: ReadonlySet<EstadoLote> = new Set(['APARTADO_A_PLAZO']);
 
 export const ESTADO_LOTE_BADGE_CLASSES: Record<EstadoLote, string> = {

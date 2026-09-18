@@ -45,7 +45,7 @@ export class LotesHistorialComponent {
   private debounceHandle: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
-    this.leadsService.listarDesarrollos().then((d) => this.desarrollos.set(d));
+    this.leadsService.listarDesarrollosGestionables().then((d) => this.desarrollos.set(d));
     this.cargar();
   }
 

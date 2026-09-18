@@ -45,18 +45,19 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Los estados APARTADO_CON_DINERO, EN_PROCESO_DE_FIRMA y VENDIDO solo los puede establecer un
- * admin; APARTADO_A_PLAZO solo un admin o un líder de área; DISPONIBLE y APARTADO los puede mover
- * cualquiera (es el uso diario de un asesor). Dar de alta/editar/importar lotes es exclusivo de
- * admin. */
+/** Los estados APARTADO_A_PLAZO, APARTADO_CON_DINERO, EN_PROCESO_DE_FIRMA y VENDIDO (comprometidos
+ * con dinero real o en firma) solo los puede establecer un admin o un líder de área; DISPONIBLE y
+ * APARTADO los puede mover cualquiera (es el uso diario de un asesor). Dar de alta/editar/importar
+ * lotes es exclusivo de admin. */
 @Service
 @Transactional
 public class LoteService {
 
-    private static final Set<EstadoLote> ESTADOS_SOLO_ADMIN =
-            Set.of(EstadoLote.APARTADO_CON_DINERO, EstadoLote.EN_PROCESO_DE_FIRMA, EstadoLote.VENDIDO);
-
-    private static final Set<EstadoLote> ESTADOS_ADMIN_O_LIDER = Set.of(EstadoLote.APARTADO_A_PLAZO);
+    private static final Set<EstadoLote> ESTADOS_ADMIN_O_LIDER = Set.of(
+            EstadoLote.APARTADO_A_PLAZO,
+            EstadoLote.APARTADO_CON_DINERO,
+            EstadoLote.EN_PROCESO_DE_FIRMA,
+            EstadoLote.VENDIDO);
 
     /** Compara manzana/número de lote como números cuando se puede (así "2" queda antes que "10"
      * en vez del orden alfabético de VARCHAR, donde "10" queda antes que "2"); si alguno no es
@@ -198,10 +199,8 @@ public class LoteService {
     public LoteDto cambiarEstadoPublico(Long id, CambiarEstadoLotePublicoRequest request) {
         Lote lote = obtenerEntidad(id);
 
-        boolean tocaEstadoRestringido = ESTADOS_SOLO_ADMIN.contains(request.estado())
-                || ESTADOS_SOLO_ADMIN.contains(lote.getEstado())
-                || ESTADOS_ADMIN_O_LIDER.contains(request.estado())
-                || ESTADOS_ADMIN_O_LIDER.contains(lote.getEstado());
+        boolean tocaEstadoRestringido =
+                ESTADOS_ADMIN_O_LIDER.contains(request.estado()) || ESTADOS_ADMIN_O_LIDER.contains(lote.getEstado());
         if (tocaEstadoRestringido) {
             throw new ForbiddenOperationException("Este lote no se puede modificar desde la disponibilidad pública");
         }
@@ -288,16 +287,10 @@ public class LoteService {
         Usuario actual = currentUserProvider.getUsuarioActual();
         Lote lote = obtenerEntidad(id);
 
-        // No solo se restringe ENTRAR a un estado exclusivo de admin: una vez que un lote ya está
-        // ahí (comprometido con dinero real o en firma), solo un admin puede moverlo a cualquier
-        // otro estado. Si no, cualquier asesor podría "liberar" un lote que un admin apartó en
-        // firme con solo marcarlo de vuelta a Disponible. Mismo razonamiento para
-        // ESTADOS_ADMIN_O_LIDER, solo que ahí basta con admin o líder de área.
-        boolean requiereAdmin =
-                ESTADOS_SOLO_ADMIN.contains(request.estado()) || ESTADOS_SOLO_ADMIN.contains(lote.getEstado());
-        if (requiereAdmin && actual.getRol() != Role.ADMIN) {
-            throw new ForbiddenOperationException("Solo un administrador puede cambiar el estado de este lote");
-        }
+        // No solo se restringe ENTRAR a un estado comprometido con dinero real o en firma: una vez
+        // que un lote ya está ahí, solo un admin o un líder de área puede moverlo a cualquier otro
+        // estado. Si no, cualquier asesor podría "liberar" un lote que ya fue apartado en firme con
+        // solo marcarlo de vuelta a Disponible.
         boolean requiereAdminOLider =
                 ESTADOS_ADMIN_O_LIDER.contains(request.estado()) || ESTADOS_ADMIN_O_LIDER.contains(lote.getEstado());
         if (requiereAdminOLider && actual.getRol() != Role.ADMIN && actual.getRol() != Role.LIDER_AREA) {

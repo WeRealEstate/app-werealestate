@@ -48,7 +48,7 @@ export class LoteImportComponent {
   readonly totalIncluidas = computed(() => this.filas().filter((f) => f.incluir).length);
 
   constructor() {
-    this.leadsService.listarDesarrollos().then((d) => this.desarrollos.set(d));
+    this.leadsService.listarDesarrollosGestionables().then((d) => this.desarrollos.set(d));
   }
 
   esFilaInvalida(fila: FilaImportacion): boolean {

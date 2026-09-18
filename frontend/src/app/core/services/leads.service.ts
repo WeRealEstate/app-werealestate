@@ -127,6 +127,14 @@ export class LeadsService {
     return firstValueFrom(this.http.get<Desarrollo[]>(`${environment.apiUrl}/desarrollos`));
   }
 
+  /** Igual que {@link listarDesarrollos}, pero sin el catálogo genérico "Otro": para Plano y Lotes,
+   * donde no tiene sentido delimitar un plano o dar de alta lotes bajo un desarrollo que no es un
+   * proyecto real (existe solo para poder atribuir un lead cuyo proyecto no está en el catálogo). */
+  async listarDesarrollosGestionables(): Promise<Desarrollo[]> {
+    const desarrollos = await this.listarDesarrollos();
+    return desarrollos.filter((d) => d.nombre !== 'Otro');
+  }
+
   /** Sube/reemplaza la imagen del plano de un desarrollo, para /panel/plano. Exclusivo de
    * admin (ver DesarrolloService). */
   subirPlano(desarrolloId: number, archivo: File): Promise<Desarrollo> {

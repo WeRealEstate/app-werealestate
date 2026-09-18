@@ -31,7 +31,6 @@ const TAMANO_PAGINA = 20;
  * moverse entre Disponible/Apartado (y solo si el lote no está ya en un estado exclusivo de
  * admin, o de admin/líder). */
 const ESTADOS_ASESOR: EstadoLote[] = ['DISPONIBLE', 'APARTADO'];
-const ESTADOS_LIDER: EstadoLote[] = ['DISPONIBLE', 'APARTADO', 'APARTADO_A_PLAZO'];
 const ESTADOS_TODOS: EstadoLote[] = [
   'DISPONIBLE',
   'APARTADO',
@@ -99,7 +98,7 @@ export class LotesListComponent {
   private debounceHandle: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
-    this.leadsService.listarDesarrollos().then((d) => this.desarrollos.set(d));
+    this.leadsService.listarDesarrollosGestionables().then((d) => this.desarrollos.set(d));
     this.cargar();
   }
 
@@ -108,13 +107,11 @@ export class LotesListComponent {
     return lote.desarrollo.precioM2 * lote.superficie;
   }
 
-  /** Un lote ya comprometido en un estado exclusivo de admin (o de admin/líder) no lo puede tocar
-   * nadie de menor rango, ni siquiera para sacarlo de ahí. */
+  /** Un admin y un líder de área tienen control total sobre el estado de cualquier lote; un
+   * asesor solo se mueve entre Disponible/Apartado, y ni siquiera puede sacar un lote ya
+   * comprometido (apartado a plazo, con dinero, en firma o vendido) de ese estado. */
   estadosDisponiblesPara(lote: Lote): EstadoLote[] {
-    if (this.esAdmin()) return ESTADOS_TODOS;
-    if (this.esLider()) {
-      return ESTADOS_LOTE_SOLO_ADMIN.has(lote.estado) ? [lote.estado] : ESTADOS_LIDER;
-    }
+    if (this.esAdmin() || this.esLider()) return ESTADOS_TODOS;
     const bloqueadoParaAsesor =
       ESTADOS_LOTE_SOLO_ADMIN.has(lote.estado) || ESTADOS_LOTE_ADMIN_O_LIDER.has(lote.estado);
     return bloqueadoParaAsesor ? [lote.estado] : ESTADOS_ASESOR;

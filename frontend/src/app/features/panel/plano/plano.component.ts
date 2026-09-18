@@ -43,10 +43,9 @@ const ZOOM_PASO_RUEDA = 1.15;
  * fue un arrastre para desplazar la vista, no un clic real sobre el plano. */
 const UMBRAL_ARRASTRE_VISTA_PX = 6;
 
-/** Igual que en Lotes: un no-admin/líder solo puede moverse entre Disponible/Apartado, y solo si
- * el lote no está ya en un estado exclusivo de admin o de admin/líder. */
+/** Igual que en Lotes: un asesor solo puede moverse entre Disponible/Apartado, y solo si el lote
+ * no está ya en un estado exclusivo de admin o de admin/líder. */
 const ESTADOS_ASESOR: EstadoLote[] = ['DISPONIBLE', 'APARTADO'];
-const ESTADOS_LIDER: EstadoLote[] = ['DISPONIBLE', 'APARTADO', 'APARTADO_A_PLAZO'];
 const ESTADOS_TODOS: EstadoLote[] = [
   'DISPONIBLE',
   'APARTADO',
@@ -144,7 +143,7 @@ export class PlanoComponent {
   readonly totalUbicados = computed(() => this.totalLotes() - this.lotesSinUbicar().length);
 
   constructor() {
-    this.leadsService.listarDesarrollos().then((desarrollos) => {
+    this.leadsService.listarDesarrollosGestionables().then((desarrollos) => {
       this.desarrollos.set(desarrollos);
       if (desarrollos.length > 0) {
         this.desarrolloId.set(desarrollos[0].id);
@@ -414,13 +413,11 @@ export class PlanoComponent {
 
   // ---- Cambiar el estado de un lote desde el panel de detalle ----
 
-  /** Un lote ya comprometido en un estado exclusivo de admin (o de admin/líder) no lo puede tocar
-   * nadie de menor rango, ni siquiera para sacarlo de ahí. */
+  /** Un admin y un líder de área tienen control total sobre el estado de cualquier lote; un
+   * asesor solo se mueve entre Disponible/Apartado, y ni siquiera puede sacar un lote ya
+   * comprometido (apartado a plazo, con dinero, en firma o vendido) de ese estado. */
   estadosDisponiblesPara(lote: Lote): EstadoLote[] {
-    if (this.esAdmin()) return ESTADOS_TODOS;
-    if (this.esLider()) {
-      return ESTADOS_LOTE_SOLO_ADMIN.has(lote.estado) ? [lote.estado] : ESTADOS_LIDER;
-    }
+    if (this.esAdmin() || this.esLider()) return ESTADOS_TODOS;
     const bloqueado = ESTADOS_LOTE_SOLO_ADMIN.has(lote.estado) || ESTADOS_LOTE_ADMIN_O_LIDER.has(lote.estado);
     return bloqueado ? [lote.estado] : ESTADOS_ASESOR;
   }

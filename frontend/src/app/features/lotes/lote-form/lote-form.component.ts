@@ -34,7 +34,7 @@ export class LoteFormComponent implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
-    this.desarrollos.set(await this.leadsService.listarDesarrollos());
+    this.desarrollos.set(await this.leadsService.listarDesarrollosGestionables());
 
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
