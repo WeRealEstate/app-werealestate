@@ -33,6 +33,16 @@ import {
  * cerrar el polígono que se está dibujando. */
 const UMBRAL_CIERRE_PORCENTAJE = 3;
 
+/** Límites de zoom del plano (1 = tamaño normal) y cuánto avanza cada paso de +/- o de la rueda. */
+const ZOOM_MIN = 1;
+const ZOOM_MAX = 5;
+const ZOOM_PASO_BOTON = 1.5;
+const ZOOM_PASO_RUEDA = 1.15;
+
+/** Si el cursor se movió más que esto (en px de pantalla) entre el pointerdown y el pointerup,
+ * fue un arrastre para desplazar la vista, no un clic real sobre el plano. */
+const UMBRAL_ARRASTRE_VISTA_PX = 6;
+
 /** Igual que en Lotes: un no-admin/líder solo puede moverse entre Disponible/Apartado, y solo si
  * el lote no está ya en un estado exclusivo de admin o de admin/líder. */
 const ESTADOS_ASESOR: EstadoLote[] = ['DISPONIBLE', 'APARTADO'];
@@ -118,6 +128,17 @@ export class PlanoComponent {
   readonly loteIdArrastrando = signal<number | null>(null);
   private verticeArrastrando: { loteId: number; indice: number } | null = null;
 
+  /** Zoom y desplazamiento del plano (independiente del zoom de la página): 1 = tamaño normal,
+   * pan en px sobre el contenedor sin escalar. Se aplican como transform al div interno que
+   * envuelve la imagen y sus overlays, así que las posiciones en % de los vértices no cambian. */
+  readonly zoom = signal(1);
+  readonly panX = signal(0);
+  readonly panY = signal(0);
+  private arrastreVista: { inicioX: number; inicioY: number; panXInicial: number; panYInicial: number; movioSuficiente: boolean } | null = null;
+  /** true si el gesto que se acaba de soltar fue un arrastre para desplazar la vista (no un clic
+   * real); onClickImagen/onClickPoligono lo consumen para no procesar el clic que sigue. */
+  private ultimoGestoFuePan = false;
+
   readonly lotesSinUbicar = computed(() => this.plano()?.lotes.filter((l) => !this.tienePoligono(l)) ?? []);
   readonly totalLotes = computed(() => this.plano()?.lotes.length ?? 0);
   readonly totalUbicados = computed(() => this.totalLotes() - this.lotesSinUbicar().length);
@@ -147,6 +168,7 @@ export class PlanoComponent {
     this.loteAUbicarId.set(null);
     this.puntosEnProgreso.set([]);
     this.posicionCursor.set(null);
+    this.restablecerZoom();
     this.cargarMapa();
   }
 
@@ -201,12 +223,18 @@ export class PlanoComponent {
     this.posicionCursor.set(null);
   }
 
+  /** Convierte una posición de pantalla (clientX/Y) al % dentro de la imagen sin escalar, deshaciendo
+   * el pan/zoom actual del visor: el div interno se desplaza panX/panY y se escala zoom, así que el
+   * punto de contenido bajo el cursor es ((posición en el contenedor) - pan) / zoom. */
   private posicionRelativa(clientX: number, clientY: number): PuntoMapa {
     const contenedor = this.contenedorPlano?.nativeElement;
     if (!contenedor) return { x: 0, y: 0 };
     const rect = contenedor.getBoundingClientRect();
-    const x = Math.min(100, Math.max(0, ((clientX - rect.left) / rect.width) * 100));
-    const y = Math.min(100, Math.max(0, ((clientY - rect.top) / rect.height) * 100));
+    const zoom = this.zoom();
+    const innerX = (clientX - rect.left - this.panX()) / zoom;
+    const innerY = (clientY - rect.top - this.panY()) / zoom;
+    const x = Math.min(100, Math.max(0, (innerX / rect.width) * 100));
+    const y = Math.min(100, Math.max(0, (innerY / rect.height) * 100));
     return { x: Math.round(x * 100) / 100, y: Math.round(y * 100) / 100 };
   }
 
@@ -242,6 +270,10 @@ export class PlanoComponent {
    * ya tiene un polígono, un clic sobre el fondo (fuera de cualquier figura) le agrega un vértice
    * de más en el borde más cercano — para lotes que necesitan más esquinas de las que ya tiene. */
   async onClickImagen(event: MouseEvent): Promise<void> {
+    if (this.ultimoGestoFuePan) {
+      this.ultimoGestoFuePan = false;
+      return;
+    }
     if (!this.modoEdicion()) return;
     const loteId = this.loteAUbicarId();
     if (loteId === null) return;
@@ -350,6 +382,10 @@ export class PlanoComponent {
    * querer). Fuera de modo edición, lo selecciona para ver sus datos. */
   onClickPoligono(lote: Lote, event: MouseEvent): void {
     event.stopPropagation();
+    if (this.ultimoGestoFuePan) {
+      this.ultimoGestoFuePan = false;
+      return;
+    }
     if (this.modoEdicion()) {
       if (this.puntosEnProgreso().length > 0 && this.loteAUbicarId() !== lote.id) return;
       if (this.loteAUbicarId() === lote.id && this.tienePoligono(lote)) {
@@ -538,6 +574,79 @@ export class PlanoComponent {
     });
   }
 
+  // ---- Zoom y desplazamiento del plano (aparte del zoom del navegador, que no lo toca) ----
+
+  /** Acerca/aleja manteniendo fijo, bajo ese punto de pantalla, el mismo punto de la imagen — así
+   * la vista no "salta" al hacer zoom con la rueda sobre un lote en particular. */
+  private zoomEn(clientX: number, clientY: number, nuevoZoom: number): void {
+    const contenedor = this.contenedorPlano?.nativeElement;
+    if (!contenedor) return;
+    const rect = contenedor.getBoundingClientRect();
+    const zoomActual = this.zoom();
+    const zoomFinal = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, nuevoZoom));
+    if (zoomFinal === zoomActual) return;
+
+    const puntoX = clientX - rect.left;
+    const puntoY = clientY - rect.top;
+    const contenidoX = (puntoX - this.panX()) / zoomActual;
+    const contenidoY = (puntoY - this.panY()) / zoomActual;
+
+    this.zoom.set(zoomFinal);
+    this.panX.set(puntoX - contenidoX * zoomFinal);
+    this.panY.set(puntoY - contenidoY * zoomFinal);
+    this.limitarPan(rect);
+  }
+
+  private zoomEnCentro(nuevoZoom: number): void {
+    const rect = this.contenedorPlano?.nativeElement.getBoundingClientRect();
+    if (!rect) return;
+    this.zoomEn(rect.left + rect.width / 2, rect.top + rect.height / 2, nuevoZoom);
+  }
+
+  /** Evita que, al alejar el zoom o soltar el arrastre, la imagen quede desplazada fuera de vista. */
+  private limitarPan(rect: DOMRect): void {
+    const zoom = this.zoom();
+    const minPanX = rect.width - rect.width * zoom;
+    const minPanY = rect.height - rect.height * zoom;
+    this.panX.set(Math.min(0, Math.max(minPanX, this.panX())));
+    this.panY.set(Math.min(0, Math.max(minPanY, this.panY())));
+  }
+
+  acercarZoom(): void {
+    this.zoomEnCentro(this.zoom() * ZOOM_PASO_BOTON);
+  }
+
+  alejarZoom(): void {
+    this.zoomEnCentro(this.zoom() / ZOOM_PASO_BOTON);
+  }
+
+  restablecerZoom(): void {
+    this.zoom.set(1);
+    this.panX.set(0);
+    this.panY.set(0);
+  }
+
+  /** La rueda del mouse hace zoom solo del plano (hacia donde apunta el cursor), nunca de la
+   * página completa: por eso el preventDefault, que bloquea el zoom nativo del navegador. */
+  onWheelImagen(event: WheelEvent): void {
+    event.preventDefault();
+    const factor = event.deltaY < 0 ? ZOOM_PASO_RUEDA : 1 / ZOOM_PASO_RUEDA;
+    this.zoomEn(event.clientX, event.clientY, this.zoom() * factor);
+  }
+
+  /** Con zoom aplicado, arrastrar desplaza la vista en vez de hacer clic; si el mouse no se mueve
+   * lo suficiente antes de soltar, se procesa como un clic normal (ver onPointerUp). */
+  onPointerDownVista(event: PointerEvent): void {
+    if (this.zoom() <= ZOOM_MIN) return;
+    this.arrastreVista = {
+      inicioX: event.clientX,
+      inicioY: event.clientY,
+      panXInicial: this.panX(),
+      panYInicial: this.panY(),
+      movioSuficiente: false,
+    };
+  }
+
   // ---- Arrastrar vértices de un polígono ya guardado, para corregirlo ----
 
   iniciarArrastreVertice(lote: Lote, indice: number, event: PointerEvent): void {
@@ -550,23 +659,45 @@ export class PlanoComponent {
 
   @HostListener('document:pointermove', ['$event'])
   onPointerMove(event: PointerEvent): void {
-    if (!this.verticeArrastrando) return;
-    const { loteId, indice } = this.verticeArrastrando;
-    const punto = this.posicionRelativa(event.clientX, event.clientY);
-    this.plano.update((p) => {
-      if (!p) return p;
-      return {
-        ...p,
-        lotes: p.lotes.map((l) => {
-          if (l.id !== loteId || !l.mapaPoligono) return l;
-          return { ...l, mapaPoligono: l.mapaPoligono.map((pt, i) => (i === indice ? punto : pt)) };
-        }),
-      };
-    });
+    if (this.verticeArrastrando) {
+      const { loteId, indice } = this.verticeArrastrando;
+      const punto = this.posicionRelativa(event.clientX, event.clientY);
+      this.plano.update((p) => {
+        if (!p) return p;
+        return {
+          ...p,
+          lotes: p.lotes.map((l) => {
+            if (l.id !== loteId || !l.mapaPoligono) return l;
+            return { ...l, mapaPoligono: l.mapaPoligono.map((pt, i) => (i === indice ? punto : pt)) };
+          }),
+        };
+      });
+      return;
+    }
+
+    if (this.arrastreVista) {
+      const dx = event.clientX - this.arrastreVista.inicioX;
+      const dy = event.clientY - this.arrastreVista.inicioY;
+      if (!this.arrastreVista.movioSuficiente && Math.hypot(dx, dy) > UMBRAL_ARRASTRE_VISTA_PX) {
+        this.arrastreVista.movioSuficiente = true;
+      }
+      if (this.arrastreVista.movioSuficiente) {
+        this.panX.set(this.arrastreVista.panXInicial + dx);
+        this.panY.set(this.arrastreVista.panYInicial + dy);
+        const rect = this.contenedorPlano?.nativeElement.getBoundingClientRect();
+        if (rect) this.limitarPan(rect);
+      }
+    }
   }
 
   @HostListener('document:pointerup')
   async onPointerUp(): Promise<void> {
+    if (this.arrastreVista) {
+      this.ultimoGestoFuePan = this.arrastreVista.movioSuficiente;
+      this.arrastreVista = null;
+      return;
+    }
+
     if (!this.verticeArrastrando) return;
     const { loteId } = this.verticeArrastrando;
     this.verticeArrastrando = null;

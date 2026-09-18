@@ -139,79 +139,121 @@
       <div class="mt-6 grid gap-4 lg:grid-cols-[1fr_260px]">
         <div
           #contenedorPlano
-          class="relative w-full overflow-hidden rounded-xl border border-border bg-surface"
+          class="relative w-full overflow-hidden rounded-xl border border-border bg-surface touch-none"
           [class.cursor-crosshair]="modoEdicion() && loteAUbicarId() !== null"
+          [class.cursor-grab]="!(modoEdicion() && loteAUbicarId() !== null) && zoom() > 1"
           (click)="onClickImagen($event)"
           (mousemove)="onMouseMoveImagen($event)"
           (mouseleave)="onMouseLeaveImagen()"
+          (pointerdown)="onPointerDownVista($event)"
+          (wheel)="onWheelImagen($event)"
         >
-          <img [src]="plano()!.planoUrl" alt="Plano de {{ plano()!.desarrolloNombre }}" class="block w-full select-none" draggable="false" />
+          <div class="relative origin-top-left" [style.transform]="'translate(' + panX() + 'px, ' + panY() + 'px) scale(' + zoom() + ')'">
+            <img [src]="plano()!.planoUrl" alt="Plano de {{ plano()!.desarrolloNombre }}" class="block w-full select-none" draggable="false" />
 
-          <!-- Polígonos guardados: relleno según estado, clic para seleccionar/editar -->
-          <svg class="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-            @for (lote of plano()!.lotes; track lote.id) {
-              @if (tienePoligono(lote)) {
-                <polygon
-                  [attr.points]="puntosSvg(lote.mapaPoligono!)"
-                  (click)="onClickPoligono(lote, $event)"
-                  class="pointer-events-auto cursor-pointer transition-opacity duration-150 hover:opacity-80"
-                  [class]="poligonoClases[lote.estado]"
-                  [attr.stroke-width]="loteAUbicarId() === lote.id || loteActivo()?.id === lote.id ? 1.2 : 0.6"
-                  vector-effect="non-scaling-stroke"
-                >
-                  <title>MZ {{ lote.manzana }} - Lote {{ lote.numeroLote }}</title>
-                </polygon>
-              }
-            }
-
-            <!-- Polígono a medio dibujar: vértices ya puestos + tramo recto hasta el cursor, para
-                 ver por dónde va a pasar exactamente la línea antes de hacer clic. -->
-            @if (puntosLineaTrazando().length > 1) {
-              <polyline
-                [attr.points]="puntosSvg(puntosLineaTrazando())"
-                fill="none"
-                class="stroke-we-primary"
-                stroke-width="0.5"
-                vector-effect="non-scaling-stroke"
-              />
-            }
-          </svg>
-
-          <!-- Vértices del polígono a medio dibujar: puntos sólidos chicos, sin borde ni sombra
-               para que no se vean como pines (decorativos, el clic lo procesa el contenedor). -->
-          @for (punto of puntosEnProgreso(); track $index) {
-            <span
-              class="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-we-primary"
-              [class]="$index === 0 ? 'h-1.5 w-1.5' : 'h-1 w-1'"
-              [style.left.%]="punto.x"
-              [style.top.%]="punto.y"
-              [attr.title]="$index === 0 ? 'Haz clic aquí para cerrar la figura' : ''"
-            ></span>
-          }
-
-          <!-- Vértices arrastrables del lote que se está corrigiendo: el punto visible es chico,
-               pero el área de agarre (el padding del span exterior) es más grande para que siga
-               siendo fácil de tomar con el mouse. -->
-          @if (modoEdicion() && loteAUbicarId() !== null && puntosEnProgreso().length === 0) {
-            @for (lote of plano()!.lotes; track lote.id) {
-              @if (lote.id === loteAUbicarId() && tienePoligono(lote)) {
-                @for (punto of lote.mapaPoligono!; track $index) {
-                  <span
-                    (pointerdown)="iniciarArrastreVertice(lote, $index, $event)"
-                    (click)="$event.stopPropagation()"
-                    class="absolute -translate-x-1/2 -translate-y-1/2 cursor-grab p-2 active:cursor-grabbing"
-                    [style.left.%]="punto.x"
-                    [style.top.%]="punto.y"
+            <!-- Polígonos guardados: relleno según estado, clic para seleccionar/editar -->
+            <svg class="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+              @for (lote of plano()!.lotes; track lote.id) {
+                @if (tienePoligono(lote)) {
+                  <polygon
+                    [attr.points]="puntosSvg(lote.mapaPoligono!)"
+                    (click)="onClickPoligono(lote, $event)"
+                    class="pointer-events-auto cursor-pointer transition-opacity duration-150 hover:opacity-80"
+                    [class]="poligonoClases[lote.estado]"
+                    [attr.stroke-width]="loteAUbicarId() === lote.id || loteActivo()?.id === lote.id ? 1.2 : 0.6"
+                    vector-effect="non-scaling-stroke"
                   >
+                    <title>MZ {{ lote.manzana }} - Lote {{ lote.numeroLote }}</title>
+                  </polygon>
+                }
+              }
+
+              <!-- Polígono a medio dibujar: vértices ya puestos + tramo recto hasta el cursor, para
+                   ver por dónde va a pasar exactamente la línea antes de hacer clic. -->
+              @if (puntosLineaTrazando().length > 1) {
+                <polyline
+                  [attr.points]="puntosSvg(puntosLineaTrazando())"
+                  fill="none"
+                  class="stroke-we-primary"
+                  stroke-width="0.5"
+                  vector-effect="non-scaling-stroke"
+                />
+              }
+            </svg>
+
+            <!-- Vértices del polígono a medio dibujar: puntos sólidos chicos, sin borde ni sombra
+                 para que no se vean como pines (decorativos, el clic lo procesa el contenedor). -->
+            @for (punto of puntosEnProgreso(); track $index) {
+              <span
+                class="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-we-primary"
+                [class]="$index === 0 ? 'h-1.5 w-1.5' : 'h-1 w-1'"
+                [style.left.%]="punto.x"
+                [style.top.%]="punto.y"
+                [attr.title]="$index === 0 ? 'Haz clic aquí para cerrar la figura' : ''"
+              ></span>
+            }
+
+            <!-- Vértices arrastrables del lote que se está corrigiendo: el punto visible es chico,
+                 pero el área de agarre (el padding del span exterior) es más grande para que siga
+                 siendo fácil de tomar con el mouse. -->
+            @if (modoEdicion() && loteAUbicarId() !== null && puntosEnProgreso().length === 0) {
+              @for (lote of plano()!.lotes; track lote.id) {
+                @if (lote.id === loteAUbicarId() && tienePoligono(lote)) {
+                  @for (punto of lote.mapaPoligono!; track $index) {
                     <span
-                      class="block h-1.5 w-1.5 rounded-full bg-we-primary transition-transform duration-100 hover:scale-150"
-                      [class.scale-150]="loteIdArrastrando() === lote.id"
-                    ></span>
-                  </span>
+                      (pointerdown)="iniciarArrastreVertice(lote, $index, $event)"
+                      (click)="$event.stopPropagation()"
+                      class="absolute -translate-x-1/2 -translate-y-1/2 cursor-grab p-2 active:cursor-grabbing"
+                      [style.left.%]="punto.x"
+                      [style.top.%]="punto.y"
+                    >
+                      <span
+                        class="block h-1.5 w-1.5 rounded-full bg-we-primary transition-transform duration-100 hover:scale-150"
+                        [class.scale-150]="loteIdArrastrando() === lote.id"
+                      ></span>
+                    </span>
+                  }
                 }
               }
             }
-          }
+          </div>
+
+          <!-- Controles de zoom del plano (no del navegador): esquina inferior derecha, estilo mapa.
+               stopPropagation en click/pointerdown evita que un clic aquí burbujee al contenedor y
+               se interprete como un clic sobre la imagen (agregaría un vértice fantasma). -->
+          <div
+            class="absolute bottom-3 right-3 flex items-center gap-1 rounded-lg border border-border bg-surface/95 p-1 shadow-lg backdrop-blur"
+            (click)="$event.stopPropagation()"
+            (pointerdown)="$event.stopPropagation()"
+          >
+            <button
+              type="button"
+              (click)="alejarZoom()"
+              [disabled]="zoom() <= 1"
+              aria-label="Alejar"
+              class="flex h-8 w-8 items-center justify-center rounded-md text-lg font-semibold text-ink hover:bg-surface-2 disabled:opacity-40 disabled:hover:bg-transparent"
+            >
+              −
+            </button>
+            <button
+              type="button"
+              (click)="restablecerZoom()"
+              [disabled]="zoom() === 1"
+              class="min-w-[3rem] rounded-md px-1.5 py-1 text-center text-xs font-medium text-ink-muted hover:bg-surface-2 disabled:opacity-60 disabled:hover:bg-transparent"
+              title="Restablecer zoom"
+            >
+              {{ zoom() * 100 | number: '1.0-0' }}%
+            </button>
+            <button
+              type="button"
+              (click)="acercarZoom()"
+              [disabled]="zoom() >= 5"
+              aria-label="Acercar"
+              class="flex h-8 w-8 items-center justify-center rounded-md text-lg font-semibold text-ink hover:bg-surface-2 disabled:opacity-40 disabled:hover:bg-transparent"
+            >
+              +
+            </button>
+          </div>
         </div>
 
         <div class="flex flex-col gap-4">
