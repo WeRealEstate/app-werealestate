@@ -271,6 +271,33 @@ input, select, textarea {
   animation: modal-backdrop-in 180ms ease-out both;
 }
 
+/* Plano: mientras se dibuja el contorno de un lote, la línea (vértices ya puestos + el tramo
+   hasta el cursor) "camina" para que se sienta viva, no como una guía estática — así se nota de
+   un vistazo por dónde va a pasar exactamente el siguiente tramo. */
+@keyframes mapa-linea-trazando {
+  to {
+    stroke-dashoffset: -8;
+  }
+}
+.mapa-linea-trazando {
+  stroke-dasharray: 3 2;
+  animation: mapa-linea-trazando 500ms linear infinite;
+}
+
+/* Vértice inicial del polígono en curso: cuando el cursor ya está lo bastante cerca para cerrar
+   la figura, respira para avisar "haz clic aquí para cerrar". */
+@keyframes mapa-vertice-pulso {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.5);
+  }
+}
+.mapa-vertice-listo {
+  animation: mapa-vertice-pulso 700ms ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .page-enter,
   .stagger-item,
@@ -297,5 +324,11 @@ input, select, textarea {
   .tablero-lista-receptora {
     animation: none;
     box-shadow: inset 0 0 0 2px color-mix(in oklch, var(--card-accent, var(--color-we-primary)) 70%, transparent);
+  }
+  .mapa-linea-trazando {
+    animation: none;
+  }
+  .mapa-vertice-listo {
+    animation: none;
   }
 }

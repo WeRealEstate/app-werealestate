@@ -127,6 +127,8 @@
           class="relative w-full overflow-hidden rounded-xl border border-border bg-surface"
           [class.cursor-crosshair]="modoEdicion() && loteAUbicarId() !== null"
           (click)="onClickImagen($event)"
+          (mousemove)="onMouseMoveImagen($event)"
+          (mouseleave)="onMouseLeaveImagen()"
         >
           <img [src]="plano()!.planoUrl" alt="Plano de {{ plano()!.desarrolloNombre }}" class="block w-full select-none" draggable="false" />
 
@@ -147,14 +149,14 @@
               }
             }
 
-            <!-- Polígono a medio dibujar: línea abierta que sigue el orden de los clics -->
-            @if (puntosEnProgreso().length > 1) {
+            <!-- Polígono a medio dibujar: vértices ya puestos + tramo "goma elástica" hasta el
+                 cursor, animada para que se note por dónde va a pasar exactamente la línea. -->
+            @if (puntosLineaTrazando().length > 1) {
               <polyline
-                [attr.points]="puntosSvg(puntosEnProgreso())"
+                [attr.points]="puntosSvg(puntosLineaTrazando())"
                 fill="none"
-                class="stroke-we-primary"
-                stroke-width="0.6"
-                stroke-dasharray="1.2,1.2"
+                class="mapa-linea-trazando stroke-we-primary"
+                stroke-width="0.5"
                 vector-effect="non-scaling-stroke"
               />
             }
@@ -163,8 +165,9 @@
           <!-- Vértices del polígono a medio dibujar (decorativos: el clic real lo procesa el contenedor) -->
           @for (punto of puntosEnProgreso(); track $index) {
             <span
-              class="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-we-primary bg-white shadow dark:bg-surface"
-              [class]="$index === 0 ? 'h-4 w-4' : 'h-2.5 w-2.5'"
+              class="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-we-primary bg-white shadow dark:bg-surface"
+              [class]="$index === 0 ? 'h-2.5 w-2.5' : 'h-1.5 w-1.5'"
+              [class.mapa-vertice-listo]="$index === 0 && listoParaCerrar()"
               [style.left.%]="punto.x"
               [style.top.%]="punto.y"
               [attr.title]="$index === 0 ? 'Haz clic aquí para cerrar la figura' : ''"
@@ -179,8 +182,8 @@
                   <span
                     (pointerdown)="iniciarArrastreVertice(lote, $index, $event)"
                     (click)="$event.stopPropagation()"
-                    class="absolute h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 cursor-grab rounded-full border-2 border-we-primary bg-white shadow transition-transform duration-100 hover:scale-125 active:cursor-grabbing dark:bg-surface"
-                    [class.scale-125]="loteIdArrastrando() === lote.id"
+                    class="absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 cursor-grab rounded-full border border-we-primary bg-white shadow transition-transform duration-100 hover:scale-150 active:cursor-grabbing dark:bg-surface"
+                    [class.scale-150]="loteIdArrastrando() === lote.id"
                     [style.left.%]="punto.x"
                     [style.top.%]="punto.y"
                   ></span>

@@ -59,6 +59,11 @@ export class PlanoComponent {
    * iniciarArrastreVertice) o cuando todavía no se ha puesto ningún vértice. */
   readonly puntosEnProgreso = signal<PuntoMapa[]>([]);
 
+  /** Posición actual del cursor sobre el plano (mientras se dibuja); alimenta la línea de vista
+   * previa entre el último vértice puesto y el próximo clic. null fuera de modo edición, sin
+   * dibujo en curso, o cuando el cursor sale de la imagen. */
+  readonly posicionCursor = signal<PuntoMapa | null>(null);
+
   /** Lote cuyo vértice se está arrastrando ahora mismo, para resaltarlo mientras se corrige. */
   readonly loteIdArrastrando = signal<number | null>(null);
   private verticeArrastrando: { loteId: number; indice: number } | null = null;
@@ -91,6 +96,7 @@ export class PlanoComponent {
     this.loteActivo.set(null);
     this.loteAUbicarId.set(null);
     this.puntosEnProgreso.set([]);
+    this.posicionCursor.set(null);
     this.cargarMapa();
   }
 
@@ -113,6 +119,7 @@ export class PlanoComponent {
     this.loteAUbicarId.set(null);
     this.loteActivo.set(null);
     this.puntosEnProgreso.set([]);
+    this.posicionCursor.set(null);
   }
 
   async onArchivoPlanoSeleccionado(event: Event): Promise<void> {
@@ -141,6 +148,7 @@ export class PlanoComponent {
   onSeleccionarLoteAUbicar(valor: string): void {
     this.loteAUbicarId.set(valor === '' ? null : +valor);
     this.puntosEnProgreso.set([]);
+    this.posicionCursor.set(null);
   }
 
   private posicionRelativa(clientX: number, clientY: number): PuntoMapa {
@@ -154,6 +162,38 @@ export class PlanoComponent {
 
   private cercaDe(a: PuntoMapa, b: PuntoMapa): boolean {
     return Math.abs(a.x - b.x) <= UMBRAL_CIERRE_PORCENTAJE && Math.abs(a.y - b.y) <= UMBRAL_CIERRE_PORCENTAJE;
+  }
+
+  /** Sigue el cursor mientras se dibuja, para la línea de vista previa del próximo tramo. */
+  onMouseMoveImagen(event: MouseEvent): void {
+    if (!this.modoEdicion() || this.puntosEnProgreso().length === 0) {
+      this.posicionCursor.set(null);
+      return;
+    }
+    this.posicionCursor.set(this.posicionRelativa(event.clientX, event.clientY));
+  }
+
+  onMouseLeaveImagen(): void {
+    this.posicionCursor.set(null);
+  }
+
+  /** true cuando el cursor ya está lo bastante cerca del primer vértice como para cerrar la
+   * figura con el próximo clic; resalta ese vértice para avisarlo. */
+  listoParaCerrar(): boolean {
+    const cursor = this.posicionCursor();
+    const puntos = this.puntosEnProgreso();
+    return puntos.length >= 3 && !!cursor && this.cercaDe(cursor, puntos[0]);
+  }
+
+  /** Puntos a unir en la línea "goma elástica": los vértices ya puestos más el tramo hasta el
+   * cursor, que se ajusta (snap) al primer vértice en cuanto queda lo bastante cerca, para que se
+   * vea con exactitud dónde va a caer si se cierra la figura ahí mismo. */
+  puntosLineaTrazando(): PuntoMapa[] {
+    const puntos = this.puntosEnProgreso();
+    const cursor = this.posicionCursor();
+    if (!cursor) return puntos;
+    const puntoPreview = this.listoParaCerrar() ? puntos[0] : cursor;
+    return [...puntos, puntoPreview];
   }
 
   /** En modo edición, con un lote elegido que todavía no tiene polígono guardado (o se está
@@ -182,6 +222,7 @@ export class PlanoComponent {
       const actualizado = await this.lotesService.actualizarPoligonoMapa(loteId, puntos);
       this.plano.update((p) => (p ? { ...p, lotes: p.lotes.map((l) => (l.id === loteId ? actualizado : l)) } : p));
       this.puntosEnProgreso.set([]);
+      this.posicionCursor.set(null);
       this.toast.success('Lote delimitado.');
     } catch {
       this.toast.error('No se pudo guardar la delimitación del lote.');
