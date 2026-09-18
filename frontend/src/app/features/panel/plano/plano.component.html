@@ -162,18 +162,21 @@
             }
           </svg>
 
-          <!-- Vértices del polígono a medio dibujar (decorativos: el clic real lo procesa el contenedor) -->
+          <!-- Vértices del polígono a medio dibujar: puntos sólidos chicos, sin borde ni sombra
+               para que no se vean como pines (decorativos, el clic lo procesa el contenedor). -->
           @for (punto of puntosEnProgreso(); track $index) {
             <span
-              class="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-we-primary bg-white shadow dark:bg-surface"
-              [class]="$index === 0 ? 'h-2.5 w-2.5' : 'h-1.5 w-1.5'"
+              class="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-we-primary"
+              [class]="$index === 0 ? 'h-1.5 w-1.5' : 'h-1 w-1'"
               [style.left.%]="punto.x"
               [style.top.%]="punto.y"
               [attr.title]="$index === 0 ? 'Haz clic aquí para cerrar la figura' : ''"
             ></span>
           }
 
-          <!-- Vértices arrastrables del lote que se está corrigiendo -->
+          <!-- Vértices arrastrables del lote que se está corrigiendo: el punto visible es chico,
+               pero el área de agarre (el padding del span exterior) es más grande para que siga
+               siendo fácil de tomar con el mouse. -->
           @if (modoEdicion() && loteAUbicarId() !== null && puntosEnProgreso().length === 0) {
             @for (lote of plano()!.lotes; track lote.id) {
               @if (lote.id === loteAUbicarId() && tienePoligono(lote)) {
@@ -181,11 +184,15 @@
                   <span
                     (pointerdown)="iniciarArrastreVertice(lote, $index, $event)"
                     (click)="$event.stopPropagation()"
-                    class="absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 cursor-grab rounded-full border border-we-primary bg-white shadow transition-transform duration-100 hover:scale-150 active:cursor-grabbing dark:bg-surface"
-                    [class.scale-150]="loteIdArrastrando() === lote.id"
+                    class="absolute -translate-x-1/2 -translate-y-1/2 cursor-grab p-2 active:cursor-grabbing"
                     [style.left.%]="punto.x"
                     [style.top.%]="punto.y"
-                  ></span>
+                  >
+                    <span
+                      class="block h-1.5 w-1.5 rounded-full bg-we-primary transition-transform duration-100 hover:scale-150"
+                      [class.scale-150]="loteIdArrastrando() === lote.id"
+                    ></span>
+                  </span>
                 }
               }
             }
