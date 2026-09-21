@@ -391,6 +391,17 @@ public class LoteService {
         return LoteDto.from(lote);
     }
 
+    /** Marca el lote como VENDIDO a raíz de un registro de {@code Venta} (ver VentaService), con el
+     * mismo mecanismo de historial que cualquier otro cambio de estado. No repite el chequeo de rol
+     * de {@link #cambiarEstado}: VentaService ya exige admin/líder de área para registrar una venta. */
+    public LoteDto marcarVendido(Long id, String cliente, String asesor) {
+        Lote lote = obtenerEntidad(id);
+        Usuario actual = currentUserProvider.getUsuarioActual();
+        cambiarEstadoConHistorial(lote, EstadoLote.VENDIDO, actual, asesor, cliente, "Venta registrada");
+        lote.setFechaExpiraApartado(null);
+        return LoteDto.from(lote);
+    }
+
     private void exigirAdmin(String accion) {
         Usuario actual = currentUserProvider.getUsuarioActual();
         if (actual.getRol() != Role.ADMIN) {

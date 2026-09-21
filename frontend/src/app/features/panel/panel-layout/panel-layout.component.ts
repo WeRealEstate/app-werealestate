@@ -11,7 +11,7 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
 interface NavItem {
   label: string;
   route: string;
-  icon: 'home' | 'leads' | 'usuarios' | 'calendario' | 'pipeline' | 'cotizador' | 'lotes' | 'plano';
+  icon: 'home' | 'leads' | 'usuarios' | 'calendario' | 'pipeline' | 'cotizador' | 'lotes' | 'plano' | 'ventas';
 }
 
 const NAV_BY_ROLE: Record<Role, NavItem[]> = {
@@ -28,6 +28,7 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
     { label: 'Inicio', route: '/panel/equipo', icon: 'home' },
     { label: 'Leads', route: '/panel/leads', icon: 'leads' },
     { label: 'Lotes', route: '/panel/lotes', icon: 'lotes' },
+    { label: 'Ventas', route: '/panel/ventas', icon: 'ventas' },
     { label: 'Calendario', route: '/panel/calendario', icon: 'calendario' },
   ],
   EQUIPO_INTERNO: [
@@ -39,6 +40,7 @@ const NAV_BY_ROLE: Record<Role, NavItem[]> = {
     { label: 'Leads', route: '/panel/leads', icon: 'leads' },
     { label: 'Pipeline', route: '/panel/pipeline', icon: 'pipeline' },
     { label: 'Lotes', route: '/panel/lotes', icon: 'lotes' },
+    { label: 'Ventas', route: '/panel/ventas', icon: 'ventas' },
     { label: 'Plano', route: '/panel/plano', icon: 'plano' },
     { label: 'Usuarios', route: '/panel/usuarios', icon: 'usuarios' },
     { label: 'Calendario', route: '/panel/calendario', icon: 'calendario' },

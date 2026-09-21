@@ -159,6 +159,18 @@ export const routes: Routes = [
           import('./features/panel/promociones/promociones.component').then((m) => m.PromocionesComponent),
       },
       {
+        path: 'ventas',
+        canActivate: [roleGuard(['ADMIN', 'LIDER_AREA'])],
+        loadComponent: () =>
+          import('./features/panel/ventas/ventas-list/ventas-list.component').then((m) => m.VentasListComponent),
+      },
+      {
+        path: 'ventas/nueva',
+        canActivate: [roleGuard(['ADMIN', 'LIDER_AREA'])],
+        loadComponent: () =>
+          import('./features/panel/ventas/venta-form/venta-form.component').then((m) => m.VentaFormComponent),
+      },
+      {
         path: 'usuarios/nuevo',
         canActivate: [roleGuard(['ADMIN'])],
         loadComponent: () =>
