@@ -4,8 +4,9 @@ import com.werealestate.backend.model.EstadoLote;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-/** nombreAsesor es obligatorio solo para apartar (ver LoteService.cambiarEstadoPublico) — para
- * liberar no hace falta pedirlo de nuevo. nota es siempre opcional. */
+/** nombreAsesor y nombreCliente son obligatorios solo para apartar (ver
+ * LoteService.cambiarEstadoPublico) — liberar un lote ya no está permitido desde aquí. nota es
+ * siempre opcional. */
 public record CambiarEstadoLotePublicoRequest(
-        @NotNull EstadoLote estado, String nombreAsesor, @Size(max = 500) String nota) {
+        @NotNull EstadoLote estado, String nombreAsesor, String nombreCliente, @Size(max = 500) String nota) {
 }

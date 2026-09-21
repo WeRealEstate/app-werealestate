@@ -107,10 +107,16 @@ public class LoteService {
      * haya originado el cambio (asesor/admin autenticado, visitante público o el revertido
      * automático por vencimiento). */
     private void cambiarEstadoConHistorial(
-            Lote lote, EstadoLote nuevoEstado, Usuario usuario, String nombreAsesor, String nota) {
+            Lote lote,
+            EstadoLote nuevoEstado,
+            Usuario usuario,
+            String nombreAsesor,
+            String nombreCliente,
+            String nota) {
         EstadoLote anterior = lote.getEstado();
         lote.cambiarEstado(nuevoEstado, usuario);
-        movimientoLoteRepository.save(new MovimientoLote(lote, anterior, nuevoEstado, usuario, nombreAsesor, nota));
+        movimientoLoteRepository.save(
+                new MovimientoLote(lote, anterior, nuevoEstado, usuario, nombreAsesor, nombreCliente, nota));
     }
 
     public PaginaDto<LoteDto> buscarPaginado(
@@ -194,8 +200,10 @@ public class LoteService {
 
     /** Igual que {@link #cambiarEstado}, pero para /cotizador-publico/lotes: sin sesión iniciada,
      * así que un visitante nunca puede tocar un lote exclusivo de admin (ni para entrar ni para
-     * salir de esos estados), el cambio se atribuye al usuario de sistema, y apartar exige el
-     * nombre del asesor que atendió al visitante (para liberar no hace falta). */
+     * salir de esos estados), el cambio se atribuye al usuario de sistema, apartar exige el
+     * nombre del asesor que atendió al visitante y el del cliente que apartó, y liberar un lote ya
+     * apartado no está permitido desde aquí (solo desde /panel/lotes o /panel/plano) — evita que
+     * cualquiera con el link pueda dejar disponible un lote que un asesor ya comprometió. */
     public LoteDto cambiarEstadoPublico(Long id, CambiarEstadoLotePublicoRequest request) {
         Lote lote = obtenerEntidad(id);
 
@@ -204,10 +212,19 @@ public class LoteService {
         if (tocaEstadoRestringido) {
             throw new ForbiddenOperationException("Este lote no se puede modificar desde la disponibilidad pública");
         }
+        if (request.estado() == EstadoLote.DISPONIBLE && lote.getEstado() == EstadoLote.APARTADO) {
+            throw new ForbiddenOperationException("Un lote apartado no se puede liberar desde la disponibilidad pública");
+        }
 
         String nombreAsesor = request.nombreAsesor() == null ? null : request.nombreAsesor().trim();
-        if (request.estado() == EstadoLote.APARTADO && (nombreAsesor == null || nombreAsesor.isBlank())) {
-            throw new ValidationException("El nombre del asesor es obligatorio para apartar un lote");
+        String nombreCliente = request.nombreCliente() == null ? null : request.nombreCliente().trim();
+        if (request.estado() == EstadoLote.APARTADO) {
+            if (nombreAsesor == null || nombreAsesor.isBlank()) {
+                throw new ValidationException("El nombre del asesor es obligatorio para apartar un lote");
+            }
+            if (nombreCliente == null || nombreCliente.isBlank()) {
+                throw new ValidationException("El nombre del cliente es obligatorio para apartar un lote");
+            }
         }
         String nota = request.nota() == null || request.nota().isBlank() ? null : request.nota().trim();
 
@@ -216,7 +233,7 @@ public class LoteService {
                 .orElseThrow(() -> new IllegalStateException(
                         "Falta el usuario de sistema del cotizador público (migración V17)"));
 
-        cambiarEstadoConHistorial(lote, request.estado(), sistema, nombreAsesor, nota);
+        cambiarEstadoConHistorial(lote, request.estado(), sistema, nombreAsesor, nombreCliente, nota);
         return LoteDto.from(lote);
     }
 
@@ -305,7 +322,7 @@ public class LoteService {
             }
         }
 
-        cambiarEstadoConHistorial(lote, request.estado(), actual, null, null);
+        cambiarEstadoConHistorial(lote, request.estado(), actual, null, null, null);
         lote.setFechaExpiraApartado(
                 request.estado() == EstadoLote.APARTADO_A_PLAZO ? request.fechaExpiraApartado() : null);
         return LoteDto.from(lote);

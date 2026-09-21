@@ -103,28 +103,15 @@
                 </span>
               </td>
               <td class="px-4 py-3 text-right">
-                @if (puedeCambiarEstado(lote)) {
-                  @if (lote.estado === 'DISPONIBLE') {
-                    <button
-                      type="button"
-                      (click)="abrirApartar(lote)"
-                      class="inline-flex items-center justify-center rounded-lg bg-we-primary px-3.5 py-2 text-xs font-semibold text-white
-                             hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150"
-                    >
-                      Apartar
-                    </button>
-                  } @else if (lote.estado === 'APARTADO') {
-                    <button
-                      type="button"
-                      [disabled]="idEnProceso() === lote.id"
-                      (click)="liberar(lote)"
-                      class="inline-flex items-center justify-center rounded-lg border border-border px-3.5 py-2 text-xs font-semibold text-ink
-                             hover:border-we-primary active:scale-[0.97] transition-transform duration-150
-                             disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {{ idEnProceso() === lote.id ? 'Liberando…' : 'Liberar' }}
-                    </button>
-                  }
+                @if (puedeCambiarEstado(lote) && lote.estado === 'DISPONIBLE') {
+                  <button
+                    type="button"
+                    (click)="abrirApartar(lote)"
+                    class="inline-flex items-center justify-center rounded-lg bg-we-primary px-3.5 py-2 text-xs font-semibold text-white
+                           hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150"
+                  >
+                    Apartar
+                  </button>
                 }
               </td>
             </tr>
@@ -134,7 +121,8 @@
     </div>
   }
 
-  <!-- MODAL "APARTAR LOTE": pide el nombre del asesor y una nota opcional antes de confirmar. -->
+  <!-- MODAL "APARTAR LOTE": pide el nombre del asesor, el del cliente y una nota opcional antes de
+       confirmar. Un lote ya apartado no se puede liberar desde aquí. -->
   @if (loteAApartar(); as lote) {
     <button
       type="button"
@@ -165,6 +153,19 @@
         </div>
 
         <div class="mt-4">
+          <label class="mb-1.5 block text-sm font-medium text-ink">Nombre del cliente *</label>
+          <input
+            type="text"
+            [ngModel]="nombreClienteInput()"
+            (ngModelChange)="nombreClienteInput.set($event)"
+            placeholder="Ej. Hernesto Montesinos Alba"
+            class="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition-all
+                   focus:border-we-primary focus:ring-2 focus:ring-we-primary/50"
+          />
+          <p class="mt-1.5 text-xs text-ink-muted">Necesario para saber a quién le corresponde este lote.</p>
+        </div>
+
+        <div class="mt-4">
           <div class="mb-1.5 flex items-center justify-between">
             <label class="block text-sm font-medium text-ink">Nota (opcional)</label>
             <span class="text-xs text-ink-muted">{{ notaInput().length }}/{{ notaMaxLength }}</span>
@@ -191,7 +192,7 @@
           </button>
           <button
             type="button"
-            [disabled]="nombreAsesorInvalido() || isApartando()"
+            [disabled]="nombreAsesorInvalido() || nombreClienteInvalido() || isApartando()"
             (click)="confirmarApartar()"
             class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90
                    active:scale-[0.97] transition-transform duration-150 disabled:opacity-60 disabled:cursor-not-allowed"

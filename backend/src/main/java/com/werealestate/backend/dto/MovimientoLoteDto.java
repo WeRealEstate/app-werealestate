@@ -15,6 +15,7 @@ public record MovimientoLoteDto(
         EstadoLote estadoNuevo,
         UsuarioResumenDto usuario,
         String nombreAsesor,
+        String nombreCliente,
         String nota,
         LocalDateTime fecha) {
 
@@ -30,6 +31,7 @@ public record MovimientoLoteDto(
                 movimiento.getEstadoNuevo(),
                 movimiento.getUsuario() != null ? UsuarioResumenDto.from(movimiento.getUsuario()) : null,
                 movimiento.getNombreAsesor(),
+                movimiento.getNombreCliente(),
                 movimiento.getNota(),
                 movimiento.getFecha());
     }

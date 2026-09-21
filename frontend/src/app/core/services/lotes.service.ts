@@ -61,13 +61,15 @@ export class LotesService {
     return firstValueFrom(this.http.get<Lote[]>(`${this.baseUrl}/publico`, { params: { proyecto } }));
   }
 
-  /** nombreAsesor es obligatorio para apartar (no para liberar); nota siempre es opcional — ver
-   * LoteService.cambiarEstadoPublico. */
-  cambiarEstadoPublico(id: number, estado: string, nombreAsesor?: string, nota?: string): Promise<Lote> {
+  /** Apartar un lote desde /cotizador-publico/lotes: nombreAsesor y nombreCliente son
+   * obligatorios, nota es opcional — ver LoteService.cambiarEstadoPublico. Liberar un lote ya
+   * apartado no está permitido desde aquí. */
+  apartarLotePublico(id: number, nombreAsesor: string, nombreCliente: string, nota?: string): Promise<Lote> {
     return firstValueFrom(
       this.http.put<Lote>(`${this.baseUrl}/publico/${id}/estado`, {
-        estado,
-        nombreAsesor: nombreAsesor ?? null,
+        estado: 'APARTADO',
+        nombreAsesor,
+        nombreCliente,
         nota: nota ?? null,
       }),
     );

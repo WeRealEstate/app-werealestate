@@ -15,7 +15,8 @@ import java.time.LocalDateTime;
 
 /** Bitácora de cada cambio de estado de un lote: quién lo hizo (usuario autenticado, o nadie si
  * fue la reversión automática por vencimiento) y, si vino de /cotizador-publico/lotes, el nombre
- * del asesor que capturó el visitante — ahí no hay una sesión real detrás. */
+ * del asesor que capturó el visitante y el del cliente que apartó — ahí no hay una sesión real
+ * detrás. */
 @Entity
 @Table(name = "movimiento_lote")
 public class MovimientoLote {
@@ -43,6 +44,9 @@ public class MovimientoLote {
     @Column(name = "nombre_asesor", length = 150)
     private String nombreAsesor;
 
+    @Column(name = "nombre_cliente", length = 150)
+    private String nombreCliente;
+
     @Column(length = 500)
     private String nota;
 
@@ -59,12 +63,14 @@ public class MovimientoLote {
             EstadoLote estadoNuevo,
             Usuario usuario,
             String nombreAsesor,
+            String nombreCliente,
             String nota) {
         this.lote = lote;
         this.estadoAnterior = estadoAnterior;
         this.estadoNuevo = estadoNuevo;
         this.usuario = usuario;
         this.nombreAsesor = nombreAsesor;
+        this.nombreCliente = nombreCliente;
         this.nota = nota;
     }
 
@@ -90,6 +96,10 @@ public class MovimientoLote {
 
     public String getNombreAsesor() {
         return nombreAsesor;
+    }
+
+    public String getNombreCliente() {
+        return nombreCliente;
     }
 
     public String getNota() {
