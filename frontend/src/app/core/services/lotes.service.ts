@@ -103,10 +103,15 @@ export class LotesService {
     return firstValueFrom(this.http.put<Lote>(`${this.baseUrl}/${id}`, request));
   }
 
-  /** fechaExpiraApartado solo aplica (y es obligatoria) para estado === 'APARTADO_A_PLAZO'. */
-  cambiarEstado(id: number, estado: string, fechaExpiraApartado?: string | null): Promise<Lote> {
+  /** fechaExpiraApartado solo aplica (y es obligatoria) para estado === 'APARTADO_A_PLAZO'. nota es
+   * obligatoria del lado del backend cuando quien cambia el estado es admin o líder de área. */
+  cambiarEstado(id: number, estado: string, fechaExpiraApartado?: string | null, nota?: string): Promise<Lote> {
     return firstValueFrom(
-      this.http.put<Lote>(`${this.baseUrl}/${id}/estado`, { estado, fechaExpiraApartado: fechaExpiraApartado ?? null }),
+      this.http.put<Lote>(`${this.baseUrl}/${id}/estado`, {
+        estado,
+        fechaExpiraApartado: fechaExpiraApartado ?? null,
+        nota: nota ?? null,
+      }),
     );
   }
 

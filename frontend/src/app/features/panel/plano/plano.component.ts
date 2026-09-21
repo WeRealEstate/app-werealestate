@@ -93,13 +93,21 @@ export class PlanoComponent {
   readonly horasOpciones = HORAS_OPCIONES;
   readonly minutosOpciones = MINUTOS_OPCIONES;
 
-  /** Lote al que se le está por fijar (o ya tiene) un "Apartado a plazo" desde el panel de detalle:
-   * abre el modal de fecha/hora de vencimiento. null cuando el modal está cerrado. */
-  readonly loteParaPlazo = signal<Lote | null>(null);
+  /** Cambio de estado que un admin o líder de área está por confirmar desde el panel de detalle:
+   * les pide siempre una nota (y, solo para "Apartado a plazo", también la fecha/hora de
+   * vencimiento). null cuando el modal está cerrado. Un asesor nunca pasa por aquí. */
+  readonly cambioEstadoPendiente = signal<{ lote: Lote; nuevoEstado: EstadoLote } | null>(null);
+  readonly notaCambioEstado = signal('');
   readonly fechaPlazo = signal('');
   readonly horaPlazo = signal(HORA_POR_DEFECTO);
   readonly minutoPlazo = signal(MINUTO_POR_DEFECTO);
-  readonly guardandoPlazo = signal(false);
+  readonly guardandoCambioEstado = signal(false);
+
+  readonly cambioEstadoInvalido = computed(() => {
+    const pendiente = this.cambioEstadoPendiente();
+    if (!pendiente || !this.notaCambioEstado().trim()) return true;
+    return pendiente.nuevoEstado === 'APARTADO_A_PLAZO' && !this.fechaPlazo();
+  });
 
   readonly generandoPdf = signal(false);
 
@@ -422,11 +430,15 @@ export class PlanoComponent {
     return bloqueado ? [lote.estado] : ESTADOS_ASESOR;
   }
 
+  /** Un asesor solo se mueve entre Disponible/Apartado y el cambio se aplica directo; un admin o
+   * líder de área puede mover un lote a cualquier estado, así que se le pide justificar el cambio
+   * con una nota (y, solo para "Apartado a plazo", también la fecha de vencimiento) en un modal
+   * antes de llamar a la API. */
   async cambiarEstado(lote: Lote, nuevoEstado: string): Promise<void> {
     if (nuevoEstado === lote.estado) return;
 
-    if (nuevoEstado === 'APARTADO_A_PLAZO') {
-      this.abrirModalPlazo(lote);
+    if (this.esAdmin() || this.esLider()) {
+      this.abrirModalCambioEstado(lote, nuevoEstado as EstadoLote);
       return;
     }
 
@@ -438,32 +450,41 @@ export class PlanoComponent {
     }
   }
 
-  abrirModalPlazo(lote: Lote): void {
-    this.loteParaPlazo.set(lote);
+  abrirModalCambioEstado(lote: Lote, nuevoEstado: EstadoLote): void {
+    this.cambioEstadoPendiente.set({ lote, nuevoEstado });
+    this.notaCambioEstado.set('');
     this.fechaPlazo.set('');
     this.horaPlazo.set(HORA_POR_DEFECTO);
     this.minutoPlazo.set(MINUTO_POR_DEFECTO);
   }
 
-  cancelarPlazo(): void {
-    this.loteParaPlazo.set(null);
+  cancelarCambioEstado(): void {
+    this.cambioEstadoPendiente.set(null);
   }
 
-  async confirmarPlazo(): Promise<void> {
-    const lote = this.loteParaPlazo();
-    if (!lote || !this.fechaPlazo()) return;
+  async confirmarCambioEstado(): Promise<void> {
+    const pendiente = this.cambioEstadoPendiente();
+    if (!pendiente || this.cambioEstadoInvalido()) return;
 
-    this.guardandoPlazo.set(true);
+    this.guardandoCambioEstado.set(true);
     try {
-      const fechaExpira = combinarFechaHora(this.fechaPlazo(), this.horaPlazo(), this.minutoPlazo());
-      const actualizado = await this.lotesService.cambiarEstado(lote.id, 'APARTADO_A_PLAZO', fechaExpira);
+      const fechaExpira =
+        pendiente.nuevoEstado === 'APARTADO_A_PLAZO'
+          ? combinarFechaHora(this.fechaPlazo(), this.horaPlazo(), this.minutoPlazo())
+          : undefined;
+      const actualizado = await this.lotesService.cambiarEstado(
+        pendiente.lote.id,
+        pendiente.nuevoEstado,
+        fechaExpira,
+        this.notaCambioEstado().trim(),
+      );
       this.aplicarLoteActualizado(actualizado);
-      this.loteParaPlazo.set(null);
-      this.toast.success('Lote apartado a plazo.');
+      this.cambioEstadoPendiente.set(null);
+      this.toast.success('Estado del lote actualizado.');
     } catch (error) {
-      this.toast.error(this.mensajeError(error, 'No se pudo apartar el lote a plazo.'));
+      this.toast.error(this.mensajeError(error, 'No se pudo cambiar el estado del lote.'));
     } finally {
-      this.guardandoPlazo.set(false);
+      this.guardandoCambioEstado.set(false);
     }
   }
 

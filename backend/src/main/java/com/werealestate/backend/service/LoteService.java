@@ -332,7 +332,15 @@ public class LoteService {
             }
         }
 
-        cambiarEstadoConHistorial(lote, request.estado(), actual, null, null, null);
+        String nota = request.nota() == null || request.nota().isBlank() ? null : request.nota().trim();
+        // Un admin o líder de área puede mover un lote a cualquier estado (incluidos los
+        // comprometidos con dinero real o en firma), así que se le pide justificar cada cambio; un
+        // asesor solo se mueve entre Disponible/Apartado en su operación diaria y no necesita nota.
+        if ((actual.getRol() == Role.ADMIN || actual.getRol() == Role.LIDER_AREA) && nota == null) {
+            throw new ValidationException("Agrega una nota explicando el motivo del cambio de estado");
+        }
+
+        cambiarEstadoConHistorial(lote, request.estado(), actual, null, null, nota);
         lote.setFechaExpiraApartado(
                 request.estado() == EstadoLote.APARTADO_A_PLAZO ? request.fechaExpiraApartado() : null);
         return LoteDto.from(lote);

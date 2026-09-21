@@ -204,66 +204,88 @@
     }
   }
 
-  @if (loteParaPlazo(); as lote) {
-    <button type="button" (click)="cancelarPlazo()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-40 bg-black/40"></button>
-    <div class="fixed inset-0 z-40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="plazo-titulo">
+  @if (cambioEstadoPendiente(); as pendiente) {
+    <button type="button" (click)="cancelarCambioEstado()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-40 bg-black/40"></button>
+    <div class="fixed inset-0 z-40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="cambio-estado-titulo">
       <div class="modal-panel-enter w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
-        <h2 id="plazo-titulo" class="font-heading text-lg font-semibold text-ink">Apartar a plazo</h2>
+        <h2 id="cambio-estado-titulo" class="font-heading text-lg font-semibold text-ink">Confirmar cambio de estado</h2>
         <p class="mt-1 text-sm text-ink-muted">
-          Manzana {{ lote.manzana }}, Lote {{ lote.numeroLote }}. Elige hasta cuándo queda apartado; al llegar esa
-          fecha el lote vuelve solo a Disponible.
+          Manzana {{ pendiente.lote.manzana }}, Lote {{ pendiente.lote.numeroLote }}
         </p>
-
-        <label class="mb-1.5 mt-4 block text-sm font-medium text-ink">Fecha y hora de vencimiento</label>
-        <div class="grid grid-cols-[1fr_auto_auto] gap-2">
-          <input
-            type="date"
-            [value]="fechaPlazo()"
-            (input)="fechaPlazo.set($any($event.target).value)"
-            class="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
-                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
-          />
-          <select
-            [value]="horaPlazo()"
-            (change)="horaPlazo.set($any($event.target).value)"
-            aria-label="Hora (24h)"
-            class="rounded-lg border border-border px-3 py-2.5 text-sm text-ink bg-surface
-                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
-          >
-            @for (h of horasOpciones; track h) {
-              <option [value]="h">{{ h }}</option>
-            }
-          </select>
-          <select
-            [value]="minutoPlazo()"
-            (change)="minutoPlazo.set($any($event.target).value)"
-            aria-label="Minuto"
-            class="rounded-lg border border-border px-3 py-2.5 text-sm text-ink bg-surface
-                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
-          >
-            @for (m of minutosOpciones; track m) {
-              <option [value]="m">{{ m }}</option>
-            }
-          </select>
+        <div class="mt-2 flex flex-wrap items-center gap-1.5">
+          <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" [class]="badgeClases[pendiente.lote.estado]">
+            {{ estadoLabels[pendiente.lote.estado] }}
+          </span>
+          <span class="text-ink-muted">&rarr;</span>
+          <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" [class]="badgeClases[pendiente.nuevoEstado]">
+            {{ estadoLabels[pendiente.nuevoEstado] }}
+          </span>
         </div>
-        <p class="mt-1.5 text-xs text-ink-muted">Hora en formato 24h.</p>
+
+        @if (pendiente.nuevoEstado === 'APARTADO_A_PLAZO') {
+          <label class="mb-1.5 mt-4 block text-sm font-medium text-ink">Fecha y hora de vencimiento</label>
+          <div class="grid grid-cols-[1fr_auto_auto] gap-2">
+            <input
+              type="date"
+              [value]="fechaPlazo()"
+              (input)="fechaPlazo.set($any($event.target).value)"
+              class="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            />
+            <select
+              [value]="horaPlazo()"
+              (change)="horaPlazo.set($any($event.target).value)"
+              aria-label="Hora (24h)"
+              class="rounded-lg border border-border px-3 py-2.5 text-sm text-ink bg-surface
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            >
+              @for (h of horasOpciones; track h) {
+                <option [value]="h">{{ h }}</option>
+              }
+            </select>
+            <select
+              [value]="minutoPlazo()"
+              (change)="minutoPlazo.set($any($event.target).value)"
+              aria-label="Minuto"
+              class="rounded-lg border border-border px-3 py-2.5 text-sm text-ink bg-surface
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            >
+              @for (m of minutosOpciones; track m) {
+                <option [value]="m">{{ m }}</option>
+              }
+            </select>
+          </div>
+          <p class="mt-1.5 text-xs text-ink-muted">Hora en formato 24h. Al llegar esa fecha el lote vuelve solo a Disponible.</p>
+        }
+
+        <label for="nota-cambio-estado" class="mb-1.5 mt-4 block text-sm font-medium text-ink">Nota *</label>
+        <textarea
+          id="nota-cambio-estado"
+          rows="3"
+          [value]="notaCambioEstado()"
+          (input)="notaCambioEstado.set($any($event.target).value)"
+          placeholder="Ej. Cliente firmó contrato de compraventa el día de hoy"
+          class="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted
+                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+        ></textarea>
+        <p class="mt-1.5 text-xs text-ink-muted">Explica el motivo del cambio; queda registrado en el historial de movimientos.</p>
 
         <div class="mt-5 flex justify-end gap-2.5">
           <button
             type="button"
-            (click)="cancelarPlazo()"
+            (click)="cancelarCambioEstado()"
             class="rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink hover:border-we-primary active:scale-[0.97] transition-transform duration-150"
           >
             Cancelar
           </button>
           <button
             type="button"
-            (click)="confirmarPlazo()"
-            [disabled]="!fechaPlazo() || guardandoPlazo()"
+            (click)="confirmarCambioEstado()"
+            [disabled]="cambioEstadoInvalido() || guardandoCambioEstado()"
             class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90
                    active:scale-[0.97] transition-transform duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {{ guardandoPlazo() ? 'Guardando…' : 'Apartar' }}
+            {{ guardandoCambioEstado() ? 'Guardando…' : 'Confirmar' }}
           </button>
         </div>
       </div>
