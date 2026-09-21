@@ -1,8 +1,11 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { AuthService } from '../../../core/services/auth.service';
+import { ConfirmService } from '../../../core/services/confirm.service';
 import { LeadsService } from '../../../core/services/leads.service';
 import { LotesService } from '../../../core/services/lotes.service';
+import { ToastService } from '../../../core/services/toast.service';
 import { Desarrollo } from '../../../core/models/lead.model';
 import { ESTADO_LOTE_BADGE_CLASSES, ESTADO_LOTE_LABELS, MovimientoLote } from '../../../core/models/lote.model';
 
@@ -19,9 +22,13 @@ const TAMANO_PAGINA = 20;
 export class LotesHistorialComponent {
   private readonly lotesService = inject(LotesService);
   private readonly leadsService = inject(LeadsService);
+  private readonly auth = inject(AuthService);
+  private readonly confirmService = inject(ConfirmService);
+  private readonly toast = inject(ToastService);
 
   readonly estadoLabels = ESTADO_LOTE_LABELS;
   readonly badgeClases = ESTADO_LOTE_BADGE_CLASSES;
+  readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
 
   readonly movimientos = signal<MovimientoLote[]>([]);
   readonly desarrollos = signal<Desarrollo[]>([]);
@@ -111,5 +118,22 @@ export class LotesHistorialComponent {
         : movimiento.usuario.nombre;
     }
     return 'Sistema (reversión automática)';
+  }
+
+  async eliminar(movimiento: MovimientoLote): Promise<void> {
+    const confirmado = await this.confirmService.confirm({
+      titulo: 'Eliminar registro del historial',
+      mensaje: `¿Eliminar este movimiento de Manzana ${movimiento.manzana}, Lote ${movimiento.numeroLote}? Esto no se puede deshacer.`,
+      textoConfirmar: 'Eliminar',
+      peligroso: true,
+    });
+    if (!confirmado) return;
+    try {
+      await this.lotesService.eliminarMovimiento(movimiento.id);
+      this.movimientos.update((lista) => lista.filter((m) => m.id !== movimiento.id));
+      this.toast.success('Registro eliminado del historial.');
+    } catch {
+      this.toast.error('No se pudo eliminar el registro.');
+    }
   }
 }

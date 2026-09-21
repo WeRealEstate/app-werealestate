@@ -64,6 +64,9 @@
             <th class="px-4 py-3">Cliente</th>
             <th class="px-4 py-3">Nota</th>
             <th class="px-4 py-3">Fecha</th>
+            @if (esAdmin()) {
+              <th class="px-4 py-3"></th>
+            }
           </tr>
         </thead>
         <tbody class="divide-y divide-border bg-surface">
@@ -87,6 +90,17 @@
               <td class="px-4 py-3 text-ink-muted">{{ m.nombreCliente || '—' }}</td>
               <td class="px-4 py-3 text-ink-muted max-w-[220px] truncate" [title]="m.nota ?? ''">{{ m.nota || '—' }}</td>
               <td class="px-4 py-3 text-ink-muted whitespace-nowrap">{{ m.fecha | date: 'd MMM y, HH:mm' }}</td>
+              @if (esAdmin()) {
+                <td class="px-4 py-3 text-right">
+                  <button
+                    type="button"
+                    (click)="eliminar(m)"
+                    class="text-ink-muted hover:text-red-600 font-medium active:scale-[0.95] transition-transform duration-150"
+                  >
+                    Eliminar
+                  </button>
+                </td>
+              }
             </tr>
           }
         </tbody>

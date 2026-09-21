@@ -265,6 +265,16 @@ public class LoteService {
         return new PaginaDto<>(resultado.getContent().stream().map(MovimientoLoteDto::from).toList(), resultado.hasNext());
     }
 
+    /** Borrar un registro del historial de movimientos es exclusivo de admin: es la bitácora de
+     * auditoría de todo lo que pasa con los lotes. */
+    public void eliminarMovimiento(Long id) {
+        exigirAdmin("eliminar movimientos del historial");
+        MovimientoLote movimiento = movimientoLoteRepository
+                .findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Movimiento no encontrado"));
+        movimientoLoteRepository.delete(movimiento);
+    }
+
     public LoteDto obtener(Long id) {
         return LoteDto.from(obtenerEntidad(id));
     }

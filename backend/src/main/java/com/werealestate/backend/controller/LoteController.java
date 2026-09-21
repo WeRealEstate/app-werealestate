@@ -79,6 +79,12 @@ public class LoteController {
         return loteService.buscarMovimientos(manzana, numeroLote, desarrolloId, pagina, tamano);
     }
 
+    @DeleteMapping("/movimientos/{id}")
+    public ResponseEntity<Void> eliminarMovimiento(@PathVariable Long id) {
+        loteService.eliminarMovimiento(id);
+        return ResponseEntity.noContent().build();
+    }
+
     /** Plano interactivo de un desarrollo, para /panel/plano. */
     @GetMapping("/mapa")
     public PlanoDesarrolloDto obtenerMapa(@RequestParam Long desarrolloId) {

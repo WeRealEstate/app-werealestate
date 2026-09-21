@@ -86,6 +86,11 @@ export class LotesService {
     );
   }
 
+  /** Borrar un registro del historial de movimientos; exclusivo de admin (ver LoteService). */
+  eliminarMovimiento(id: number): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`${this.baseUrl}/movimientos/${id}`));
+  }
+
   obtener(id: number): Promise<Lote> {
     return firstValueFrom(this.http.get<Lote>(`${this.baseUrl}/${id}`));
   }
