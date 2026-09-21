@@ -72,9 +72,10 @@
                   [disabled]="eliminandoTareaId() === t.id"
                   (click)="eliminar(t)"
                   aria-label="Borrar tarea"
-                  class="text-ink-muted hover:text-red-600 disabled:opacity-60"
+                  class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-red-50 hover:text-red-600
+                         dark:hover:bg-red-500/10 dark:hover:text-red-400 transition-colors duration-150 active:scale-90 disabled:opacity-60"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z"/></svg>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </button>
               </td>
             </tr>

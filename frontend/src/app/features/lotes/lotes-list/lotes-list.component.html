@@ -153,21 +153,30 @@
                   <p class="mt-1 text-xs text-ink-muted">Vence: {{ lote.fechaExpiraApartado | date: 'dd/MM/yy HH:mm' }}</p>
                 }
               </td>
-              <td class="px-4 py-3 text-right">
-                <div class="flex items-center justify-end gap-3">
+              <td class="px-4 py-3">
+                <div class="flex items-center justify-end gap-1.5">
                   @if (esAdmin()) {
                     <a
                       [routerLink]="['/panel/lotes', lote.id, 'editar']"
-                      class="text-we-blue-light hover:underline font-medium active:scale-[0.95] transition-transform duration-150 inline-block"
+                      aria-label="Editar lote"
+                      class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2 hover:text-we-blue-light
+                             transition-colors duration-150 active:scale-90"
                     >
-                      Editar
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
                     </a>
                     <button
                       type="button"
                       (click)="eliminar(lote)"
-                      class="text-ink-muted hover:text-red-600 font-medium active:scale-[0.95] transition-transform duration-150"
+                      aria-label="Eliminar lote"
+                      class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-red-50 hover:text-red-600
+                             dark:hover:bg-red-500/10 dark:hover:text-red-400 transition-colors duration-150 active:scale-90"
                     >
-                      Eliminar
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
                     </button>
                   }
                 </div>

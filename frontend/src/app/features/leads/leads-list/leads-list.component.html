@@ -217,7 +217,17 @@
                 }
               </td>
               <td class="px-4 py-3 text-right">
-                <a [routerLink]="['/panel/leads', lead.id]" class="text-we-blue-light hover:underline font-medium active:scale-[0.95] transition-transform duration-150 inline-block">Ver</a>
+                <a
+                  [routerLink]="['/panel/leads', lead.id]"
+                  aria-label="Ver lead"
+                  class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2 hover:text-we-blue-light
+                         transition-colors duration-150 active:scale-90"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </a>
               </td>
             </tr>
           }
