@@ -94,6 +94,9 @@
         }
       </div>
 
+      <!-- Captcha (Cloudflare Turnstile) -->
+      <div #turnstileContainer class="flex justify-center pt-1"></div>
+
       <!-- Error del servidor -->
       @if (errorMessage()) {
         <div class="rounded-2xl bg-red-500/15 border border-red-300/40 px-4 py-2.5 text-sm text-red-100" role="alert" aria-live="assertive">

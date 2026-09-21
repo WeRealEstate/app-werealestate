@@ -16,17 +16,24 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final UsuarioRepository usuarioRepository;
     private final JwtService jwtService;
+    private final TurnstileService turnstileService;
 
     public AuthService(
             AuthenticationManager authenticationManager,
             UsuarioRepository usuarioRepository,
-            JwtService jwtService) {
+            JwtService jwtService,
+            TurnstileService turnstileService) {
         this.authenticationManager = authenticationManager;
         this.usuarioRepository = usuarioRepository;
         this.jwtService = jwtService;
+        this.turnstileService = turnstileService;
     }
 
     public LoginResponse login(LoginRequest request) {
+        // Se valida antes que las credenciales: así un intento de fuerza bruta nunca llega a
+        // comparar contraseñas (ni gasta el costo de BCrypt) sin haber resuelto el captcha primero.
+        turnstileService.verificar(request.captchaToken());
+
         // Lanza BadCredentialsException (-> 401) si el email no existe o la contraseña no coincide.
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.email(), request.password()));
