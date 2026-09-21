@@ -1,5 +1,5 @@
-import { AfterViewInit, Component, ElementRef } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { AfterViewInit, Component, ElementRef, inject } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 import { animate, stagger } from 'motion';
 import { PressDirective } from '../../../shared/motion/press.directive';
 
@@ -19,6 +19,8 @@ import { PressDirective } from '../../../shared/motion/press.directive';
   ],
 })
 export class HeroPublicoComponent implements AfterViewInit {
+  private readonly router = inject(Router);
+
   constructor(private readonly el: ElementRef<HTMLElement>) {}
 
   ngAfterViewInit(): void {
@@ -38,7 +40,15 @@ export class HeroPublicoComponent implements AfterViewInit {
     );
   }
 
+  /** El hero es compartido por /cotizador-publico y /cotizador-publico/lotes (mismo layout, ver
+   * CotizadorPublicoLayoutComponent): si "Comenzar cotización" se hace clic estando en /lotes,
+   * primero hay que volver a la ruta del cotizador — si no, el scroll a "#cotizador" solo revela
+   * la pantalla de lotes, que sigue montada ahí. */
   irAlCotizador(): void {
+    if (this.router.url.startsWith('/cotizador-publico/lotes')) {
+      void this.router.navigateByUrl('/cotizador-publico');
+    }
+
     const destino = document.getElementById('cotizador');
 
     if (!destino) return;
