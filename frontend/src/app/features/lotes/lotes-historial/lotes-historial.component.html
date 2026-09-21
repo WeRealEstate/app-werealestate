@@ -64,9 +64,7 @@
             <th class="px-4 py-3">Cliente</th>
             <th class="px-4 py-3">Nota</th>
             <th class="px-4 py-3">Fecha</th>
-            @if (esAdmin()) {
-              <th class="px-4 py-3"></th>
-            }
+            <th class="px-4 py-3"></th>
           </tr>
         </thead>
         <tbody class="divide-y divide-border bg-surface">
@@ -90,17 +88,35 @@
               <td class="px-4 py-3 text-ink-muted">{{ m.nombreCliente || '—' }}</td>
               <td class="px-4 py-3 text-ink-muted max-w-[220px] truncate" [title]="m.nota ?? ''">{{ m.nota || '—' }}</td>
               <td class="px-4 py-3 text-ink-muted whitespace-nowrap">{{ m.fecha | date: 'd MMM y, HH:mm' }}</td>
-              @if (esAdmin()) {
-                <td class="px-4 py-3 text-right">
+              <td class="px-4 py-3">
+                <div class="flex flex-col items-center gap-1.5">
                   <button
                     type="button"
-                    (click)="eliminar(m)"
-                    class="text-ink-muted hover:text-red-600 font-medium active:scale-[0.95] transition-transform duration-150"
+                    (click)="verDetalle(m)"
+                    aria-label="Ver detalle de la nota"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2 hover:text-we-blue-light
+                           transition-colors duration-150 active:scale-90"
                   >
-                    Eliminar
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" stroke-linecap="round" stroke-linejoin="round"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
                   </button>
-                </td>
-              }
+                  @if (esAdmin()) {
+                    <button
+                      type="button"
+                      (click)="eliminar(m)"
+                      aria-label="Eliminar registro del historial"
+                      class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-red-50 hover:text-red-600
+                             dark:hover:bg-red-500/10 dark:hover:text-red-400 transition-colors duration-150 active:scale-90"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </button>
+                  }
+                </div>
+              </td>
             </tr>
           }
         </tbody>
@@ -122,5 +138,66 @@
         </button>
       </div>
     }
+  }
+
+  @if (detalle(); as d) {
+    <button
+      type="button"
+      (click)="cerrarDetalle()"
+      aria-label="Cerrar"
+      class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"
+    ></button>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="detalle-movimiento-titulo">
+      <div class="modal-panel-enter w-full max-w-md rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <h2 id="detalle-movimiento-titulo" class="font-heading text-lg font-semibold text-ink">
+          Manzana {{ d.manzana }}, Lote {{ d.numeroLote }}
+        </h2>
+        <p class="mt-0.5 text-sm text-ink-muted">{{ d.desarrolloNombre }}</p>
+
+        <dl class="mt-4 space-y-3 text-sm">
+          <div>
+            <dt class="text-xs font-medium uppercase tracking-wide text-ink-muted">Cambio</dt>
+            <dd class="mt-1 flex flex-wrap items-center gap-1.5">
+              <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" [class]="badgeClases[d.estadoAnterior]">
+                {{ estadoLabels[d.estadoAnterior] }}
+              </span>
+              <span class="text-ink-muted">&rarr;</span>
+              <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" [class]="badgeClases[d.estadoNuevo]">
+                {{ estadoLabels[d.estadoNuevo] }}
+              </span>
+            </dd>
+          </div>
+          <div>
+            <dt class="text-xs font-medium uppercase tracking-wide text-ink-muted">Quién</dt>
+            <dd class="mt-1 text-ink">{{ autorMovimiento(d) }}</dd>
+          </div>
+          @if (d.nombreCliente) {
+            <div>
+              <dt class="text-xs font-medium uppercase tracking-wide text-ink-muted">Cliente</dt>
+              <dd class="mt-1 text-ink">{{ d.nombreCliente }}</dd>
+            </div>
+          }
+          <div>
+            <dt class="text-xs font-medium uppercase tracking-wide text-ink-muted">Nota</dt>
+            <dd class="mt-1 whitespace-pre-wrap text-ink">{{ d.nota || 'Sin nota.' }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs font-medium uppercase tracking-wide text-ink-muted">Fecha</dt>
+            <dd class="mt-1 text-ink">{{ d.fecha | date: 'd MMM y, HH:mm' }}</dd>
+          </div>
+        </dl>
+
+        <div class="flex justify-end pt-5">
+          <button
+            type="button"
+            (click)="cerrarDetalle()"
+            class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary
+                   active:scale-[0.97] transition-transform duration-150"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
   }
 </div>

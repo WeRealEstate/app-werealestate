@@ -41,6 +41,10 @@ export class LotesHistorialComponent {
   readonly filtroNumeroLote = signal('');
   readonly filtroDesarrolloId = signal<number | null>(null);
 
+  /** Movimiento cuyo detalle (nota completa incluida) se muestra en el modal; null cuando está
+   * cerrado. Evita truncar la nota en la tabla y así ensanchar la fila. */
+  readonly detalle = signal<MovimientoLote | null>(null);
+
   readonly hayFiltrosActivos = computed(
     () =>
       this.filtroManzana().trim().length > 0 ||
@@ -118,6 +122,14 @@ export class LotesHistorialComponent {
         : movimiento.usuario.nombre;
     }
     return 'Sistema (reversión automática)';
+  }
+
+  verDetalle(movimiento: MovimientoLote): void {
+    this.detalle.set(movimiento);
+  }
+
+  cerrarDetalle(): void {
+    this.detalle.set(null);
   }
 
   async eliminar(movimiento: MovimientoLote): Promise<void> {
