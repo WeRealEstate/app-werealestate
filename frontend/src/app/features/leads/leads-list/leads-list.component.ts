@@ -148,12 +148,23 @@ export class LeadsListComponent {
 
   toggleSoloFrios(): void {
     this.estadoFiltro.update((v) => (v === 'FRIOS' ? null : 'FRIOS'));
+    this.alFiltrarPorFrios();
     this.recargarDesdeInicio();
   }
 
   cambiarEstadoFiltro(valor: string): void {
     this.estadoFiltro.set(valor === '' ? null : (valor as FiltroEstado));
+    this.alFiltrarPorFrios();
     this.recargarDesdeInicio();
+  }
+
+  /** "Abandonados (sin seguimiento)" cuenta sobre todo el equipo (ver cargarTotalFrios), así que
+   * si el admin lo activa mientras el filtro de asesor sigue en "solo yo" (el valor por defecto),
+   * la lista se ve vacía aunque sí haya leads fríos de otros asesores. Se fuerza a "todos". */
+  private alFiltrarPorFrios(): void {
+    if (this.estadoFiltro() === 'FRIOS') {
+      this.asesorId.set(null);
+    }
   }
 
   toggleArchivados(): void {
