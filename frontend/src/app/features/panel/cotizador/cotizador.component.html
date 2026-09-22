@@ -861,7 +861,7 @@
           <strong class="text-sm text-ink">{{ selectedArea.toLocaleString('en-US') }} m²</strong>
         </div>
 
-        @if (selectedPaymentType !== 'cash') {
+        @if (!cashDiscountApplied) {
           <div class="flex justify-between gap-4">
             <span class="text-sm text-ink-muted">Precio por m²</span>
             <strong class="text-sm text-ink">${{ pricePerM2.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} MXN</strong>
