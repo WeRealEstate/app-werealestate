@@ -14,37 +14,73 @@ interface NavItem {
   icon: 'home' | 'leads' | 'usuarios' | 'calendario' | 'pipeline' | 'cotizador' | 'lotes' | 'plano' | 'ventas';
 }
 
-const NAV_BY_ROLE: Record<Role, NavItem[]> = {
+/** {@code label: null} agrupa items sin encabezado visible (Inicio, siempre arriba y suelto). */
+interface NavSection {
+  label: string | null;
+  items: NavItem[];
+}
+
+const NAV_BY_ROLE: Record<Role, NavSection[]> = {
   ASESOR: [
-    { label: 'Inicio', route: '/panel/asesor', icon: 'home' },
-    { label: 'Leads', route: '/panel/leads', icon: 'leads' },
-    { label: 'Pipeline', route: '/panel/pipeline', icon: 'pipeline' },
-    { label: 'Lotes', route: '/panel/lotes', icon: 'lotes' },
-    { label: 'Plano', route: '/panel/plano', icon: 'plano' },
-    { label: 'Calendario', route: '/panel/calendario', icon: 'calendario' },
-    { label: 'Cotizador', route: '/panel/cotizador', icon: 'cotizador' },
+    { label: null, items: [{ label: 'Inicio', route: '/panel/asesor', icon: 'home' }] },
+    {
+      label: 'Desarrollos',
+      items: [
+        { label: 'Leads', route: '/panel/leads', icon: 'leads' },
+        { label: 'Pipeline', route: '/panel/pipeline', icon: 'pipeline' },
+        { label: 'Cotizador', route: '/panel/cotizador', icon: 'cotizador' },
+      ],
+    },
+    {
+      label: 'Inventario',
+      items: [
+        { label: 'Lotes', route: '/panel/lotes', icon: 'lotes' },
+        { label: 'Plano', route: '/panel/plano', icon: 'plano' },
+      ],
+    },
+    { label: 'Administración', items: [{ label: 'Calendario', route: '/panel/calendario', icon: 'calendario' }] },
   ],
   LIDER_AREA: [
-    { label: 'Inicio', route: '/panel/equipo', icon: 'home' },
-    { label: 'Leads', route: '/panel/leads', icon: 'leads' },
-    { label: 'Lotes', route: '/panel/lotes', icon: 'lotes' },
-    { label: 'Ventas', route: '/panel/ventas', icon: 'ventas' },
-    { label: 'Calendario', route: '/panel/calendario', icon: 'calendario' },
+    { label: null, items: [{ label: 'Inicio', route: '/panel/equipo', icon: 'home' }] },
+    { label: 'Desarrollos', items: [{ label: 'Leads', route: '/panel/leads', icon: 'leads' }] },
+    {
+      label: 'Inventario',
+      items: [
+        { label: 'Lotes', route: '/panel/lotes', icon: 'lotes' },
+        { label: 'Ventas', route: '/panel/ventas', icon: 'ventas' },
+      ],
+    },
+    { label: 'Administración', items: [{ label: 'Calendario', route: '/panel/calendario', icon: 'calendario' }] },
   ],
   EQUIPO_INTERNO: [
-    { label: 'Inicio', route: '/panel/equipo', icon: 'home' },
-    { label: 'Calendario', route: '/panel/calendario', icon: 'calendario' },
+    { label: null, items: [{ label: 'Inicio', route: '/panel/equipo', icon: 'home' }] },
+    { label: 'Administración', items: [{ label: 'Calendario', route: '/panel/calendario', icon: 'calendario' }] },
   ],
   ADMIN: [
-    { label: 'Inicio', route: '/panel/admin', icon: 'home' },
-    { label: 'Leads', route: '/panel/leads', icon: 'leads' },
-    { label: 'Pipeline', route: '/panel/pipeline', icon: 'pipeline' },
-    { label: 'Lotes', route: '/panel/lotes', icon: 'lotes' },
-    { label: 'Ventas', route: '/panel/ventas', icon: 'ventas' },
-    { label: 'Plano', route: '/panel/plano', icon: 'plano' },
-    { label: 'Usuarios', route: '/panel/usuarios', icon: 'usuarios' },
-    { label: 'Calendario', route: '/panel/calendario', icon: 'calendario' },
-    { label: 'Cotizador', route: '/panel/cotizador', icon: 'cotizador' },
+    { label: null, items: [{ label: 'Inicio', route: '/panel/admin', icon: 'home' }] },
+    {
+      label: 'Desarrollos',
+      items: [
+        { label: 'Leads', route: '/panel/leads', icon: 'leads' },
+        { label: 'Pipeline', route: '/panel/pipeline', icon: 'pipeline' },
+        { label: 'Cotizador', route: '/panel/cotizador', icon: 'cotizador' },
+      ],
+    },
+    {
+      label: 'Inventario',
+      items: [
+        { label: 'Lotes', route: '/panel/lotes', icon: 'lotes' },
+        { label: 'Plano', route: '/panel/plano', icon: 'plano' },
+        { label: 'Ventas', route: '/panel/ventas', icon: 'ventas' },
+      ],
+    },
+    {
+      label: 'Administración',
+      items: [
+        { label: 'Usuarios', route: '/panel/usuarios', icon: 'usuarios' },
+        { label: 'Calendario', route: '/panel/calendario', icon: 'calendario' },
+      ],
+    },
   ],
 };
 
@@ -72,7 +108,7 @@ export class PanelLayoutComponent {
     return rol ? ROLE_LABELS[rol] : '';
   });
   readonly themeLabel = computed(() => (this.themeService.theme() === 'dark' ? 'Modo oscuro' : 'Modo claro'));
-  readonly navItems = computed<NavItem[]>(() => {
+  readonly navSections = computed<NavSection[]>(() => {
     const rol = this.user()?.rol;
     return rol ? NAV_BY_ROLE[rol] : [];
   });
