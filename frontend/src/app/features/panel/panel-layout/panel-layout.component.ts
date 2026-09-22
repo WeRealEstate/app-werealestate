@@ -2,7 +2,6 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { ROLE_LABELS, Role } from '../../../core/models/user.model';
-import { ThemeService } from '../../../core/services/theme.service';
 import { NotificationBellComponent } from '../../../shared/notification-bell/notification-bell.component';
 import { ThemeToggleComponent } from '../../../shared/theme-toggle/theme-toggle.component';
 import { ToastContainerComponent } from '../../../shared/toast-container/toast-container.component';
@@ -100,14 +99,12 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
 })
 export class PanelLayoutComponent {
   private readonly auth = inject(AuthService);
-  private readonly themeService = inject(ThemeService);
 
   readonly user = this.auth.currentUser;
   readonly roleLabel = computed(() => {
     const rol = this.user()?.rol;
     return rol ? ROLE_LABELS[rol] : '';
   });
-  readonly themeLabel = computed(() => (this.themeService.theme() === 'dark' ? 'Modo oscuro' : 'Modo claro'));
   readonly navSections = computed<NavSection[]>(() => {
     const rol = this.user()?.rol;
     return rol ? NAV_BY_ROLE[rol] : [];

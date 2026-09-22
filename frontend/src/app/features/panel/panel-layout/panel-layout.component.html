@@ -110,13 +110,6 @@
       }
     </nav>
 
-    <div class="border-t border-white/15 px-4 py-4">
-      <div class="flex items-center justify-between gap-3 px-1.5">
-        <span class="text-xs font-medium text-white/60">{{ themeLabel() }}</span>
-        <app-theme-toggle />
-      </div>
-    </div>
-
     @if (user(); as u) {
       <div class="border-t border-white/15 px-4 py-4">
         <div class="flex items-center gap-3 px-1.5">
@@ -127,10 +120,11 @@
           >
             {{ u.nombre.charAt(0) }}
           </div>
-          <div class="min-w-0 leading-tight">
+          <div class="min-w-0 leading-tight flex-1">
             <p class="truncate text-sm font-medium text-white">{{ u.nombre }}</p>
             <p class="truncate text-xs text-white/55">{{ roleLabel() }}</p>
           </div>
+          <app-theme-toggle />
         </div>
         <button
           type="button"
