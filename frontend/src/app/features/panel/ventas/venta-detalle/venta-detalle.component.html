@@ -13,8 +13,21 @@
     <div class="mt-3">
       <h1 class="font-heading text-2xl font-semibold text-ink">{{ v.cliente }}</h1>
       <p class="mt-1 text-sm text-ink-muted">
-        {{ v.lote.desarrollo.nombre }} · Manzana {{ v.lote.manzana }} / Lote {{ v.lote.numeroLote }}
+        {{ v.lotes.length }} {{ v.lotes.length === 1 ? 'lote' : 'lotes' }} · {{ v.lotes[0].lote.desarrollo.nombre }}
       </p>
+    </div>
+
+    <!-- LOTES -->
+    <div class="mt-6 rounded-2xl border border-border bg-surface p-5">
+      <p class="text-xs text-ink-muted mb-3">Lotes de esta venta</p>
+      <div class="space-y-2">
+        @for (item of v.lotes; track item.id) {
+          <div class="flex items-center justify-between gap-3 rounded-lg bg-surface-2 px-3.5 py-2.5">
+            <span class="text-sm text-ink">Manzana {{ item.lote.manzana }} / Lote {{ item.lote.numeroLote }} · {{ item.lote.superficie }} m²</span>
+            <span class="text-sm font-medium text-we-primary dark:text-we-blue-light">${{ money(item.precio) }}</span>
+          </div>
+        }
+      </div>
     </div>
 
     <div class="mt-6 grid gap-4 rounded-2xl border border-border bg-surface p-5 sm:grid-cols-2">
@@ -31,7 +44,7 @@
         <p class="mt-1 text-sm font-medium text-ink">{{ v.formaPago }}</p>
       </div>
       <div>
-        <p class="text-xs text-ink-muted">Precio de venta</p>
+        <p class="text-xs text-ink-muted">Precio total</p>
         <p class="mt-1 text-sm font-medium text-ink">${{ money(v.precioVenta) }}</p>
       </div>
       @if (v.mensualidad) {

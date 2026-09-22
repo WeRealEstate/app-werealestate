@@ -1,17 +1,24 @@
 import { Lote } from './lote.model';
 import { UsuarioResumen } from './lead.model';
 
+/** Un lote dentro de una venta, con el precio negociado para ese lote en particular. */
+export interface VentaLote {
+  id: number;
+  lote: Lote;
+  precio: number;
+}
+
 /**
  * Registro de una venta cerrada. cliente y asesor son texto libre a propósito (ver
  * backend Venta): no todo comprador pasó por el CRM como lead y no todo asesor que vende tiene
- * cuenta en el sistema (hay asesores externos).
+ * cuenta en el sistema (hay asesores externos). Puede incluir varios lotes (misma operación, una
+ * sola mensualidad/plazo/saldo combinado — ver VentaLote).
  */
 export interface Venta {
   id: number;
-  lote: Lote;
+  lotes: VentaLote[];
   cliente: string;
   asesor: string;
-  precioVenta: number;
   formaPago: string;
   fechaVenta: string;
   /** Términos de financiamiento; null en ventas de contado. */
@@ -19,16 +26,21 @@ export interface Venta {
   plazoMeses: number | null;
   notas: string | null;
   fechaCreacion: string;
-  /** Se calculan a partir de los pagos de la venta (ver PagoVenta), nunca se capturan a mano. */
+  /** Se calculan a partir de sus lotes y sus pagos (ver PagoVenta), nunca se capturan a mano. */
+  precioVenta: number;
   totalAbonado: number;
   saldoPendiente: number;
 }
 
-export interface VentaCreateRequest {
+export interface VentaLoteItemRequest {
   loteId: number;
+  precio: number;
+}
+
+export interface VentaCreateRequest {
+  lotes: VentaLoteItemRequest[];
   cliente: string;
   asesor: string;
-  precioVenta: number;
   formaPago: string;
   fechaVenta: string;
   mensualidad: number | null;

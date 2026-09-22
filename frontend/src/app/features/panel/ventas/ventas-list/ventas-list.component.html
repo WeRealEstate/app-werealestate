@@ -59,8 +59,13 @@
               <td class="px-4 py-3 text-ink-muted">{{ v.fechaVenta | date: 'd MMM y' }}</td>
               <td class="px-4 py-3 font-medium text-ink">{{ v.cliente }}</td>
               <td class="px-4 py-3 text-ink-muted">{{ v.asesor }}</td>
-              <td class="px-4 py-3 text-ink-muted">{{ v.lote.desarrollo.nombre }}</td>
-              <td class="px-4 py-3 text-ink-muted">{{ v.lote.manzana }} / {{ v.lote.numeroLote }}</td>
+              <td class="px-4 py-3 text-ink-muted">{{ v.lotes[0].lote.desarrollo.nombre }}</td>
+              <td class="px-4 py-3 text-ink-muted">
+                {{ v.lotes[0].lote.manzana }} / {{ v.lotes[0].lote.numeroLote }}
+                @if (v.lotes.length > 1) {
+                  <span class="ml-1 text-xs text-ink-muted">+{{ v.lotes.length - 1 }} más</span>
+                }
+              </td>
               <td class="px-4 py-3 text-ink-muted">{{ v.formaPago }}</td>
               <td class="px-4 py-3 font-medium text-we-primary dark:text-we-blue-light">${{ money(v.precioVenta) }}</td>
               <td class="px-4 py-3 font-medium" [class.text-ink]="v.saldoPendiente > 0" [class.text-green-600]="v.saldoPendiente <= 0" [class.dark:text-green-400]="v.saldoPendiente <= 0">

@@ -4,37 +4,39 @@ import com.werealestate.backend.model.Venta;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record VentaDto(
         Long id,
-        LoteDto lote,
+        List<VentaLoteDto> lotes,
         String cliente,
         String asesor,
-        BigDecimal precioVenta,
         String formaPago,
         LocalDate fechaVenta,
         BigDecimal mensualidad,
         Integer plazoMeses,
         String notas,
         LocalDateTime fechaCreacion,
-        // Se calculan a partir de sus pagos (ver VentaService), nunca se guardan directo.
+        // Se calculan a partir de sus lotes y sus pagos (ver VentaService), nunca se guardan directo.
+        BigDecimal precioVenta,
         BigDecimal totalAbonado,
         BigDecimal saldoPendiente) {
 
-    public static VentaDto from(Venta venta, BigDecimal totalAbonado) {
+    public static VentaDto from(Venta venta, List<VentaLoteDto> lotes, BigDecimal totalAbonado) {
+        BigDecimal precioVenta = lotes.stream().map(VentaLoteDto::precio).reduce(BigDecimal.ZERO, BigDecimal::add);
         return new VentaDto(
                 venta.getId(),
-                LoteDto.from(venta.getLote()),
+                lotes,
                 venta.getCliente(),
                 venta.getAsesor(),
-                venta.getPrecioVenta(),
                 venta.getFormaPago(),
                 venta.getFechaVenta(),
                 venta.getMensualidad(),
                 venta.getPlazoMeses(),
                 venta.getNotas(),
                 venta.getFechaCreacion(),
+                precioVenta,
                 totalAbonado,
-                venta.getPrecioVenta().subtract(totalAbonado));
+                precioVenta.subtract(totalAbonado));
     }
 }

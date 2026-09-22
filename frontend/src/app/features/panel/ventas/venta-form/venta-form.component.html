@@ -26,31 +26,88 @@
     </div>
 
     <div>
-      <label for="loteId" class="block text-sm font-medium text-ink mb-1.5">Lote *</label>
-      @if (isCargandoLotes()) {
-        <p class="text-sm text-ink-muted">Cargando lotes…</p>
-      } @else {
-        <select
-          id="loteId"
-          formControlName="loteId"
-          [disabled]="form.controls.desarrolloId.value === null"
-          class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
-                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary disabled:opacity-60"
-        >
-          <option [ngValue]="null">Selecciona un lote</option>
-          @for (l of lotesDelDesarrollo(); track l.id) {
-            <option [ngValue]="l.id">{{ l.manzana }} / {{ l.numeroLote }} — {{ estadoLabels[l.estado] }}</option>
+      <label class="block text-sm font-medium text-ink mb-1.5">Lotes de la venta *</label>
+      <p class="text-xs text-ink-muted mb-2">
+        Agrega uno o más lotes: si el cliente compró varios en la misma operación, todos comparten la mensualidad/plazo/saldo de abajo.
+      </p>
+
+      @if (lotesAgregados().length > 0) {
+        <div class="mb-3 space-y-2">
+          @for (item of lotesAgregados(); track item.lote.id) {
+            <div class="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface-2 px-3.5 py-2.5">
+              <div class="text-sm text-ink">
+                <span class="font-medium">{{ item.lote.manzana }} / {{ item.lote.numeroLote }}</span>
+                <span class="text-ink-muted"> · {{ item.lote.superficie }} m²</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-sm font-medium text-we-primary dark:text-we-blue-light">${{ money(item.precio) }}</span>
+                <button
+                  type="button"
+                  (click)="quitarLote(item.lote.id)"
+                  aria-label="Quitar lote"
+                  class="flex h-7 w-7 items-center justify-center rounded-lg text-ink-muted hover:bg-red-50 hover:text-red-600
+                         dark:hover:bg-red-500/10 transition-colors duration-150"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M18 6 6 18M6 6l12 12" stroke-linecap="round"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
           }
-        </select>
-        @if (form.controls.desarrolloId.value !== null && lotesDelDesarrollo().length === 0) {
-          <p class="mt-1.5 text-xs text-ink-muted">Este desarrollo no tiene lotes capturados.</p>
-        }
+        </div>
       }
-      @if (form.controls.loteId.invalid && form.controls.loteId.touched) {
-        <p class="mt-1.5 text-xs text-red-600">Elige un lote.</p>
-      }
-      @if (loteSeleccionado(); as lote) {
-        <p class="mt-1.5 text-xs text-ink-muted">Estado actual: {{ estadoLabels[lote.estado] }} · {{ lote.superficie }} m²</p>
+
+      <div class="flex items-end gap-2.5 rounded-lg border border-dashed border-border p-3.5">
+        <div class="flex-1">
+          <label for="loteParaAgregar" class="block text-xs font-medium text-ink-muted mb-1.5">Lote</label>
+          @if (isCargandoLotes()) {
+            <p class="text-sm text-ink-muted">Cargando…</p>
+          } @else {
+            <select
+              id="loteParaAgregar"
+              [ngModel]="loteParaAgregarId()"
+              [ngModelOptions]="{ standalone: true }"
+              (ngModelChange)="onLoteParaAgregarChange($any($event) ?? '')"
+              [disabled]="form.controls.desarrolloId.value === null"
+              class="block w-full rounded-lg border border-border px-3 py-2 text-sm text-ink bg-surface
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary disabled:opacity-60"
+            >
+              <option [ngValue]="null">Selecciona un lote</option>
+              @for (l of lotesDisponiblesParaAgregar(); track l.id) {
+                <option [ngValue]="l.id">{{ l.manzana }} / {{ l.numeroLote }} — {{ estadoLabels[l.estado] }}</option>
+              }
+            </select>
+          }
+        </div>
+        <div class="w-36">
+          <label for="precioParaAgregar" class="block text-xs font-medium text-ink-muted mb-1.5">Precio</label>
+          <input
+            id="precioParaAgregar"
+            type="number"
+            step="0.01"
+            min="1"
+            [ngModel]="precioParaAgregar()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="precioParaAgregar.set($event)"
+            placeholder="Ej. 160000"
+            class="block w-full rounded-lg border border-border px-3 py-2 text-sm text-ink
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          />
+        </div>
+        <button
+          type="button"
+          (click)="agregarLote()"
+          [disabled]="loteParaAgregarId() === null || !precioParaAgregar()"
+          class="inline-flex items-center justify-center rounded-lg border border-we-primary px-4 py-2 text-sm font-semibold text-we-primary
+                 hover:bg-we-primary/10 active:scale-[0.97] transition-transform duration-150
+                 disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 min-h-[38px]"
+        >
+          + Agregar
+        </button>
+      </div>
+      @if (form.controls.desarrolloId.value !== null && lotesDelDesarrollo().length === 0) {
+        <p class="mt-1.5 text-xs text-ink-muted">Este desarrollo no tiene lotes capturados.</p>
       }
     </div>
 
@@ -87,21 +144,11 @@
 
     <div class="grid grid-cols-2 gap-4">
       <div>
-        <label for="precioVenta" class="block text-sm font-medium text-ink mb-1.5">Precio de venta *</label>
-        <input
-          id="precioVenta"
-          type="number"
-          step="0.01"
-          min="1"
-          formControlName="precioVenta"
-          placeholder="Ej. 850000"
-          class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
-                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
-        />
-        @if (form.controls.precioVenta.invalid && form.controls.precioVenta.touched) {
-          <p class="mt-1.5 text-xs text-red-600">Ingresa un precio válido.</p>
-        }
-        <p class="mt-1.5 text-xs text-ink-muted">Se autocompleta al elegir el lote (mismo estimado de /panel/lotes); edítalo si la venta se cerró en otro monto.</p>
+        <label class="block text-sm font-medium text-ink mb-1.5">Precio total de la venta</label>
+        <div class="flex items-center rounded-lg border border-border bg-surface-2 px-3.5 py-2.5 text-sm font-semibold text-ink min-h-[44px]">
+          ${{ money(precioTotal()) }}
+        </div>
+        <p class="mt-1.5 text-xs text-ink-muted">Suma de los precios de cada lote agregado arriba.</p>
       </div>
       <div>
         <label for="fechaVenta" class="block text-sm font-medium text-ink mb-1.5">Fecha de venta *</label>
@@ -187,8 +234,8 @@
         class="mt-0.5 h-4 w-4 rounded border-border text-we-primary focus:ring-we-primary/50"
       />
       <span>
-        Marcar el lote como <strong>Vendido</strong> al guardar
-        <span class="block text-xs text-ink-muted mt-0.5">Actualiza el estado del lote y queda en su historial de movimientos.</span>
+        Marcar {{ lotesAgregados().length > 1 ? 'los lotes' : 'el lote' }} como <strong>Vendido</strong> al guardar
+        <span class="block text-xs text-ink-muted mt-0.5">Actualiza el estado de cada lote y queda en su historial de movimientos.</span>
       </span>
     </label>
 
