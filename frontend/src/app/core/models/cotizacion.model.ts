@@ -9,6 +9,9 @@ export interface CotizacionHistorial {
   asesor: CotizacionAsesor;
   proyecto: string;
   nombreCliente: string;
+  /** Solo viene de /cotizador-publico: nombre del asesor que atendió al cliente con el link
+   * público (sin sesión, ver CotizadorComponent.advisorName). Null en cotizaciones con sesión. */
+  nombreAsesorPublico: string | null;
   manzana: string | null;
   lote: string | null;
   superficie: number;
@@ -29,6 +32,7 @@ export interface CotizacionHistorial {
 export interface CotizacionCreateRequest {
   proyecto: string;
   nombreCliente: string;
+  nombreAsesorPublico: string | null;
   manzana: string | null;
   lote: string | null;
   superficie: number;

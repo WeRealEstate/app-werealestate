@@ -8,6 +8,9 @@ import java.math.BigDecimal;
 public record CotizacionCreateRequest(
         @NotBlank String proyecto,
         @NotBlank String nombreCliente,
+        // Solo aplica a /cotizador-publico (ver CotizacionService.registrarPublica), que la exige;
+        // en el cotizador con sesión se ignora, por eso no lleva @NotBlank aquí.
+        String nombreAsesorPublico,
         String manzana,
         String lote,
         @NotNull @Positive BigDecimal superficie,

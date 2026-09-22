@@ -119,7 +119,7 @@ export class HistorialCotizacionesComponent {
   private datosExportacion(cotizaciones: CotizacionHistorial[]) {
     const filas = cotizaciones.map((c) => ({
       fecha: c.fechaCreacion,
-      asesor: c.asesor.nombre,
+      asesor: c.nombreAsesorPublico || c.asesor.nombre,
       cliente: c.nombreCliente,
       proyecto: c.proyecto,
       manzana: c.manzana ?? '',

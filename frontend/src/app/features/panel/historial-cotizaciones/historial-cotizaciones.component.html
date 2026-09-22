@@ -96,7 +96,7 @@
           @for (c of cotizaciones(); track c.id; let i = $index) {
             <tr class="stagger-item hover:bg-surface-2 transition-colors duration-150" [style.animation-delay.ms]="i < 8 ? i * 40 : 0">
               <td class="px-4 py-3 text-ink-muted">{{ c.fechaCreacion | date: 'd MMM y' }}</td>
-              <td class="px-4 py-3 text-ink-muted">{{ c.asesor.nombre }}</td>
+              <td class="px-4 py-3 text-ink-muted">{{ c.nombreAsesorPublico || c.asesor.nombre }}</td>
               <td class="px-4 py-3 font-medium text-ink">{{ c.nombreCliente }}</td>
               <td class="px-4 py-3 text-ink-muted">{{ c.proyecto }}</td>
               <td class="px-4 py-3 text-ink-muted">{{ c.manzana || '—' }} / {{ c.lote || '—' }}</td>

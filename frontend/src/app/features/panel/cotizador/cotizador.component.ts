@@ -385,12 +385,22 @@ export class CotizadorComponent implements OnInit {
     return this.selectedArea * this.pricePerM2;
   }
 
+  /** El precio de contado con descuento ($110,000 fijo) es una promoción exclusiva del lote
+   * estándar de SAMAI de 200 m² exactos, no se prorratea a otros tamaños (antes sí se escalaba
+   * proporcionalmente, pero ese precio especial nunca aplicó más que a ese tamaño puntual). Para
+   * cualquier otro tamaño en SAMAI, o para Nanuu, "Contado" cobra el precio de lista sin descuento. */
   get cashPrice(): number {
-    if (this.selectedProject === 'samai') {
-      return (this.selectedArea / 200) * 110000;
+    if (this.selectedProject === 'samai' && this.selectedArea === 200) {
+      return 110000;
     }
 
     return this.totalPrice;
+  }
+
+  /** Si "Contado" está seleccionado pero el lote no es el estándar de 200 m² de SAMAI, no hay
+   * descuento real: el resumen debe decirlo (ver cashPrice) en vez de mostrar "Precio especial". */
+  get cashDiscountApplied(): boolean {
+    return this.selectedPaymentType === 'cash' && this.selectedProject === 'samai' && this.selectedArea === 200;
   }
 
   selectPaymentType(type: PaymentType): void {
@@ -697,6 +707,9 @@ export class CotizadorComponent implements OnInit {
     const request = {
       proyecto: data.project,
       nombreCliente: data.clientName,
+      // Solo lo exige/usa el backend en /cotizador-publico (ver CotizacionService.registrarPublica);
+      // en el cotizador con sesión el asesor ya se resuelve del token, así que se manda null.
+      nombreAsesorPublico: this.esPublico ? data.advisorName : null,
       manzana: data.blockNumber || null,
       lote: data.lotNumber || null,
       superficie: data.area,

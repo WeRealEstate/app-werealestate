@@ -35,6 +35,12 @@ public class Cotizacion {
     @Column(name = "nombre_cliente", nullable = false, length = 150)
     private String nombreCliente;
 
+    /** Solo se llena en /cotizador-publico (ver CotizacionService.registrarPublica): nombre del
+     * asesor que atendió al cliente con el link público, donde no hay una sesión real detrás y
+     * {@link #asesor} siempre es el usuario de sistema. Null en cotizaciones con sesión. */
+    @Column(name = "nombre_asesor_publico", length = 200)
+    private String nombreAsesorPublico;
+
     @Column(length = 30)
     private String manzana;
 
@@ -88,6 +94,7 @@ public class Cotizacion {
             Usuario asesor,
             String proyecto,
             String nombreCliente,
+            String nombreAsesorPublico,
             String manzana,
             String lote,
             BigDecimal superficie,
@@ -105,6 +112,7 @@ public class Cotizacion {
         this.asesor = asesor;
         this.proyecto = proyecto;
         this.nombreCliente = nombreCliente;
+        this.nombreAsesorPublico = nombreAsesorPublico;
         this.manzana = manzana;
         this.lote = lote;
         this.superficie = superficie;
@@ -135,6 +143,10 @@ public class Cotizacion {
 
     public String getNombreCliente() {
         return nombreCliente;
+    }
+
+    public String getNombreAsesorPublico() {
+        return nombreAsesorPublico;
     }
 
     public String getManzana() {

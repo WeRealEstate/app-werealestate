@@ -4,6 +4,7 @@ import com.werealestate.backend.dto.CotizacionCreateRequest;
 import com.werealestate.backend.dto.CotizacionDto;
 import com.werealestate.backend.dto.PaginaDto;
 import com.werealestate.backend.exception.ForbiddenOperationException;
+import com.werealestate.backend.exception.ValidationException;
 import com.werealestate.backend.model.Cotizacion;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Usuario;
@@ -49,8 +50,14 @@ public class CotizacionService {
     }
 
     /** Igual que {@link #registrar}, pero para /cotizador-publico: sin sesión iniciada, así que
-     * se atribuye al usuario de sistema en vez de buscar un autenticado. */
+     * se atribuye al usuario de sistema en vez de buscar un autenticado, y se exige el nombre del
+     * asesor que atendió al cliente con el link público (ver Cotizacion#nombreAsesorPublico) —
+     * sin eso, el historial no tendría forma de saber quién generó la cotización. */
     public CotizacionDto registrarPublica(CotizacionCreateRequest request) {
+        if (request.nombreAsesorPublico() == null || request.nombreAsesorPublico().isBlank()) {
+            throw new ValidationException("El nombre del asesor es obligatorio para registrar la cotización");
+        }
+
         Usuario sistema = usuarioRepository
                 .findByEmail(EMAIL_USUARIO_COTIZADOR_PUBLICO)
                 .orElseThrow(() -> new IllegalStateException(
@@ -60,10 +67,15 @@ public class CotizacionService {
     }
 
     private CotizacionDto guardar(Usuario asesor, CotizacionCreateRequest request) {
+        String nombreAsesorPublico = request.nombreAsesorPublico() == null || request.nombreAsesorPublico().isBlank()
+                ? null
+                : request.nombreAsesorPublico().trim();
+
         Cotizacion cotizacion = new Cotizacion(
                 asesor,
                 request.proyecto(),
                 request.nombreCliente(),
+                nombreAsesorPublico,
                 request.manzana(),
                 request.lote(),
                 request.superficie(),
