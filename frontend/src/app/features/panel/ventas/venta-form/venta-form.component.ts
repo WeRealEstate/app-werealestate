@@ -50,6 +50,15 @@ export class VentaFormComponent {
 
   constructor() {
     this.leadsService.listarDesarrollosGestionables().then((d) => this.desarrollos.set(d));
+    // Autocompleta el precio con el mismo estimado que ya se ve en /panel/lotes (precio por m² del
+    // desarrollo × superficie del lote); queda editable por si la venta se cerró en otro monto.
+    this.form.controls.loteId.valueChanges.subscribe((loteId) => this.autocompletarPrecio(loteId));
+  }
+
+  private autocompletarPrecio(loteId: number | null): void {
+    const lote = loteId == null ? null : this.lotesDelDesarrollo().find((l) => l.id === loteId);
+    if (!lote) return;
+    this.form.controls.precioVenta.setValue(Math.round(lote.desarrollo.precioM2 * lote.superficie));
   }
 
   async onDesarrolloChange(valor: string): Promise<void> {
