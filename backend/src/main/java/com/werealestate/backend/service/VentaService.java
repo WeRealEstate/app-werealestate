@@ -80,9 +80,13 @@ public class VentaService {
         String asesor = request.asesor().trim();
         String notas = request.notas() == null || request.notas().isBlank() ? null : request.notas().trim();
 
+        String engancheLabel = request.engancheLabel() == null || request.engancheLabel().isBlank()
+                ? null
+                : request.engancheLabel().trim();
+
         Venta venta = new Venta(
                 cliente, asesor, request.formaPago().trim(), request.fechaVenta(), request.mensualidad(),
-                request.plazoMeses(), notas);
+                request.plazoMeses(), engancheLabel, request.enganche(), notas);
         venta = ventaRepository.save(venta);
 
         for (VentaLoteItemRequest item : request.lotes()) {

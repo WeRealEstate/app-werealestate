@@ -16,6 +16,28 @@ interface LoteAgregado {
   precio: number;
 }
 
+/** Mismos tipos de pago que ya usa el Cotizador (ver CotizadorComponent.PaymentType), para no
+ * inventar un segundo vocabulario: cada uno define si hay enganche/aportación y cómo se etiqueta. */
+type TipoPago = 'msi' | 'downpayment' | 'initial' | 'annualities' | 'cash';
+
+const TIPO_PAGO_OPCIONES: { value: TipoPago; label: string; sublabel: string }[] = [
+  { value: 'msi', label: 'Sin enganche', sublabel: 'Meses sin intereses' },
+  { value: 'downpayment', label: 'Con enganche', sublabel: 'Monto libre' },
+  { value: 'initial', label: 'Pago inicial', sublabel: 'Baja la mensualidad' },
+  { value: 'annualities', label: 'Con anualidades', sublabel: 'Aportación anual' },
+  { value: 'cash', label: 'Contado', sublabel: 'Pago único' },
+];
+
+/** "Enganche" / "Pago inicial" / "Aportación anual" (mismo concepto que ya usa Cotización); null
+ * para los tipos sin enganche (Sin enganche / Contado). */
+const ENGANCHE_LABEL_POR_TIPO: Record<TipoPago, string | null> = {
+  msi: null,
+  downpayment: 'Enganche',
+  initial: 'Pago inicial',
+  annualities: 'Aportación anual',
+  cash: null,
+};
+
 @Component({
   selector: 'app-venta-form',
   standalone: true,
@@ -41,11 +63,24 @@ export class VentaFormComponent {
   readonly lotesAgregados = signal<LoteAgregado[]>([]);
   readonly precioTotal = computed(() => this.lotesAgregados().reduce((sum, l) => sum + l.precio, 0));
 
+  readonly tipoPagoOpciones = TIPO_PAGO_OPCIONES;
+  readonly tipoPago = signal<TipoPago>('msi');
+  readonly montoEnganche = signal<number | null>(null);
+
+  /** Sin enganche/Con enganche usan "MSI" (meses sin intereses); pago inicial/anualidades usan
+   * "meses" a secas — mismo texto que ya arma CotizadorComponent.paymentMethodLabel. */
+  readonly unidadPlazo = computed(() =>
+    this.tipoPago() === 'msi' || this.tipoPago() === 'downpayment' ? 'MSI' : 'meses',
+  );
+  readonly engancheLabelActual = computed(() => ENGANCHE_LABEL_POR_TIPO[this.tipoPago()]);
+  readonly mostrarEnganche = computed(() => this.engancheLabelActual() !== null);
+  readonly mostrarPlazo = computed(() => this.tipoPago() !== 'cash');
+
   readonly form = this.fb.group({
     desarrolloId: this.fb.control<number | null>(null, { validators: [Validators.required] }),
     cliente: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
     asesor: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
-    formaPago: this.fb.control('Contado', { nonNullable: true, validators: [Validators.required] }),
+    formaPago: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
     fechaVenta: this.fb.control(new Date().toISOString().slice(0, 10), { nonNullable: true, validators: [Validators.required] }),
     // Opcionales: una venta de contado no los necesita.
     mensualidad: this.fb.control<number | null>(null, { validators: [Validators.min(1)] }),
@@ -67,6 +102,33 @@ export class VentaFormComponent {
 
   constructor() {
     this.leadsService.listarDesarrollosGestionables().then((d) => this.desarrollos.set(d));
+    this.actualizarFormaPago();
+    // Cualquier cambio en plazo regenera el texto de forma de pago; formaPago sigue editable a
+    // mano por si el trato real necesita una descripción distinta.
+    this.form.controls.plazoMeses.valueChanges.subscribe(() => this.actualizarFormaPago());
+  }
+
+  /** Igual que CotizadorComponent.selectPaymentType: cambiar de tipo limpia lo que ya no aplica
+   * (ej. el monto de enganche si pasas a "Sin enganche", plazo/mensualidad si pasas a "Contado"). */
+  seleccionarTipoPago(tipo: TipoPago): void {
+    this.tipoPago.set(tipo);
+    if (!this.mostrarEnganche()) {
+      this.montoEnganche.set(null);
+    }
+    if (tipo === 'cash') {
+      this.form.controls.mensualidad.setValue(null);
+      this.form.controls.plazoMeses.setValue(null);
+    }
+    this.actualizarFormaPago();
+  }
+
+  private actualizarFormaPago(): void {
+    const plazo = this.form.controls.plazoMeses.value;
+    const tipo = this.tipoPago();
+    const opcion = TIPO_PAGO_OPCIONES.find((o) => o.value === tipo)!;
+
+    const texto = tipo === 'cash' || !plazo ? opcion.label : `${opcion.label} · ${plazo} ${this.unidadPlazo()}`;
+    this.form.controls.formaPago.setValue(texto);
   }
 
   async onDesarrolloChange(valor: string): Promise<void> {
@@ -119,10 +181,13 @@ export class VentaFormComponent {
   }
 
   async onSubmit(): Promise<void> {
-    if (this.form.invalid || this.lotesAgregados().length === 0 || this.isLoading()) {
+    const faltaMontoEnganche = this.mostrarEnganche() && !this.montoEnganche();
+    if (this.form.invalid || this.lotesAgregados().length === 0 || faltaMontoEnganche || this.isLoading()) {
       this.form.markAllAsTouched();
       if (this.lotesAgregados().length === 0) {
         this.errorMessage.set('Agrega al menos un lote a la venta.');
+      } else if (faltaMontoEnganche) {
+        this.errorMessage.set(`Ingresa el monto de ${this.engancheLabelActual()!.toLowerCase()}.`);
       }
       return;
     }
@@ -140,6 +205,8 @@ export class VentaFormComponent {
         fechaVenta: v.fechaVenta,
         mensualidad: v.mensualidad,
         plazoMeses: v.plazoMeses,
+        engancheLabel: this.engancheLabelActual(),
+        enganche: this.mostrarEnganche() ? this.montoEnganche() : null,
         notas: v.notas?.trim() || null,
         marcarLoteVendido: v.marcarLoteVendido,
       });

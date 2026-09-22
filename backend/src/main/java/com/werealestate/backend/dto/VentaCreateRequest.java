@@ -18,9 +18,13 @@ public record VentaCreateRequest(
         @NotBlank String asesor,
         @NotBlank String formaPago,
         @NotNull LocalDate fechaVenta,
-        // Términos de financiamiento; ambos opcionales (una venta de contado no los necesita).
+        // Términos de financiamiento; opcionales (una venta de contado no los necesita).
         @Positive BigDecimal mensualidad,
         @Positive Integer plazoMeses,
+        // "Enganche" / "Pago inicial" / "Aportación anual" (mismo concepto que ya usa Cotización);
+        // ambos null cuando no aplica (Sin enganche / Contado).
+        String engancheLabel,
+        @Positive BigDecimal enganche,
         @Size(max = 1000) String notas,
         // Si es true, además de registrar la venta se marca cada lote como VENDIDO (con su
         // historial normal, ver LoteService.marcarVendido). Ver VentaService.

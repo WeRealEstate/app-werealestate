@@ -166,6 +166,82 @@
     </div>
 
     <div>
+      <label class="block text-sm font-medium text-ink mb-1.5">Tipo de pago</label>
+      <div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+        @for (opcion of tipoPagoOpciones; track opcion.value) {
+          <button
+            type="button"
+            (click)="seleccionarTipoPago(opcion.value)"
+            [class.border-we-primary]="tipoPago() === opcion.value"
+            [class.text-we-primary]="tipoPago() === opcion.value"
+            [class.bg-we-primary/10]="tipoPago() === opcion.value"
+            class="rounded-xl border border-border p-3 text-left transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <p class="text-sm font-semibold">{{ opcion.label }}</p>
+            <p class="text-xs text-ink-muted">{{ opcion.sublabel }}</p>
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (mostrarEnganche()) {
+      <div>
+        <label for="montoEnganche" class="block text-sm font-medium text-ink mb-1.5">
+          Monto de {{ engancheLabelActual()!.toLowerCase() }} *
+        </label>
+        <input
+          id="montoEnganche"
+          type="number"
+          step="0.01"
+          min="1"
+          [ngModel]="montoEnganche()"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="montoEnganche.set($event)"
+          placeholder="Ej. 20000"
+          class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
+                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+        />
+      </div>
+    }
+
+    @if (mostrarPlazo()) {
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label for="mensualidad" class="block text-sm font-medium text-ink mb-1.5">Mensualidad</label>
+          <input
+            id="mensualidad"
+            type="number"
+            step="0.01"
+            min="1"
+            formControlName="mensualidad"
+            placeholder="Opcional"
+            class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          />
+          @if (form.controls.mensualidad.invalid && form.controls.mensualidad.touched) {
+            <p class="mt-1.5 text-xs text-red-600">Debe ser mayor a 0.</p>
+          }
+        </div>
+        <div>
+          <label for="plazoMeses" class="block text-sm font-medium text-ink mb-1.5">Plazo ({{ unidadPlazo() }})</label>
+          <input
+            id="plazoMeses"
+            type="number"
+            step="1"
+            min="1"
+            formControlName="plazoMeses"
+            placeholder="Opcional"
+            class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          />
+          @if (form.controls.plazoMeses.invalid && form.controls.plazoMeses.touched) {
+            <p class="mt-1.5 text-xs text-red-600">Debe ser mayor a 0.</p>
+          }
+        </div>
+      </div>
+    }
+
+    <div>
       <label for="formaPago" class="block text-sm font-medium text-ink mb-1.5">Forma de pago *</label>
       <input
         id="formaPago"
@@ -178,41 +254,7 @@
       @if (form.controls.formaPago.invalid && form.controls.formaPago.touched) {
         <p class="mt-1.5 text-xs text-red-600">Campo obligatorio.</p>
       }
-    </div>
-
-    <div class="grid grid-cols-2 gap-4">
-      <div>
-        <label for="mensualidad" class="block text-sm font-medium text-ink mb-1.5">Mensualidad</label>
-        <input
-          id="mensualidad"
-          type="number"
-          step="0.01"
-          min="1"
-          formControlName="mensualidad"
-          placeholder="Opcional"
-          class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
-                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
-        />
-        @if (form.controls.mensualidad.invalid && form.controls.mensualidad.touched) {
-          <p class="mt-1.5 text-xs text-red-600">Debe ser mayor a 0.</p>
-        }
-      </div>
-      <div>
-        <label for="plazoMeses" class="block text-sm font-medium text-ink mb-1.5">Plazo (meses)</label>
-        <input
-          id="plazoMeses"
-          type="number"
-          step="1"
-          min="1"
-          formControlName="plazoMeses"
-          placeholder="Opcional"
-          class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
-                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
-        />
-        @if (form.controls.plazoMeses.invalid && form.controls.plazoMeses.touched) {
-          <p class="mt-1.5 text-xs text-red-600">Debe ser mayor a 0.</p>
-        }
-      </div>
+      <p class="mt-1.5 text-xs text-ink-muted">Se arma solo con el tipo de pago y el plazo; edítalo si el trato necesita otra descripción.</p>
     </div>
 
     <div>

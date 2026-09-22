@@ -24,6 +24,10 @@ export interface Venta {
   /** Términos de financiamiento; null en ventas de contado. */
   mensualidad: number | null;
   plazoMeses: number | null;
+  /** "Enganche" / "Pago inicial" / "Aportación anual" (mismo concepto que ya usa Cotización);
+   * ambos null cuando no aplica (Sin enganche / Contado). */
+  engancheLabel: string | null;
+  enganche: number | null;
   notas: string | null;
   fechaCreacion: string;
   /** Se calculan a partir de sus lotes y sus pagos (ver PagoVenta), nunca se capturan a mano. */
@@ -45,6 +49,8 @@ export interface VentaCreateRequest {
   fechaVenta: string;
   mensualidad: number | null;
   plazoMeses: number | null;
+  engancheLabel: string | null;
+  enganche: number | null;
   notas: string | null;
   marcarLoteVendido: boolean;
 }

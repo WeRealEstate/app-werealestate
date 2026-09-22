@@ -46,6 +46,14 @@ public class Venta {
     @Column(name = "plazo_meses")
     private Integer plazoMeses;
 
+    /** "Enganche" / "Pago inicial" / "Aportación anual" según el tipo de pago elegido (mismo
+     * concepto que ya usa Cotizacion); ambos null cuando no aplica (Sin enganche / Contado). */
+    @Column(name = "enganche_label", length = 30)
+    private String engancheLabel;
+
+    @Column(precision = 14, scale = 2)
+    private BigDecimal enganche;
+
     @Column(length = 1000)
     private String notas;
 
@@ -63,6 +71,8 @@ public class Venta {
             LocalDate fechaVenta,
             BigDecimal mensualidad,
             Integer plazoMeses,
+            String engancheLabel,
+            BigDecimal enganche,
             String notas) {
         this.cliente = cliente;
         this.asesor = asesor;
@@ -70,6 +80,8 @@ public class Venta {
         this.fechaVenta = fechaVenta;
         this.mensualidad = mensualidad;
         this.plazoMeses = plazoMeses;
+        this.engancheLabel = engancheLabel;
+        this.enganche = enganche;
         this.notas = notas;
     }
 
@@ -99,6 +111,14 @@ public class Venta {
 
     public Integer getPlazoMeses() {
         return plazoMeses;
+    }
+
+    public String getEngancheLabel() {
+        return engancheLabel;
+    }
+
+    public BigDecimal getEnganche() {
+        return enganche;
     }
 
     public String getNotas() {

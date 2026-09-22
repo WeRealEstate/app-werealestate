@@ -47,6 +47,12 @@
         <p class="text-xs text-ink-muted">Precio total</p>
         <p class="mt-1 text-sm font-medium text-ink">${{ money(v.precioVenta) }}</p>
       </div>
+      @if (v.engancheLabel && v.enganche) {
+        <div>
+          <p class="text-xs text-ink-muted">{{ v.engancheLabel }}</p>
+          <p class="mt-1 text-sm font-medium text-ink">${{ money(v.enganche) }}</p>
+        </div>
+      }
       @if (v.mensualidad) {
         <div>
           <p class="text-xs text-ink-muted">Mensualidad</p>
