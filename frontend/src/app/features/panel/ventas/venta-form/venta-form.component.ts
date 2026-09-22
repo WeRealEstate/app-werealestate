@@ -103,9 +103,13 @@ export class VentaFormComponent {
   constructor() {
     this.leadsService.listarDesarrollosGestionables().then((d) => this.desarrollos.set(d));
     this.actualizarFormaPago();
-    // Cualquier cambio en plazo regenera el texto de forma de pago; formaPago sigue editable a
-    // mano por si el trato real necesita una descripción distinta.
-    this.form.controls.plazoMeses.valueChanges.subscribe(() => this.actualizarFormaPago());
+    // Cualquier cambio en plazo regenera el texto de forma de pago Y recalcula la mensualidad
+    // (mismo cálculo que ya usa el Cotizador: saldo a financiar ÷ meses); ambos siguen editables
+    // a mano por si el trato real fue distinto.
+    this.form.controls.plazoMeses.valueChanges.subscribe(() => {
+      this.actualizarFormaPago();
+      this.actualizarMensualidad();
+    });
   }
 
   /** Igual que CotizadorComponent.selectPaymentType: cambiar de tipo limpia lo que ya no aplica
@@ -120,6 +124,13 @@ export class VentaFormComponent {
       this.form.controls.plazoMeses.setValue(null);
     }
     this.actualizarFormaPago();
+    this.actualizarMensualidad();
+  }
+
+  /** Se llama cada vez que cambia el monto de enganche/pago inicial/aportación a mano. */
+  onMontoEngancheChange(valor: number | null): void {
+    this.montoEnganche.set(valor);
+    this.actualizarMensualidad();
   }
 
   private actualizarFormaPago(): void {
@@ -129,6 +140,26 @@ export class VentaFormComponent {
 
     const texto = tipo === 'cash' || !plazo ? opcion.label : `${opcion.label} · ${plazo} ${this.unidadPlazo()}`;
     this.form.controls.formaPago.setValue(texto);
+  }
+
+  /** Mensualidad = saldo a financiar (precio total − enganche) ÷ meses, igual que
+   * CotizadorComponent.monthlyPayment (0% interés — "meses sin intereses"). Se recalcula cada vez
+   * que cambia el precio total, el plazo, el enganche o el tipo de pago; el campo sigue editable
+   * por si el trato real llevó un ajuste manual. */
+  private actualizarMensualidad(): void {
+    const plazo = this.form.controls.plazoMeses.value;
+    if (this.tipoPago() === 'cash' || !plazo || plazo <= 0) {
+      return;
+    }
+
+    const enganche = this.mostrarEnganche() ? (this.montoEnganche() ?? 0) : 0;
+    const saldoAFinanciar = this.precioTotal() - enganche;
+    if (saldoAFinanciar <= 0) {
+      this.form.controls.mensualidad.setValue(null);
+      return;
+    }
+
+    this.form.controls.mensualidad.setValue(Math.round((saldoAFinanciar / plazo) * 100) / 100);
   }
 
   async onDesarrolloChange(valor: string): Promise<void> {
@@ -174,10 +205,12 @@ export class VentaFormComponent {
     this.lotesAgregados.update((actuales) => [...actuales, { lote, precio }]);
     this.loteParaAgregarId.set(null);
     this.precioParaAgregar.set(null);
+    this.actualizarMensualidad();
   }
 
   quitarLote(loteId: number): void {
     this.lotesAgregados.update((actuales) => actuales.filter((l) => l.lote.id !== loteId));
+    this.actualizarMensualidad();
   }
 
   async onSubmit(): Promise<void> {

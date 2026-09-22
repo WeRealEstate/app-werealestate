@@ -196,7 +196,7 @@
           min="1"
           [ngModel]="montoEnganche()"
           [ngModelOptions]="{ standalone: true }"
-          (ngModelChange)="montoEnganche.set($event)"
+          (ngModelChange)="onMontoEngancheChange($event)"
           placeholder="Ej. 20000"
           class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
                  focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
@@ -221,6 +221,7 @@
           @if (form.controls.mensualidad.invalid && form.controls.mensualidad.touched) {
             <p class="mt-1.5 text-xs text-red-600">Debe ser mayor a 0.</p>
           }
+          <p class="mt-1.5 text-xs text-ink-muted">Se recalcula sola con el precio, el enganche y el plazo; edítala si el trato fue distinto.</p>
         </div>
         <div>
           <label for="plazoMeses" class="block text-sm font-medium text-ink mb-1.5">Plazo ({{ unidadPlazo() }})</label>
