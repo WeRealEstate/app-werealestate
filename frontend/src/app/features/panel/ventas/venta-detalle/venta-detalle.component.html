@@ -1,0 +1,169 @@
+<div class="max-w-3xl page-enter">
+  <a routerLink="/panel/ventas" class="text-sm text-we-blue-light hover:underline">&larr; Volver a ventas</a>
+
+  @if (isLoading()) {
+    <p class="mt-8 text-sm text-ink-muted">Cargando…</p>
+  } @else if (!venta()) {
+    <div class="mt-8 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
+      {{ errorMessage() || 'Venta no encontrada.' }}
+    </div>
+  } @else {
+    @let v = venta()!;
+
+    <div class="mt-3">
+      <h1 class="font-heading text-2xl font-semibold text-ink">{{ v.cliente }}</h1>
+      <p class="mt-1 text-sm text-ink-muted">
+        {{ v.lote.desarrollo.nombre }} · Manzana {{ v.lote.manzana }} / Lote {{ v.lote.numeroLote }}
+      </p>
+    </div>
+
+    <div class="mt-6 grid gap-4 rounded-2xl border border-border bg-surface p-5 sm:grid-cols-2">
+      <div>
+        <p class="text-xs text-ink-muted">Asesor</p>
+        <p class="mt-1 text-sm font-medium text-ink">{{ v.asesor }}</p>
+      </div>
+      <div>
+        <p class="text-xs text-ink-muted">Fecha de venta</p>
+        <p class="mt-1 text-sm font-medium text-ink">{{ v.fechaVenta }}</p>
+      </div>
+      <div>
+        <p class="text-xs text-ink-muted">Forma de pago</p>
+        <p class="mt-1 text-sm font-medium text-ink">{{ v.formaPago }}</p>
+      </div>
+      <div>
+        <p class="text-xs text-ink-muted">Precio de venta</p>
+        <p class="mt-1 text-sm font-medium text-ink">${{ money(v.precioVenta) }}</p>
+      </div>
+      @if (v.mensualidad) {
+        <div>
+          <p class="text-xs text-ink-muted">Mensualidad</p>
+          <p class="mt-1 text-sm font-medium text-ink">${{ money(v.mensualidad) }}</p>
+        </div>
+      }
+      @if (v.plazoMeses) {
+        <div>
+          <p class="text-xs text-ink-muted">Plazo</p>
+          <p class="mt-1 text-sm font-medium text-ink">{{ v.plazoMeses }} meses</p>
+        </div>
+      }
+      @if (v.notas) {
+        <div class="sm:col-span-2">
+          <p class="text-xs text-ink-muted">Notas</p>
+          <p class="mt-1 text-sm text-ink">{{ v.notas }}</p>
+        </div>
+      }
+    </div>
+
+    <!-- COBRANZA -->
+    <div class="mt-6 grid gap-4 sm:grid-cols-3">
+      <div class="rounded-2xl border border-border bg-surface p-5">
+        <p class="text-xs text-ink-muted">Precio de venta</p>
+        <p class="mt-1 text-lg font-semibold text-ink">${{ money(v.precioVenta) }}</p>
+      </div>
+      <div class="rounded-2xl border border-border bg-surface p-5">
+        <p class="text-xs text-ink-muted">Total abonado</p>
+        <p class="mt-1 text-lg font-semibold text-green-600 dark:text-green-400">${{ money(v.totalAbonado) }}</p>
+      </div>
+      <div class="rounded-2xl border border-border bg-surface p-5">
+        <p class="text-xs text-ink-muted">Saldo pendiente</p>
+        <p class="mt-1 text-lg font-semibold text-we-primary dark:text-we-blue-light">${{ money(v.saldoPendiente) }}</p>
+      </div>
+    </div>
+
+    <!-- REGISTRAR ABONO -->
+    <div class="mt-6 rounded-2xl border border-border bg-surface p-5">
+      <h2 class="font-heading text-base font-semibold text-ink">Registrar abono</h2>
+      <form [formGroup]="pagoForm" (ngSubmit)="registrarPago()" class="mt-4 grid gap-4 sm:grid-cols-3" novalidate>
+        <div>
+          <label for="fecha" class="block text-sm font-medium text-ink mb-1.5">Fecha *</label>
+          <input
+            id="fecha"
+            type="date"
+            formControlName="fecha"
+            class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          />
+        </div>
+        <div>
+          <label for="monto" class="block text-sm font-medium text-ink mb-1.5">Monto *</label>
+          <input
+            id="monto"
+            type="number"
+            step="0.01"
+            min="1"
+            formControlName="monto"
+            placeholder="Ej. 5000"
+            class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          />
+          @if (pagoForm.controls.monto.invalid && pagoForm.controls.monto.touched) {
+            <p class="mt-1.5 text-xs text-red-600">Ingresa un monto válido.</p>
+          }
+        </div>
+        <div>
+          <label for="notasPago" class="block text-sm font-medium text-ink mb-1.5">Notas</label>
+          <input
+            id="notasPago"
+            type="text"
+            formControlName="notas"
+            placeholder="Opcional"
+            class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          />
+        </div>
+
+        @if (pagoError()) {
+          <div class="sm:col-span-3 rounded-lg bg-red-50 border border-red-200 px-3.5 py-2.5 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
+            {{ pagoError() }}
+          </div>
+        }
+
+        <div class="sm:col-span-3">
+          <button
+            type="submit"
+            [disabled]="isSavingPago()"
+            class="inline-flex items-center justify-center rounded-lg bg-we-primary px-5 py-2.5 text-sm font-semibold text-white
+                   hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50
+                   disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100 min-h-[44px]"
+          >
+            {{ isSavingPago() ? 'Guardando…' : 'Registrar abono' }}
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- HISTORIAL DE ABONOS -->
+    <div class="mt-6">
+      <h2 class="font-heading text-base font-semibold text-ink">Historial de abonos</h2>
+      @if (pagos().length === 0) {
+        <div class="mt-3 rounded-xl border border-dashed border-border p-8 text-center">
+          <p class="text-sm text-ink-muted">Todavía no se ha registrado ningún abono.</p>
+        </div>
+      } @else {
+        <div class="mt-3 overflow-x-auto rounded-xl border border-border">
+          <table class="min-w-full divide-y divide-border text-sm">
+            <thead class="bg-surface-2">
+              <tr class="text-left text-xs font-medium uppercase tracking-wide text-ink-muted">
+                <th class="px-4 py-3">Fecha</th>
+                <th class="px-4 py-3">Monto</th>
+                <th class="px-4 py-3">Notas</th>
+                <th class="px-4 py-3">Registrado por</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border bg-surface">
+              @for (p of pagos(); track p.id) {
+                <tr>
+                  <td class="px-4 py-3 text-ink-muted">{{ p.fecha }}</td>
+                  <td class="px-4 py-3 font-medium text-ink">${{ money(p.monto) }}</td>
+                  <td class="px-4 py-3 text-ink-muted">{{ p.notas || '—' }}</td>
+                  <td class="px-4 py-3 text-ink-muted">{{ p.registradoPor.nombre }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+</div>

@@ -49,6 +49,8 @@
             <th class="px-4 py-3">Manzana / Lote</th>
             <th class="px-4 py-3">Forma de pago</th>
             <th class="px-4 py-3">Precio de venta</th>
+            <th class="px-4 py-3">Saldo pendiente</th>
+            <th class="px-4 py-3"></th>
           </tr>
         </thead>
         <tbody class="divide-y divide-border bg-surface">
@@ -61,6 +63,22 @@
               <td class="px-4 py-3 text-ink-muted">{{ v.lote.manzana }} / {{ v.lote.numeroLote }}</td>
               <td class="px-4 py-3 text-ink-muted">{{ v.formaPago }}</td>
               <td class="px-4 py-3 font-medium text-we-primary dark:text-we-blue-light">${{ money(v.precioVenta) }}</td>
+              <td class="px-4 py-3 font-medium" [class.text-ink]="v.saldoPendiente > 0" [class.text-green-600]="v.saldoPendiente <= 0" [class.dark:text-green-400]="v.saldoPendiente <= 0">
+                {{ v.saldoPendiente > 0 ? '$' + money(v.saldoPendiente) : 'Liquidado' }}
+              </td>
+              <td class="px-4 py-3 text-right">
+                <a
+                  [routerLink]="['/panel/ventas', v.id]"
+                  aria-label="Ver venta"
+                  class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2 hover:text-we-blue-light
+                         transition-colors duration-150 active:scale-90"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </a>
+              </td>
             </tr>
           }
         </tbody>

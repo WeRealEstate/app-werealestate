@@ -14,6 +14,9 @@ public record VentaCreateRequest(
         @NotNull @Positive BigDecimal precioVenta,
         @NotBlank String formaPago,
         @NotNull LocalDate fechaVenta,
+        // Términos de financiamiento; ambos opcionales (una venta de contado no los necesita).
+        @Positive BigDecimal mensualidad,
+        @Positive Integer plazoMeses,
         @Size(max = 1000) String notas,
         // Si es true, además de registrar la venta se marca el lote como VENDIDO (con su historial
         // normal, ver LoteService.marcarVendido). Ver VentaService.

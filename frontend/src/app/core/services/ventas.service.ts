@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Pagina } from '../models/pagina.model';
-import { Venta, VentaCreateRequest } from '../models/venta.model';
+import { PagoVenta, PagoVentaCreateRequest, Venta, VentaCreateRequest } from '../models/venta.model';
 
 export interface BuscarVentasParams {
   busqueda?: string;
@@ -23,7 +23,19 @@ export class VentasService {
     return firstValueFrom(this.http.get<Pagina<Venta>>(`${this.baseUrl}/buscar`, { params: httpParams }));
   }
 
+  obtener(id: number): Promise<Venta> {
+    return firstValueFrom(this.http.get<Venta>(`${this.baseUrl}/${id}`));
+  }
+
   crear(request: VentaCreateRequest): Promise<Venta> {
     return firstValueFrom(this.http.post<Venta>(this.baseUrl, request));
+  }
+
+  listarPagos(ventaId: number): Promise<PagoVenta[]> {
+    return firstValueFrom(this.http.get<PagoVenta[]>(`${this.baseUrl}/${ventaId}/pagos`));
+  }
+
+  registrarPago(ventaId: number, request: PagoVentaCreateRequest): Promise<PagoVenta> {
+    return firstValueFrom(this.http.post<PagoVenta>(`${this.baseUrl}/${ventaId}/pagos`, request));
   }
 }

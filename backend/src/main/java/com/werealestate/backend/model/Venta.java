@@ -45,6 +45,13 @@ public class Venta {
     @Column(name = "fecha_venta", nullable = false)
     private LocalDate fechaVenta;
 
+    /** Términos de financiamiento fijados al momento de la venta; null en ventas de contado. */
+    @Column(precision = 14, scale = 2)
+    private BigDecimal mensualidad;
+
+    @Column(name = "plazo_meses")
+    private Integer plazoMeses;
+
     @Column(length = 1000)
     private String notas;
 
@@ -62,6 +69,8 @@ public class Venta {
             BigDecimal precioVenta,
             String formaPago,
             LocalDate fechaVenta,
+            BigDecimal mensualidad,
+            Integer plazoMeses,
             String notas) {
         this.lote = lote;
         this.cliente = cliente;
@@ -69,6 +78,8 @@ public class Venta {
         this.precioVenta = precioVenta;
         this.formaPago = formaPago;
         this.fechaVenta = fechaVenta;
+        this.mensualidad = mensualidad;
+        this.plazoMeses = plazoMeses;
         this.notas = notas;
     }
 
@@ -98,6 +109,14 @@ public class Venta {
 
     public LocalDate getFechaVenta() {
         return fechaVenta;
+    }
+
+    public BigDecimal getMensualidad() {
+        return mensualidad;
+    }
+
+    public Integer getPlazoMeses() {
+        return plazoMeses;
     }
 
     public String getNotas() {

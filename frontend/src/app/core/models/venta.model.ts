@@ -1,4 +1,5 @@
 import { Lote } from './lote.model';
+import { UsuarioResumen } from './lead.model';
 
 /**
  * Registro de una venta cerrada. cliente y asesor son texto libre a propósito (ver
@@ -13,8 +14,14 @@ export interface Venta {
   precioVenta: number;
   formaPago: string;
   fechaVenta: string;
+  /** Términos de financiamiento; null en ventas de contado. */
+  mensualidad: number | null;
+  plazoMeses: number | null;
   notas: string | null;
   fechaCreacion: string;
+  /** Se calculan a partir de los pagos de la venta (ver PagoVenta), nunca se capturan a mano. */
+  totalAbonado: number;
+  saldoPendiente: number;
 }
 
 export interface VentaCreateRequest {
@@ -24,6 +31,24 @@ export interface VentaCreateRequest {
   precioVenta: number;
   formaPago: string;
   fechaVenta: string;
+  mensualidad: number | null;
+  plazoMeses: number | null;
   notas: string | null;
   marcarLoteVendido: boolean;
+}
+
+/** Un abono registrado contra una venta. */
+export interface PagoVenta {
+  id: number;
+  fecha: string;
+  monto: number;
+  notas: string | null;
+  registradoPor: UsuarioResumen;
+  fechaCreacion: string;
+}
+
+export interface PagoVentaCreateRequest {
+  fecha: string;
+  monto: number;
+  notas: string | null;
 }

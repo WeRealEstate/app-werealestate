@@ -13,10 +13,15 @@ public record VentaDto(
         BigDecimal precioVenta,
         String formaPago,
         LocalDate fechaVenta,
+        BigDecimal mensualidad,
+        Integer plazoMeses,
         String notas,
-        LocalDateTime fechaCreacion) {
+        LocalDateTime fechaCreacion,
+        // Se calculan a partir de sus pagos (ver VentaService), nunca se guardan directo.
+        BigDecimal totalAbonado,
+        BigDecimal saldoPendiente) {
 
-    public static VentaDto from(Venta venta) {
+    public static VentaDto from(Venta venta, BigDecimal totalAbonado) {
         return new VentaDto(
                 venta.getId(),
                 LoteDto.from(venta.getLote()),
@@ -25,7 +30,11 @@ public record VentaDto(
                 venta.getPrecioVenta(),
                 venta.getFormaPago(),
                 venta.getFechaVenta(),
+                venta.getMensualidad(),
+                venta.getPlazoMeses(),
                 venta.getNotas(),
-                venta.getFechaCreacion());
+                venta.getFechaCreacion(),
+                totalAbonado,
+                venta.getPrecioVenta().subtract(totalAbonado));
     }
 }

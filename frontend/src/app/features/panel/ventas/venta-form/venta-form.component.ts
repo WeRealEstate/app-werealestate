@@ -39,6 +39,9 @@ export class VentaFormComponent {
     precioVenta: this.fb.control<number | null>(null, { validators: [Validators.required, Validators.min(1)] }),
     formaPago: this.fb.control('Contado', { nonNullable: true, validators: [Validators.required] }),
     fechaVenta: this.fb.control(new Date().toISOString().slice(0, 10), { nonNullable: true, validators: [Validators.required] }),
+    // Opcionales: una venta de contado no los necesita.
+    mensualidad: this.fb.control<number | null>(null, { validators: [Validators.min(1)] }),
+    plazoMeses: this.fb.control<number | null>(null, { validators: [Validators.min(1)] }),
     notas: this.fb.control(''),
     marcarLoteVendido: this.fb.control(true, { nonNullable: true }),
   });
@@ -101,6 +104,8 @@ export class VentaFormComponent {
         precioVenta: v.precioVenta!,
         formaPago: v.formaPago,
         fechaVenta: v.fechaVenta,
+        mensualidad: v.mensualidad,
+        plazoMeses: v.plazoMeses,
         notas: v.notas?.trim() || null,
         marcarLoteVendido: v.marcarLoteVendido,
       });
