@@ -27,6 +27,12 @@ export class VentasService {
     return firstValueFrom(this.http.get<Venta>(`${this.baseUrl}/${id}`));
   }
 
+  /** Para el ícono de "ver información de venta" en /panel/lotes. Rechaza (404) si el lote no
+   * tiene una venta asociada (ej. su estado se cambió a mano, no desde el módulo de ventas). */
+  obtenerPorLote(loteId: number): Promise<Venta> {
+    return firstValueFrom(this.http.get<Venta>(`${this.baseUrl}/por-lote/${loteId}`));
+  }
+
   crear(request: VentaCreateRequest): Promise<Venta> {
     return firstValueFrom(this.http.post<Venta>(this.baseUrl, request));
   }

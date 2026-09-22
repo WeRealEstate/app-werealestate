@@ -108,6 +108,17 @@ public class VentaService {
         return toDto(obtenerEntidad(id));
     }
 
+    /** Para el ícono de "ver información de venta" en /panel/lotes: qué venta vendió este lote, si
+     * alguna (un lote puede estar en VENDIDO sin venta asociada si alguien cambió el estado a mano
+     * en vez de usar el módulo de ventas). */
+    public VentaDto obtenerPorLote(Long loteId) {
+        exigirAdminOLider();
+        VentaLote ventaLote = ventaLoteRepository
+                .findFirstByLoteIdOrderByIdDesc(loteId)
+                .orElseThrow(() -> new ResourceNotFoundException("Este lote no tiene una venta registrada"));
+        return toDto(ventaLote.getVenta());
+    }
+
     public PaginaDto<VentaDto> buscarPaginado(String busqueda, int pagina, int tamano) {
         exigirAdminOLider();
         Specification<Venta> spec = (root, query, cb) -> cb.conjunction();

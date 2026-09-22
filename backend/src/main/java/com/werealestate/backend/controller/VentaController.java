@@ -44,6 +44,12 @@ public class VentaController {
         return ventaService.obtener(id);
     }
 
+    /** Para /panel/lotes: qué venta corresponde a un lote marcado como vendido. */
+    @GetMapping("/por-lote/{loteId}")
+    public VentaDto obtenerPorLote(@PathVariable Long loteId) {
+        return ventaService.obtenerPorLote(loteId);
+    }
+
     @GetMapping("/{id}/pagos")
     public List<PagoVentaDto> listarPagos(@PathVariable Long id) {
         return ventaService.listarPagos(id);

@@ -7,8 +7,10 @@ import { AuthService } from '../../../core/services/auth.service';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { LeadsService } from '../../../core/services/leads.service';
 import { LotesService } from '../../../core/services/lotes.service';
+import { VentasService } from '../../../core/services/ventas.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { Desarrollo } from '../../../core/models/lead.model';
+import { Venta } from '../../../core/models/venta.model';
 import {
   ESTADO_LOTE_BADGE_CLASSES,
   ESTADO_LOTE_LABELS,
@@ -49,6 +51,7 @@ const ESTADOS_TODOS: EstadoLote[] = [
 export class LotesListComponent {
   private readonly lotesService = inject(LotesService);
   private readonly leadsService = inject(LeadsService);
+  private readonly ventasService = inject(VentasService);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly confirmService = inject(ConfirmService);
@@ -58,6 +61,15 @@ export class LotesListComponent {
   readonly estadosLote = ESTADOS_TODOS;
   readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
   readonly esLider = computed(() => this.auth.currentUser()?.rol === 'LIDER_AREA');
+  /** Mismo permiso que el módulo de ventas (roleGuard ADMIN/LIDER_AREA): solo ellos pueden ver la
+   * información de venta de un lote vendido. */
+  readonly puedeVerVenta = computed(() => this.esAdmin() || this.esLider());
+
+  /** Lote sobre el que se pidió "ver información de venta"; null cierra el modal. */
+  readonly loteInfoVenta = signal<Lote | null>(null);
+  readonly ventaDeLote = signal<Venta | null>(null);
+  readonly cargandoVentaDeLote = signal(false);
+  readonly errorVentaDeLote = signal<string | null>(null);
 
   readonly horasOpciones = HORAS_OPCIONES;
   readonly minutosOpciones = MINUTOS_OPCIONES;
@@ -113,6 +125,10 @@ export class LotesListComponent {
   /** El precio ya no se captura a mano: siempre es el precio por m² del desarrollo × la superficie. */
   precioEstimado(lote: Lote): number {
     return lote.desarrollo.precioM2 * lote.superficie;
+  }
+
+  money(valor: number): string {
+    return valor.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   /** Un admin y un líder de área tienen control total sobre el estado de cualquier lote; un
@@ -262,6 +278,32 @@ export class LotesListComponent {
     return error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
       ? error.error.message
       : porDefecto;
+  }
+
+  /** Precio negociado de este lote específico dentro de su venta (puede diferir del estimado si
+   * la venta incluyó varios lotes con precios distintos); null si por algún motivo no aparece en
+   * la lista de lotes de la venta encontrada. */
+  precioDeLoteEnVenta(venta: Venta, loteId: number): number | null {
+    return venta.lotes.find((l) => l.lote.id === loteId)?.precio ?? null;
+  }
+
+  async verInfoVenta(lote: Lote): Promise<void> {
+    this.loteInfoVenta.set(lote);
+    this.ventaDeLote.set(null);
+    this.errorVentaDeLote.set(null);
+    this.cargandoVentaDeLote.set(true);
+    try {
+      const venta = await this.ventasService.obtenerPorLote(lote.id);
+      this.ventaDeLote.set(venta);
+    } catch {
+      this.errorVentaDeLote.set('Este lote no tiene una venta registrada en el sistema.');
+    } finally {
+      this.cargandoVentaDeLote.set(false);
+    }
+  }
+
+  cerrarInfoVenta(): void {
+    this.loteInfoVenta.set(null);
   }
 
   async eliminar(lote: Lote): Promise<void> {
