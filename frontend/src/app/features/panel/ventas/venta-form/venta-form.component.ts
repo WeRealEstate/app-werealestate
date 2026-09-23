@@ -6,7 +6,14 @@ import { Desarrollo } from '../../../../core/models/lead.model';
 import { ESTADO_LOTE_LABELS, Lote } from '../../../../core/models/lote.model';
 import { LeadsService } from '../../../../core/services/leads.service';
 import { LotesService } from '../../../../core/services/lotes.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { VentasService } from '../../../../core/services/ventas.service';
+
+/** Cómo se aplica a la venta el dinero que ya se había recibido al apartar un lote (ver
+ * Lote.montoApartado): 'mensualidad' lo suma al enganche antes de calcular la mensualidad (baja el
+ * pago mensual, mismo plazo); 'saldo' la deja igual y registra el monto como abono inicial en
+ * cuanto se crea la venta (el saldo pendiente baja de entrada, el pago mensual no cambia). */
+type AplicarDepositoA = 'mensualidad' | 'saldo';
 
 /** Suficiente para traer todos los lotes de un desarrollo de un jalón: son cientos, no miles. */
 const TAMANO_LOTES_DESARROLLO = 1000;
@@ -49,6 +56,7 @@ export class VentaFormComponent {
   private readonly leadsService = inject(LeadsService);
   private readonly lotesService = inject(LotesService);
   private readonly ventasService = inject(VentasService);
+  private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
 
   readonly estadoLabels = ESTADO_LOTE_LABELS;
@@ -62,6 +70,17 @@ export class VentaFormComponent {
    * operación, con una sola mensualidad/plazo/saldo combinado). */
   readonly lotesAgregados = signal<LoteAgregado[]>([]);
   readonly precioTotal = computed(() => this.lotesAgregados().reduce((sum, l) => sum + l.precio, 0));
+
+  /** Suma de lo que ya se había apartado con dinero en los lotes agregados (ver
+   * Lote.montoApartado); 0 si ninguno tenía. */
+  readonly depositoTotal = computed(() =>
+    this.lotesAgregados().reduce((sum, l) => sum + (l.lote.montoApartado ?? 0), 0),
+  );
+  /** Solo aplica cuando hay depósito Y la venta tiene mensualidad (una venta de Contado no tiene
+   * pago mensual que reducir: ahí el depósito siempre se registra como abono). null mientras no se
+   * ha elegido — se pide explícito, no hay default silencioso para una decisión financiera. */
+  readonly aplicarDepositoA = signal<AplicarDepositoA | null>(null);
+  readonly requiereElegirDeposito = computed(() => this.depositoTotal() > 0 && this.mostrarPlazo());
 
   readonly tipoPagoOpciones = TIPO_PAGO_OPCIONES;
   readonly tipoPago = signal<TipoPago>('msi');
@@ -122,6 +141,7 @@ export class VentaFormComponent {
     if (tipo === 'cash') {
       this.form.controls.mensualidad.setValue(null);
       this.form.controls.plazoMeses.setValue(null);
+      this.aplicarDepositoA.set(null);
     }
     this.actualizarFormaPago();
     this.actualizarMensualidad();
@@ -153,13 +173,20 @@ export class VentaFormComponent {
     }
 
     const enganche = this.mostrarEnganche() ? (this.montoEnganche() ?? 0) : 0;
-    const saldoAFinanciar = this.precioTotal() - enganche;
+    const depositoParaMensualidad = this.aplicarDepositoA() === 'mensualidad' ? this.depositoTotal() : 0;
+    const saldoAFinanciar = this.precioTotal() - enganche - depositoParaMensualidad;
     if (saldoAFinanciar <= 0) {
       this.form.controls.mensualidad.setValue(null);
       return;
     }
 
     this.form.controls.mensualidad.setValue(Math.round((saldoAFinanciar / plazo) * 100) / 100);
+  }
+
+  /** Se llama al elegir cómo aplicar el dinero ya recibido al apartar (ver depositoTotal). */
+  onAplicarDepositoChange(valor: AplicarDepositoA): void {
+    this.aplicarDepositoA.set(valor);
+    this.actualizarMensualidad();
   }
 
   async onDesarrolloChange(valor: string): Promise<void> {
@@ -205,22 +232,35 @@ export class VentaFormComponent {
     this.lotesAgregados.update((actuales) => [...actuales, { lote, precio }]);
     this.loteParaAgregarId.set(null);
     this.precioParaAgregar.set(null);
+    // Cambió la base del depósito (si el lote agregado tenía uno): que se vuelva a elegir en vez
+    // de arrastrar una decisión tomada sobre un monto distinto.
+    this.aplicarDepositoA.set(null);
     this.actualizarMensualidad();
   }
 
   quitarLote(loteId: number): void {
     this.lotesAgregados.update((actuales) => actuales.filter((l) => l.lote.id !== loteId));
+    this.aplicarDepositoA.set(null);
     this.actualizarMensualidad();
   }
 
   async onSubmit(): Promise<void> {
     const faltaMontoEnganche = this.mostrarEnganche() && !this.montoEnganche();
-    if (this.form.invalid || this.lotesAgregados().length === 0 || faltaMontoEnganche || this.isLoading()) {
+    const faltaElegirDeposito = this.requiereElegirDeposito() && !this.aplicarDepositoA();
+    if (
+      this.form.invalid ||
+      this.lotesAgregados().length === 0 ||
+      faltaMontoEnganche ||
+      faltaElegirDeposito ||
+      this.isLoading()
+    ) {
       this.form.markAllAsTouched();
       if (this.lotesAgregados().length === 0) {
         this.errorMessage.set('Agrega al menos un lote a la venta.');
       } else if (faltaMontoEnganche) {
         this.errorMessage.set(`Ingresa el monto de ${this.engancheLabelActual()!.toLowerCase()}.`);
+      } else if (faltaElegirDeposito) {
+        this.errorMessage.set('Indica si el dinero ya apartado baja la mensualidad o el saldo.');
       }
       return;
     }
@@ -228,9 +268,11 @@ export class VentaFormComponent {
     this.isLoading.set(true);
     this.errorMessage.set(null);
     const v = this.form.getRawValue();
+    // Contado no tiene mensualidad que reducir: si había depósito, siempre se registra como abono.
+    const registrarDepositoComoAbono = this.depositoTotal() > 0 && this.aplicarDepositoA() !== 'mensualidad';
 
     try {
-      await this.ventasService.crear({
+      const venta = await this.ventasService.crear({
         lotes: this.lotesAgregados().map((l) => ({ loteId: l.lote.id, precio: l.precio })),
         cliente: v.cliente,
         asesor: v.asesor,
@@ -243,6 +285,23 @@ export class VentaFormComponent {
         notas: v.notas?.trim() || null,
         marcarLoteVendido: v.marcarLoteVendido,
       });
+
+      if (registrarDepositoComoAbono) {
+        try {
+          await this.ventasService.registrarPago(venta.id, {
+            fecha: v.fechaVenta,
+            monto: this.depositoTotal(),
+            notas: 'Dinero recibido al apartar el lote',
+          });
+        } catch {
+          this.toast.error(
+            'La venta se registró, pero no se pudo aplicar el depósito de apartado como abono. Regístralo a mano en la venta.',
+          );
+        }
+        await this.router.navigate(['/panel/ventas', venta.id]);
+        return;
+      }
+
       await this.router.navigate(['/panel/ventas']);
     } catch (error) {
       this.errorMessage.set(

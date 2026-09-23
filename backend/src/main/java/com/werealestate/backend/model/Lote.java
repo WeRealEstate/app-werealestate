@@ -58,6 +58,13 @@ public class Lote {
     @Column(name = "fecha_expira_apartado")
     private LocalDateTime fechaExpiraApartado;
 
+    /** Cuánto dinero se recibió al apartar, solo mientras estado == APARTADO_CON_DINERO. Se limpia
+     * a null al salir de ese estado (ver LoteService.cambiarEstado). El formulario de Ventas lo lee
+     * (vía LoteDto) antes de registrar la venta, para preguntar si ese dinero baja la mensualidad o
+     * el saldo; LoteService.marcarVendido lo limpia una vez que el lote ya quedó Vendido. */
+    @Column(name = "monto_apartado", precision = 14, scale = 2)
+    private BigDecimal montoApartado;
+
     protected Lote() {
         // JPA
     }
@@ -127,6 +134,14 @@ public class Lote {
 
     public void setFechaExpiraApartado(LocalDateTime fechaExpiraApartado) {
         this.fechaExpiraApartado = fechaExpiraApartado;
+    }
+
+    public BigDecimal getMontoApartado() {
+        return montoApartado;
+    }
+
+    public void setMontoApartado(BigDecimal montoApartado) {
+        this.montoApartado = montoApartado;
     }
 
     /** Fija (o borra, pasando null) el polígono que delimita este lote en el plano. */

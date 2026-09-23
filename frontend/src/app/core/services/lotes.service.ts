@@ -105,13 +105,16 @@ export class LotesService {
 
   /** fechaExpiraApartado solo aplica (y es obligatoria) para estado === 'APARTADO_A_PLAZO'. nota es
    * obligatoria del lado del backend cuando quien cambia el estado es admin o líder de área.
-   * nombreCliente lo exige la UI (no el backend) al mover un lote a un estado comprometido. */
+   * nombreCliente y montoApartado los exige la UI (no el backend) al mover un lote a un estado
+   * comprometido; montoApartado además es obligatorio del lado del backend cuando
+   * estado === 'APARTADO_CON_DINERO'. */
   cambiarEstado(
     id: number,
     estado: string,
     fechaExpiraApartado?: string | null,
     nota?: string,
     nombreCliente?: string | null,
+    montoApartado?: number | null,
   ): Promise<Lote> {
     return firstValueFrom(
       this.http.put<Lote>(`${this.baseUrl}/${id}/estado`, {
@@ -119,6 +122,7 @@ export class LotesService {
         fechaExpiraApartado: fechaExpiraApartado ?? null,
         nota: nota ?? null,
         nombreCliente: nombreCliente ?? null,
+        montoApartado: montoApartado ?? null,
       }),
     );
   }

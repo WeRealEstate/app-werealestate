@@ -273,6 +273,23 @@
           <p class="mt-1.5 text-xs text-ink-muted">Hora en formato 24h. Al llegar esa fecha el lote vuelve solo a Disponible.</p>
         }
 
+        @if (requiereMontoCambioEstado()) {
+          <label for="monto-cambio-estado" class="mb-1.5 mt-4 block text-sm font-medium text-ink">¿Con cuánto dinero se apartó? *</label>
+          <input
+            id="monto-cambio-estado"
+            type="number"
+            step="0.01"
+            min="0.01"
+            [ngModel]="montoApartadoCambioEstado()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="montoApartadoCambioEstado.set($event)"
+            placeholder="Ej. 20000"
+            class="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          />
+          <p class="mt-1.5 text-xs text-ink-muted">Si este lote termina en una venta, se preguntará si baja la mensualidad o el saldo.</p>
+        }
+
         @if (requiereClienteCambioEstado()) {
           <label for="cliente-cambio-estado" class="mb-1.5 mt-4 block text-sm font-medium text-ink">Nombre del cliente *</label>
           <input
@@ -391,6 +408,12 @@
               <p class="text-xs text-ink-muted">Lleva en este estado</p>
               <p class="mt-0.5 text-sm font-medium text-ink">{{ diasEnEstado(li) }} día{{ diasEnEstado(li) === 1 ? '' : 's' }}</p>
             </div>
+            @if (li.estado === 'APARTADO_CON_DINERO' && li.montoApartado) {
+              <div class="col-span-2">
+                <p class="text-xs text-ink-muted">Monto apartado</p>
+                <p class="mt-0.5 text-sm font-medium text-ink">${{ money(li.montoApartado) }}</p>
+              </div>
+            }
           </div>
 
           @if (li.estado === 'VENDIDO') {
@@ -413,6 +436,9 @@
                     </div>
                     @if (m.nombreCliente) {
                       <p class="mt-1 text-sm text-ink"><span class="text-ink-muted">Cliente:</span> {{ m.nombreCliente }}</p>
+                    }
+                    @if (m.monto) {
+                      <p class="mt-1 text-sm text-ink"><span class="text-ink-muted">Monto apartado:</span> ${{ money(m.monto) }}</p>
                     }
                     <p class="mt-1 text-sm text-ink">
                       <span class="text-ink-muted">Por:</span>

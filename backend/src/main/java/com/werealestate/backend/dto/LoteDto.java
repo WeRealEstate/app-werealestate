@@ -16,7 +16,8 @@ public record LoteDto(
         LocalDateTime fechaCambioEstado,
         UsuarioResumenDto cambiadoPor,
         List<PuntoMapaDto> mapaPoligono,
-        LocalDateTime fechaExpiraApartado) {
+        LocalDateTime fechaExpiraApartado,
+        BigDecimal montoApartado) {
 
     public static LoteDto from(Lote lote) {
         return new LoteDto(
@@ -29,6 +30,7 @@ public record LoteDto(
                 lote.getFechaCambioEstado(),
                 lote.getCambiadoPor() != null ? UsuarioResumenDto.from(lote.getCambiadoPor()) : null,
                 PoligonoMapaJson.deserializar(lote.getMapaPoligonoJson()),
-                lote.getFechaExpiraApartado());
+                lote.getFechaExpiraApartado(),
+                lote.getMontoApartado());
     }
 }

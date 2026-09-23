@@ -56,7 +56,7 @@ public class LoteAutoLiberacionScheduler {
             lote.cambiarEstado(EstadoLote.DISPONIBLE, null);
             lote.setFechaExpiraApartado(null);
             movimientoLoteRepository.save(
-                    new MovimientoLote(lote, anterior, EstadoLote.DISPONIBLE, null, null, null, null));
+                    new MovimientoLote(lote, anterior, EstadoLote.DISPONIBLE, null, null, null, null, null));
         }
     }
 }

@@ -96,6 +96,7 @@ export class LotesListComponent {
   readonly cambioEstadoPendiente = signal<{ lote: Lote; nuevoEstado: EstadoLote } | null>(null);
   readonly notaCambioEstado = signal('');
   readonly nombreClienteCambioEstado = signal('');
+  readonly montoApartadoCambioEstado = signal<number | null>(null);
   readonly fechaPlazo = signal('');
   readonly horaPlazo = signal(HORA_POR_DEFECTO);
   readonly minutoPlazo = signal(MINUTO_POR_DEFECTO);
@@ -106,11 +107,16 @@ export class LotesListComponent {
     return pendiente !== null && ESTADOS_REQUIEREN_CLIENTE.includes(pendiente.nuevoEstado);
   });
 
+  readonly requiereMontoCambioEstado = computed(
+    () => this.cambioEstadoPendiente()?.nuevoEstado === 'APARTADO_CON_DINERO',
+  );
+
   readonly cambioEstadoInvalido = computed(() => {
     const pendiente = this.cambioEstadoPendiente();
     if (!pendiente || !this.notaCambioEstado().trim()) return true;
     if (pendiente.nuevoEstado === 'APARTADO_A_PLAZO' && !this.fechaPlazo()) return true;
-    return this.requiereClienteCambioEstado() && !this.nombreClienteCambioEstado().trim();
+    if (this.requiereClienteCambioEstado() && !this.nombreClienteCambioEstado().trim()) return true;
+    return this.requiereMontoCambioEstado() && !this.montoApartadoCambioEstado();
   });
 
   readonly lotes = signal<Lote[]>([]);
@@ -263,6 +269,7 @@ export class LotesListComponent {
     this.cambioEstadoPendiente.set({ lote, nuevoEstado });
     this.notaCambioEstado.set('');
     this.nombreClienteCambioEstado.set('');
+    this.montoApartadoCambioEstado.set(null);
     this.fechaPlazo.set('');
     this.horaPlazo.set(HORA_POR_DEFECTO);
     this.minutoPlazo.set(MINUTO_POR_DEFECTO);
@@ -288,6 +295,7 @@ export class LotesListComponent {
         fechaExpira,
         this.notaCambioEstado().trim(),
         this.requiereClienteCambioEstado() ? this.nombreClienteCambioEstado().trim() : null,
+        this.requiereMontoCambioEstado() ? this.montoApartadoCambioEstado() : null,
       );
       this.lotes.update((lista) => lista.map((l) => (l.id === pendiente.lote.id ? actualizado : l)));
       this.cambioEstadoPendiente.set(null);

@@ -3,6 +3,7 @@ package com.werealestate.backend.dto;
 import com.werealestate.backend.model.EstadoLote;
 import com.werealestate.backend.model.Lote;
 import com.werealestate.backend.model.MovimientoLote;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public record MovimientoLoteDto(
@@ -16,6 +17,7 @@ public record MovimientoLoteDto(
         UsuarioResumenDto usuario,
         String nombreAsesor,
         String nombreCliente,
+        BigDecimal monto,
         String nota,
         LocalDateTime fecha) {
 
@@ -32,6 +34,7 @@ public record MovimientoLoteDto(
                 movimiento.getUsuario() != null ? UsuarioResumenDto.from(movimiento.getUsuario()) : null,
                 movimiento.getNombreAsesor(),
                 movimiento.getNombreCliente(),
+                movimiento.getMonto(),
                 movimiento.getNota(),
                 movimiento.getFecha());
     }

@@ -11,6 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /** Bitácora de cada cambio de estado de un lote: quién lo hizo (usuario autenticado, o nadie si
@@ -47,6 +48,11 @@ public class MovimientoLote {
     @Column(name = "nombre_cliente", length = 150)
     private String nombreCliente;
 
+    /** Cuánto dinero se recibió en este movimiento — hoy solo se captura al pasar a
+     * APARTADO_CON_DINERO (ver LoteService.cambiarEstado); null en cualquier otro tipo de cambio. */
+    @Column(precision = 14, scale = 2)
+    private BigDecimal monto;
+
     @Column(length = 500)
     private String nota;
 
@@ -64,6 +70,7 @@ public class MovimientoLote {
             Usuario usuario,
             String nombreAsesor,
             String nombreCliente,
+            BigDecimal monto,
             String nota) {
         this.lote = lote;
         this.estadoAnterior = estadoAnterior;
@@ -71,6 +78,7 @@ public class MovimientoLote {
         this.usuario = usuario;
         this.nombreAsesor = nombreAsesor;
         this.nombreCliente = nombreCliente;
+        this.monto = monto;
         this.nota = nota;
     }
 
@@ -100,6 +108,10 @@ public class MovimientoLote {
 
     public String getNombreCliente() {
         return nombreCliente;
+    }
+
+    public BigDecimal getMonto() {
+        return monto;
     }
 
     public String getNota() {

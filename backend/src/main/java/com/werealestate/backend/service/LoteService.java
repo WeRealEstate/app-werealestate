@@ -112,11 +112,12 @@ public class LoteService {
             Usuario usuario,
             String nombreAsesor,
             String nombreCliente,
+            BigDecimal monto,
             String nota) {
         EstadoLote anterior = lote.getEstado();
         lote.cambiarEstado(nuevoEstado, usuario);
         movimientoLoteRepository.save(
-                new MovimientoLote(lote, anterior, nuevoEstado, usuario, nombreAsesor, nombreCliente, nota));
+                new MovimientoLote(lote, anterior, nuevoEstado, usuario, nombreAsesor, nombreCliente, monto, nota));
     }
 
     public PaginaDto<LoteDto> buscarPaginado(
@@ -233,7 +234,7 @@ public class LoteService {
                 .orElseThrow(() -> new IllegalStateException(
                         "Falta el usuario de sistema del cotizador público (migración V17)"));
 
-        cambiarEstadoConHistorial(lote, request.estado(), sistema, nombreAsesor, nombreCliente, nota);
+        cambiarEstadoConHistorial(lote, request.estado(), sistema, nombreAsesor, nombreCliente, null, nota);
         return LoteDto.from(lote);
     }
 
@@ -342,6 +343,11 @@ public class LoteService {
                         "Para apartar a plazo hay que indicar una fecha de vencimiento futura");
             }
         }
+        if (request.estado() == EstadoLote.APARTADO_CON_DINERO) {
+            if (request.montoApartado() == null || request.montoApartado().signum() <= 0) {
+                throw new ValidationException("Indica con cuánto dinero se apartó este lote");
+            }
+        }
 
         String nota = request.nota() == null || request.nota().isBlank() ? null : request.nota().trim();
         // Un admin o líder de área puede mover un lote a cualquier estado (incluidos los
@@ -354,9 +360,12 @@ public class LoteService {
         String nombreCliente = request.nombreCliente() == null || request.nombreCliente().isBlank()
                 ? null
                 : request.nombreCliente().trim();
-        cambiarEstadoConHistorial(lote, request.estado(), actual, null, nombreCliente, nota);
+        BigDecimal montoApartado =
+                request.estado() == EstadoLote.APARTADO_CON_DINERO ? request.montoApartado() : null;
+        cambiarEstadoConHistorial(lote, request.estado(), actual, null, nombreCliente, montoApartado, nota);
         lote.setFechaExpiraApartado(
                 request.estado() == EstadoLote.APARTADO_A_PLAZO ? request.fechaExpiraApartado() : null);
+        lote.setMontoApartado(montoApartado);
         return LoteDto.from(lote);
     }
 
@@ -411,8 +420,12 @@ public class LoteService {
     public LoteDto marcarVendido(Long id, String cliente, String asesor) {
         Lote lote = obtenerEntidad(id);
         Usuario actual = currentUserProvider.getUsuarioActual();
-        cambiarEstadoConHistorial(lote, EstadoLote.VENDIDO, actual, asesor, cliente, "Venta registrada");
+        cambiarEstadoConHistorial(lote, EstadoLote.VENDIDO, actual, asesor, cliente, null, "Venta registrada");
         lote.setFechaExpiraApartado(null);
+        // El formulario de Ventas ya leyó montoApartado (vía LoteDto) antes de llegar aquí, para
+        // decidir si ese dinero baja la mensualidad o el saldo; una vez Vendido, ya no representa
+        // un depósito pendiente de aplicar.
+        lote.setMontoApartado(null);
         return LoteDto.from(lote);
     }
 

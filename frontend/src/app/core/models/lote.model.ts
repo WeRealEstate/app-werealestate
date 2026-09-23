@@ -79,6 +79,9 @@ export interface Lote {
   /** null mientras el lote no se ha delimitado en el editor del plano. */
   mapaPoligono: PuntoMapa[] | null;
   fechaExpiraApartado: string | null;
+  /** Solo tiene valor mientras estado === 'APARTADO_CON_DINERO'; el formulario de Ventas lo lee
+   * para preguntar si ese dinero baja la mensualidad o el saldo. */
+  montoApartado: number | null;
 }
 
 /** El plano interactivo de un desarrollo: la imagen subida por un admin y el polígono de cada lote
@@ -141,6 +144,8 @@ export interface MovimientoLote {
   usuario: UsuarioResumen | null;
   nombreAsesor: string | null;
   nombreCliente: string | null;
+  /** Solo viene con valor en el movimiento que apartó el lote con dinero. */
+  monto: number | null;
   nota: string | null;
   fecha: string;
 }
