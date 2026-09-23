@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
+import { ScrollingModule } from '@angular/cdk/scrolling';
 import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
 import { UsuariosService } from '../../../core/services/usuarios.service';
@@ -62,7 +63,7 @@ type Destino = { tipo: 'tarjeta'; id: number; nombre: string } | { tipo: 'sin-as
 @Component({
   selector: 'app-pipeline',
   standalone: true,
-  imports: [RouterLink, DragDropModule, ReactiveFormsModule],
+  imports: [RouterLink, DragDropModule, ReactiveFormsModule, ScrollingModule],
   templateUrl: './pipeline.component.html',
 })
 export class PipelineComponent {
@@ -79,6 +80,10 @@ export class PipelineComponent {
   readonly propioId = computed(() => this.auth.currentUser()?.id);
   readonly maxTarjetas = MAX_TARJETAS_POR_ASESOR;
   readonly badgeClasesEtiqueta = ETIQUETA_BADGE_CLASSES;
+
+  /** Píxeles por frame que desplaza el auto-scroll del CDK al arrastrar cerca del borde; el
+   * default de Angular CDK (2px) se sentía demasiado lento con varias tarjetas fuera de pantalla. */
+  readonly autoScrollStep = 4;
 
   readonly leads = signal<Lead[]>([]);
   readonly isLoading = signal(true);

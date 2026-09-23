@@ -89,7 +89,10 @@
       {{ errorMessage() }}
     </div>
   } @else {
-    <div class="mt-6 flex-1 overflow-x-auto pb-4" cdkDropListGroup>
+    <!-- cdkScrollable: sin esto, Angular CDK no sabe que este contenedor es "arrastrable hacia el
+         borde para auto-scroll" — con muchas tarjetas, mover un lead a una que no cabe en pantalla
+         era imposible porque no había forma de desplazar el tablero mientras se arrastra. -->
+    <div class="mt-6 flex-1 overflow-x-auto pb-4" cdkDropListGroup cdkScrollable>
       <div class="flex h-full min-h-[400px] gap-4">
         <!-- "Sin asignar" no es una tarjeta real: no cuenta para el tope y no se puede renombrar ni eliminar. -->
         <div
@@ -104,11 +107,13 @@
           <div
             cdkDropList
             [cdkDropListData]="sinAsignar()"
+            [cdkDropListAutoScrollStep]="autoScrollStep"
             (cdkDropListDropped)="onDropSinAsignar($event)"
             (cdkDropListEntered)="onColumnaHoverEntered('sin-asignar')"
             (cdkDropListExited)="onColumnaHoverExited('sin-asignar')"
             class="flex-1 space-y-2.5 overflow-y-auto p-2.5"
             [class.tablero-lista-receptora]="columnaHoverId() === 'sin-asignar'"
+            cdkScrollable
           >
             @for (lead of sinAsignar(); track lead.id) {
               <div
@@ -220,11 +225,13 @@
             <div
               cdkDropList
               [cdkDropListData]="tarjeta.leads"
+              [cdkDropListAutoScrollStep]="autoScrollStep"
               (cdkDropListDropped)="onDropTarjeta($event, tarjeta)"
               (cdkDropListEntered)="onColumnaHoverEntered(tarjeta.id)"
               (cdkDropListExited)="onColumnaHoverExited(tarjeta.id)"
               class="flex-1 space-y-2.5 overflow-y-auto p-2.5"
               [class.tablero-lista-receptora]="columnaHoverId() === tarjeta.id"
+              cdkScrollable
             >
               @for (lead of tarjeta.leads; track lead.id) {
                 <div
