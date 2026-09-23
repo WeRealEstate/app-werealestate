@@ -106,6 +106,9 @@ export class DesempenoGeneralComponent {
   readonly periodo = signal<Periodo>('mes');
   readonly isLoading = signal(true);
   readonly reporte = signal<ReporteDesempeno | null>(null);
+  /** true cuando la última carga falló: distinto de "reporte sin datos" (ver cargar()), para que
+   * un backend caído no se vea igual que un mes genuinamente sin actividad. */
+  readonly hayError = signal(false);
 
   readonly periodoLabel = computed(() => {
     switch (this.periodo()) {
@@ -236,6 +239,10 @@ export class DesempenoGeneralComponent {
     this.cargar();
   }
 
+  reintentar(): void {
+    this.cargar();
+  }
+
   private rangoPeriodo(): { desde?: string; hasta?: string } {
     const hoy = new Date();
     if (this.periodo() === 'todo') return {};
@@ -249,12 +256,14 @@ export class DesempenoGeneralComponent {
 
   private async cargar(): Promise<void> {
     this.isLoading.set(true);
+    this.hayError.set(false);
     try {
       const { desde, hasta } = this.rangoPeriodo();
       this.reporte.set(await this.reportesService.obtenerDesempeno(desde, hasta));
       setTimeout(() => this.displayedRingOffset.set(this.ringOffset()), 60);
     } catch {
-      // El dashboard es informativo: si falla, el resto del panel sigue usable.
+      // Distinto de "sin datos": el reporte no se toca, así que un reintento no parpadea a vacío.
+      this.hayError.set(true);
     } finally {
       this.isLoading.set(false);
     }

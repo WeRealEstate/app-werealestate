@@ -63,8 +63,20 @@ export class AdminTareasComponent {
     return [tarea.asignadoA, ...activos];
   }
 
+  /** Misma fricción que eliminar() para una acción de riesgo similar: reasignar saca la tarea de
+   * la vista de quien la tenía sin que quede rastro visible salvo revisando aquí de nuevo. Si se
+   * cancela, no tocamos `tareas`, así que el <select> vuelve solo a mostrar la asignación real en
+   * el siguiente ciclo de detección de cambios (mismo patrón que el cambio de estado de lotes). */
   async reasignar(tarea: Tarea, nuevoAsignadoAId: number): Promise<void> {
     if (nuevoAsignadoAId === tarea.asignadoA.id) return;
+
+    const nuevoAsignado = this.opcionesReasignar(tarea).find((u) => u.id === nuevoAsignadoAId);
+    const confirmado = await this.confirmService.confirm({
+      titulo: 'Reasignar tarea',
+      mensaje: `¿Reasignar "${tarea.titulo}" de ${tarea.asignadoA.nombre} a ${nuevoAsignado?.nombre ?? 'otro usuario'}?`,
+      textoConfirmar: 'Reasignar',
+    });
+    if (!confirmado) return;
 
     this.reasignandoTareaId.set(tarea.id);
     try {
