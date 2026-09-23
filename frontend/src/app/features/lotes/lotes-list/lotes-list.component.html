@@ -355,7 +355,7 @@
             {{ errorInfoLote() }}
           </div>
         } @else if (infoModo() === 'venta' && ventaDeLote(); as v) {
-          <div class="mt-4 grid gap-3">
+          <div class="mt-4 grid grid-cols-2 gap-3">
             <div>
               <p class="text-xs text-ink-muted">Comprador</p>
               <p class="mt-0.5 text-sm font-medium text-ink">{{ v.cliente }}</p>
@@ -369,6 +369,10 @@
               <p class="mt-0.5 text-sm font-medium text-ink">{{ v.fechaVenta }}</p>
             </div>
             <div>
+              <p class="text-xs text-ink-muted">Forma de pago</p>
+              <p class="mt-0.5 text-sm font-medium text-ink">{{ v.formaPago }}</p>
+            </div>
+            <div>
               <p class="text-xs text-ink-muted">Precio de este lote</p>
               <p class="mt-0.5 text-sm font-medium text-ink">
                 @if (precioDeLoteEnVenta(v, li.id); as precio) {
@@ -378,23 +382,122 @@
                 }
               </p>
             </div>
-            <div class="grid grid-cols-2 gap-3">
+            @if (v.engancheLabel && v.enganche) {
               <div>
-                <p class="text-xs text-ink-muted">Total abonado</p>
-                <p class="mt-0.5 text-sm font-medium text-green-600 dark:text-green-400">${{ money(v.totalAbonado) }}</p>
+                <p class="text-xs text-ink-muted">{{ v.engancheLabel }}</p>
+                <p class="mt-0.5 text-sm font-medium text-ink">${{ money(v.enganche) }}</p>
               </div>
+            }
+            @if (v.mensualidad) {
               <div>
-                <p class="text-xs text-ink-muted">Saldo pendiente</p>
-                <p class="mt-0.5 text-sm font-medium text-we-primary dark:text-we-blue-light">${{ money(v.saldoPendiente) }}</p>
+                <p class="text-xs text-ink-muted">Mensualidad</p>
+                <p class="mt-0.5 text-sm font-medium text-ink">${{ money(v.mensualidad) }}</p>
               </div>
+            }
+            @if (v.plazoMeses) {
+              <div>
+                <p class="text-xs text-ink-muted">Plazo</p>
+                <p class="mt-0.5 text-sm font-medium text-ink">{{ v.plazoMeses }} meses</p>
+              </div>
+            }
+            @if (v.notas) {
+              <div class="col-span-2">
+                <p class="text-xs text-ink-muted">Notas</p>
+                <p class="mt-0.5 text-sm text-ink">{{ v.notas }}</p>
+              </div>
+            }
+          </div>
+
+          <div class="mt-4 grid grid-cols-2 gap-3">
+            <div class="rounded-lg bg-surface-2 px-3.5 py-2.5">
+              <p class="text-xs text-ink-muted">Total abonado</p>
+              <p class="mt-0.5 text-sm font-semibold text-green-600 dark:text-green-400">${{ money(v.totalAbonado) }}</p>
+            </div>
+            <div class="rounded-lg bg-surface-2 px-3.5 py-2.5">
+              <p class="text-xs text-ink-muted">Saldo pendiente</p>
+              <p class="mt-0.5 text-sm font-semibold text-we-primary dark:text-we-blue-light">${{ money(v.saldoPendiente) }}</p>
             </div>
           </div>
+
+          @if (v.saldoPendiente > 0) {
+            <div class="mt-4 rounded-lg border border-border p-3.5">
+              <p class="text-sm font-medium text-ink">Registrar abono</p>
+              <div class="mt-2.5 grid grid-cols-2 gap-2.5">
+                <div>
+                  <label for="fecha-abono-info" class="block text-xs text-ink-muted mb-1">Fecha *</label>
+                  <input
+                    id="fecha-abono-info"
+                    type="date"
+                    [ngModel]="fechaPagoInfoLote()"
+                    [ngModelOptions]="{ standalone: true }"
+                    (ngModelChange)="fechaPagoInfoLote.set($event)"
+                    class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink bg-surface
+                           focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+                  />
+                </div>
+                <div>
+                  <label for="monto-abono-info" class="block text-xs text-ink-muted mb-1">Monto *</label>
+                  <input
+                    id="monto-abono-info"
+                    type="number"
+                    step="0.01"
+                    min="1"
+                    [ngModel]="montoPagoInfoLote()"
+                    [ngModelOptions]="{ standalone: true }"
+                    (ngModelChange)="montoPagoInfoLote.set($event)"
+                    placeholder="Ej. 5000"
+                    class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink
+                           focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+                  />
+                </div>
+              </div>
+              <label for="notas-abono-info" class="block text-xs text-ink-muted mb-1 mt-2.5">Notas</label>
+              <input
+                id="notas-abono-info"
+                type="text"
+                [ngModel]="notasPagoInfoLote()"
+                [ngModelOptions]="{ standalone: true }"
+                (ngModelChange)="notasPagoInfoLote.set($event)"
+                placeholder="Opcional"
+                class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink placeholder:text-ink-muted
+                       focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+              />
+              @if (errorPagoInfoLote()) {
+                <p class="mt-2 text-xs text-red-600">{{ errorPagoInfoLote() }}</p>
+              }
+              <button
+                type="button"
+                (click)="registrarAbonoInfoLote()"
+                [disabled]="guardandoPagoInfoLote()"
+                class="mt-3 inline-flex w-full items-center justify-center rounded-lg bg-we-primary px-4 py-2 text-sm font-semibold text-white
+                       hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
+                       disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {{ guardandoPagoInfoLote() ? 'Guardando…' : 'Registrar abono' }}
+              </button>
+            </div>
+          }
+
+          @if (pagosInfoLote().length > 0) {
+            <div class="mt-4">
+              <p class="text-xs text-ink-muted mb-2">Historial de abonos</p>
+              <div class="space-y-2 max-h-40 overflow-y-auto pr-1">
+                @for (p of pagosInfoLote(); track p.id) {
+                  <div class="flex items-center justify-between gap-2 rounded-lg bg-surface-2 px-3.5 py-2 text-sm">
+                    <span class="text-ink-muted">{{ p.fecha }}</span>
+                    <span class="text-ink-muted truncate">{{ p.notas }}</span>
+                    <span class="font-medium text-ink">${{ money(p.monto) }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          }
 
           <a
             [routerLink]="['/panel/ventas', v.id]"
             (click)="cerrarInfoLote()"
-            class="mt-5 inline-flex w-full items-center justify-center rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
-                   hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150"
+            class="mt-4 inline-flex w-full items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink
+                   hover:border-we-primary active:scale-[0.97] transition-transform duration-150"
           >
             Ver venta completa
           </a>

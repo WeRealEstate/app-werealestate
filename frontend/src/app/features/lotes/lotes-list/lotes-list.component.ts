@@ -10,7 +10,7 @@ import { LotesService } from '../../../core/services/lotes.service';
 import { VentasService } from '../../../core/services/ventas.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { Desarrollo } from '../../../core/models/lead.model';
-import { Venta } from '../../../core/models/venta.model';
+import { PagoVenta, Venta } from '../../../core/models/venta.model';
 import {
   ESTADO_LOTE_BADGE_CLASSES,
   ESTADO_LOTE_LABELS,
@@ -86,6 +86,15 @@ export class LotesListComponent {
   readonly historialInfoLote = signal<MovimientoLote[]>([]);
   readonly cargandoInfoLote = signal(false);
   readonly errorInfoLote = signal<string | null>(null);
+
+  /** Historial de abonos de la venta mostrada en el modal, y el mini-formulario para registrar uno
+   * nuevo sin salir de /panel/lotes. */
+  readonly pagosInfoLote = signal<PagoVenta[]>([]);
+  readonly fechaPagoInfoLote = signal(new Date().toISOString().slice(0, 10));
+  readonly montoPagoInfoLote = signal<number | null>(null);
+  readonly notasPagoInfoLote = signal('');
+  readonly guardandoPagoInfoLote = signal(false);
+  readonly errorPagoInfoLote = signal<string | null>(null);
 
   readonly horasOpciones = HORAS_OPCIONES;
   readonly minutosOpciones = MINUTOS_OPCIONES;
@@ -328,14 +337,17 @@ export class LotesListComponent {
     this.loteInfo.set(lote);
     this.infoModo.set(null);
     this.ventaDeLote.set(null);
+    this.pagosInfoLote.set([]);
     this.historialInfoLote.set([]);
     this.errorInfoLote.set(null);
+    this.reiniciarFormularioAbonoInfoLote();
     this.cargandoInfoLote.set(true);
     try {
       if (lote.estado === 'VENDIDO') {
         const venta = await this.ventasService.obtenerPorLote(lote.id).catch(() => null);
         if (venta) {
           this.ventaDeLote.set(venta);
+          this.pagosInfoLote.set(await this.ventasService.listarPagos(venta.id));
           this.infoModo.set('venta');
           return;
         }
@@ -351,6 +363,53 @@ export class LotesListComponent {
 
   cerrarInfoLote(): void {
     this.loteInfo.set(null);
+  }
+
+  private reiniciarFormularioAbonoInfoLote(): void {
+    this.fechaPagoInfoLote.set(new Date().toISOString().slice(0, 10));
+    this.montoPagoInfoLote.set(null);
+    this.notasPagoInfoLote.set('');
+    this.errorPagoInfoLote.set(null);
+  }
+
+  /** Registra un abono sin salir de /panel/lotes; vuelve a cargar la venta y sus pagos desde el
+   * servidor (igual que VentaDetalleComponent.registrarPago) para que total abonado/saldo queden
+   * consistentes con lo que ya calculó el backend, en vez de restar a mano aquí. */
+  async registrarAbonoInfoLote(): Promise<void> {
+    const venta = this.ventaDeLote();
+    const monto = this.montoPagoInfoLote();
+    if (!venta || this.guardandoPagoInfoLote()) return;
+    if (!this.fechaPagoInfoLote() || !monto || monto <= 0) {
+      this.errorPagoInfoLote.set('Ingresa una fecha y un monto válido.');
+      return;
+    }
+
+    this.guardandoPagoInfoLote.set(true);
+    this.errorPagoInfoLote.set(null);
+    try {
+      await this.ventasService.registrarPago(venta.id, {
+        fecha: this.fechaPagoInfoLote(),
+        monto,
+        notas: this.notasPagoInfoLote().trim() || null,
+      });
+      const [ventaActualizada, pagos] = await Promise.all([
+        this.ventasService.obtener(venta.id),
+        this.ventasService.listarPagos(venta.id),
+      ]);
+      this.ventaDeLote.set(ventaActualizada);
+      this.pagosInfoLote.set(pagos);
+      this.reiniciarFormularioAbonoInfoLote();
+      this.toast.success('Abono registrado.');
+    } catch (error) {
+      const mensaje =
+        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+          ? error.error.message
+          : 'No se pudo registrar el abono.';
+      this.errorPagoInfoLote.set(mensaje);
+      this.toast.error(mensaje);
+    } finally {
+      this.guardandoPagoInfoLote.set(false);
+    }
   }
 
   /** Cuántos días completos lleva un lote en su estado actual, a partir de fechaCambioEstado. */
