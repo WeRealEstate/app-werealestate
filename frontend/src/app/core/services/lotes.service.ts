@@ -104,15 +104,28 @@ export class LotesService {
   }
 
   /** fechaExpiraApartado solo aplica (y es obligatoria) para estado === 'APARTADO_A_PLAZO'. nota es
-   * obligatoria del lado del backend cuando quien cambia el estado es admin o líder de área. */
-  cambiarEstado(id: number, estado: string, fechaExpiraApartado?: string | null, nota?: string): Promise<Lote> {
+   * obligatoria del lado del backend cuando quien cambia el estado es admin o líder de área.
+   * nombreCliente lo exige la UI (no el backend) al mover un lote a un estado comprometido. */
+  cambiarEstado(
+    id: number,
+    estado: string,
+    fechaExpiraApartado?: string | null,
+    nota?: string,
+    nombreCliente?: string | null,
+  ): Promise<Lote> {
     return firstValueFrom(
       this.http.put<Lote>(`${this.baseUrl}/${id}/estado`, {
         estado,
         fechaExpiraApartado: fechaExpiraApartado ?? null,
         nota: nota ?? null,
+        nombreCliente: nombreCliente ?? null,
       }),
     );
+  }
+
+  /** Historial completo de un lote específico, para el ícono de "ver información" en /panel/lotes. */
+  historialDeLote(id: number): Promise<MovimientoLote[]> {
+    return firstValueFrom(this.http.get<MovimientoLote[]>(`${this.baseUrl}/${id}/historial`));
   }
 
   eliminar(id: number): Promise<void> {

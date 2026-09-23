@@ -155,12 +155,12 @@
               </td>
               <td class="px-4 py-3">
                 <div class="flex items-center justify-end gap-1.5">
-                  @if (lote.estado === 'VENDIDO' && puedeVerVenta()) {
+                  @if (lote.estado !== 'DISPONIBLE' && puedeVerInfoLote()) {
                     <button
                       type="button"
-                      (click)="verInfoVenta(lote)"
-                      aria-label="Ver información de venta"
-                      title="Ver información de venta"
+                      (click)="verInfoLote(lote)"
+                      aria-label="Ver información del lote"
+                      title="Ver información del lote"
                       class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2 hover:text-we-primary
                              transition-colors duration-150 active:scale-90"
                     >
@@ -273,6 +273,20 @@
           <p class="mt-1.5 text-xs text-ink-muted">Hora en formato 24h. Al llegar esa fecha el lote vuelve solo a Disponible.</p>
         }
 
+        @if (requiereClienteCambioEstado()) {
+          <label for="cliente-cambio-estado" class="mb-1.5 mt-4 block text-sm font-medium text-ink">Nombre del cliente *</label>
+          <input
+            id="cliente-cambio-estado"
+            type="text"
+            [value]="nombreClienteCambioEstado()"
+            (input)="nombreClienteCambioEstado.set($any($event.target).value)"
+            placeholder="Ej. Juana Pérez"
+            class="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          />
+          <p class="mt-1.5 text-xs text-ink-muted">Queda como dato estructurado del lote, no solo en la nota.</p>
+        }
+
         <label for="nota-cambio-estado" class="mb-1.5 mt-4 block text-sm font-medium text-ink">Nota *</label>
         <textarea
           id="nota-cambio-estado"
@@ -307,22 +321,23 @@
     </div>
   }
 
-  @if (loteInfoVenta(); as loteVenta) {
-    <button type="button" (click)="cerrarInfoVenta()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-40 bg-black/40"></button>
-    <div class="fixed inset-0 z-40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="info-venta-titulo">
-      <div class="modal-panel-enter w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
-        <h2 id="info-venta-titulo" class="font-heading text-lg font-semibold text-ink">Información de venta</h2>
+  @if (loteInfo(); as li) {
+    <button type="button" (click)="cerrarInfoLote()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-40 bg-black/40"></button>
+    <div class="fixed inset-0 z-40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="info-lote-titulo">
+      <div class="modal-panel-enter w-full max-w-md max-h-[85vh] overflow-y-auto rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <h2 id="info-lote-titulo" class="font-heading text-lg font-semibold text-ink">Información del lote</h2>
         <p class="mt-1 text-sm text-ink-muted">
-          Manzana {{ loteVenta.manzana }}, Lote {{ loteVenta.numeroLote }}
+          Manzana {{ li.manzana }}, Lote {{ li.numeroLote }}
+          · <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium" [class]="badgeClases[li.estado]">{{ estadoLabels[li.estado] }}</span>
         </p>
 
-        @if (cargandoVentaDeLote()) {
+        @if (cargandoInfoLote()) {
           <p class="mt-4 text-sm text-ink-muted">Cargando…</p>
-        } @else if (errorVentaDeLote()) {
+        } @else if (errorInfoLote()) {
           <div class="mt-4 rounded-lg bg-red-50 border border-red-200 px-3.5 py-2.5 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
-            {{ errorVentaDeLote() }}
+            {{ errorInfoLote() }}
           </div>
-        } @else if (ventaDeLote(); as v) {
+        } @else if (infoModo() === 'venta' && ventaDeLote(); as v) {
           <div class="mt-4 grid gap-3">
             <div>
               <p class="text-xs text-ink-muted">Comprador</p>
@@ -339,7 +354,7 @@
             <div>
               <p class="text-xs text-ink-muted">Precio de este lote</p>
               <p class="mt-0.5 text-sm font-medium text-ink">
-                @if (precioDeLoteEnVenta(v, loteVenta.id); as precio) {
+                @if (precioDeLoteEnVenta(v, li.id); as precio) {
                   ${{ money(precio) }}
                 } @else {
                   —
@@ -360,18 +375,63 @@
 
           <a
             [routerLink]="['/panel/ventas', v.id]"
-            (click)="cerrarInfoVenta()"
+            (click)="cerrarInfoLote()"
             class="mt-5 inline-flex w-full items-center justify-center rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
                    hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150"
           >
             Ver venta completa
           </a>
+        } @else if (infoModo() === 'estado') {
+          <div class="mt-4 grid grid-cols-2 gap-3">
+            <div>
+              <p class="text-xs text-ink-muted">Desde</p>
+              <p class="mt-0.5 text-sm font-medium text-ink">{{ li.fechaCambioEstado | date: 'dd/MM/yy HH:mm' }}</p>
+            </div>
+            <div>
+              <p class="text-xs text-ink-muted">Lleva en este estado</p>
+              <p class="mt-0.5 text-sm font-medium text-ink">{{ diasEnEstado(li) }} día{{ diasEnEstado(li) === 1 ? '' : 's' }}</p>
+            </div>
+          </div>
+
+          @if (li.estado === 'VENDIDO') {
+            <div class="mt-3 rounded-lg bg-amber-50 border border-amber-200 px-3.5 py-2.5 text-xs text-amber-800 dark:bg-amber-500/10 dark:border-amber-500/25 dark:text-amber-300">
+              Este lote no tiene una venta registrada en el módulo de Ventas. Así quedó el cambio de estado:
+            </div>
+          }
+
+          @if (historialInfoLote().length === 0) {
+            <p class="mt-4 text-sm text-ink-muted">Todavía no hay movimientos registrados para este lote.</p>
+          } @else {
+            <div class="mt-4">
+              <p class="text-xs text-ink-muted mb-2">Historial de movimientos</p>
+              <div class="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                @for (m of historialInfoLote(); track m.id) {
+                  <div class="rounded-lg bg-surface-2 px-3.5 py-2.5">
+                    <div class="flex items-center justify-between gap-2 text-xs text-ink-muted">
+                      <span>{{ m.fecha | date: 'dd/MM/yy HH:mm' }}</span>
+                      <span>{{ estadoLabels[m.estadoAnterior] }} &rarr; {{ estadoLabels[m.estadoNuevo] }}</span>
+                    </div>
+                    @if (m.nombreCliente) {
+                      <p class="mt-1 text-sm text-ink"><span class="text-ink-muted">Cliente:</span> {{ m.nombreCliente }}</p>
+                    }
+                    <p class="mt-1 text-sm text-ink">
+                      <span class="text-ink-muted">Por:</span>
+                      {{ m.usuario?.nombre ?? m.nombreAsesor ?? 'Sistema (cotizador público)' }}
+                    </p>
+                    @if (m.nota) {
+                      <p class="mt-1 text-sm text-ink-muted">{{ m.nota }}</p>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          }
         }
 
-        <div class="mt-3 flex justify-end">
+        <div class="mt-5 flex justify-end">
           <button
             type="button"
-            (click)="cerrarInfoVenta()"
+            (click)="cerrarInfoLote()"
             class="rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink hover:border-we-primary active:scale-[0.97] transition-transform duration-150"
           >
             Cerrar

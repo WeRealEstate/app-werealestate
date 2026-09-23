@@ -265,6 +265,17 @@ public class LoteService {
         return new PaginaDto<>(resultado.getContent().stream().map(MovimientoLoteDto::from).toList(), resultado.hasNext());
     }
 
+    /** Historial completo de un lote específico (más reciente primero), para el ícono de "ver
+     * información" en /panel/lotes: cuándo entró a su estado actual, quién lo cambió y el nombre
+     * del cliente/nota que se haya capturado en cada paso. Mismo alcance de acceso que
+     * {@link #buscarMovimientos}: cualquier rol autenticado puede consultarlo. */
+    public List<MovimientoLoteDto> historialDeLote(Long id) {
+        obtenerEntidad(id); // valida que el lote exista antes de listar su historial
+        return movimientoLoteRepository.findByLoteIdOrderByFechaDesc(id).stream()
+                .map(MovimientoLoteDto::from)
+                .toList();
+    }
+
     /** Borrar un registro del historial de movimientos es exclusivo de admin: es la bitácora de
      * auditoría de todo lo que pasa con los lotes. */
     public void eliminarMovimiento(Long id) {
@@ -340,7 +351,10 @@ public class LoteService {
             throw new ValidationException("Agrega una nota explicando el motivo del cambio de estado");
         }
 
-        cambiarEstadoConHistorial(lote, request.estado(), actual, null, null, nota);
+        String nombreCliente = request.nombreCliente() == null || request.nombreCliente().isBlank()
+                ? null
+                : request.nombreCliente().trim();
+        cambiarEstadoConHistorial(lote, request.estado(), actual, null, nombreCliente, nota);
         lote.setFechaExpiraApartado(
                 request.estado() == EstadoLote.APARTADO_A_PLAZO ? request.fechaExpiraApartado() : null);
         return LoteDto.from(lote);

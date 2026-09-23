@@ -96,6 +96,12 @@ public class LoteController {
         return loteService.obtener(id);
     }
 
+    /** Historial completo de un lote específico, para el ícono de "ver información" en /panel/lotes. */
+    @GetMapping("/{id}/historial")
+    public List<MovimientoLoteDto> historialDeLote(@PathVariable Long id) {
+        return loteService.historialDeLote(id);
+    }
+
     @PostMapping
     public LoteDto crear(@Valid @RequestBody LoteCreateRequest request) {
         return loteService.crear(request);

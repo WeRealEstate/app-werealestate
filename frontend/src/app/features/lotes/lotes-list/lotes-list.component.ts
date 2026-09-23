@@ -18,6 +18,7 @@ import {
   ESTADOS_LOTE_SOLO_ADMIN,
   EstadoLote,
   Lote,
+  MovimientoLote,
 } from '../../../core/models/lote.model';
 import {
   HORAS_OPCIONES,
@@ -35,6 +36,17 @@ const TAMANO_PAGINA = 20;
 const ESTADOS_ASESOR: EstadoLote[] = ['DISPONIBLE', 'APARTADO'];
 const ESTADOS_TODOS: EstadoLote[] = [
   'DISPONIBLE',
+  'APARTADO',
+  'APARTADO_A_PLAZO',
+  'APARTADO_CON_DINERO',
+  'EN_PROCESO_DE_FIRMA',
+  'VENDIDO',
+];
+
+/** Al mover un lote a cualquiera de estos estados desde el modal de admin/líder, el nombre del
+ * cliente es obligatorio: son los estados donde alguien real está comprometido con el lote, y sin
+ * esto ese dato solo quedaba enterrado (si acaso) en la nota libre. */
+const ESTADOS_REQUIEREN_CLIENTE: EstadoLote[] = [
   'APARTADO',
   'APARTADO_A_PLAZO',
   'APARTADO_CON_DINERO',
@@ -62,14 +74,18 @@ export class LotesListComponent {
   readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
   readonly esLider = computed(() => this.auth.currentUser()?.rol === 'LIDER_AREA');
   /** Mismo permiso que el módulo de ventas (roleGuard ADMIN/LIDER_AREA): solo ellos pueden ver la
-   * información de venta de un lote vendido. */
-  readonly puedeVerVenta = computed(() => this.esAdmin() || this.esLider());
+   * información de un lote comprometido (apartado, en firma o vendido). */
+  readonly puedeVerInfoLote = computed(() => this.esAdmin() || this.esLider());
 
-  /** Lote sobre el que se pidió "ver información de venta"; null cierra el modal. */
-  readonly loteInfoVenta = signal<Lote | null>(null);
+  /** Lote sobre el que se pidió "ver información"; null cierra el modal. Un lote Vendido muestra
+   * su Venta si existe en el módulo de Ventas ('venta'); cualquier otro estado comprometido (o un
+   * Vendido marcado a mano sin pasar por Ventas) muestra su historial de movimientos ('estado'). */
+  readonly loteInfo = signal<Lote | null>(null);
+  readonly infoModo = signal<'venta' | 'estado' | null>(null);
   readonly ventaDeLote = signal<Venta | null>(null);
-  readonly cargandoVentaDeLote = signal(false);
-  readonly errorVentaDeLote = signal<string | null>(null);
+  readonly historialInfoLote = signal<MovimientoLote[]>([]);
+  readonly cargandoInfoLote = signal(false);
+  readonly errorInfoLote = signal<string | null>(null);
 
   readonly horasOpciones = HORAS_OPCIONES;
   readonly minutosOpciones = MINUTOS_OPCIONES;
@@ -79,15 +95,22 @@ export class LotesListComponent {
    * está cerrado. Un asesor nunca pasa por aquí — su cambio se aplica directo. */
   readonly cambioEstadoPendiente = signal<{ lote: Lote; nuevoEstado: EstadoLote } | null>(null);
   readonly notaCambioEstado = signal('');
+  readonly nombreClienteCambioEstado = signal('');
   readonly fechaPlazo = signal('');
   readonly horaPlazo = signal(HORA_POR_DEFECTO);
   readonly minutoPlazo = signal(MINUTO_POR_DEFECTO);
   readonly guardandoCambioEstado = signal(false);
 
+  readonly requiereClienteCambioEstado = computed(() => {
+    const pendiente = this.cambioEstadoPendiente();
+    return pendiente !== null && ESTADOS_REQUIEREN_CLIENTE.includes(pendiente.nuevoEstado);
+  });
+
   readonly cambioEstadoInvalido = computed(() => {
     const pendiente = this.cambioEstadoPendiente();
     if (!pendiente || !this.notaCambioEstado().trim()) return true;
-    return pendiente.nuevoEstado === 'APARTADO_A_PLAZO' && !this.fechaPlazo();
+    if (pendiente.nuevoEstado === 'APARTADO_A_PLAZO' && !this.fechaPlazo()) return true;
+    return this.requiereClienteCambioEstado() && !this.nombreClienteCambioEstado().trim();
   });
 
   readonly lotes = signal<Lote[]>([]);
@@ -239,6 +262,7 @@ export class LotesListComponent {
   abrirModalCambioEstado(lote: Lote, nuevoEstado: EstadoLote): void {
     this.cambioEstadoPendiente.set({ lote, nuevoEstado });
     this.notaCambioEstado.set('');
+    this.nombreClienteCambioEstado.set('');
     this.fechaPlazo.set('');
     this.horaPlazo.set(HORA_POR_DEFECTO);
     this.minutoPlazo.set(MINUTO_POR_DEFECTO);
@@ -263,6 +287,7 @@ export class LotesListComponent {
         pendiente.nuevoEstado,
         fechaExpira,
         this.notaCambioEstado().trim(),
+        this.requiereClienteCambioEstado() ? this.nombreClienteCambioEstado().trim() : null,
       );
       this.lotes.update((lista) => lista.map((l) => (l.id === pendiente.lote.id ? actualizado : l)));
       this.cambioEstadoPendiente.set(null);
@@ -287,23 +312,43 @@ export class LotesListComponent {
     return venta.lotes.find((l) => l.lote.id === loteId)?.precio ?? null;
   }
 
-  async verInfoVenta(lote: Lote): Promise<void> {
-    this.loteInfoVenta.set(lote);
+  /** Un Vendido muestra su Venta si el módulo de Ventas la tiene registrada; si no (se marcó
+   * vendido a mano, sin pasar por /panel/ventas) o el lote está en cualquier otro estado
+   * comprometido, cae al historial de movimientos — que siempre queda registrado, sin importar
+   * desde dónde se originó el cambio. */
+  async verInfoLote(lote: Lote): Promise<void> {
+    this.loteInfo.set(lote);
+    this.infoModo.set(null);
     this.ventaDeLote.set(null);
-    this.errorVentaDeLote.set(null);
-    this.cargandoVentaDeLote.set(true);
+    this.historialInfoLote.set([]);
+    this.errorInfoLote.set(null);
+    this.cargandoInfoLote.set(true);
     try {
-      const venta = await this.ventasService.obtenerPorLote(lote.id);
-      this.ventaDeLote.set(venta);
+      if (lote.estado === 'VENDIDO') {
+        const venta = await this.ventasService.obtenerPorLote(lote.id).catch(() => null);
+        if (venta) {
+          this.ventaDeLote.set(venta);
+          this.infoModo.set('venta');
+          return;
+        }
+      }
+      this.historialInfoLote.set(await this.lotesService.historialDeLote(lote.id));
+      this.infoModo.set('estado');
     } catch {
-      this.errorVentaDeLote.set('Este lote no tiene una venta registrada en el sistema.');
+      this.errorInfoLote.set('No se pudo cargar la información de este lote.');
     } finally {
-      this.cargandoVentaDeLote.set(false);
+      this.cargandoInfoLote.set(false);
     }
   }
 
-  cerrarInfoVenta(): void {
-    this.loteInfoVenta.set(null);
+  cerrarInfoLote(): void {
+    this.loteInfo.set(null);
+  }
+
+  /** Cuántos días completos lleva un lote en su estado actual, a partir de fechaCambioEstado. */
+  diasEnEstado(lote: Lote): number {
+    const ms = Date.now() - new Date(lote.fechaCambioEstado).getTime();
+    return Math.max(0, Math.floor(ms / 86_400_000));
   }
 
   async eliminar(lote: Lote): Promise<void> {
