@@ -109,6 +109,10 @@ export class DesempenoGeneralComponent {
   /** true cuando la última carga falló: distinto de "reporte sin datos" (ver cargar()), para que
    * un backend caído no se vea igual que un mes genuinamente sin actividad. */
   readonly hayError = signal(false);
+  /** El reporte completo (tendencia, donas, barras por asesor/desarrollo/riesgo, cotizaciones)
+   * arranca oculto: un admin que revisa esto a diario solo necesita los 4 KPI del resumen la
+   * mayoría de las veces. Se queda como el admin lo dejó al cambiar de periodo, a propósito. */
+  readonly mostrarReporteCompleto = signal(false);
 
   readonly periodoLabel = computed(() => {
     switch (this.periodo()) {
@@ -241,6 +245,10 @@ export class DesempenoGeneralComponent {
 
   reintentar(): void {
     this.cargar();
+  }
+
+  alternarReporteCompleto(): void {
+    this.mostrarReporteCompleto.update((v) => !v);
   }
 
   private rangoPeriodo(): { desde?: string; hasta?: string } {
