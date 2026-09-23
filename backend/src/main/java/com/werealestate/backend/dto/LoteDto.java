@@ -17,7 +17,8 @@ public record LoteDto(
         UsuarioResumenDto cambiadoPor,
         List<PuntoMapaDto> mapaPoligono,
         LocalDateTime fechaExpiraApartado,
-        BigDecimal montoApartado) {
+        BigDecimal montoApartado,
+        boolean sinVentaRegistrada) {
 
     public static LoteDto from(Lote lote) {
         return new LoteDto(
@@ -31,6 +32,17 @@ public record LoteDto(
                 lote.getCambiadoPor() != null ? UsuarioResumenDto.from(lote.getCambiadoPor()) : null,
                 PoligonoMapaJson.deserializar(lote.getMapaPoligonoJson()),
                 lote.getFechaExpiraApartado(),
-                lote.getMontoApartado());
+                lote.getMontoApartado(),
+                false);
+    }
+
+    /** Para /panel/lotes: marca un lote VENDIDO que no tiene ningún VentaLote asociado, así el
+     * inventario puede señalar cuáles ventas todavía faltan por registrar en el sistema (ver
+     * LoteService.buscarPaginado). Falso en cualquier otro contexto — no vale la pena la consulta
+     * extra fuera del listado principal. */
+    public LoteDto conSinVentaRegistrada(boolean sinVentaRegistrada) {
+        return new LoteDto(
+                id, desarrollo, manzana, numeroLote, superficie, estado, fechaCambioEstado, cambiadoPor,
+                mapaPoligono, fechaExpiraApartado, montoApartado, sinVentaRegistrada);
     }
 }

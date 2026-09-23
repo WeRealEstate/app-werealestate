@@ -29,6 +29,7 @@ import com.werealestate.backend.repository.DesarrolloRepository;
 import com.werealestate.backend.repository.LoteRepository;
 import com.werealestate.backend.repository.MovimientoLoteRepository;
 import com.werealestate.backend.repository.UsuarioRepository;
+import com.werealestate.backend.repository.VentaLoteRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -87,6 +88,7 @@ public class LoteService {
     private final DesarrolloRepository desarrolloRepository;
     private final UsuarioRepository usuarioRepository;
     private final MovimientoLoteRepository movimientoLoteRepository;
+    private final VentaLoteRepository ventaLoteRepository;
     private final CurrentUserProvider currentUserProvider;
 
     public LoteService(
@@ -94,11 +96,13 @@ public class LoteService {
             DesarrolloRepository desarrolloRepository,
             UsuarioRepository usuarioRepository,
             MovimientoLoteRepository movimientoLoteRepository,
+            VentaLoteRepository ventaLoteRepository,
             CurrentUserProvider currentUserProvider) {
         this.loteRepository = loteRepository;
         this.desarrolloRepository = desarrolloRepository;
         this.usuarioRepository = usuarioRepository;
         this.movimientoLoteRepository = movimientoLoteRepository;
+        this.ventaLoteRepository = ventaLoteRepository;
         this.currentUserProvider = currentUserProvider;
     }
 
@@ -167,7 +171,26 @@ public class LoteService {
 
         Pageable pageable = PageRequest.of(Math.max(pagina, 0), Math.max(tamano, 1));
         Page<Lote> resultado = loteRepository.findAll(spec, pageable);
-        return new PaginaDto<>(resultado.getContent().stream().map(LoteDto::from).toList(), resultado.hasNext());
+        List<LoteDto> lotes = resultado.getContent().stream().map(LoteDto::from).toList();
+        return new PaginaDto<>(marcarSinVentaRegistrada(lotes), resultado.hasNext());
+    }
+
+    /** Para el punto rojo en /panel/lotes: de los lotes VENDIDO en esta página, cuáles no tienen
+     * ningún VentaLote asociado (se marcaron vendidos a mano, sin pasar por el módulo de Ventas). */
+    private List<LoteDto> marcarSinVentaRegistrada(List<LoteDto> lotes) {
+        List<Long> idsVendidos = lotes.stream()
+                .filter(l -> l.estado() == EstadoLote.VENDIDO)
+                .map(LoteDto::id)
+                .toList();
+        if (idsVendidos.isEmpty()) {
+            return lotes;
+        }
+        Set<Long> conVenta = new HashSet<>(ventaLoteRepository.findLoteIdsConVenta(idsVendidos));
+        return lotes.stream()
+                .map(l -> l.estado() == EstadoLote.VENDIDO && !conVenta.contains(l.id())
+                        ? l.conSinVentaRegistrada(true)
+                        : l)
+                .toList();
     }
 
     /** Lotes disponibles de un desarrollo, para elegir uno al cotizar. Se reordenan en Java con

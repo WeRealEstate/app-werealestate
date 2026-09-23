@@ -82,6 +82,10 @@ export interface Lote {
   /** Solo tiene valor mientras estado === 'APARTADO_CON_DINERO'; el formulario de Ventas lo lee
    * para preguntar si ese dinero baja la mensualidad o el saldo. */
   montoApartado: number | null;
+  /** true solo cuando estado === 'VENDIDO' y el lote se marcó vendido a mano, sin pasar por el
+   * módulo de Ventas (ver LoteService.buscarPaginado) — para el punto rojo en /panel/lotes que
+   * señala cuáles ventas todavía faltan por registrar. Siempre false en cualquier otro listado. */
+  sinVentaRegistrada: boolean;
 }
 
 /** El plano interactivo de un desarrollo: la imagen subida por un admin y el polígono de cada lote

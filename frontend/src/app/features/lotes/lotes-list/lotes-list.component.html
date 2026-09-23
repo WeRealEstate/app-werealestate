@@ -133,22 +133,31 @@
               <td class="px-4 py-3 text-ink-muted">{{ lote.superficie }} m²</td>
               <td class="px-4 py-3 text-ink-muted">{{ precioEstimado(lote) | number:'1.0-0' }} MXN</td>
               <td class="px-4 py-3">
-                @if (estadosDisponiblesPara(lote).length > 1) {
-                  <select
-                    [ngModel]="lote.estado"
-                    (ngModelChange)="cambiarEstado(lote, $event)"
-                    class="rounded-full border-0 px-2.5 py-1 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-we-primary/50"
-                    [class]="badgeClases[lote.estado]"
-                  >
-                    @for (e of estadosDisponiblesPara(lote); track e) {
-                      <option [ngValue]="e">{{ estadoLabels[e] }}</option>
-                    }
-                  </select>
-                } @else {
-                  <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" [class]="badgeClases[lote.estado]" [title]="'Solo un administrador o un líder de área puede cambiar este estado'">
-                    {{ estadoLabels[lote.estado] }}
-                  </span>
-                }
+                <div class="flex items-center gap-1.5">
+                  @if (estadosDisponiblesPara(lote).length > 1) {
+                    <select
+                      [ngModel]="lote.estado"
+                      (ngModelChange)="cambiarEstado(lote, $event)"
+                      class="rounded-full border-0 px-2.5 py-1 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+                      [class]="badgeClases[lote.estado]"
+                    >
+                      @for (e of estadosDisponiblesPara(lote); track e) {
+                        <option [ngValue]="e">{{ estadoLabels[e] }}</option>
+                      }
+                    </select>
+                  } @else {
+                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" [class]="badgeClases[lote.estado]" [title]="'Solo un administrador o un líder de área puede cambiar este estado'">
+                      {{ estadoLabels[lote.estado] }}
+                    </span>
+                  }
+                  @if (lote.sinVentaRegistrada) {
+                    <span
+                      class="h-2 w-2 shrink-0 rounded-full bg-red-500"
+                      title="Vendido sin venta registrada en el sistema — usa el ícono de información para registrarla"
+                      aria-label="Vendido sin venta registrada en el sistema"
+                    ></span>
+                  }
+                </div>
                 @if (lote.estado === 'APARTADO_A_PLAZO' && lote.fechaExpiraApartado) {
                   <p class="mt-1 text-xs text-ink-muted">Vence: {{ lote.fechaExpiraApartado | date: 'dd/MM/yy HH:mm' }}</p>
                 }
