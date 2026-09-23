@@ -5,12 +5,14 @@ import com.werealestate.backend.dto.PagoVentaCreateRequest;
 import com.werealestate.backend.dto.PagoVentaDto;
 import com.werealestate.backend.dto.VentaCreateRequest;
 import com.werealestate.backend.dto.VentaDto;
+import com.werealestate.backend.dto.VentaUpdateRequest;
 import com.werealestate.backend.service.VentaService;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -42,6 +44,12 @@ public class VentaController {
     @GetMapping("/{id}")
     public VentaDto obtener(@PathVariable Long id) {
         return ventaService.obtener(id);
+    }
+
+    /** Temporal: modifica los datos capturados de una venta (cliente, fechas, términos). */
+    @PutMapping("/{id}")
+    public VentaDto actualizar(@PathVariable Long id, @Valid @RequestBody VentaUpdateRequest request) {
+        return ventaService.actualizar(id, request);
     }
 
     /** Para /panel/lotes: qué venta corresponde a un lote marcado como vendido. */

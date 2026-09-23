@@ -33,6 +33,23 @@ export class VentaDetalleComponent implements OnInit {
     notas: this.fb.control(''),
   });
 
+  /** Temporal: permite modificar los datos capturados de la venta (no sus lotes/precios). Se va a
+   * quitar más adelante — avisan cuándo. */
+  readonly editando = signal(false);
+  readonly isSavingEdicion = signal(false);
+  readonly errorEdicion = signal<string | null>(null);
+  readonly edicionForm = this.fb.group({
+    cliente: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
+    asesor: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
+    fechaVenta: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
+    formaPago: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
+    mensualidad: this.fb.control<number | null>(null, { validators: [Validators.min(1)] }),
+    plazoMeses: this.fb.control<number | null>(null, { validators: [Validators.min(1)] }),
+    engancheLabel: this.fb.control(''),
+    enganche: this.fb.control<number | null>(null, { validators: [Validators.min(1)] }),
+    notas: this.fb.control(''),
+  });
+
   ngOnInit(): void {
     this.ventaId = Number(this.route.snapshot.paramMap.get('id'));
     this.cargar();
@@ -90,5 +107,66 @@ export class VentaDetalleComponent implements OnInit {
 
   money(valor: number): string {
     return valor.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  // --- Modificar venta (temporal) ---
+
+  abrirEdicion(): void {
+    const v = this.venta();
+    if (!v) return;
+    this.edicionForm.reset({
+      cliente: v.cliente,
+      asesor: v.asesor,
+      fechaVenta: v.fechaVenta,
+      formaPago: v.formaPago,
+      mensualidad: v.mensualidad,
+      plazoMeses: v.plazoMeses,
+      engancheLabel: v.engancheLabel ?? '',
+      enganche: v.enganche,
+      notas: v.notas ?? '',
+    });
+    this.errorEdicion.set(null);
+    this.editando.set(true);
+  }
+
+  cancelarEdicion(): void {
+    this.editando.set(false);
+  }
+
+  async guardarEdicion(): Promise<void> {
+    if (this.edicionForm.invalid || this.isSavingEdicion()) {
+      this.edicionForm.markAllAsTouched();
+      return;
+    }
+
+    this.isSavingEdicion.set(true);
+    this.errorEdicion.set(null);
+    const v = this.edicionForm.getRawValue();
+
+    try {
+      const actualizada = await this.ventasService.actualizar(this.ventaId, {
+        cliente: v.cliente,
+        asesor: v.asesor,
+        fechaVenta: v.fechaVenta,
+        formaPago: v.formaPago,
+        mensualidad: v.mensualidad,
+        plazoMeses: v.plazoMeses,
+        engancheLabel: v.engancheLabel?.trim() || null,
+        enganche: v.enganche,
+        notas: v.notas?.trim() || null,
+      });
+      this.venta.set(actualizada);
+      this.editando.set(false);
+      this.toast.success('Venta actualizada.');
+    } catch (error) {
+      const mensaje =
+        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+          ? error.error.message
+          : 'No se pudo actualizar la venta.';
+      this.errorEdicion.set(mensaje);
+      this.toast.error(mensaje);
+    } finally {
+      this.isSavingEdicion.set(false);
+    }
   }
 }

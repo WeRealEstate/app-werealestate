@@ -85,6 +85,29 @@ public class Venta {
         this.notas = notas;
     }
 
+    /** Modifica los datos capturados de la venta (no toca sus lotes/precios, que se administran
+     * aparte). Temporal: el botón que llama a esto en el frontend se va a quitar más adelante. */
+    public void actualizar(
+            String cliente,
+            String asesor,
+            String formaPago,
+            LocalDate fechaVenta,
+            BigDecimal mensualidad,
+            Integer plazoMeses,
+            String engancheLabel,
+            BigDecimal enganche,
+            String notas) {
+        this.cliente = cliente;
+        this.asesor = asesor;
+        this.formaPago = formaPago;
+        this.fechaVenta = fechaVenta;
+        this.mensualidad = mensualidad;
+        this.plazoMeses = plazoMeses;
+        this.engancheLabel = engancheLabel;
+        this.enganche = enganche;
+        this.notas = notas;
+    }
+
     public Long getId() {
         return id;
     }

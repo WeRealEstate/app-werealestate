@@ -3,7 +3,13 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Pagina } from '../models/pagina.model';
-import { PagoVenta, PagoVentaCreateRequest, Venta, VentaCreateRequest } from '../models/venta.model';
+import {
+  PagoVenta,
+  PagoVentaCreateRequest,
+  Venta,
+  VentaCreateRequest,
+  VentaUpdateRequest,
+} from '../models/venta.model';
 
 export interface BuscarVentasParams {
   busqueda?: string;
@@ -35,6 +41,11 @@ export class VentasService {
 
   crear(request: VentaCreateRequest): Promise<Venta> {
     return firstValueFrom(this.http.post<Venta>(this.baseUrl, request));
+  }
+
+  /** Temporal: para el botón "Modificar venta" en el detalle, se va a quitar más adelante. */
+  actualizar(id: number, request: VentaUpdateRequest): Promise<Venta> {
+    return firstValueFrom(this.http.put<Venta>(`${this.baseUrl}/${id}`, request));
   }
 
   listarPagos(ventaId: number): Promise<PagoVenta[]> {

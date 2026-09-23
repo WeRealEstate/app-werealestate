@@ -10,11 +10,24 @@
   } @else {
     @let v = venta()!;
 
-    <div class="mt-3">
-      <h1 class="font-heading text-2xl font-semibold text-ink">{{ v.cliente }}</h1>
-      <p class="mt-1 text-sm text-ink-muted">
-        {{ v.lotes.length }} {{ v.lotes.length === 1 ? 'lote' : 'lotes' }} · {{ v.lotes[0].lote.desarrollo.nombre }}
-      </p>
+    <div class="mt-3 flex items-start justify-between gap-3">
+      <div>
+        <h1 class="font-heading text-2xl font-semibold text-ink">{{ v.cliente }}</h1>
+        <p class="mt-1 text-sm text-ink-muted">
+          {{ v.lotes.length }} {{ v.lotes.length === 1 ? 'lote' : 'lotes' }} · {{ v.lotes[0].lote.desarrollo.nombre }}
+        </p>
+      </div>
+      @if (!editando()) {
+        <button
+          type="button"
+          (click)="abrirEdicion()"
+          class="shrink-0 inline-flex items-center justify-center gap-1.5 rounded-lg border border-border px-3.5 py-2 text-sm font-semibold text-ink
+                 hover:border-we-primary active:scale-[0.97] transition-transform duration-150"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Modificar venta
+        </button>
+      }
     </div>
 
     <!-- LOTES -->
@@ -30,48 +43,156 @@
       </div>
     </div>
 
-    <div class="mt-6 grid gap-4 rounded-2xl border border-border bg-surface p-5 sm:grid-cols-2">
-      <div>
-        <p class="text-xs text-ink-muted">Asesor</p>
-        <p class="mt-1 text-sm font-medium text-ink">{{ v.asesor }}</p>
-      </div>
-      <div>
-        <p class="text-xs text-ink-muted">Fecha de venta</p>
-        <p class="mt-1 text-sm font-medium text-ink">{{ v.fechaVenta }}</p>
-      </div>
-      <div>
-        <p class="text-xs text-ink-muted">Forma de pago</p>
-        <p class="mt-1 text-sm font-medium text-ink">{{ v.formaPago }}</p>
-      </div>
-      <div>
-        <p class="text-xs text-ink-muted">Precio total</p>
-        <p class="mt-1 text-sm font-medium text-ink">${{ money(v.precioVenta) }}</p>
-      </div>
-      @if (v.engancheLabel && v.enganche) {
+    @if (!editando()) {
+      <div class="mt-6 grid gap-4 rounded-2xl border border-border bg-surface p-5 sm:grid-cols-2">
         <div>
-          <p class="text-xs text-ink-muted">{{ v.engancheLabel }}</p>
-          <p class="mt-1 text-sm font-medium text-ink">${{ money(v.enganche) }}</p>
+          <p class="text-xs text-ink-muted">Asesor</p>
+          <p class="mt-1 text-sm font-medium text-ink">{{ v.asesor }}</p>
         </div>
-      }
-      @if (v.mensualidad) {
         <div>
-          <p class="text-xs text-ink-muted">Mensualidad</p>
-          <p class="mt-1 text-sm font-medium text-ink">${{ money(v.mensualidad) }}</p>
+          <p class="text-xs text-ink-muted">Fecha de venta</p>
+          <p class="mt-1 text-sm font-medium text-ink">{{ v.fechaVenta }}</p>
         </div>
-      }
-      @if (v.plazoMeses) {
         <div>
-          <p class="text-xs text-ink-muted">Plazo</p>
-          <p class="mt-1 text-sm font-medium text-ink">{{ v.plazoMeses }} meses</p>
+          <p class="text-xs text-ink-muted">Forma de pago</p>
+          <p class="mt-1 text-sm font-medium text-ink">{{ v.formaPago }}</p>
         </div>
-      }
-      @if (v.notas) {
-        <div class="sm:col-span-2">
-          <p class="text-xs text-ink-muted">Notas</p>
-          <p class="mt-1 text-sm text-ink">{{ v.notas }}</p>
+        <div>
+          <p class="text-xs text-ink-muted">Precio total</p>
+          <p class="mt-1 text-sm font-medium text-ink">${{ money(v.precioVenta) }}</p>
         </div>
-      }
-    </div>
+        @if (v.engancheLabel && v.enganche) {
+          <div>
+            <p class="text-xs text-ink-muted">{{ v.engancheLabel }}</p>
+            <p class="mt-1 text-sm font-medium text-ink">${{ money(v.enganche) }}</p>
+          </div>
+        }
+        @if (v.mensualidad) {
+          <div>
+            <p class="text-xs text-ink-muted">Mensualidad</p>
+            <p class="mt-1 text-sm font-medium text-ink">${{ money(v.mensualidad) }}</p>
+          </div>
+        }
+        @if (v.plazoMeses) {
+          <div>
+            <p class="text-xs text-ink-muted">Plazo</p>
+            <p class="mt-1 text-sm font-medium text-ink">{{ v.plazoMeses }} meses</p>
+          </div>
+        }
+        @if (v.notas) {
+          <div class="sm:col-span-2">
+            <p class="text-xs text-ink-muted">Notas</p>
+            <p class="mt-1 text-sm text-ink">{{ v.notas }}</p>
+          </div>
+        }
+      </div>
+    } @else {
+      <!-- MODIFICAR VENTA (temporal) -->
+      <div class="mt-6 rounded-2xl border border-we-primary/30 bg-we-primary/5 p-5">
+        <p class="text-sm font-medium text-ink">Modificar venta</p>
+        <p class="mt-0.5 text-xs text-ink-muted">No cambia los lotes ni sus precios, solo los datos de esta ficha.</p>
+
+        <form [formGroup]="edicionForm" (ngSubmit)="guardarEdicion()" class="mt-4 grid gap-4 sm:grid-cols-2" novalidate>
+          <div>
+            <label for="ed-cliente" class="block text-sm font-medium text-ink mb-1.5">Cliente *</label>
+            <input
+              id="ed-cliente" type="text" formControlName="cliente"
+              class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            />
+          </div>
+          <div>
+            <label for="ed-asesor" class="block text-sm font-medium text-ink mb-1.5">Asesor *</label>
+            <input
+              id="ed-asesor" type="text" formControlName="asesor"
+              class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            />
+          </div>
+          <div>
+            <label for="ed-fecha" class="block text-sm font-medium text-ink mb-1.5">Fecha de venta *</label>
+            <input
+              id="ed-fecha" type="date" formControlName="fechaVenta"
+              class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            />
+          </div>
+          <div>
+            <label for="ed-formaPago" class="block text-sm font-medium text-ink mb-1.5">Forma de pago *</label>
+            <input
+              id="ed-formaPago" type="text" formControlName="formaPago"
+              class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            />
+          </div>
+          <div>
+            <label for="ed-engancheLabel" class="block text-sm font-medium text-ink mb-1.5">Etiqueta de enganche</label>
+            <input
+              id="ed-engancheLabel" type="text" formControlName="engancheLabel" placeholder="Ej. Enganche, Pago inicial…"
+              class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface placeholder:text-ink-muted
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            />
+          </div>
+          <div>
+            <label for="ed-enganche" class="block text-sm font-medium text-ink mb-1.5">Monto de enganche</label>
+            <input
+              id="ed-enganche" type="number" step="0.01" min="1" formControlName="enganche" placeholder="Opcional"
+              class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface placeholder:text-ink-muted
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            />
+          </div>
+          <div>
+            <label for="ed-mensualidad" class="block text-sm font-medium text-ink mb-1.5">Mensualidad</label>
+            <input
+              id="ed-mensualidad" type="number" step="0.01" min="1" formControlName="mensualidad" placeholder="Opcional"
+              class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface placeholder:text-ink-muted
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            />
+          </div>
+          <div>
+            <label for="ed-plazo" class="block text-sm font-medium text-ink mb-1.5">Plazo (meses)</label>
+            <input
+              id="ed-plazo" type="number" step="1" min="1" formControlName="plazoMeses" placeholder="Opcional"
+              class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface placeholder:text-ink-muted
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            />
+          </div>
+          <div class="sm:col-span-2">
+            <label for="ed-notas" class="block text-sm font-medium text-ink mb-1.5">Notas</label>
+            <textarea
+              id="ed-notas" formControlName="notas" rows="3" placeholder="Opcional"
+              class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface placeholder:text-ink-muted
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            ></textarea>
+          </div>
+
+          @if (errorEdicion()) {
+            <div class="sm:col-span-2 rounded-lg bg-red-50 border border-red-200 px-3.5 py-2.5 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
+              {{ errorEdicion() }}
+            </div>
+          }
+
+          <div class="sm:col-span-2 flex justify-end gap-2.5">
+            <button
+              type="button"
+              (click)="cancelarEdicion()"
+              class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary
+                     active:scale-[0.97] transition-transform duration-150"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              [disabled]="isSavingEdicion()"
+              class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90
+                     active:scale-[0.97] transition-transform duration-150 disabled:opacity-60"
+            >
+              {{ isSavingEdicion() ? 'Guardando…' : 'Guardar cambios' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    }
 
     <!-- COBRANZA -->
     <div class="mt-6 grid gap-4 sm:grid-cols-3">

@@ -7,6 +7,7 @@ import com.werealestate.backend.dto.VentaCreateRequest;
 import com.werealestate.backend.dto.VentaDto;
 import com.werealestate.backend.dto.VentaLoteDto;
 import com.werealestate.backend.dto.VentaLoteItemRequest;
+import com.werealestate.backend.dto.VentaUpdateRequest;
 import com.werealestate.backend.exception.ConflictException;
 import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
@@ -106,6 +107,30 @@ public class VentaService {
     public VentaDto obtener(Long id) {
         exigirAdminOLider();
         return toDto(obtenerEntidad(id));
+    }
+
+    /** Modifica los datos capturados de una venta (cliente, fechas, términos de financiamiento);
+     * no toca sus lotes ni precios. Temporal: ver Venta.actualizar. */
+    public VentaDto actualizar(Long id, VentaUpdateRequest request) {
+        exigirAdminOLider();
+        Venta venta = obtenerEntidad(id);
+
+        String engancheLabel = request.engancheLabel() == null || request.engancheLabel().isBlank()
+                ? null
+                : request.engancheLabel().trim();
+        String notas = request.notas() == null || request.notas().isBlank() ? null : request.notas().trim();
+
+        venta.actualizar(
+                request.cliente().trim(),
+                request.asesor().trim(),
+                request.formaPago().trim(),
+                request.fechaVenta(),
+                request.mensualidad(),
+                request.plazoMeses(),
+                engancheLabel,
+                request.enganche(),
+                notas);
+        return toDto(venta);
     }
 
     /** Para el ícono de "ver información de venta" en /panel/lotes: qué venta vendió este lote, si

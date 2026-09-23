@@ -55,6 +55,21 @@ export interface VentaCreateRequest {
   marcarLoteVendido: boolean;
 }
 
+/** Igual que VentaCreateRequest pero sin lotes ni marcarLoteVendido: no toca qué lotes incluye la
+ * venta, solo sus datos capturados. Temporal: el botón "Modificar venta" que usa esto se va a
+ * quitar más adelante. */
+export interface VentaUpdateRequest {
+  cliente: string;
+  asesor: string;
+  formaPago: string;
+  fechaVenta: string;
+  mensualidad: number | null;
+  plazoMeses: number | null;
+  engancheLabel: string | null;
+  enganche: number | null;
+  notas: string | null;
+}
+
 /** Un abono registrado contra una venta. */
 export interface PagoVenta {
   id: number;
