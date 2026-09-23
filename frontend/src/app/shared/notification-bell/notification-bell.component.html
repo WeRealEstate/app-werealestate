@@ -11,7 +11,7 @@
       <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke-linecap="round" stroke-linejoin="round" />
     </svg>
     @if (total() > 0) {
-      <span class="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
+      <span class="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold text-white">
         {{ total() > 9 ? '9+' : total() }}
       </span>
     }
@@ -20,7 +20,15 @@
   @if (isOpen()) {
     <button type="button" (click)="close()" class="fixed inset-0 z-30" aria-label="Cerrar notificaciones"></button>
 
-    <div class="toast-enter absolute left-0 z-40 mt-2 w-80 max-w-[85vw] rounded-xl border border-border bg-surface shadow-2xl">
+    <!-- El trigger vive cerca del borde derecho de un sidebar de 256px: un panel de 320px
+         anclado a su x (izquierda o derecha) se sale del viewport en cualquier pantalla angosta,
+         porque ninguno de los dos lados tiene 320px libres ahí. Por debajo de lg (donde el sidebar
+         es un drawer superpuesto, no una columna fija) se ancla al viewport en vez de al trigger;
+         de lg en adelante hay sobra de espacio a la derecha y vuelve al dropdown normal. -->
+    <div
+      class="toast-enter fixed inset-x-4 top-20 z-40 rounded-xl border border-border bg-surface shadow-2xl
+             lg:absolute lg:inset-x-auto lg:top-auto lg:left-0 lg:mt-2 lg:w-80 lg:max-w-[85vw]"
+    >
       <div class="border-b border-border px-4 py-3">
         <h3 class="font-heading text-sm font-semibold text-ink">Notificaciones</h3>
       </div>
