@@ -401,7 +401,7 @@ export class PdfService {
       ...filasLotes,
 
       [
-        'Precio total del terreno',
+        'Monto de inversión',
         this.money(data.totalPrice)
       ],
 
