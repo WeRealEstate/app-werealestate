@@ -19,6 +19,16 @@ import { ValuePulseDirective } from '../../../shared/motion/value-pulse.directiv
 export type ProjectId = 'samai' | 'nanuu';
 export type PaymentType = 'msi' | 'downpayment' | 'annualities' | 'cash' | 'initial' | 'promocion';
 
+/** Un lote ya confirmado dentro de una cotización de varios lotes juntos. Cada uno guarda su
+ * propio precio por m² (no uno solo compartido) porque el umbral de macrolote de SAMAI depende
+ * de la superficie de ESE lote en particular. */
+export interface LoteCotizado {
+  manzana: string;
+  lote: string;
+  superficie: number;
+  pricePerM2: number;
+}
+
 /** A partir de esta superficie (m²), SAMAI cobra la tarifa de macrolote ($170/m², la misma tarifa
  * que antes solo se elegía a mano como "Hectarea") en vez del precio de lote normal ($800/m²). */
 const SUPERFICIE_MACROLOTE_M2 = 8000;
@@ -215,6 +225,80 @@ export class CotizadorComponent implements OnInit {
   // por m² y superficie quedan bloqueados porque ya vienen del lote, no se capturan a mano.
   loteBloqueado = false;
 
+  // ==============================
+  // VARIOS LOTES EN UNA COTIZACIÓN
+  // ==============================
+
+  /** Lotes ya confirmados de esta cotización. Los campos de Manzana/Lote/Superficie de arriba
+   * son siempre el lote "en captura" (el más reciente o el único); agregarOtroLote() lo guarda
+   * aquí y limpia los campos para capturar el siguiente. Así, si nunca se usa este botón, el
+   * comportamiento es idéntico al de antes: un solo lote, esta lista vacía. */
+  readonly lotesAgregados = signal<LoteCotizado[]>([]);
+
+  get esMultiLote(): boolean {
+    return this.lotesAgregados().length > 0;
+  }
+
+  /** Todos los lotes de la cotización: los ya confirmados más el que está en captura ahora mismo. */
+  private get todosLosLotes(): LoteCotizado[] {
+    return [
+      ...this.lotesAgregados(),
+      { manzana: this.blockNumber, lote: this.lotNumber, superficie: this.selectedArea, pricePerM2: this.pricePerM2 },
+    ];
+  }
+
+  get superficieTotal(): number {
+    return this.lotesAgregados().reduce((suma, l) => suma + l.superficie, 0) + this.selectedArea;
+  }
+
+  /** Precio por m² promedio ponderado de todos los lotes de la cotización: coincide con
+   * pricePerM2 cuando solo hay un lote, así que se puede usar siempre sin distinguir casos. */
+  get precioM2Promedio(): number {
+    return this.superficieTotal > 0 ? this.totalPrice / this.superficieTotal : this.pricePerM2;
+  }
+
+  /** Guarda el lote que se estaba capturando (Manzana/Lote/Superficie/Precio de arriba) en la
+   * lista y limpia esos campos para capturar el siguiente. Precio de contado y promociones dejan
+   * de tener sentido con varios lotes juntos (están calibrados para un solo lote estándar), así
+   * que se desactivan solos si estaban aplicados. */
+  agregarOtroLote(): void {
+    if (!this.blockNumber.trim() || !this.lotNumber.trim() || this.selectedArea <= 0) {
+      this.showQuoteErrors = true;
+      return;
+    }
+
+    this.lotesAgregados.update((lotes) => [
+      ...lotes,
+      {
+        manzana: this.blockNumber.trim(),
+        lote: this.lotNumber.trim(),
+        superficie: this.selectedArea,
+        pricePerM2: this.pricePerM2,
+      },
+    ]);
+
+    this.blockNumber = '';
+    this.lotNumber = '';
+    this.loteBloqueado = false;
+    this.selectedArea = 200;
+    this.isCustomArea = false;
+    this.customAreaDisplay = '200';
+    this.pricePerM2 = this.selectedProject === 'nanuu' ? 3700 : 800;
+
+    if (this.selectedPaymentType === 'cash') {
+      this.selectedPaymentType = 'msi';
+    }
+    this.promocionSeleccionada = null;
+    if (this.selectedPaymentType === 'promocion') {
+      this.selectedPaymentType = 'msi';
+    }
+    this.mostrarSelectorPromociones.set(false);
+  }
+
+  quitarLoteAgregado(index: number): void {
+    this.lotesAgregados.update((lotes) => lotes.filter((_, i) => i !== index));
+  }
+
   selectProject(project: ProjectId): void {
     this.promocionSeleccionada = null;
     this.selectedProject = project;
@@ -381,26 +465,44 @@ export class CotizadorComponent implements OnInit {
     return this.downPaymentAmount >= this.totalPrice;
   }
 
+  /** Suma de todos los lotes de la cotización: cada uno con su propia superficie y precio por m²
+   * (el umbral de macrolote depende de la superficie de cada lote). Con un solo lote (el caso de
+   * siempre, lotesAgregados vacío) es exactamente selectedArea * pricePerM2, igual que antes. */
   get totalPrice(): number {
+    const totalLotesAgregados = this.lotesAgregados().reduce((suma, l) => suma + l.superficie * l.pricePerM2, 0);
+    return totalLotesAgregados + this.precioLoteActual;
+  }
+
+  /** Precio solo del lote que se está capturando ahora mismo (Manzana/Lote/Superficie de arriba),
+   * sin sumar los ya agregados a la lista — lo que se muestra en la caja de "Configuración del
+   * terreno", a diferencia de totalPrice/displayedLandPrice que son el total combinado. */
+  get precioLoteActual(): number {
     return this.selectedArea * this.pricePerM2;
   }
 
   /** El precio de contado con descuento ($110,000 fijo) es una promoción exclusiva del lote
    * estándar de SAMAI de 200 m² exactos, no se prorratea a otros tamaños (antes sí se escalaba
    * proporcionalmente, pero ese precio especial nunca aplicó más que a ese tamaño puntual). Para
-   * cualquier otro tamaño en SAMAI, o para Nanuu, "Contado" cobra el precio de lista sin descuento. */
+   * cualquier otro tamaño en SAMAI, para Nanuu, o cuando la cotización combina varios lotes,
+   * "Contado" cobra el precio de lista sin descuento. */
   get cashPrice(): number {
-    if (this.selectedProject === 'samai' && this.selectedArea === 200) {
+    if (!this.esMultiLote && this.selectedProject === 'samai' && this.selectedArea === 200) {
       return 110000;
     }
 
     return this.totalPrice;
   }
 
-  /** Si "Contado" está seleccionado pero el lote no es el estándar de 200 m² de SAMAI, no hay
-   * descuento real: el resumen debe decirlo (ver cashPrice) en vez de mostrar "Precio especial". */
+  /** Si "Contado" está seleccionado pero el lote no es el estándar de 200 m² de SAMAI (o hay
+   * varios lotes juntos), no hay descuento real: el resumen debe decirlo (ver cashPrice) en vez
+   * de mostrar "Precio especial". */
   get cashDiscountApplied(): boolean {
-    return this.selectedPaymentType === 'cash' && this.selectedProject === 'samai' && this.selectedArea === 200;
+    return (
+      !this.esMultiLote &&
+      this.selectedPaymentType === 'cash' &&
+      this.selectedProject === 'samai' &&
+      this.selectedArea === 200
+    );
   }
 
   selectPaymentType(type: PaymentType): void {
@@ -408,7 +510,17 @@ export class CotizadorComponent implements OnInit {
       return;
     }
 
+    if (type === 'cash' && this.esMultiLote) {
+      return;
+    }
+
     this.selectedPaymentType = type;
+  }
+
+  /** "Contado" no está disponible con tarifa de macrolote (siempre fue así) ni al combinar varios
+   * lotes en la misma cotización (el precio especial es exclusivo de un solo lote estándar). */
+  get contadoDisponible(): boolean {
+    return !this.esMultiLote && this.pricePerM2 !== 170;
   }
 
   /** Aplica una promoción: cambia al proyecto al que pertenece y activa el modo "promocion".
@@ -460,8 +572,12 @@ export class CotizadorComponent implements OnInit {
 
   /** Promociones activas que de verdad aplican a la cotización actual: una promoción de Hectáreas
    * solo se ofrece mientras la tarifa de macrolote está vigente, y una de Lotes solo mientras no lo
-   * está. No cambia la superficie/tarifa por sí sola, solo filtra qué se puede elegir. */
+   * está. No cambia la superficie/tarifa por sí sola, solo filtra qué se puede elegir. Ninguna
+   * aplica cuando la cotización combina varios lotes: están calibradas para un solo lote estándar. */
   get promocionesElegibles(): Promocion[] {
+    if (this.esMultiLote) {
+      return [];
+    }
     return this.promocionesActivas().filter((promo) => promo.tipoPrecio === this.tipoPrecioActual);
   }
 
@@ -930,6 +1046,8 @@ export class CotizadorComponent implements OnInit {
   }
 
   private getQuotePdfData(): QuotePdfData {
+    const lotes = this.todosLosLotes;
+
     return {
       project: this.selectedProject === 'samai' ? 'SAMAI Campestre' : 'Aldea Nanuu',
 
@@ -940,11 +1058,14 @@ export class CotizadorComponent implements OnInit {
 
       advisorName: this.advisorName,
       clientName: this.clientName,
-      blockNumber: this.blockNumber,
-      lotNumber: this.lotNumber,
+      // Con varios lotes, manzana/lote pasan a ser la lista completa (ej. "5, 5, 6"): el
+      // desglose por lote va en la tabla de "lotes" del PDF y en la lista `lotes` de abajo.
+      blockNumber: this.esMultiLote ? lotes.map((l) => l.manzana || '—').join(', ') : this.blockNumber,
+      lotNumber: this.esMultiLote ? lotes.map((l) => l.lote || '—').join(', ') : this.lotNumber,
+      lotes,
 
-      area: this.selectedArea,
-      pricePerM2: this.pricePerM2,
+      area: this.superficieTotal,
+      pricePerM2: this.esMultiLote ? this.precioM2Promedio : this.pricePerM2,
 
       totalPrice: this.displayedLandPrice,
 

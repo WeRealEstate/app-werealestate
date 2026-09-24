@@ -404,12 +404,61 @@
 
         <!-- PRECIO TOTAL -->
         <div class="mt-6 rounded-2xl border border-we-primary/20 dark:border-we-primary/25 bg-we-primary/5 dark:bg-we-primary/10 p-5 shadow-[0_6px_18px_rgba(36,63,184,0.06)]">
-          <p class="text-xs font-semibold text-ink">Precio total del terreno</p>
+          <p class="text-xs font-semibold text-ink">Precio total del terreno{{ esMultiLote ? ' de este lote' : '' }}</p>
           <p class="mt-1 text-3xl font-bold text-we-primary dark:text-we-blue-light">
-            ${{ displayedLandPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+            ${{ (esMultiLote ? precioLoteActual : displayedLandPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
             <span class="text-sm font-medium">MXN</span>
           </p>
         </div>
+
+        <!-- ================================================== -->
+        <!-- VARIOS LOTES JUNTOS -->
+        <!-- ================================================== -->
+
+        @if (lotesAgregados().length > 0) {
+          <div weFadeIn class="mt-6 space-y-2">
+            <p class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Lotes ya agregados a esta cotización</p>
+            @for (l of lotesAgregados(); track $index; let i = $index) {
+              <div class="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface-2/50 px-4 py-2.5 text-sm">
+                <span class="text-ink">
+                  Manzana {{ l.manzana || '—' }} · Lote {{ l.lote || '—' }}
+                  <span class="text-ink-muted">({{ l.superficie.toLocaleString('en-US') }} m²)</span>
+                </span>
+                <button
+                  type="button"
+                  (click)="quitarLoteAgregado(i)"
+                  class="shrink-0 text-xs font-semibold text-red-600 hover:underline dark:text-red-400"
+                >
+                  Quitar
+                </button>
+              </div>
+            }
+          </div>
+        }
+
+        <div class="mt-6 flex flex-col items-start gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+          <p class="text-xs text-ink-muted">
+            @if (esMultiLote) {
+              Manzana/Lote/Superficie de arriba son del siguiente lote a agregar.
+            } @else {
+              ¿El cliente compra más de un lote? Agrégalos para cotizarlos juntos.
+            }
+          </p>
+          <button
+            type="button"
+            weMotionPress
+            (click)="agregarOtroLote()"
+            class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-we-primary/40 px-3.5 py-2.5 text-xs font-semibold text-we-primary transition-colors duration-150 hover:bg-we-primary/10 dark:text-we-blue-light"
+          >
+            + Agregar otro lote
+          </button>
+        </div>
+
+        @if (esMultiLote) {
+          <p class="mt-2 text-xs text-ink-muted">
+            Con varios lotes juntos, el precio especial de contado y las promociones no están disponibles (están calibrados para un solo lote estándar).
+          </p>
+        }
       </div>
 
       <!-- SEPARADOR -->
@@ -576,10 +625,10 @@
 
             <!-- CONTADO -->
             <button
-              [disabled]="selectedProject === 'samai' && pricePerM2 === 170"
-              [class.opacity-40]="selectedProject === 'samai' && pricePerM2 === 170"
-              [class.cursor-not-allowed]="selectedProject === 'samai' && pricePerM2 === 170"
-              [class.bg-surface-2]="selectedProject === 'samai' && pricePerM2 === 170"
+              [disabled]="!contadoDisponible"
+              [class.opacity-40]="!contadoDisponible"
+              [class.cursor-not-allowed]="!contadoDisponible"
+              [class.bg-surface-2]="!contadoDisponible"
               type="button"
               weMotionPress
               (click)="selectPaymentType('cash')"
@@ -857,14 +906,21 @@
       <!-- INFORMACIÓN -->
       <div class="space-y-4 p-6">
         <div class="flex justify-between gap-4">
-          <span class="text-sm text-ink-muted">Superficie</span>
-          <strong class="text-sm text-ink">{{ selectedArea.toLocaleString('en-US') }} m²</strong>
+          <span class="text-sm text-ink-muted">Superficie{{ esMultiLote ? ' total' : '' }}</span>
+          <strong class="text-sm text-ink">{{ superficieTotal.toLocaleString('en-US') }} m²</strong>
         </div>
+
+        @if (esMultiLote) {
+          <div class="flex justify-between gap-4">
+            <span class="text-sm text-ink-muted">Lotes incluidos</span>
+            <strong class="text-sm text-ink">{{ lotesAgregados().length + 1 }}</strong>
+          </div>
+        }
 
         @if (!cashDiscountApplied) {
           <div class="flex justify-between gap-4">
-            <span class="text-sm text-ink-muted">Precio por m²</span>
-            <strong class="text-sm text-ink">${{ pricePerM2.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} MXN</strong>
+            <span class="text-sm text-ink-muted">Precio por m²{{ esMultiLote ? ' (promedio)' : '' }}</span>
+            <strong class="text-sm text-ink">${{ precioM2Promedio.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} MXN</strong>
           </div>
         } @else {
           <div class="flex justify-between gap-4">

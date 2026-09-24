@@ -11,6 +11,10 @@ export interface QuotePdfData {
   blockNumber: string;
   lotNumber: string;
 
+  /** Lotes que componen la cotización: 1 en el caso de siempre, más de 1 cuando se combinan varios
+   * lotes juntos. area/pricePerM2 de arriba ya son el total/promedio de esta lista. */
+  lotes: { manzana: string; lote: string; superficie: number; pricePerM2: number }[];
+
   area: number;
   pricePerM2: number;
   totalPrice: number;
@@ -365,6 +369,28 @@ export class PdfService {
     y += 5;
 
 
+    // Con un solo lote, una fila de Superficie y una de Precio por m² (como siempre). Con varios
+    // lotes juntos, una fila por lote (cada uno con su propia superficie y precio) en vez de un
+    // total/promedio que escondería el detalle que el cliente necesita ver.
+    const filasLotes: [string, string][] =
+      data.lotes.length > 1
+        ? data.lotes.map((lote) => [
+            `Lote ${lote.manzana || '—'}-${lote.lote || '—'}`,
+            `${this.number(lote.superficie)} m² · ${this.money(lote.pricePerM2)}/m²`,
+          ])
+        : [
+            ['Superficie', `${this.number(data.area)} m²`],
+            [
+              data.paymentMethod === 'Contado'
+                ? 'Modalidad de precio'
+                : 'Precio por m²',
+
+              data.paymentMethod === 'Contado'
+                ? 'Precio especial de contado'
+                : this.money(data.pricePerM2)
+            ],
+          ];
+
     const rows: [string, string][] = [
 
       [
@@ -372,20 +398,7 @@ export class PdfService {
         data.project
       ],
 
-      [
-        'Superficie',
-        `${this.number(data.area)} m²`
-      ],
-
-      [
-        data.paymentMethod === 'Contado'
-          ? 'Modalidad de precio'
-          : 'Precio por m²',
-
-        data.paymentMethod === 'Contado'
-          ? 'Precio especial de contado'
-          : this.money(data.pricePerM2)
-      ],
+      ...filasLotes,
 
       [
         'Precio total del terreno',

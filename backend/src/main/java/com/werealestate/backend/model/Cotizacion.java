@@ -41,10 +41,12 @@ public class Cotizacion {
     @Column(name = "nombre_asesor_publico", length = 200)
     private String nombreAsesorPublico;
 
-    @Column(length = 30)
+    // Cotización de varios lotes juntos: guarda la lista completa separada por comas
+    // (ej. "5, 5, 6" / "11, 12, 3"), no solo un par (ver migración V33).
+    @Column(length = 500)
     private String manzana;
 
-    @Column(length = 30)
+    @Column(length = 500)
     private String lote;
 
     @Column(nullable = false, precision = 12, scale = 2)
