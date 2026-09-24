@@ -403,13 +403,17 @@
         </div>
 
         <!-- PRECIO TOTAL -->
-        <div class="mt-6 rounded-2xl border border-we-primary/20 dark:border-we-primary/25 bg-we-primary/5 dark:bg-we-primary/10 p-5 shadow-[0_6px_18px_rgba(36,63,184,0.06)]">
-          <p class="text-xs font-semibold text-ink">Precio total del terreno{{ esMultiLote ? ' de este lote' : '' }}</p>
-          <p class="mt-1 text-3xl font-bold text-we-primary dark:text-we-blue-light">
-            ${{ (esMultiLote ? precioLoteActual : displayedLandPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
-            <span class="text-sm font-medium">MXN</span>
-          </p>
-        </div>
+        <!-- Con varios lotes ya agregados y estos campos vacíos a propósito (ver
+             requiereLoteEnCaptura), no hay "lote en captura" que mostrar aquí. -->
+        @if (!esMultiLote || requiereLoteEnCaptura) {
+          <div class="mt-6 rounded-2xl border border-we-primary/20 dark:border-we-primary/25 bg-we-primary/5 dark:bg-we-primary/10 p-5 shadow-[0_6px_18px_rgba(36,63,184,0.06)]">
+            <p class="text-xs font-semibold text-ink">Precio total del terreno{{ esMultiLote ? ' de este lote' : '' }}</p>
+            <p class="mt-1 text-3xl font-bold text-we-primary dark:text-we-blue-light">
+              ${{ (esMultiLote ? precioLoteActual : displayedLandPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+              <span class="text-sm font-medium">MXN</span>
+            </p>
+          </div>
+        }
 
         <!-- ================================================== -->
         <!-- VARIOS LOTES JUNTOS -->
@@ -438,10 +442,12 @@
 
         <div class="mt-6 flex flex-col items-start gap-2.5 sm:flex-row sm:items-center sm:justify-between">
           <p class="text-xs text-ink-muted">
-            @if (esMultiLote) {
-              Manzana/Lote/Superficie de arriba son del siguiente lote a agregar.
-            } @else {
+            @if (!esMultiLote) {
               ¿El cliente compra más de un lote? Agrégalos para cotizarlos juntos.
+            } @else if (requiereLoteEnCaptura) {
+              Estos datos son del siguiente lote: agrégalo, o bórralos si no quieres agregar más.
+            } @else {
+              Listo. Si quieres agregar otro lote, complétalo arriba.
             }
           </p>
           <button
@@ -913,7 +919,7 @@
         @if (esMultiLote) {
           <div class="flex justify-between gap-4">
             <span class="text-sm text-ink-muted">Lotes incluidos</span>
-            <strong class="text-sm text-ink">{{ lotesAgregados().length + 1 }}</strong>
+            <strong class="text-sm text-ink">{{ cantidadLotes }}</strong>
           </div>
         }
 

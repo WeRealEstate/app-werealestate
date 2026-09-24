@@ -239,16 +239,37 @@ export class CotizadorComponent implements OnInit {
     return this.lotesAgregados().length > 0;
   }
 
-  /** Todos los lotes de la cotización: los ya confirmados más el que está en captura ahora mismo. */
+  /** Con varios lotes ya agregados, Manzana/Lote de arriba dejan de ser obligatorios: si se dejan
+   * vacíos, es que el usuario ya terminó y no quiere agregar uno más (ver isQuoteDataComplete). En
+   * cambio, si ya escribió algo en cualquiera de los dos, sí hace falta completarlo o borrarlo —
+   * dejarlo a medias sería ambiguo. Con un solo lote (el caso de siempre) siempre hacen falta. */
+  get requiereLoteEnCaptura(): boolean {
+    return !this.esMultiLote || this.blockNumber.trim().length > 0 || this.lotNumber.trim().length > 0;
+  }
+
+  /** El lote que se está capturando ahora mismo (Manzana/Lote/Superficie de arriba), o null si con
+   * varios lotes ya agregados se dejó en blanco a propósito (ver requiereLoteEnCaptura) — en ese
+   * caso no cuenta para el total ni aparece en el PDF. */
+  private get loteEnCapturaOpcional(): LoteCotizado | null {
+    if (!this.requiereLoteEnCaptura) {
+      return null;
+    }
+    return { manzana: this.blockNumber, lote: this.lotNumber, superficie: this.selectedArea, pricePerM2: this.pricePerM2 };
+  }
+
+  /** Todos los lotes de la cotización: los ya confirmados más el que está en captura ahora mismo
+   * (si lo hay). */
   private get todosLosLotes(): LoteCotizado[] {
-    return [
-      ...this.lotesAgregados(),
-      { manzana: this.blockNumber, lote: this.lotNumber, superficie: this.selectedArea, pricePerM2: this.pricePerM2 },
-    ];
+    const actual = this.loteEnCapturaOpcional;
+    return actual ? [...this.lotesAgregados(), actual] : this.lotesAgregados();
+  }
+
+  get cantidadLotes(): number {
+    return this.todosLosLotes.length;
   }
 
   get superficieTotal(): number {
-    return this.lotesAgregados().reduce((suma, l) => suma + l.superficie, 0) + this.selectedArea;
+    return this.todosLosLotes.reduce((suma, l) => suma + l.superficie, 0);
   }
 
   /** Precio por m² promedio ponderado de todos los lotes de la cotización: coincide con
@@ -469,15 +490,15 @@ export class CotizadorComponent implements OnInit {
    * (el umbral de macrolote depende de la superficie de cada lote). Con un solo lote (el caso de
    * siempre, lotesAgregados vacío) es exactamente selectedArea * pricePerM2, igual que antes. */
   get totalPrice(): number {
-    const totalLotesAgregados = this.lotesAgregados().reduce((suma, l) => suma + l.superficie * l.pricePerM2, 0);
-    return totalLotesAgregados + this.precioLoteActual;
+    return this.todosLosLotes.reduce((suma, l) => suma + l.superficie * l.pricePerM2, 0);
   }
 
   /** Precio solo del lote que se está capturando ahora mismo (Manzana/Lote/Superficie de arriba),
    * sin sumar los ya agregados a la lista — lo que se muestra en la caja de "Configuración del
-   * terreno", a diferencia de totalPrice/displayedLandPrice que son el total combinado. */
+   * terreno", a diferencia de totalPrice/displayedLandPrice que son el total combinado. 0 si con
+   * varios lotes ya agregados se dejó en blanco a propósito (ver requiereLoteEnCaptura). */
   get precioLoteActual(): number {
-    return this.selectedArea * this.pricePerM2;
+    return this.requiereLoteEnCaptura ? this.selectedArea * this.pricePerM2 : 0;
   }
 
   /** El precio de contado con descuento ($110,000 fijo) es una promoción exclusiva del lote
@@ -1197,13 +1218,14 @@ export class CotizadorComponent implements OnInit {
     return this.selectedProject === 'samai' ? '/images/samai-cover.png' : '/images/nanuu-cover.png';
   }
 
+  /** Con un solo lote, Manzana/Lote son obligatorios como siempre. Con varios lotes ya agregados,
+   * solo hacen falta si el usuario empezó a llenarlos (ver requiereLoteEnCaptura) — dejarlos
+   * vacíos significa que ya terminó y la cotización se genera solo con los lotes de la lista. */
   get isQuoteDataComplete(): boolean {
-    return (
-      this.advisorName.trim().length > 0 &&
-      this.clientName.trim().length > 0 &&
-      this.blockNumber.trim().length > 0 &&
-      this.lotNumber.trim().length > 0
-    );
+    if (!this.advisorName.trim() || !this.clientName.trim()) {
+      return false;
+    }
+    return !this.requiereLoteEnCaptura || (this.blockNumber.trim().length > 0 && this.lotNumber.trim().length > 0);
   }
 
   get advisorNameInvalid(): boolean {
@@ -1215,11 +1237,11 @@ export class CotizadorComponent implements OnInit {
   }
 
   get blockNumberInvalid(): boolean {
-    return this.showQuoteErrors && !this.blockNumber.trim();
+    return this.showQuoteErrors && this.requiereLoteEnCaptura && !this.blockNumber.trim();
   }
 
   get lotNumberInvalid(): boolean {
-    return this.showQuoteErrors && !this.lotNumber.trim();
+    return this.showQuoteErrors && this.requiereLoteEnCaptura && !this.lotNumber.trim();
   }
 
   // ==============================
