@@ -51,9 +51,6 @@ public class TareaService {
 
     public TareaDto crear(TareaCreateRequest request) {
         Usuario actual = currentUserProvider.getUsuarioActual();
-        if (actual.getRol() != Role.LIDER_AREA && actual.getRol() != Role.ADMIN) {
-            throw new ForbiddenOperationException("Solo un líder de área o administrador puede asignar tareas");
-        }
 
         Usuario asignado = usuarioRepository
                 .findById(request.asignadoAId())
@@ -64,15 +61,12 @@ public class TareaService {
         return TareaDto.from(tareaRepository.save(tarea));
     }
 
-    /** El admin puede asignar a líderes de área o a equipo interno; un líder de área solo a equipo interno. */
+    /** Jerarquía de asignación (ver Role.rango): asesor y equipo interno están al mismo nivel,
+     * luego líder de área, luego admin. Cada quien puede asignar tareas a su propio nivel o
+     * cualquiera por debajo, nunca a alguien de nivel superior. */
     private void validarRolAsignable(Usuario creador, Usuario asignado) {
-        boolean valido = asignado.getRol() == Role.EQUIPO_INTERNO
-                || (creador.getRol() == Role.ADMIN && asignado.getRol() == Role.LIDER_AREA);
-        if (!valido) {
-            throw new ForbiddenOperationException(
-                    creador.getRol() == Role.ADMIN
-                            ? "Las tareas solo se pueden asignar a líderes de área o equipo interno"
-                            : "Las tareas solo se pueden asignar a equipo interno");
+        if (asignado.getRol().rango() > creador.getRol().rango()) {
+            throw new ForbiddenOperationException("No puedes asignar tareas a alguien de mayor nivel que tú");
         }
     }
 

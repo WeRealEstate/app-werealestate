@@ -72,18 +72,15 @@ public class UsuarioService {
     }
 
     /**
-     * Lista ligera (solo id/nombre) de equipo interno activo, para el picker de "asignar a" en
-     * tareas. Solo lo usan admin y líderes de área, que son quienes pueden asignar tareas.
+     * Lista ligera (solo id/nombre) de gente a la que el usuario actual le puede asignar una
+     * tarea: cualquier rol lo puede usar ahora (ver Role.rango) — un asesor o alguien de equipo
+     * interno ve a su mismo nivel, un líder de área también ve asesores/equipo interno, y un admin
+     * ve a todos. Nunca se incluye a uno mismo en la lista.
      */
     public List<UsuarioResumenDto> asignables() {
         Usuario actual = currentUserProvider.getUsuarioActual();
-        if (actual.getRol() != Role.ADMIN && actual.getRol() != Role.LIDER_AREA) {
-            throw new ForbiddenOperationException("No tienes acceso a la lista de usuarios");
-        }
-        // El admin también puede asignar tareas a líderes de área, no solo a equipo interno.
-        boolean incluirLideres = actual.getRol() == Role.ADMIN;
         return usuarioRepository.findAll().stream()
-                .filter(u -> u.isActivo() && (u.getRol() == Role.EQUIPO_INTERNO || (incluirLideres && u.getRol() == Role.LIDER_AREA)))
+                .filter(u -> u.isActivo() && !u.getId().equals(actual.getId()) && u.getRol().rango() <= actual.getRol().rango())
                 .sorted(Comparator.comparing(Usuario::getNombre))
                 .map(UsuarioResumenDto::from)
                 .toList();

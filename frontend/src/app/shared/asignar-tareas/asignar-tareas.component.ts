@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DatePipe } from '@angular/common';
+import { AuthService } from '../../core/services/auth.service';
 import { TareasService } from '../../core/services/tareas.service';
 import { ToastService } from '../../core/services/toast.service';
 import { UsuariosService } from '../../core/services/usuarios.service';
@@ -8,9 +9,11 @@ import { Tarea } from '../../core/models/tarea.model';
 import { UsuarioResumen } from '../../core/models/lead.model';
 
 /**
- * Formulario "Asignar una tarea" + lista "Tareas que has asignado". Lo usan tanto el líder de
- * área (solo puede asignar a equipo interno) como el admin (puede asignar también a líderes de
- * área) — el backend filtra la lista de asignables según el rol de quien la usa.
+ * Widget de tareas completo — lo usan los 4 roles por igual (ver Role.rango en el backend): "Mis
+ * tareas" (asignadas a mí), "Asignar una tarea" (a mi mismo nivel o por debajo: un asesor o
+ * equipo interno ve a su mismo nivel; un líder de área también ve asesores/equipo interno; un
+ * admin ve a todos) y "Tareas que he asignado". El backend filtra a quién se puede asignar según
+ * el rol de quien la usa, así que este componente no necesita saber el rol de nadie.
  */
 @Component({
   selector: 'app-asignar-tareas',
@@ -19,11 +22,15 @@ import { UsuarioResumen } from '../../core/models/lead.model';
   templateUrl: './asignar-tareas.component.html',
 })
 export class AsignarTareasComponent {
+  private readonly auth = inject(AuthService);
   private readonly tareasService = inject(TareasService);
   private readonly usuariosService = inject(UsuariosService);
   private readonly toast = inject(ToastService);
   private readonly fb = inject(FormBuilder);
 
+  readonly propioId = this.auth.currentUser()?.id;
+
+  readonly misTareas = signal<Tarea[]>([]);
   readonly tareasCreadas = signal<Tarea[]>([]);
   readonly usuariosAsignables = signal<UsuarioResumen[]>([]);
   readonly isLoading = signal(true);
@@ -44,10 +51,12 @@ export class AsignarTareasComponent {
   private async cargar(): Promise<void> {
     this.isLoading.set(true);
     try {
-      const [creadas, usuarios] = await Promise.all([
+      const [mias, creadas, usuarios] = await Promise.all([
+        this.tareasService.misTareas(),
         this.tareasService.tareasCreadas(),
         this.usuariosService.asignables(),
       ]);
+      this.misTareas.set(mias);
       this.tareasCreadas.set(creadas);
       this.usuariosAsignables.set(usuarios);
     } catch {
@@ -57,11 +66,24 @@ export class AsignarTareasComponent {
     }
   }
 
+  async toggleMiTarea(tarea: Tarea): Promise<void> {
+    this.savingTareaId.set(tarea.id);
+    try {
+      const actualizada = await this.tareasService.cambiarEstado(tarea.id, !tarea.completada);
+      this.misTareas.update((lista) => lista.map((t) => (t.id === actualizada.id ? actualizada : t)));
+      // La misma tarea puede aparecer también en "tareas que he asignado" si me la autoasigné.
+      this.tareasCreadas.update((lista) => lista.map((t) => (t.id === actualizada.id ? actualizada : t)));
+    } finally {
+      this.savingTareaId.set(null);
+    }
+  }
+
   async toggleTarea(tarea: Tarea): Promise<void> {
     this.savingTareaId.set(tarea.id);
     try {
       const actualizada = await this.tareasService.cambiarEstado(tarea.id, !tarea.completada);
       this.tareasCreadas.update((lista) => lista.map((t) => (t.id === actualizada.id ? actualizada : t)));
+      this.misTareas.update((lista) => lista.map((t) => (t.id === actualizada.id ? actualizada : t)));
     } finally {
       this.savingTareaId.set(null);
     }

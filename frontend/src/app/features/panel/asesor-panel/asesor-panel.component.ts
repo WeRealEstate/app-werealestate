@@ -6,11 +6,12 @@ import { LeadsService } from '../../../core/services/leads.service';
 import { NotificacionesService } from '../../../core/services/notificaciones.service';
 import { ESTADO_LEAD_LABELS, EstadoLead, Lead } from '../../../core/models/lead.model';
 import { Notificacion } from '../../../core/models/notificacion.model';
+import { AsignarTareasComponent } from '../../../shared/asignar-tareas/asignar-tareas.component';
 
 @Component({
   selector: 'app-asesor-panel',
   standalone: true,
-  imports: [RouterLink, KeyValuePipe],
+  imports: [RouterLink, KeyValuePipe, AsignarTareasComponent],
   templateUrl: './asesor-panel.component.html',
 })
 export class AsesorPanelComponent {
