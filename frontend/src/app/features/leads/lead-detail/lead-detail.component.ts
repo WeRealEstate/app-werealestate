@@ -6,10 +6,12 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
 import { EtiquetasService } from '../../../core/services/etiquetas.service';
+import { ColumnasService } from '../../../core/services/columnas.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { UsuariosService } from '../../../core/services/usuarios.service';
 import {
+  ColumnaPersonalizada,
   ESTADO_LEAD_LABELS,
   EstadoLead,
   Etiqueta,
@@ -49,6 +51,7 @@ export class LeadDetailComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly leadsService = inject(LeadsService);
   private readonly etiquetasService = inject(EtiquetasService);
+  private readonly columnasService = inject(ColumnasService);
   private readonly usuariosService = inject(UsuariosService);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
@@ -63,6 +66,15 @@ export class LeadDetailComponent implements OnInit {
   readonly horasOpciones = HORAS_OPCIONES;
   readonly minutosOpciones = MINUTOS_OPCIONES;
   readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
+  readonly propioId = computed(() => this.auth.currentUser()?.id);
+  /** Las tarjetas son por asesor (ver ColumnaPersonalizadaService.resolverAsesorId): solo se
+   * pueden consultar las propias, o las de cualquiera si quien mira es admin. Un líder de área
+   * viendo el lead de otro asesor no las ve — ni el selector de tarjeta aparece en ese caso. */
+  readonly puedeMoverTarjeta = computed(() => {
+    const l = this.lead();
+    if (!l) return false;
+    return this.esAdmin() || l.asesor.id === this.propioId();
+  });
   readonly coloresEtiqueta = ETIQUETA_COLORES;
   readonly badgeClasesEtiqueta = ETIQUETA_BADGE_CLASSES;
   readonly swatchClasesEtiqueta = ETIQUETA_SWATCH_CLASSES;
@@ -78,6 +90,7 @@ export class LeadDetailComponent implements OnInit {
   readonly editEtiquetaColor = signal<EtiquetaColor>('BLUE');
   readonly isGuardandoEtiquetas = signal(false);
   readonly seguimientos = signal<Seguimiento[]>([]);
+  readonly columnasDisponibles = signal<ColumnaPersonalizada[]>([]);
   readonly asesores = signal<Usuario[]>([]);
   readonly isLoading = signal(true);
   readonly isSavingEstado = signal(false);
@@ -105,6 +118,9 @@ export class LeadDetailComponent implements OnInit {
     horaSeguimiento: this.fb.control(HORA_POR_DEFECTO, { nonNullable: true }),
     minutoSeguimiento: this.fb.control(MINUTO_POR_DEFECTO, { nonNullable: true }),
     duracionSeguimiento: this.fb.control(DURACION_POR_DEFECTO, { nonNullable: true }),
+    /** Precargada con la tarjeta actual del lead (ver cargar()); cambiarla mueve el lead de
+     * tarjeta en el mismo Pipeline al registrar este seguimiento (ver registrarSeguimiento()). */
+    columnaPersonalizadaId: this.fb.control<number | null>(null),
   });
 
   ngOnInit(): void {
@@ -134,6 +150,12 @@ export class LeadDetailComponent implements OnInit {
       this.lead.set(lead);
       this.seguimientos.set(seguimientos);
       this.catalogoEtiquetas.set(await this.etiquetasService.listar(lead.asesor.id));
+      this.seguimientoForm.controls.columnaPersonalizadaId.setValue(lead.columnaPersonalizadaId);
+      this.columnasDisponibles.set(
+        this.esAdmin() || lead.asesor.id === this.propioId()
+          ? await this.columnasService.listar(lead.asesor.id)
+          : [],
+      );
     } catch {
       this.errorMessage.set('No se pudo cargar el lead.');
     } finally {
@@ -255,6 +277,10 @@ export class LeadDetailComponent implements OnInit {
     }
   }
 
+  /** Si la tarjeta elegida en el formulario es distinta a la actual del lead, se registra vía
+   * moverColumna (mismo endpoint que usa arrastrar una tarjeta en el Pipeline: mueve Y deja el
+   * seguimiento en una sola operación); si no cambió, un crearSeguimiento normal — moverColumna
+   * no crea el seguimiento cuando la tarjeta es la misma (ver LeadService.moverAColumnaPersonalizada). */
   async registrarSeguimiento(): Promise<void> {
     if (this.seguimientoForm.invalid || this.isSavingSeguimiento()) {
       this.seguimientoForm.markAllAsTouched();
@@ -264,18 +290,34 @@ export class LeadDetailComponent implements OnInit {
     this.isSavingSeguimiento.set(true);
     this.errorMessage.set(null);
     const v = this.seguimientoForm.getRawValue();
+    const tarjetaActualId = this.lead()?.columnaPersonalizadaId ?? null;
+    const cambiaTarjeta = this.puedeMoverTarjeta() && v.columnaPersonalizadaId !== tarjetaActualId;
+
+    const datosSeguimiento = {
+      tipo: v.tipo,
+      nota: v.nota,
+      resultado: v.resultado || null,
+      proximoSeguimiento: v.proximoSeguimiento
+        ? combinarFechaHora(v.proximoSeguimiento, v.horaSeguimiento, v.minutoSeguimiento)
+        : null,
+      duracionMinutos: v.proximoSeguimiento ? v.duracionSeguimiento : null,
+    };
 
     try {
-      const nuevo = await this.leadsService.crearSeguimiento(this.leadId, {
-        tipo: v.tipo,
-        nota: v.nota,
-        resultado: v.resultado || null,
-        proximoSeguimiento: v.proximoSeguimiento
-          ? combinarFechaHora(v.proximoSeguimiento, v.horaSeguimiento, v.minutoSeguimiento)
-          : null,
-        duracionMinutos: v.proximoSeguimiento ? v.duracionSeguimiento : null,
-      });
-      this.seguimientos.update((lista) => [nuevo, ...lista]);
+      let leadActualizado: Lead;
+      if (cambiaTarjeta) {
+        leadActualizado = await this.leadsService.moverColumna(this.leadId, {
+          columnaPersonalizadaId: v.columnaPersonalizadaId,
+          ...datosSeguimiento,
+        });
+        this.seguimientos.set(await this.leadsService.listarSeguimientos(this.leadId));
+      } else {
+        const nuevo = await this.leadsService.crearSeguimiento(this.leadId, datosSeguimiento);
+        this.seguimientos.update((lista) => [nuevo, ...lista]);
+        leadActualizado = await this.leadsService.obtener(this.leadId);
+      }
+      this.lead.set(leadActualizado);
+
       this.seguimientoForm.reset({
         tipo: 'LLAMADA',
         nota: '',
@@ -284,11 +326,9 @@ export class LeadDetailComponent implements OnInit {
         horaSeguimiento: HORA_POR_DEFECTO,
         minutoSeguimiento: MINUTO_POR_DEFECTO,
         duracionSeguimiento: DURACION_POR_DEFECTO,
+        columnaPersonalizadaId: leadActualizado.columnaPersonalizadaId,
       });
-
-      const leadActualizado = await this.leadsService.obtener(this.leadId);
-      this.lead.set(leadActualizado);
-      this.toast.success('Seguimiento registrado.');
+      this.toast.success(cambiaTarjeta ? 'Seguimiento registrado y tarjeta actualizada.' : 'Seguimiento registrado.');
     } catch {
       this.errorMessage.set('No se pudo registrar el seguimiento.');
       this.toast.error('No se pudo registrar el seguimiento.');

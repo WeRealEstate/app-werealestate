@@ -289,6 +289,24 @@
           </div>
         </div>
 
+        @if (puedeMoverTarjeta()) {
+          <div>
+            <label for="columnaPersonalizadaId" class="block text-sm font-medium text-ink mb-1.5">Tarjeta del pipeline</label>
+            <select
+              id="columnaPersonalizadaId"
+              formControlName="columnaPersonalizadaId"
+              class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            >
+              <option [ngValue]="null">Sin asignar</option>
+              @for (c of columnasDisponibles(); track c.id) {
+                <option [ngValue]="c.id">{{ c.nombre }}</option>
+              }
+            </select>
+            <p class="mt-1.5 text-xs text-ink-muted">Si la cambias, este seguimiento también mueve al lead a esa tarjeta en el Pipeline.</p>
+          </div>
+        }
+
         @if (seguimientoForm.controls.proximoSeguimiento.value) {
           <div class="grid grid-cols-1 gap-4 rounded-lg border border-border bg-surface-2 p-3.5 sm:grid-cols-3">
             <div>
