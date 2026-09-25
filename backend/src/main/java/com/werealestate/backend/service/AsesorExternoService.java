@@ -51,7 +51,9 @@ public class AsesorExternoService {
 
     public AsesorExternoDto crear(AsesorExternoCreateRequest request) {
         exigirAdmin();
-        return AsesorExternoDto.from(asesorExternoRepository.save(new AsesorExterno(request.nombre().trim())));
+        AsesorExterno asesor = new AsesorExterno(
+                request.nombre().trim(), request.celular().trim(), request.correo().trim());
+        return AsesorExternoDto.from(asesorExternoRepository.save(asesor));
     }
 
     public AsesorExternoDto actualizar(Long id, AsesorExternoUpdateRequest request) {
@@ -59,6 +61,8 @@ public class AsesorExternoService {
         AsesorExterno asesor = asesorExternoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Asesor externo no encontrado"));
         asesor.setNombre(request.nombre().trim());
+        asesor.setCelular(request.celular() == null || request.celular().isBlank() ? null : request.celular().trim());
+        asesor.setCorreo(request.correo() == null || request.correo().isBlank() ? null : request.correo().trim());
         asesor.setActivo(request.activo());
         return AsesorExternoDto.from(asesorExternoRepository.save(asesor));
     }

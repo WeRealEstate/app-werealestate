@@ -24,6 +24,14 @@ public class AsesorExterno {
     @Column(nullable = false, length = 200)
     private String nombre;
 
+    // Nullable: se piden al crear uno nuevo (ver AsesorExternoCreateRequest), pero los ya
+    // registrados antes de este campo no los tienen todavía.
+    @Column(length = 20)
+    private String celular;
+
+    @Column(length = 150)
+    private String correo;
+
     @Column(nullable = false)
     private boolean activo = true;
 
@@ -34,8 +42,10 @@ public class AsesorExterno {
         // JPA
     }
 
-    public AsesorExterno(String nombre) {
+    public AsesorExterno(String nombre, String celular, String correo) {
         this.nombre = nombre;
+        this.celular = celular;
+        this.correo = correo;
     }
 
     public Long getId() {
@@ -48,6 +58,22 @@ public class AsesorExterno {
 
     public void setNombre(String nombre) {
         this.nombre = nombre;
+    }
+
+    public String getCelular() {
+        return celular;
+    }
+
+    public void setCelular(String celular) {
+        this.celular = celular;
+    }
+
+    public String getCorreo() {
+        return correo;
+    }
+
+    public void setCorreo(String correo) {
+        this.correo = correo;
     }
 
     public boolean isActivo() {

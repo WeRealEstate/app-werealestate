@@ -22,11 +22,19 @@ export class AsesoresExternosListComponent {
   readonly errorMessage = signal<string | null>(null);
   readonly savingId = signal<number | null>(null);
 
+  // --- Tarjeta flotante para agregar uno nuevo: el botón "+ Agregar" siempre está habilitado
+  // (no depende de ningún campo) y solo abre el formulario; el propio formulario valida al guardar. ---
+  readonly mostrarModalCrear = signal(false);
   readonly nuevoNombre = signal('');
+  readonly nuevoCelular = signal('');
+  readonly nuevoCorreo = signal('');
   readonly isCreando = signal(false);
+  readonly errorCreacion = signal<string | null>(null);
 
   readonly editandoId = signal<number | null>(null);
   readonly nombreEnEdicion = signal('');
+  readonly celularEnEdicion = signal('');
+  readonly correoEnEdicion = signal('');
 
   constructor() {
     this.cargar();
@@ -44,44 +52,81 @@ export class AsesoresExternosListComponent {
     }
   }
 
+  abrirModalCrear(): void {
+    this.nuevoNombre.set('');
+    this.nuevoCelular.set('');
+    this.nuevoCorreo.set('');
+    this.errorCreacion.set(null);
+    this.mostrarModalCrear.set(true);
+  }
+
+  cerrarModalCrear(): void {
+    this.mostrarModalCrear.set(false);
+  }
+
   async crear(): Promise<void> {
     const nombre = this.nuevoNombre().trim();
-    if (!nombre || this.isCreando()) return;
+    const celular = this.nuevoCelular().trim();
+    const correo = this.nuevoCorreo().trim();
+    if (!nombre || !celular || !correo || this.isCreando()) {
+      this.errorCreacion.set('Nombre, celular y correo son obligatorios.');
+      return;
+    }
 
     this.isCreando.set(true);
+    this.errorCreacion.set(null);
     try {
-      const creado = await this.asesoresExternosService.crear({ nombre });
+      const creado = await this.asesoresExternosService.crear({ nombre, celular, correo });
       this.asesores.update((lista) => [...lista, creado].sort((a, b) => a.nombre.localeCompare(b.nombre)));
-      this.nuevoNombre.set('');
+      this.mostrarModalCrear.set(false);
       this.toast.success(`${creado.nombre} fue agregado.`);
-    } catch {
-      this.toast.error('No se pudo agregar el asesor externo.');
+    } catch (error) {
+      this.errorCreacion.set(
+        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+          ? error.error.message
+          : 'No se pudo agregar el asesor externo.',
+      );
     } finally {
       this.isCreando.set(false);
     }
   }
 
   async toggleActivo(asesor: AsesorExterno): Promise<void> {
-    await this.guardar(asesor, { nombre: asesor.nombre, activo: !asesor.activo });
+    await this.guardar(asesor, {
+      nombre: asesor.nombre,
+      celular: asesor.celular,
+      correo: asesor.correo,
+      activo: !asesor.activo,
+    });
   }
 
   abrirEdicion(asesor: AsesorExterno): void {
     this.editandoId.set(asesor.id);
     this.nombreEnEdicion.set(asesor.nombre);
+    this.celularEnEdicion.set(asesor.celular ?? '');
+    this.correoEnEdicion.set(asesor.correo ?? '');
   }
 
   cancelarEdicion(): void {
     this.editandoId.set(null);
   }
 
-  async guardarNombre(asesor: AsesorExterno): Promise<void> {
+  async guardarEdicion(asesor: AsesorExterno): Promise<void> {
     const nombre = this.nombreEnEdicion().trim();
     if (!nombre) return;
-    await this.guardar(asesor, { nombre, activo: asesor.activo });
+    await this.guardar(asesor, {
+      nombre,
+      celular: this.celularEnEdicion().trim() || null,
+      correo: this.correoEnEdicion().trim() || null,
+      activo: asesor.activo,
+    });
     this.editandoId.set(null);
   }
 
-  private async guardar(asesor: AsesorExterno, cambios: { nombre: string; activo: boolean }): Promise<void> {
+  private async guardar(
+    asesor: AsesorExterno,
+    cambios: { nombre: string; celular: string | null; correo: string | null; activo: boolean },
+  ): Promise<void> {
     this.savingId.set(asesor.id);
     try {
       const actualizado = await this.asesoresExternosService.actualizar(asesor.id, cambios);
