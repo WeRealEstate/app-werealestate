@@ -69,6 +69,58 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
 }
 
+/* Keep record actions beside their data on narrow screens. */
+@media (max-width: 639px) {
+  .mobile-records,
+  .mobile-records tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .mobile-records thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .mobile-records tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 8px;
+  }
+
+  .mobile-records td {
+    display: block;
+    min-width: 0;
+    padding: 8px;
+    overflow-wrap: anywhere;
+    text-align: left;
+  }
+
+  .mobile-records td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 4px;
+    color: var(--ink-muted);
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .mobile-records td[data-label='Cliente'],
+  .mobile-records td[data-label='Estado'],
+  .mobile-records td[data-label='Acciones'] {
+    grid-column: 1 / -1;
+  }
+
+  .mobile-records :is(button, a, select) {
+    min-width: 44px;
+    min-height: 44px;
+    max-width: 100%;
+  }
+}
+
 /* ---- Movimiento: curvas de easing propias, más marcadas que las de CSS por
    defecto — se sienten intencionales en vez de genéricas. Expuestas también
    como utilidades Tailwind (ease-brand-out / ease-brand-in-out). ---- */

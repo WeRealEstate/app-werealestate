@@ -144,7 +144,7 @@
     <button
       type="button"
       (click)="toggleSidebar()"
-      class="flex h-9 w-9 items-center justify-center rounded-lg text-white/80 hover:bg-white/10
+      class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-white/80 hover:bg-white/10
              transition-transform duration-150 active:scale-[0.92]
              focus:outline-none focus:ring-2 focus:ring-white/40"
       aria-label="Abrir menú"
@@ -157,7 +157,7 @@
   </div>
 
   <!-- Contenido: superficie propia del tema (claro/oscuro), separada del sidebar con un borde limpio -->
-  <div class="relative z-0 min-h-screen bg-canvas lg:ml-64 lg:border-l lg:border-border">
+  <div class="relative z-0 min-h-screen bg-canvas has-[[role=dialog]]:z-40 lg:ml-64 lg:border-l lg:border-border">
     <main class="p-4 sm:p-6 lg:p-10">
       <div class="mx-auto max-w-6xl">
         <router-outlet />

@@ -112,7 +112,7 @@
     </div>
   } @else {
     <div class="mt-6 overflow-x-auto rounded-xl border border-border">
-      <table class="min-w-full divide-y divide-border text-sm">
+      <table class="mobile-records min-w-full divide-y divide-border text-sm">
         <thead class="bg-surface-2">
           <tr class="text-left text-xs font-medium uppercase tracking-wide text-ink-muted">
             <th class="px-4 py-3">Manzana</th>
@@ -127,12 +127,12 @@
         <tbody class="divide-y divide-border bg-surface">
           @for (lote of lotes(); track lote.id; let i = $index) {
             <tr class="stagger-item hover:bg-surface-2 transition-colors duration-150" [style.animation-delay.ms]="i < 8 ? i * 40 : 0">
-              <td class="px-4 py-3 font-medium text-ink">{{ lote.manzana }}</td>
-              <td class="px-4 py-3 font-medium text-ink">{{ lote.numeroLote }}</td>
-              <td class="px-4 py-3 text-ink-muted">{{ lote.desarrollo.nombre }}</td>
-              <td class="px-4 py-3 text-ink-muted">{{ lote.superficie }} m²</td>
-              <td class="px-4 py-3 text-ink-muted">{{ precioEstimado(lote) | number:'1.0-0' }} MXN</td>
-              <td class="px-4 py-3">
+              <td data-label="Manzana" class="px-4 py-3 font-medium text-ink">{{ lote.manzana }}</td>
+              <td data-label="Lote" class="px-4 py-3 font-medium text-ink">{{ lote.numeroLote }}</td>
+              <td data-label="Desarrollo" class="px-4 py-3 text-ink-muted">{{ lote.desarrollo.nombre }}</td>
+              <td data-label="Superficie" class="px-4 py-3 text-ink-muted">{{ lote.superficie }} m²</td>
+              <td data-label="Precio estimado" class="px-4 py-3 text-ink-muted">{{ precioEstimado(lote) | number:'1.0-0' }} MXN</td>
+              <td data-label="Estado" class="px-4 py-3">
                 <div class="flex items-center gap-1.5">
                   @if (estadosDisponiblesPara(lote).length > 1) {
                     <select
@@ -162,7 +162,7 @@
                   <p class="mt-1 text-xs text-ink-muted">Vence: {{ lote.fechaExpiraApartado | date: 'dd/MM/yy HH:mm' }}</p>
                 }
               </td>
-              <td class="px-4 py-3">
+              <td data-label="Acciones" class="px-4 py-3">
                 <div class="flex items-center justify-end gap-1.5">
                   @if (lote.estado !== 'DISPONIBLE' && puedeVerInfoLote()) {
                     <button
