@@ -20,8 +20,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -82,6 +84,17 @@ public class NotificacionService {
                 ? leadRepository.findByArchivadoFalseOrderByFechaUltimoContactoAsc()
                 : leadRepository.findByAsesorIdAndArchivadoFalseOrderByFechaUltimoContactoAsc(actual.getId());
 
+        // Último seguimiento de cada lead, resuelto en una sola consulta (antes era una por lead
+        // dentro del for de abajo). Ordenado por lead y luego por fecha desc: la primera fila de
+        // cada lead que encontramos es su seguimiento más reciente, así que putIfAbsent basta.
+        List<Long> leadIds = leadsVisibles.stream().map(Lead::getId).toList();
+        Map<Long, Seguimiento> ultimoSeguimientoPorLead = new HashMap<>();
+        if (!leadIds.isEmpty()) {
+            for (Seguimiento s : seguimientoRepository.findByLeadIdInOrderByLeadIdAscFechaDesc(leadIds)) {
+                ultimoSeguimientoPorLead.putIfAbsent(s.getLead().getId(), s);
+            }
+        }
+
         LocalDateTime ahora = LocalDateTime.now();
         List<NotificacionDto> notificaciones = new ArrayList<>();
 
@@ -89,20 +102,23 @@ public class NotificacionService {
             boolean cerrado = CERRADOS.contains(lead.getEstado());
             if (cerrado) continue;
 
-            long dias = ChronoUnit.DAYS.between(lead.getFechaUltimoContacto(), ahora);
-            if (dias >= diasFrio) {
-                String firma = lead.getFechaUltimoContacto().toString();
-                if (!leidas.contains(clave("LEAD_FRIO", lead.getId(), firma))) {
-                    notificaciones.add(NotificacionDto.leadFrio(
-                            lead.getNombreCliente() + " lleva " + dias + " días sin seguimiento.",
-                            lead.getId(),
-                            firma));
-                }
-            }
+            Seguimiento ultimo = ultimoSeguimientoPorLead.get(lead.getId());
 
-            List<Seguimiento> historial = seguimientoRepository.findByLeadIdOrderByFechaDesc(lead.getId());
-            if (!historial.isEmpty()) {
-                Seguimiento ultimo = historial.get(0);
+            if (ultimo != null) {
+                // LEAD_FRIO solo aplica a leads que ya tuvieron seguimiento: para los que nunca
+                // fueron contactados ya existe LEAD_SIN_CONTACTAR (rama de abajo) — evaluar ambas
+                // sin distinguir generaba dos notificaciones para el mismo hecho.
+                long dias = ChronoUnit.DAYS.between(lead.getFechaUltimoContacto(), ahora);
+                if (dias >= diasFrio) {
+                    String firma = lead.getFechaUltimoContacto().toString();
+                    if (!leidas.contains(clave("LEAD_FRIO", lead.getId(), firma))) {
+                        notificaciones.add(NotificacionDto.leadFrio(
+                                lead.getNombreCliente() + " lleva " + dias + " días sin seguimiento.",
+                                lead.getId(),
+                                firma));
+                    }
+                }
+
                 LocalDateTime proximo = ultimo.getProximoSeguimiento();
                 if (proximo != null && !proximo.isAfter(ahora)) {
                     String firma = proximo.toString();
