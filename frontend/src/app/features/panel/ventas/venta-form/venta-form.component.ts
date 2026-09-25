@@ -2,12 +2,30 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { Desarrollo } from '../../../../core/models/lead.model';
+import { Desarrollo, UsuarioResumen } from '../../../../core/models/lead.model';
 import { ESTADO_LOTE_LABELS, Lote } from '../../../../core/models/lote.model';
+import { AsesorExterno } from '../../../../core/models/asesor-externo.model';
+import { AsesoresExternosService } from '../../../../core/services/asesores-externos.service';
 import { LeadsService } from '../../../../core/services/leads.service';
 import { LotesService } from '../../../../core/services/lotes.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { UsuariosService } from '../../../../core/services/usuarios.service';
 import { VentasService } from '../../../../core/services/ventas.service';
+
+/** Codifica la selección del <select> de asesor como un solo string ("U-5" / "E-3") porque un
+ * formControl reactivo solo puede llevar un valor, y el asesor es uno de dos tipos distintos (ver
+ * parseAsesorSeleccion). */
+export function parseAsesorSeleccion(valor: string): { usuarioAsesorId: number | null; asesorExternoId: number | null } {
+  if (valor.startsWith('U-')) return { usuarioAsesorId: Number(valor.slice(2)), asesorExternoId: null };
+  if (valor.startsWith('E-')) return { usuarioAsesorId: null, asesorExternoId: Number(valor.slice(2)) };
+  return { usuarioAsesorId: null, asesorExternoId: null };
+}
+
+/** Inverso de parseAsesorSeleccion: arma el valor del <select> a partir del asesor ya guardado en
+ * una venta, para preseleccionarlo al editar (ver VentaDetalleComponent.abrirEdicion). */
+export function asesorSeleccionDe(asesor: { id: number; externo: boolean }): string {
+  return `${asesor.externo ? 'E' : 'U'}-${asesor.id}`;
+}
 
 /** Cómo se aplica a la venta el dinero que ya se había recibido al apartar un lote (ver
  * Lote.montoApartado): 'mensualidad' lo suma al enganche antes de calcular la mensualidad (baja el
@@ -56,11 +74,17 @@ export class VentaFormComponent {
   private readonly leadsService = inject(LeadsService);
   private readonly lotesService = inject(LotesService);
   private readonly ventasService = inject(VentasService);
+  private readonly usuariosService = inject(UsuariosService);
+  private readonly asesoresExternosService = inject(AsesoresExternosService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
 
   readonly estadoLabels = ESTADO_LOTE_LABELS;
   readonly desarrollos = signal<Desarrollo[]>([]);
+  /** Solo se puede elegir entre asesores ya registrados — internos (usuarios activos) o externos
+   * (ver AsesorExterno) — nunca texto libre (ver form.controls.asesor). */
+  readonly asesoresInternos = signal<UsuarioResumen[]>([]);
+  readonly asesoresExternos = signal<AsesorExterno[]>([]);
   readonly lotesDelDesarrollo = signal<Lote[]>([]);
   readonly isCargandoLotes = signal(false);
   readonly isLoading = signal(false);
@@ -121,6 +145,8 @@ export class VentaFormComponent {
 
   constructor() {
     this.leadsService.listarDesarrollosGestionables().then((d) => this.desarrollos.set(d));
+    this.usuariosService.paraVenta().then((u) => this.asesoresInternos.set(u));
+    this.asesoresExternosService.listarActivos().then((a) => this.asesoresExternos.set(a));
     this.actualizarFormaPago();
     // Cualquier cambio en plazo regenera el texto de forma de pago Y recalcula la mensualidad
     // (mismo cálculo que ya usa el Cotizador: saldo a financiar ÷ meses); ambos siguen editables
@@ -275,7 +301,7 @@ export class VentaFormComponent {
       const venta = await this.ventasService.crear({
         lotes: this.lotesAgregados().map((l) => ({ loteId: l.lote.id, precio: l.precio })),
         cliente: v.cliente,
-        asesor: v.asesor,
+        ...parseAsesorSeleccion(v.asesor),
         formaPago: v.formaPago,
         fechaVenta: v.fechaVenta,
         mensualidad: v.mensualidad,

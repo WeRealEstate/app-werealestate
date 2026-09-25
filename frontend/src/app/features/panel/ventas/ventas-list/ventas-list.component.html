@@ -58,7 +58,7 @@
             <tr class="stagger-item hover:bg-surface-2 transition-colors duration-150" [style.animation-delay.ms]="i < 8 ? i * 40 : 0">
               <td class="px-4 py-3 text-ink-muted">{{ v.fechaVenta | date: 'd MMM y' }}</td>
               <td class="px-4 py-3 font-medium text-ink">{{ v.cliente }}</td>
-              <td class="px-4 py-3 text-ink-muted">{{ v.asesor }}</td>
+              <td class="px-4 py-3 text-ink-muted">{{ v.asesor.nombre }}</td>
               <td class="px-4 py-3 text-ink-muted">{{ v.lotes[0].lote.desarrollo.nombre }}</td>
               <td class="px-4 py-3 text-ink-muted">
                 {{ v.lotes[0].lote.manzana }} / {{ v.lotes[0].lote.numeroLote }}

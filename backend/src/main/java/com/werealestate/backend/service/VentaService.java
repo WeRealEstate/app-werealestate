@@ -12,17 +12,22 @@ import com.werealestate.backend.exception.ConflictException;
 import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.exception.ValidationException;
+import com.werealestate.backend.model.AsesorExterno;
 import com.werealestate.backend.model.Lote;
 import com.werealestate.backend.model.PagoVenta;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.model.Venta;
 import com.werealestate.backend.model.VentaLote;
+import com.werealestate.backend.repository.AsesorExternoRepository;
 import com.werealestate.backend.repository.LoteRepository;
 import com.werealestate.backend.repository.PagoVentaRepository;
+import com.werealestate.backend.repository.UsuarioRepository;
 import com.werealestate.backend.repository.VentaLoteRepository;
 import com.werealestate.backend.repository.VentaRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.List;
@@ -35,11 +40,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Registro de ventas cerradas. Cliente y asesor son texto libre a propósito (ver Venta): no todo
- * comprador pasó por el CRM como lead y no todo asesor que vende tiene cuenta en el sistema. Una
- * venta puede incluir varios lotes (misma operación, una sola mensualidad/plazo/saldo combinado,
- * ver VentaLote). Exclusivo de admin y líder de área, igual que los estados de lote comprometidos
- * con dinero real.
+ * Registro de ventas cerradas. Cliente es texto libre a propósito (ver Venta): no todo comprador
+ * pasó por el CRM como lead. El asesor sí es una relación real, a un usuario interno o a un
+ * AsesorExterno registrado (ver resolverAsesor). Una venta puede incluir varios lotes (misma
+ * operación, una sola mensualidad/plazo/saldo combinado, ver VentaLote). Exclusivo de admin y
+ * líder de área, igual que los estados de lote comprometidos con dinero real.
  */
 @Service
 @Transactional
@@ -50,6 +55,8 @@ public class VentaService {
     private final LoteRepository loteRepository;
     private final LoteService loteService;
     private final PagoVentaRepository pagoVentaRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final AsesorExternoRepository asesorExternoRepository;
     private final CurrentUserProvider currentUserProvider;
 
     public VentaService(
@@ -58,12 +65,16 @@ public class VentaService {
             LoteRepository loteRepository,
             LoteService loteService,
             PagoVentaRepository pagoVentaRepository,
+            UsuarioRepository usuarioRepository,
+            AsesorExternoRepository asesorExternoRepository,
             CurrentUserProvider currentUserProvider) {
         this.ventaRepository = ventaRepository;
         this.ventaLoteRepository = ventaLoteRepository;
         this.loteRepository = loteRepository;
         this.loteService = loteService;
         this.pagoVentaRepository = pagoVentaRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.asesorExternoRepository = asesorExternoRepository;
         this.currentUserProvider = currentUserProvider;
     }
 
@@ -77,8 +88,9 @@ public class VentaService {
             }
         }
 
+        AsesorResuelto asesor = resolverAsesor(request.usuarioAsesorId(), request.asesorExternoId());
+
         String cliente = request.cliente().trim();
-        String asesor = request.asesor().trim();
         String notas = request.notas() == null || request.notas().isBlank() ? null : request.notas().trim();
 
         String engancheLabel = request.engancheLabel() == null || request.engancheLabel().isBlank()
@@ -86,8 +98,8 @@ public class VentaService {
                 : request.engancheLabel().trim();
 
         Venta venta = new Venta(
-                cliente, asesor, request.formaPago().trim(), request.fechaVenta(), request.mensualidad(),
-                request.plazoMeses(), engancheLabel, request.enganche(), notas);
+                cliente, asesor.usuario(), asesor.externo(), request.formaPago().trim(), request.fechaVenta(),
+                request.mensualidad(), request.plazoMeses(), engancheLabel, request.enganche(), notas);
         venta = ventaRepository.save(venta);
 
         for (VentaLoteItemRequest item : request.lotes()) {
@@ -97,7 +109,7 @@ public class VentaService {
             ventaLoteRepository.save(new VentaLote(venta, lote, item.precio()));
 
             if (request.marcarLoteVendido()) {
-                loteService.marcarVendido(lote.getId(), cliente, asesor);
+                loteService.marcarVendido(lote.getId(), cliente, asesor.nombre());
             }
         }
 
@@ -114,6 +126,7 @@ public class VentaService {
     public VentaDto actualizar(Long id, VentaUpdateRequest request) {
         exigirAdminOLider();
         Venta venta = obtenerEntidad(id);
+        AsesorResuelto asesor = resolverAsesor(request.usuarioAsesorId(), request.asesorExternoId());
 
         String engancheLabel = request.engancheLabel() == null || request.engancheLabel().isBlank()
                 ? null
@@ -122,7 +135,8 @@ public class VentaService {
 
         venta.actualizar(
                 request.cliente().trim(),
-                request.asesor().trim(),
+                asesor.usuario(),
+                asesor.externo(),
                 request.formaPago().trim(),
                 request.fechaVenta(),
                 request.mensualidad(),
@@ -150,8 +164,17 @@ public class VentaService {
 
         if (busqueda != null && !busqueda.isBlank()) {
             String comodin = "%" + busqueda.trim().toLowerCase() + "%";
-            spec = spec.and((root, query, cb) -> cb.or(
-                    cb.like(cb.lower(root.get("cliente")), comodin), cb.like(cb.lower(root.get("asesor")), comodin)));
+            spec = spec.and((root, query, cb) -> {
+                // Join explícito en vez de root.get("usuarioAsesor").get(...): con una relación
+                // nullable, get() genera un INNER JOIN implícito que excluiría del resultado toda
+                // venta cuyo asesor sea del otro tipo.
+                Join<Venta, Usuario> usuarioAsesor = root.join("usuarioAsesor", JoinType.LEFT);
+                Join<Venta, AsesorExterno> asesorExterno = root.join("asesorExterno", JoinType.LEFT);
+                return cb.or(
+                        cb.like(cb.lower(root.get("cliente")), comodin),
+                        cb.like(cb.lower(usuarioAsesor.get("nombre")), comodin),
+                        cb.like(cb.lower(asesorExterno.get("nombre")), comodin));
+            });
         }
         spec = spec.and((root, query, cb) -> {
             query.orderBy(cb.desc(root.get("fechaVenta")), cb.desc(root.get("id")));
@@ -215,5 +238,38 @@ public class VentaService {
             throw new ForbiddenOperationException("Solo un administrador o líder de área puede gestionar ventas");
         }
         return actual;
+    }
+
+    /** Exactamente uno de usuarioAsesorId/asesorExternoId debe venir, y debe corresponder a un
+     * asesor activo — así "solo se puede registrar de entre los asesores registrados" se cumple
+     * de verdad en el servidor, no solo porque el <select> del frontend no deje escribir texto. */
+    private AsesorResuelto resolverAsesor(Long usuarioAsesorId, Long asesorExternoId) {
+        boolean tieneInterno = usuarioAsesorId != null;
+        boolean tieneExterno = asesorExternoId != null;
+        if (tieneInterno == tieneExterno) {
+            throw new ValidationException("Selecciona un asesor interno o externo (uno de los dos, no ambos)");
+        }
+
+        if (tieneInterno) {
+            Usuario usuario = usuarioRepository.findById(usuarioAsesorId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Asesor no encontrado"));
+            if (!usuario.isActivo()) {
+                throw new ValidationException("Ese asesor está inactivo");
+            }
+            return new AsesorResuelto(usuario, null);
+        }
+
+        AsesorExterno externo = asesorExternoRepository.findById(asesorExternoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Asesor externo no encontrado"));
+        if (!externo.isActivo()) {
+            throw new ValidationException("Ese asesor externo está inactivo");
+        }
+        return new AsesorResuelto(null, externo);
+    }
+
+    private record AsesorResuelto(Usuario usuario, AsesorExterno externo) {
+        String nombre() {
+            return usuario != null ? usuario.getNombre() : externo.getNombre();
+        }
     }
 }

@@ -1,0 +1,136 @@
+<div class="page-enter">
+  <div>
+    <h1 class="font-heading text-2xl font-semibold text-ink">Asesores externos</h1>
+    <p class="mt-1 text-sm text-ink-muted">
+      Gente que vende pero no tiene cuenta en el sistema — se pueden elegir al registrar una venta, igual que un asesor interno.
+    </p>
+  </div>
+
+  <form (ngSubmit)="crear()" class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+    <input
+      type="text"
+      [ngModel]="nuevoNombre()"
+      (ngModelChange)="nuevoNombre.set($event)"
+      name="nuevoNombre"
+      placeholder="Nombre del asesor externo"
+      class="w-full max-w-sm rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
+             focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+    />
+    <button
+      type="submit"
+      [disabled]="!nuevoNombre().trim() || isCreando()"
+      class="inline-flex items-center justify-center gap-2 rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
+             hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
+             focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]
+             disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+    >
+      {{ isCreando() ? 'Agregando…' : '+ Agregar' }}
+    </button>
+  </form>
+
+  @if (errorMessage()) {
+    <div class="mt-6 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  @if (isLoading()) {
+    <p class="mt-8 text-sm text-ink-muted">Cargando asesores externos…</p>
+  } @else if (asesores().length === 0) {
+    <div class="mt-8 rounded-xl border border-dashed border-border p-10 text-center">
+      <p class="text-sm text-ink-muted">Todavía no hay asesores externos registrados.</p>
+    </div>
+  } @else {
+    <div class="mt-6 overflow-x-auto rounded-xl border border-border">
+      <table class="min-w-full divide-y divide-border text-sm">
+        <thead class="bg-surface-2">
+          <tr class="text-left text-xs font-medium uppercase tracking-wide text-ink-muted">
+            <th class="px-4 py-3">Nombre</th>
+            <th class="px-4 py-3">Estado</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border bg-surface">
+          @for (a of asesores(); track a.id; let i = $index) {
+            <tr class="stagger-item hover:bg-surface-2 transition-colors duration-150" [style.animation-delay.ms]="i < 8 ? i * 40 : 0">
+              <td class="px-4 py-3 font-medium text-ink">
+                @if (editandoId() === a.id) {
+                  <div class="flex items-center gap-2">
+                    <input
+                      type="text"
+                      [ngModel]="nombreEnEdicion()"
+                      (ngModelChange)="nombreEnEdicion.set($event)"
+                      name="nombreEnEdicion"
+                      class="w-full max-w-xs rounded-lg border border-border px-3 py-1.5 text-sm text-ink
+                             focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+                    />
+                    <button
+                      type="button"
+                      [disabled]="!nombreEnEdicion().trim() || savingId() === a.id"
+                      (click)="guardarNombre(a)"
+                      class="text-xs font-semibold text-we-primary hover:underline disabled:opacity-50"
+                    >
+                      Guardar
+                    </button>
+                    <button type="button" (click)="cancelarEdicion()" class="text-xs font-medium text-ink-muted hover:underline">
+                      Cancelar
+                    </button>
+                  </div>
+                } @else {
+                  {{ a.nombre }}
+                }
+              </td>
+              <td class="px-4 py-3">
+                <button
+                  type="button"
+                  [disabled]="savingId() === a.id"
+                  (click)="toggleActivo(a)"
+                  class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium
+                         transition-[color,background-color,transform] duration-150 active:scale-[0.95]
+                         disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
+                  [class.bg-green-100]="a.activo"
+                  [class.text-green-700]="a.activo"
+                  [class.dark:bg-green-500/15]="a.activo"
+                  [class.dark:text-green-300]="a.activo"
+                  [class.bg-surface-2]="!a.activo"
+                  [class.text-ink-muted]="!a.activo"
+                >
+                  <span class="h-1.5 w-1.5 rounded-full" [class.bg-green-500]="a.activo" [class.bg-ink-muted]="!a.activo" aria-hidden="true"></span>
+                  {{ a.activo ? 'Activo' : 'Inactivo' }}
+                </button>
+              </td>
+              <td class="px-4 py-3 text-right">
+                <div class="flex items-center justify-end gap-1.5">
+                  @if (editandoId() !== a.id) {
+                    <button
+                      type="button"
+                      (click)="abrirEdicion(a)"
+                      aria-label="Editar nombre"
+                      class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2 hover:text-we-blue-light
+                             transition-colors duration-150 active:scale-90"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                    </button>
+                  }
+                  <button
+                    type="button"
+                    [disabled]="savingId() === a.id"
+                    (click)="eliminar(a)"
+                    aria-label="Eliminar asesor externo"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-red-50 hover:text-red-600
+                           dark:hover:bg-red-500/10 dark:hover:text-red-400 transition-colors duration-150 active:scale-90 disabled:opacity-60"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

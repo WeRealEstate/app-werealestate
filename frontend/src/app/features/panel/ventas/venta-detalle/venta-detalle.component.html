@@ -47,7 +47,12 @@
       <div class="mt-6 grid gap-4 rounded-2xl border border-border bg-surface p-5 sm:grid-cols-2">
         <div>
           <p class="text-xs text-ink-muted">Asesor</p>
-          <p class="mt-1 text-sm font-medium text-ink">{{ v.asesor }}</p>
+          <p class="mt-1 text-sm font-medium text-ink">
+            {{ v.asesor.nombre }}
+            @if (v.asesor.externo) {
+              <span class="ml-1 text-xs font-normal text-ink-muted">(externo)</span>
+            }
+          </p>
         </div>
         <div>
           <p class="text-xs text-ink-muted">Fecha de venta</p>
@@ -103,11 +108,27 @@
           </div>
           <div>
             <label for="ed-asesor" class="block text-sm font-medium text-ink mb-1.5">Asesor *</label>
-            <input
-              id="ed-asesor" type="text" formControlName="asesor"
+            <select
+              id="ed-asesor" formControlName="asesor"
               class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
                      focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
-            />
+            >
+              <option value="" disabled>Selecciona un asesor…</option>
+              @if (asesoresInternos().length > 0) {
+                <optgroup label="Internos">
+                  @for (u of asesoresInternos(); track u.id) {
+                    <option [value]="'U-' + u.id">{{ u.nombre }}</option>
+                  }
+                </optgroup>
+              }
+              @if (asesoresExternos().length > 0) {
+                <optgroup label="Externos">
+                  @for (a of asesoresExternos(); track a.id) {
+                    <option [value]="'E-' + a.id">{{ a.nombre }}</option>
+                  }
+                </optgroup>
+              }
+            </select>
           </div>
           <div>
             <label for="ed-fecha" class="block text-sm font-medium text-ink mb-1.5">Fecha de venta *</label>

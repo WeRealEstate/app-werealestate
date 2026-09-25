@@ -8,17 +8,24 @@ export interface VentaLote {
   precio: number;
 }
 
+/** Asesor de una venta, sea interno (usuario real del sistema) o externo (ver AsesorExterno). */
+export interface VentaAsesor {
+  id: number;
+  nombre: string;
+  externo: boolean;
+}
+
 /**
- * Registro de una venta cerrada. cliente y asesor son texto libre a propósito (ver
- * backend Venta): no todo comprador pasó por el CRM como lead y no todo asesor que vende tiene
- * cuenta en el sistema (hay asesores externos). Puede incluir varios lotes (misma operación, una
- * sola mensualidad/plazo/saldo combinado — ver VentaLote).
+ * Registro de una venta cerrada. cliente es texto libre a propósito (ver backend Venta): no todo
+ * comprador pasó por el CRM como lead. El asesor sí es una relación real, a un usuario interno o a
+ * un asesor externo registrado. Puede incluir varios lotes (misma operación, una sola
+ * mensualidad/plazo/saldo combinado — ver VentaLote).
  */
 export interface Venta {
   id: number;
   lotes: VentaLote[];
   cliente: string;
-  asesor: string;
+  asesor: VentaAsesor;
   formaPago: string;
   fechaVenta: string;
   /** Términos de financiamiento; null en ventas de contado. */
@@ -44,7 +51,9 @@ export interface VentaLoteItemRequest {
 export interface VentaCreateRequest {
   lotes: VentaLoteItemRequest[];
   cliente: string;
-  asesor: string;
+  // Exactamente uno de los dos (ver backend VentaService.resolverAsesor).
+  usuarioAsesorId: number | null;
+  asesorExternoId: number | null;
   formaPago: string;
   fechaVenta: string;
   mensualidad: number | null;
@@ -60,7 +69,8 @@ export interface VentaCreateRequest {
  * quitar más adelante. */
 export interface VentaUpdateRequest {
   cliente: string;
-  asesor: string;
+  usuarioAsesorId: number | null;
+  asesorExternoId: number | null;
   formaPago: string;
   fechaVenta: string;
   mensualidad: number | null;

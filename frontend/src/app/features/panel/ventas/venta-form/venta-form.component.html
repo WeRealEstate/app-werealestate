@@ -128,16 +128,33 @@
       </div>
       <div>
         <label for="asesor" class="block text-sm font-medium text-ink mb-1.5">Asesor *</label>
-        <input
+        <select
           id="asesor"
-          type="text"
           formControlName="asesor"
-          placeholder="Interno o externo"
-          class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
+          class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
                  focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
-        />
+        >
+          <option value="" disabled>Selecciona un asesor…</option>
+          @if (asesoresInternos().length > 0) {
+            <optgroup label="Internos">
+              @for (u of asesoresInternos(); track u.id) {
+                <option [value]="'U-' + u.id">{{ u.nombre }}</option>
+              }
+            </optgroup>
+          }
+          @if (asesoresExternos().length > 0) {
+            <optgroup label="Externos">
+              @for (a of asesoresExternos(); track a.id) {
+                <option [value]="'E-' + a.id">{{ a.nombre }}</option>
+              }
+            </optgroup>
+          }
+        </select>
         @if (form.controls.asesor.invalid && form.controls.asesor.touched) {
           <p class="mt-1.5 text-xs text-red-600">Campo obligatorio.</p>
+        }
+        @if (asesoresInternos().length === 0 && asesoresExternos().length === 0) {
+          <p class="mt-1.5 text-xs text-ink-muted">No hay asesores registrados todavía.</p>
         }
       </div>
     </div>

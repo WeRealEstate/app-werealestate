@@ -184,6 +184,14 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/usuarios/usuario-form/usuario-form.component').then((m) => m.UsuarioFormComponent),
       },
+      {
+        path: 'asesores-externos',
+        canActivate: [roleGuard(['ADMIN'])],
+        loadComponent: () =>
+          import('./features/asesores-externos/asesores-externos-list/asesores-externos-list.component').then(
+            (m) => m.AsesoresExternosListComponent,
+          ),
+      },
     ],
   },
   { path: '**', redirectTo: 'login' },

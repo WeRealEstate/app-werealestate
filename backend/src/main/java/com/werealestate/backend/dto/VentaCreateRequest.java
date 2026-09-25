@@ -15,7 +15,10 @@ public record VentaCreateRequest(
         // mensualidad/plazo/saldo combinado (ver VentaLote y VentaService).
         @NotEmpty @Valid List<VentaLoteItemRequest> lotes,
         @NotBlank String cliente,
-        @NotBlank String asesor,
+        // Exactamente uno de los dos: el asesor interno (usuario real del sistema) o externo (ver
+        // VentaService.resolverAsesor, que valida esto — no se puede expresar con anotaciones).
+        Long usuarioAsesorId,
+        Long asesorExternoId,
         @NotBlank String formaPago,
         @NotNull LocalDate fechaVenta,
         // Términos de financiamiento; opcionales (una venta de contado no los necesita).

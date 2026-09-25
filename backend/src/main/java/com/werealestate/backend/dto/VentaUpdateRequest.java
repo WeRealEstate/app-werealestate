@@ -12,7 +12,9 @@ import java.time.LocalDate;
  * Temporal: el botón que usa esto en el frontend se va a quitar más adelante. */
 public record VentaUpdateRequest(
         @NotBlank String cliente,
-        @NotBlank String asesor,
+        // Exactamente uno de los dos (ver VentaCreateRequest / VentaService.resolverAsesor).
+        Long usuarioAsesorId,
+        Long asesorExternoId,
         @NotBlank String formaPago,
         @NotNull LocalDate fechaVenta,
         @Positive BigDecimal mensualidad,

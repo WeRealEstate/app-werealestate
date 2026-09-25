@@ -2,18 +2,23 @@ package com.werealestate.backend.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * Registro de una venta cerrada. A propósito no referencia Lead ni Usuario (ver VentaService):
- * cliente y asesor son texto libre porque no todo comprador pasó por el CRM como lead, y no todo
- * asesor que vende tiene cuenta en el sistema (hay asesores externos).
+ * Registro de una venta cerrada. A propósito no referencia Lead (ver VentaService): cliente es
+ * texto libre porque no todo comprador pasó por el CRM como lead. El asesor sí es una relación
+ * real — a un Usuario interno o a un AsesorExterno registrado (gente que vende pero no tiene
+ * cuenta en el sistema) — exactamente uno de los dos, nunca los dos ni ninguno (ver
+ * VentaService.resolverAsesor y la migración V34).
  *
  * <p>No referencia Lote directo: una venta puede incluir varios lotes (cliente que compra más de
  * uno en la misma operación, con una sola mensualidad/plazo/saldo combinado — ver VentaLote y
@@ -30,8 +35,13 @@ public class Venta {
     @Column(nullable = false, length = 200)
     private String cliente;
 
-    @Column(nullable = false, length = 200)
-    private String asesor;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_asesor_id")
+    private Usuario usuarioAsesor;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "asesor_externo_id")
+    private AsesorExterno asesorExterno;
 
     @Column(name = "forma_pago", nullable = false, length = 50)
     private String formaPago;
@@ -66,7 +76,8 @@ public class Venta {
 
     public Venta(
             String cliente,
-            String asesor,
+            Usuario usuarioAsesor,
+            AsesorExterno asesorExterno,
             String formaPago,
             LocalDate fechaVenta,
             BigDecimal mensualidad,
@@ -75,7 +86,8 @@ public class Venta {
             BigDecimal enganche,
             String notas) {
         this.cliente = cliente;
-        this.asesor = asesor;
+        this.usuarioAsesor = usuarioAsesor;
+        this.asesorExterno = asesorExterno;
         this.formaPago = formaPago;
         this.fechaVenta = fechaVenta;
         this.mensualidad = mensualidad;
@@ -89,7 +101,8 @@ public class Venta {
      * aparte). Temporal: el botón que llama a esto en el frontend se va a quitar más adelante. */
     public void actualizar(
             String cliente,
-            String asesor,
+            Usuario usuarioAsesor,
+            AsesorExterno asesorExterno,
             String formaPago,
             LocalDate fechaVenta,
             BigDecimal mensualidad,
@@ -98,7 +111,8 @@ public class Venta {
             BigDecimal enganche,
             String notas) {
         this.cliente = cliente;
-        this.asesor = asesor;
+        this.usuarioAsesor = usuarioAsesor;
+        this.asesorExterno = asesorExterno;
         this.formaPago = formaPago;
         this.fechaVenta = fechaVenta;
         this.mensualidad = mensualidad;
@@ -116,8 +130,18 @@ public class Venta {
         return cliente;
     }
 
-    public String getAsesor() {
-        return asesor;
+    public Usuario getUsuarioAsesor() {
+        return usuarioAsesor;
+    }
+
+    public AsesorExterno getAsesorExterno() {
+        return asesorExterno;
+    }
+
+    /** Nombre a mostrar del asesor, sea interno o externo — para bitácoras/historiales de texto
+     * (ver LoteService.marcarVendido) que no necesitan distinguir cuál de los dos es. */
+    public String getAsesorNombre() {
+        return usuarioAsesor != null ? usuarioAsesor.getNombre() : asesorExterno.getNombre();
     }
 
     public String getFormaPago() {

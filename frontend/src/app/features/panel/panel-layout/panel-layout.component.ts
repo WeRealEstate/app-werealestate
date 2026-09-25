@@ -13,6 +13,8 @@ interface NavItem {
   icon: 'home' | 'leads' | 'usuarios' | 'calendario' | 'pipeline' | 'cotizador' | 'lotes' | 'plano' | 'ventas';
 }
 
+const ASESORES_EXTERNOS_NAV_ITEM: NavItem = { label: 'Asesores externos', route: '/panel/asesores-externos', icon: 'usuarios' };
+
 /** {@code label: null} agrupa items sin encabezado visible (Inicio, siempre arriba y suelto). */
 interface NavSection {
   label: string | null;
@@ -77,6 +79,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
       label: 'Administración',
       items: [
         { label: 'Usuarios', route: '/panel/usuarios', icon: 'usuarios' },
+        ASESORES_EXTERNOS_NAV_ITEM,
         { label: 'Calendario', route: '/panel/calendario', icon: 'calendario' },
       ],
     },

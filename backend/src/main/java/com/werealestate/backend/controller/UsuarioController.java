@@ -38,6 +38,11 @@ public class UsuarioController {
         return usuarioService.asignables();
     }
 
+    @GetMapping("/para-venta")
+    public List<UsuarioResumenDto> paraVenta() {
+        return usuarioService.paraVenta();
+    }
+
     @PostMapping
     public UsuarioDto crear(@Valid @RequestBody UsuarioCreateRequest request) {
         return usuarioService.crear(request);

@@ -5,4 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecificationExecutor<Venta> {
+
+    boolean existsByUsuarioAsesorId(Long usuarioId);
+
+    boolean existsByAsesorExternoId(Long asesorExternoId);
 }

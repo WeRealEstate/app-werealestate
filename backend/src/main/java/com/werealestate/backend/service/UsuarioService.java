@@ -18,6 +18,7 @@ import com.werealestate.backend.repository.LeadRepository;
 import com.werealestate.backend.repository.SeguimientoRepository;
 import com.werealestate.backend.repository.TareaRepository;
 import com.werealestate.backend.repository.UsuarioRepository;
+import com.werealestate.backend.repository.VentaRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
 import java.util.Comparator;
 import java.util.List;
@@ -37,6 +38,7 @@ public class UsuarioService {
     private final EventoCalendarioRepository eventoCalendarioRepository;
     private final SeguimientoRepository seguimientoRepository;
     private final EtiquetaRepository etiquetaRepository;
+    private final VentaRepository ventaRepository;
     private final CurrentUserProvider currentUserProvider;
     private final PasswordEncoder passwordEncoder;
 
@@ -49,6 +51,7 @@ public class UsuarioService {
             EventoCalendarioRepository eventoCalendarioRepository,
             SeguimientoRepository seguimientoRepository,
             EtiquetaRepository etiquetaRepository,
+            VentaRepository ventaRepository,
             CurrentUserProvider currentUserProvider,
             PasswordEncoder passwordEncoder) {
         this.usuarioRepository = usuarioRepository;
@@ -59,6 +62,7 @@ public class UsuarioService {
         this.eventoCalendarioRepository = eventoCalendarioRepository;
         this.seguimientoRepository = seguimientoRepository;
         this.etiquetaRepository = etiquetaRepository;
+        this.ventaRepository = ventaRepository;
         this.currentUserProvider = currentUserProvider;
         this.passwordEncoder = passwordEncoder;
     }
@@ -81,6 +85,25 @@ public class UsuarioService {
         Usuario actual = currentUserProvider.getUsuarioActual();
         return usuarioRepository.findAll().stream()
                 .filter(u -> u.isActivo() && !u.getId().equals(actual.getId()) && u.getRol().rango() <= actual.getRol().rango())
+                .sorted(Comparator.comparing(Usuario::getNombre))
+                .map(UsuarioResumenDto::from)
+                .toList();
+    }
+
+    /**
+     * Lista ligera (solo id/nombre) de usuarios activos que pueden ser el asesor interno de una
+     * venta: a diferencia de asignables(), no excluye a quien la pide ni filtra por jerarquía — el
+     * admin o líder de área que registra la venta puede acreditarse a sí mismo o a cualquier
+     * compañero, sin importar su rol. Exclusivo de quienes pueden registrar ventas (ver
+     * VentaService).
+     */
+    public List<UsuarioResumenDto> paraVenta() {
+        Usuario actual = currentUserProvider.getUsuarioActual();
+        if (actual.getRol() != Role.ADMIN && actual.getRol() != Role.LIDER_AREA) {
+            throw new ForbiddenOperationException("Solo un administrador o líder de área puede consultar esta lista");
+        }
+        return usuarioRepository.findAll().stream()
+                .filter(Usuario::isActivo)
                 .sorted(Comparator.comparing(Usuario::getNombre))
                 .map(UsuarioResumenDto::from)
                 .toList();
@@ -135,10 +158,11 @@ public class UsuarioService {
                 || tareaRepository.existsByCreadoPorId(id)
                 || comisionRepository.existsByAsesorId(id)
                 || cotizacionRepository.existsByAsesorId(id)
-                || seguimientoRepository.existsByAsesorId(id);
+                || seguimientoRepository.existsByAsesorId(id)
+                || ventaRepository.existsByUsuarioAsesorId(id);
         if (tieneActividad) {
             throw new ConflictException("No se puede eliminar a " + usuario.getNombre()
-                    + ": tiene actividad registrada (leads, tareas, comisiones, cotizaciones o seguimientos). "
+                    + ": tiene actividad registrada (leads, tareas, comisiones, cotizaciones, seguimientos o ventas). "
                     + "Desactívalo para quitarle el acceso sin perder ese historial.");
         }
 

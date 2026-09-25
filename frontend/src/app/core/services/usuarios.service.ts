@@ -19,6 +19,12 @@ export class UsuariosService {
     return firstValueFrom(this.http.get<UsuarioResumen[]>(`${this.baseUrl}/asignables`));
   }
 
+  /** Lista ligera (id/nombre) de usuarios activos que pueden ser el asesor interno de una venta:
+   * a diferencia de asignables(), no excluye a quien la pide ni filtra por jerarquía. */
+  paraVenta(): Promise<UsuarioResumen[]> {
+    return firstValueFrom(this.http.get<UsuarioResumen[]>(`${this.baseUrl}/para-venta`));
+  }
+
   crear(request: UsuarioCreateRequest): Promise<Usuario> {
     return firstValueFrom(this.http.post<Usuario>(this.baseUrl, request));
   }

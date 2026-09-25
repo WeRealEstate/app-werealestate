@@ -4,7 +4,12 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ToastService } from '../../../../core/services/toast.service';
 import { VentasService } from '../../../../core/services/ventas.service';
+import { UsuariosService } from '../../../../core/services/usuarios.service';
+import { AsesoresExternosService } from '../../../../core/services/asesores-externos.service';
 import { PagoVenta, Venta } from '../../../../core/models/venta.model';
+import { UsuarioResumen } from '../../../../core/models/lead.model';
+import { AsesorExterno } from '../../../../core/models/asesor-externo.model';
+import { asesorSeleccionDe, parseAsesorSeleccion } from '../venta-form/venta-form.component';
 
 @Component({
   selector: 'app-venta-detalle',
@@ -15,10 +20,14 @@ import { PagoVenta, Venta } from '../../../../core/models/venta.model';
 export class VentaDetalleComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly ventasService = inject(VentasService);
+  private readonly usuariosService = inject(UsuariosService);
+  private readonly asesoresExternosService = inject(AsesoresExternosService);
   private readonly toast = inject(ToastService);
   private readonly fb = inject(FormBuilder);
 
   readonly venta = signal<Venta | null>(null);
+  readonly asesoresInternos = signal<UsuarioResumen[]>([]);
+  readonly asesoresExternos = signal<AsesorExterno[]>([]);
   readonly pagos = signal<PagoVenta[]>([]);
   readonly isLoading = signal(true);
   readonly isSavingPago = signal(false);
@@ -53,6 +62,8 @@ export class VentaDetalleComponent implements OnInit {
   ngOnInit(): void {
     this.ventaId = Number(this.route.snapshot.paramMap.get('id'));
     this.cargar();
+    this.usuariosService.paraVenta().then((u) => this.asesoresInternos.set(u));
+    this.asesoresExternosService.listarActivos().then((a) => this.asesoresExternos.set(a));
   }
 
   async cargar(): Promise<void> {
@@ -116,7 +127,7 @@ export class VentaDetalleComponent implements OnInit {
     if (!v) return;
     this.edicionForm.reset({
       cliente: v.cliente,
-      asesor: v.asesor,
+      asesor: asesorSeleccionDe(v.asesor),
       fechaVenta: v.fechaVenta,
       formaPago: v.formaPago,
       mensualidad: v.mensualidad,
@@ -146,7 +157,7 @@ export class VentaDetalleComponent implements OnInit {
     try {
       const actualizada = await this.ventasService.actualizar(this.ventaId, {
         cliente: v.cliente,
-        asesor: v.asesor,
+        ...parseAsesorSeleccion(v.asesor),
         fechaVenta: v.fechaVenta,
         formaPago: v.formaPago,
         mensualidad: v.mensualidad,
