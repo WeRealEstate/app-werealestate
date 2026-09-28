@@ -38,6 +38,21 @@ export class TeamsComponent {
    * mueve más allá de su umbral, un clic simple sigue disparando (click) normal. */
   readonly detalleAbierto = signal<AsesorExterno | null>(null);
 
+  /** Qué zona de destino tiene el cursor encima ahora mismo mientras se arrastra algo ("L-{id}" =
+   * línea 1 de ese líder, "2-{id}" = línea 2 de ese asesor, "IND" = independientes) — para
+   * resaltarla de forma inequívoca (ver onHoverEntered/Exited). La clase que CDK aplica sola
+   * (cdk-drop-list-receiving) se enciende por igual en TODAS las zonas conectadas mientras dura
+   * cualquier arrastre, no solo en la que está debajo del cursor. */
+  readonly dropZoneHover = signal<string | null>(null);
+
+  onHoverEntered(zona: string): void {
+    this.dropZoneHover.set(zona);
+  }
+
+  onHoverExited(zona: string): void {
+    if (this.dropZoneHover() === zona) this.dropZoneHover.set(null);
+  }
+
   constructor() {
     this.cargar();
   }
@@ -104,6 +119,9 @@ export class TeamsComponent {
   }
 
   private moverA(event: CdkDragDrop<AsesorExterno[]>, tipo: TipoAsesorExterno, liderDirectoId: number | null): void {
+    // No depender solo de (cdkDropListExited) para apagar el resaltado de "aquí cae": al soltar,
+    // ya no aplica sin importar si ese evento llegó a dispararse.
+    this.dropZoneHover.set(null);
     if (event.previousContainer === event.container) return;
     const asesor = event.item.data as AsesorExterno;
     void this.guardarTipo(asesor, tipo, liderDirectoId);

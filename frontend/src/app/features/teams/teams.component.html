@@ -37,86 +37,113 @@
 
         <div class="flex min-w-max items-start gap-10 px-1">
           @for (lider of lideres(); track lider.id) {
-            <div class="flex flex-col items-center">
-              <!-- NODO LÍDER (raíz del equipo, no se arrastra) -->
-              <button
-                type="button"
-                (click)="abrirDetalle(lider)"
-                class="flex min-w-[150px] flex-col items-center gap-0.5 rounded-2xl border-2 border-we-primary bg-we-primary/10 px-4 py-3
-                       text-center shadow-sm transition-transform duration-150 hover:-translate-y-0.5 active:scale-[0.97]"
-              >
-                <span class="text-[10px] font-bold uppercase tracking-wide text-we-primary dark:text-we-blue-light">Líder</span>
-                <span class="text-sm font-semibold text-ink">{{ lider.nombre }}</span>
-              </button>
-
-              <!-- LÍNEA 1: drop zone del líder -->
+            <div class="flex flex-col items-center gap-1.5">
+              <!-- El líder no se arrastra, así que es seguro que su propia tarjeta viva DENTRO de
+                   la zona de destino de línea 1: así soltar justo encima del líder también cuenta,
+                   no solo en el huequito de abajo. -->
               <div
                 cdkDropList
+                cdkDropListSortingDisabled
                 [cdkDropListData]="linea1De(lider.id)"
                 (cdkDropListDropped)="onDropEnLider($event, lider.id)"
-                class="flex min-h-[28px] items-start gap-6 rounded-xl p-2 transition-colors duration-150"
+                (cdkDropListEntered)="onHoverEntered('L-' + lider.id)"
+                (cdkDropListExited)="onHoverExited('L-' + lider.id)"
+                [class.bg-we-primary/5]="dropZoneHover() === 'L-' + lider.id"
+                [class.ring-2]="dropZoneHover() === 'L-' + lider.id"
+                [class.ring-we-primary/40]="dropZoneHover() === 'L-' + lider.id"
+                class="flex flex-col items-center gap-1 rounded-2xl p-3 transition-colors duration-150"
               >
-                @for (l1 of linea1De(lider.id); track l1.id; let first = $first; let last = $last; let count = $count) {
-                  <div class="relative flex flex-col items-center pt-6">
-                    <!-- conectores hacia el líder -->
-                    <div class="pointer-events-none absolute left-1/2 top-0 h-6 w-0.5 -translate-x-1/2 bg-border" aria-hidden="true"></div>
-                    @if (count > 1) {
+                <!-- NODO LÍDER -->
+                <button
+                  type="button"
+                  (click)="abrirDetalle(lider)"
+                  class="flex min-w-[150px] flex-col items-center gap-0.5 rounded-2xl border-2 border-we-primary bg-we-primary/10 px-4 py-3
+                         text-center shadow-sm transition-transform duration-150 hover:-translate-y-0.5 active:scale-[0.97]"
+                >
+                  <span class="text-[10px] font-bold uppercase tracking-wide text-we-primary dark:text-we-blue-light">Líder</span>
+                  <span class="text-sm font-semibold text-ink">{{ lider.nombre }}</span>
+                </button>
+
+                <!-- LÍNEA 1: columnas de ancho fijo (no por contenido) para que la fila de línea 2
+                     de abajo, en su propia rejilla aparte, alinee exacto por columna con esta. -->
+                <div
+                  class="grid gap-6 pt-1"
+                  [style.grid-template-columns]="'repeat(' + linea1De(lider.id).length + ', 140px)'"
+                >
+                  @for (l1 of linea1De(lider.id); track l1.id; let first = $first; let last = $last; let count = $count) {
+                    <div class="relative flex flex-col items-center pt-6">
+                      <!-- conectores hacia el líder -->
+                      <div class="pointer-events-none absolute left-1/2 top-0 h-6 w-0.5 -translate-x-1/2 bg-border" aria-hidden="true"></div>
+                      @if (count > 1) {
+                        <div
+                          class="pointer-events-none absolute top-0 h-0.5 bg-border"
+                          [style.left]="first ? '50%' : '0'"
+                          [style.right]="last ? '50%' : '0'"
+                          aria-hidden="true"
+                        ></div>
+                      }
+
                       <div
-                        class="pointer-events-none absolute top-0 h-0.5 bg-border"
-                        [style.left]="first ? '50%' : '0'"
-                        [style.right]="last ? '50%' : '0'"
-                        aria-hidden="true"
-                      ></div>
-                    }
-
-                    <div
-                      cdkDrag
-                      [cdkDragData]="l1"
-                      [class.opacity-50]="savingId() === l1.id"
-                      (click)="abrirDetalle(l1)"
-                      class="flex min-w-[130px] cursor-grab flex-col items-center gap-0.5 rounded-xl border border-border bg-surface px-3.5 py-2.5
-                             text-center shadow-sm transition-transform duration-150 hover:-translate-y-0.5 active:cursor-grabbing"
-                    >
-                      <span class="text-[10px] font-bold uppercase tracking-wide text-ink-muted">Línea 1</span>
-                      <span class="text-sm font-medium text-ink">{{ l1.nombre }}</span>
+                        cdkDrag
+                        [cdkDragData]="l1"
+                        [class.opacity-50]="savingId() === l1.id"
+                        (click)="abrirDetalle(l1)"
+                        class="flex w-full cursor-grab flex-col items-center gap-0.5 rounded-xl border border-border bg-surface px-3 py-2.5
+                               text-center shadow-sm transition-transform duration-150 hover:-translate-y-0.5 active:cursor-grabbing"
+                      >
+                        <span class="text-[10px] font-bold uppercase tracking-wide text-ink-muted">Línea 1</span>
+                        <span class="text-sm font-medium text-ink">{{ l1.nombre }}</span>
+                      </div>
                     </div>
+                  }
+                </div>
+              </div>
 
-                    <!-- LÍNEA 2: drop zone de este asesor de línea 1 -->
+              <!-- LÍNEA 2: una zona de destino por cada asesor de línea 1, en su PROPIA rejilla —
+                   a propósito NO anidada dentro del cdkDropList de línea 1 de arriba. Angular CDK,
+                   entre zonas de destino conectadas que se contienen geométricamente, siempre
+                   prioriza a la exterior sobre la anidada — con esta reestructura ninguna zona
+                   contiene a otra, cada una es su propio blanco exclusivo. La rejilla usa las
+                   mismas columnas de ancho fijo que la de línea 1 para alinear cada zona justo
+                   debajo de su asesor de línea 1. -->
+              @if (linea1De(lider.id).length > 0) {
+                <div
+                  class="grid gap-6"
+                  [style.grid-template-columns]="'repeat(' + linea1De(lider.id).length + ', 140px)'"
+                >
+                  @for (l1 of linea1De(lider.id); track l1.id) {
                     <div
                       cdkDropList
+                      cdkDropListSortingDisabled
                       [cdkDropListData]="linea2De(l1.id)"
                       (cdkDropListDropped)="onDropEnLinea1($event, l1.id)"
-                      class="flex min-h-[20px] items-start gap-4 rounded-xl p-1.5 transition-colors duration-150"
+                      (cdkDropListEntered)="onHoverEntered('2-' + l1.id)"
+                      (cdkDropListExited)="onHoverExited('2-' + l1.id)"
+                      [class.bg-we-primary/10]="dropZoneHover() === '2-' + l1.id"
+                      [class.border-we-primary]="dropZoneHover() === '2-' + l1.id"
+                      class="relative flex min-h-[52px] flex-col items-center gap-1.5 rounded-xl border border-dashed border-border/70 px-2 py-2.5 transition-colors duration-150"
                     >
-                      @for (l2 of linea2De(l1.id); track l2.id; let first2 = $first; let last2 = $last; let count2 = $count) {
-                        <div class="relative flex flex-col items-center pt-5">
-                          <div class="pointer-events-none absolute left-1/2 top-0 h-5 w-0.5 -translate-x-1/2 bg-border" aria-hidden="true"></div>
-                          @if (count2 > 1) {
-                            <div
-                              class="pointer-events-none absolute top-0 h-0.5 bg-border"
-                              [style.left]="first2 ? '50%' : '0'"
-                              [style.right]="last2 ? '50%' : '0'"
-                              aria-hidden="true"
-                            ></div>
-                          }
-
-                          <div
-                            cdkDrag
-                            [cdkDragData]="l2"
-                            [class.opacity-50]="savingId() === l2.id"
-                            (click)="abrirDetalle(l2)"
-                            class="flex min-w-[110px] cursor-grab flex-col items-center gap-0.5 rounded-lg border border-border bg-surface-2/60 px-3 py-2
-                                   text-center shadow-sm transition-transform duration-150 hover:-translate-y-0.5 active:cursor-grabbing"
-                          >
-                            <span class="text-[9px] font-bold uppercase tracking-wide text-ink-muted">Línea 2</span>
-                            <span class="text-xs font-medium text-ink">{{ l2.nombre }}</span>
-                          </div>
+                      <div class="pointer-events-none absolute left-1/2 -top-1.5 h-1.5 w-0.5 -translate-x-1/2 bg-border" aria-hidden="true"></div>
+                      @for (l2 of linea2De(l1.id); track l2.id) {
+                        <div
+                          cdkDrag
+                          [cdkDragData]="l2"
+                          [class.opacity-50]="savingId() === l2.id"
+                          (click)="abrirDetalle(l2)"
+                          class="flex w-full cursor-grab flex-col items-center gap-0.5 rounded-lg border border-border bg-surface-2/60 px-2.5 py-2
+                                 text-center shadow-sm transition-transform duration-150 hover:-translate-y-0.5 active:cursor-grabbing"
+                        >
+                          <span class="text-[9px] font-bold uppercase tracking-wide text-ink-muted">Línea 2</span>
+                          <span class="text-xs font-medium text-ink">{{ l2.nombre }}</span>
                         </div>
                       }
+                      @if (linea2De(l1.id).length === 0) {
+                        <p class="text-center text-[9px] leading-tight text-ink-muted">Suelta aquí<br />para línea 2</p>
+                      }
                     </div>
-                  </div>
-                }
-              </div>
+                  }
+                </div>
+              }
             </div>
           }
         </div>
@@ -129,8 +156,14 @@
 
         <div
           cdkDropList
+          cdkDropListSortingDisabled
           [cdkDropListData]="independientes()"
           (cdkDropListDropped)="onDropEnIndependientes($event)"
+          (cdkDropListEntered)="onHoverEntered('IND')"
+          (cdkDropListExited)="onHoverExited('IND')"
+          [class.bg-we-primary/5]="dropZoneHover() === 'IND'"
+          [class.ring-2]="dropZoneHover() === 'IND'"
+          [class.ring-we-primary/40]="dropZoneHover() === 'IND'"
           class="mt-4 flex min-h-[64px] flex-wrap items-center gap-2.5 rounded-xl border border-dashed border-border p-4 transition-colors duration-150"
         >
           @for (a of independientes(); track a.id) {
