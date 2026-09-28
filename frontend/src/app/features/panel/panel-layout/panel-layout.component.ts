@@ -14,6 +14,7 @@ interface NavItem {
 }
 
 const ASESORES_EXTERNOS_NAV_ITEM: NavItem = { label: 'Asesores externos', route: '/panel/asesores-externos', icon: 'usuarios' };
+const TEAMS_NAV_ITEM: NavItem = { label: 'Teams', route: '/panel/teams', icon: 'usuarios' };
 
 /** {@code label: null} agrupa items sin encabezado visible (Inicio, siempre arriba y suelto). */
 interface NavSection {
@@ -80,6 +81,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
       items: [
         { label: 'Usuarios', route: '/panel/usuarios', icon: 'usuarios' },
         ASESORES_EXTERNOS_NAV_ITEM,
+        TEAMS_NAV_ITEM,
         { label: 'Calendario', route: '/panel/calendario', icon: 'calendario' },
       ],
     },

@@ -192,6 +192,11 @@ export const routes: Routes = [
             (m) => m.AsesoresExternosListComponent,
           ),
       },
+      {
+        path: 'teams',
+        canActivate: [roleGuard(['ADMIN'])],
+        loadComponent: () => import('./features/teams/teams.component').then((m) => m.TeamsComponent),
+      },
     ],
   },
   { path: '**', redirectTo: 'login' },

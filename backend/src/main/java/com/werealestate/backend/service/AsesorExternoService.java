@@ -6,8 +6,10 @@ import com.werealestate.backend.dto.AsesorExternoUpdateRequest;
 import com.werealestate.backend.exception.ConflictException;
 import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
+import com.werealestate.backend.exception.ValidationException;
 import com.werealestate.backend.model.AsesorExterno;
 import com.werealestate.backend.model.Role;
+import com.werealestate.backend.model.TipoAsesorExterno;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.repository.AsesorExternoRepository;
 import com.werealestate.backend.repository.VentaRepository;
@@ -64,11 +66,13 @@ public class AsesorExternoService {
         asesor.setCelular(request.celular() == null || request.celular().isBlank() ? null : request.celular().trim());
         asesor.setCorreo(request.correo() == null || request.correo().isBlank() ? null : request.correo().trim());
         asesor.setActivo(request.activo());
+        aplicarJerarquia(asesor, request.tipo(), request.liderDirectoId());
         return AsesorExternoDto.from(asesorExternoRepository.save(asesor));
     }
 
     /** Se rechaza si ya se le acreditó alguna venta, para no dejar ventas con una referencia
-     * colgando: en ese caso hay que desactivarlo en vez de eliminarlo (igual que un Usuario). */
+     * colgando: en ese caso hay que desactivarlo en vez de eliminarlo (igual que un Usuario).
+     * También se rechaza si tiene gente reportándole en Teams (ver aplicarJerarquia). */
     public void eliminar(Long id) {
         exigirAdmin();
         AsesorExterno asesor = asesorExternoRepository.findById(id)
@@ -79,8 +83,68 @@ public class AsesorExternoService {
                     "No se puede eliminar a " + asesor.getNombre()
                             + ": tiene ventas registradas. Desactívalo para quitarlo de la lista sin perder ese historial.");
         }
+        if (asesorExternoRepository.existsByLiderDirectoId(id)) {
+            throw new ConflictException(
+                    "No se puede eliminar a " + asesor.getNombre()
+                            + ": tiene gente reportándole en Teams. Reasígnalos o quítalos del equipo primero.");
+        }
 
         asesorExternoRepository.delete(asesor);
+    }
+
+    /**
+     * Aplica el tipo (INDEPENDIENTE/LIDER/LINEA) y, si es LINEA, a quién reporta — validando en el
+     * servidor las reglas de Teams, no solo confiando en lo que mande el frontend:
+     * <ul>
+     *   <li>INDEPENDIENTE/LIDER nunca reportan a nadie.
+     *   <li>LINEA siempre reporta a alguien: a un LIDER (queda en línea 1) o a un LINEA que ya esté
+     *       en línea 1 (queda en línea 2) — nunca a otro LINEA de línea 2, ahí se corta el árbol.
+     *   <li>Si el tipo cambia y ya tiene gente reportándole, se rechaza: hay que reasignar o quitar
+     *       a esa gente del equipo antes de poder cambiarlo (evita dejar el árbol roto).
+     * </ul>
+     * nivelLinea nunca viene del request: siempre se calcula aquí a partir de liderDirecto.
+     */
+    private void aplicarJerarquia(AsesorExterno asesor, TipoAsesorExterno tipo, Long liderDirectoId) {
+        boolean tieneDependientes =
+                asesor.getId() != null && asesorExternoRepository.existsByLiderDirectoId(asesor.getId());
+        if (tieneDependientes && tipo != asesor.getTipo()) {
+            throw new ConflictException(
+                    "No se puede cambiar el tipo de " + asesor.getNombre()
+                            + ": tiene gente reportándole en Teams. Reasígnalos o quítalos del equipo primero.");
+        }
+
+        if (tipo != TipoAsesorExterno.LINEA) {
+            if (liderDirectoId != null) {
+                throw new ValidationException(tipo + " no puede reportar a nadie");
+            }
+            asesor.setTipo(tipo);
+            asesor.setLiderDirecto(null);
+            asesor.setNivelLinea(null);
+            return;
+        }
+
+        if (liderDirectoId == null) {
+            throw new ValidationException("Selecciona a quién reporta este asesor de línea");
+        }
+        if (liderDirectoId.equals(asesor.getId())) {
+            throw new ValidationException("Un asesor no puede reportarse a sí mismo");
+        }
+        AsesorExterno liderDirecto = asesorExternoRepository.findById(liderDirectoId)
+                .orElseThrow(() -> new ResourceNotFoundException("El líder directo no existe"));
+
+        int nivel;
+        if (liderDirecto.getTipo() == TipoAsesorExterno.LIDER) {
+            nivel = 1;
+        } else if (liderDirecto.getTipo() == TipoAsesorExterno.LINEA && liderDirecto.getNivelLinea() == 1) {
+            nivel = 2;
+        } else {
+            throw new ValidationException(
+                    "Solo se puede reportar a un líder (línea 1) o a alguien ya en línea 1 (línea 2) — no hay línea 3");
+        }
+
+        asesor.setTipo(TipoAsesorExterno.LINEA);
+        asesor.setLiderDirecto(liderDirecto);
+        asesor.setNivelLinea(nivel);
     }
 
     private Usuario exigirAdmin() {

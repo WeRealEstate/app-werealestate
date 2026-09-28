@@ -1,15 +1,16 @@
 import { Component, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../core/services/toast.service';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { AsesoresExternosService } from '../../../core/services/asesores-externos.service';
-import { AsesorExterno } from '../../../core/models/asesor-externo.model';
+import { AsesorExterno, AsesorExternoUpdateRequest } from '../../../core/models/asesor-externo.model';
 
 @Component({
   selector: 'app-asesores-externos-list',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   templateUrl: './asesores-externos-list.component.html',
 })
 export class AsesoresExternosListComponent {
@@ -97,6 +98,8 @@ export class AsesoresExternosListComponent {
       celular: asesor.celular,
       correo: asesor.correo,
       activo: !asesor.activo,
+      tipo: asesor.tipo,
+      liderDirectoId: asesor.liderDirectoId,
     });
   }
 
@@ -119,14 +122,13 @@ export class AsesoresExternosListComponent {
       celular: this.celularEnEdicion().trim() || null,
       correo: this.correoEnEdicion().trim() || null,
       activo: asesor.activo,
+      tipo: asesor.tipo,
+      liderDirectoId: asesor.liderDirectoId,
     });
     this.editandoId.set(null);
   }
 
-  private async guardar(
-    asesor: AsesorExterno,
-    cambios: { nombre: string; celular: string | null; correo: string | null; activo: boolean },
-  ): Promise<void> {
+  private async guardar(asesor: AsesorExterno, cambios: AsesorExternoUpdateRequest): Promise<void> {
     this.savingId.set(asesor.id);
     try {
       const actualizado = await this.asesoresExternosService.actualizar(asesor.id, cambios);
@@ -136,6 +138,14 @@ export class AsesoresExternosListComponent {
     } finally {
       this.savingId.set(null);
     }
+  }
+
+  /** Solo informativo (la jerarquía se maneja en /panel/teams): para que se entienda de un vistazo
+   * por qué un asesor no se deja eliminar o cambiar de tipo (ver AsesorExternoService.eliminar). */
+  equipoLabel(asesor: AsesorExterno): string {
+    if (asesor.tipo === 'LIDER') return 'Líder';
+    if (asesor.tipo === 'LINEA') return `Línea ${asesor.nivelLinea} · ${asesor.liderDirectoNombre}`;
+    return '—';
   }
 
   async eliminar(asesor: AsesorExterno): Promise<void> {

@@ -6,15 +6,25 @@
         Gente que vende pero no tiene cuenta en el sistema — se pueden elegir al registrar una venta, igual que un asesor interno.
       </p>
     </div>
-    <button
-      type="button"
-      (click)="abrirModalCrear()"
-      class="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
-             hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
-             focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
-    >
-      + Agregar asesor externo
-    </button>
+    <div class="flex shrink-0 items-center gap-2.5">
+      <a
+        routerLink="/panel/teams"
+        class="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink
+               hover:border-we-primary active:scale-[0.97] transition-transform duration-150
+               focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
+      >
+        Ver Teams
+      </a>
+      <button
+        type="button"
+        (click)="abrirModalCrear()"
+        class="inline-flex items-center justify-center gap-2 rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
+               hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
+               focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
+      >
+        + Agregar asesor externo
+      </button>
+    </div>
   </div>
 
   @if (errorMessage()) {
@@ -37,6 +47,7 @@
             <th class="px-4 py-3">Nombre</th>
             <th class="px-4 py-3">Celular</th>
             <th class="px-4 py-3">Correo</th>
+            <th class="px-4 py-3">Equipo</th>
             <th class="px-4 py-3">Estado</th>
             <th class="px-4 py-3"></th>
           </tr>
@@ -78,6 +89,7 @@
                            focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
                   />
                 </td>
+                <td class="px-4 py-3 text-ink-muted">{{ equipoLabel(a) }}</td>
                 <td class="px-4 py-3 text-ink-muted">{{ a.activo ? 'Activo' : 'Inactivo' }}</td>
                 <td class="px-4 py-3 text-right">
                   <div class="flex items-center justify-end gap-2">
@@ -100,6 +112,7 @@
                 <td class="px-4 py-3 font-medium text-ink">{{ a.nombre }}</td>
                 <td class="px-4 py-3 text-ink-muted">{{ a.celular || '—' }}</td>
                 <td class="px-4 py-3 text-ink-muted">{{ a.correo || '—' }}</td>
+                <td class="px-4 py-3 text-ink-muted">{{ equipoLabel(a) }}</td>
                 <td class="px-4 py-3">
                   <button
                     type="button"

@@ -2,9 +2,14 @@ package com.werealestate.backend.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 
@@ -34,6 +39,23 @@ public class AsesorExterno {
 
     @Column(nullable = false)
     private boolean activo = true;
+
+    // Teams: INDEPENDIENTE (default, trabaja solo) / LIDER (encabeza un equipo) / LINEA (reporta a
+    // liderDirecto). Ver TipoAsesorExterno y AsesorExternoService.resolverJerarquia.
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private TipoAsesorExterno tipo = TipoAsesorExterno.INDEPENDIENTE;
+
+    /** Solo se llena cuando tipo = LINEA: el LIDER (línea 1) o LINEA de línea 1 (línea 2) al que
+     * reporta. Null en INDEPENDIENTE/LIDER. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "lider_directo_id")
+    private AsesorExterno liderDirecto;
+
+    /** Solo se llena cuando tipo = LINEA: 1 si liderDirecto es un LIDER, 2 si liderDirecto es un
+     * LINEA de línea 1 — nunca hay línea 3 (ver AsesorExternoService.resolverJerarquia). */
+    @Column(name = "nivel_linea")
+    private Integer nivelLinea;
 
     @Column(name = "fecha_creacion", nullable = false)
     private LocalDateTime fechaCreacion = LocalDateTime.now();
@@ -82,6 +104,30 @@ public class AsesorExterno {
 
     public void setActivo(boolean activo) {
         this.activo = activo;
+    }
+
+    public TipoAsesorExterno getTipo() {
+        return tipo;
+    }
+
+    public void setTipo(TipoAsesorExterno tipo) {
+        this.tipo = tipo;
+    }
+
+    public AsesorExterno getLiderDirecto() {
+        return liderDirecto;
+    }
+
+    public void setLiderDirecto(AsesorExterno liderDirecto) {
+        this.liderDirecto = liderDirecto;
+    }
+
+    public Integer getNivelLinea() {
+        return nivelLinea;
+    }
+
+    public void setNivelLinea(Integer nivelLinea) {
+        this.nivelLinea = nivelLinea;
     }
 
     public LocalDateTime getFechaCreacion() {
