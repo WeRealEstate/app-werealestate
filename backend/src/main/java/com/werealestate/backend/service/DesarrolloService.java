@@ -18,6 +18,7 @@ import java.nio.file.Path;
 import javax.imageio.ImageIO;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,14 @@ public class DesarrolloService {
      * haciendo zoom en el canvas interactivo — más alto que la resolución típica de un plano
      * exportado apurado como JPG/PNG, que es la causa real del pixeleo. */
     private static final float DPI_RASTERIZADO_PDF = 900f;
+
+    /** Tope de píxeles totales del raster de salida: a 900 DPI, una hoja tamaño carta ya da ~76
+     * millones de píxeles; un plano en una hoja más grande (formato arquitectónico, p. ej. A1/A0)
+     * sin este tope podría pedir un BufferedImage de varios GB y tardar minutos o agotar la memoria
+     * del backend a mitad de la subida. Si se excede, se baja el DPI efectivo (conservando la
+     * proporción) para quedar dentro del tope — un plano tamaño carta o tabloide sigue rasterizando
+     * a los 900 DPI completos. */
+    private static final double MAX_PIXELES_RASTERIZADO = 150_000_000d;
 
     private final DesarrolloRepository desarrolloRepository;
     private final CurrentUserProvider currentUserProvider;
@@ -108,7 +117,7 @@ public class DesarrolloService {
                 throw new ValidationException("El PDF del plano no tiene páginas");
             }
             PDFRenderer renderer = new PDFRenderer(documento);
-            BufferedImage imagen = renderer.renderImageWithDPI(0, DPI_RASTERIZADO_PDF);
+            BufferedImage imagen = renderer.renderImageWithDPI(0, dpiSeguroPara(documento.getPage(0).getMediaBox()));
 
             ByteArrayOutputStream salida = new ByteArrayOutputStream();
             ImageIO.write(imagen, "png", salida);
@@ -116,6 +125,19 @@ public class DesarrolloService {
         } catch (IOException e) {
             throw new ValidationException("No se pudo leer el PDF del plano");
         }
+    }
+
+    /** DPI_RASTERIZADO_PDF si el tamaño de página del PDF (en puntos, 72 por pulgada) cabe dentro
+     * de MAX_PIXELES_RASTERIZADO a ese DPI; si no, el DPI más alto que sí quepa, conservando la
+     * proporción de la hoja. */
+    private static float dpiSeguroPara(PDRectangle pagina) {
+        double anchoPulgadas = pagina.getWidth() / 72d;
+        double altoPulgadas = pagina.getHeight() / 72d;
+        double pixelesAlDpiPedido = (anchoPulgadas * DPI_RASTERIZADO_PDF) * (altoPulgadas * DPI_RASTERIZADO_PDF);
+        if (pixelesAlDpiPedido <= MAX_PIXELES_RASTERIZADO) {
+            return DPI_RASTERIZADO_PDF;
+        }
+        return (float) (DPI_RASTERIZADO_PDF * Math.sqrt(MAX_PIXELES_RASTERIZADO / pixelesAlDpiPedido));
     }
 
     /** null si no reconoce ninguna de las tres firmas de archivo (magic bytes) que aceptamos. */
