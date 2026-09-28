@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { LucideArchive, LucideEye } from '@lucide/angular';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
@@ -36,7 +37,7 @@ const DEBOUNCE_BUSQUEDA_MS = 350;
 @Component({
   selector: 'app-leads-list',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, LucideArchive, LucideEye],
   templateUrl: './leads-list.component.html',
 })
 export class LeadsListComponent {

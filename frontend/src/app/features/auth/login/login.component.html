@@ -36,10 +36,7 @@
             [attr.aria-invalid]="email.invalid && email.touched"
             aria-describedby="email-error"
           />
-          <svg class="absolute inset-y-0 right-4 my-auto h-4 w-4 text-white/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Z" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="m22 6-10 7L2 6" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+          <svg lucideMail class="absolute inset-y-0 right-4 my-auto h-4 w-4 text-white/60" aria-hidden="true"></svg>
         </div>
         @if (email.invalid && email.touched) {
           <p id="email-error" class="mt-1.5 ml-2 text-xs text-red-200" role="alert">
@@ -77,15 +74,9 @@
             [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
           >
             @if (showPassword()) {
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a20.6 20.6 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a20.6 20.6 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M1 1l22 22" stroke-linecap="round"/>
-              </svg>
+              <svg lucideEyeOff [size]="17" aria-hidden="true"></svg>
             } @else {
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" stroke-linecap="round" stroke-linejoin="round"/>
-                <circle cx="12" cy="12" r="3"/>
-              </svg>
+              <svg lucideEye [size]="17" aria-hidden="true"></svg>
             }
           </button>
         </div>
@@ -114,10 +105,7 @@
         style="background: linear-gradient(90deg, #243fb8, #81b3f0);"
       >
         @if (isLoading()) {
-          <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-          </svg>
+          <svg lucideLoaderCircle [size]="16" class="animate-spin" aria-hidden="true"></svg>
           Iniciando sesión…
         } @else {
           Iniciar sesión

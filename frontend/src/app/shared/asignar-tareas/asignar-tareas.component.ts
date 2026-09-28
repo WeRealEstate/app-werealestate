@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { LucideCheck } from '@lucide/angular';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { AuthService } from '../../core/services/auth.service';
@@ -18,7 +19,7 @@ import { UsuarioResumen } from '../../core/models/lead.model';
 @Component({
   selector: 'app-asignar-tareas',
   standalone: true,
-  imports: [ReactiveFormsModule, DatePipe],
+  imports: [ReactiveFormsModule, DatePipe, LucideCheck],
   templateUrl: './asignar-tareas.component.html',
 })
 export class AsignarTareasComponent {

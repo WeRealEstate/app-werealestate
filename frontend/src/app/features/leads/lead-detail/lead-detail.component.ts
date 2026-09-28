@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { LucideArchive, LucideCheck, LucidePencil, LucideTrash2 } from '@lucide/angular';
 import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
 import { EtiquetasService } from '../../../core/services/etiquetas.service';
@@ -43,7 +44,7 @@ const ROLES_ASIGNABLES = new Set(['ASESOR', 'LIDER_AREA', 'ADMIN']);
 @Component({
   selector: 'app-lead-detail',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, DatePipe, DecimalPipe],
+  imports: [ReactiveFormsModule, RouterLink, DatePipe, DecimalPipe, LucidePencil, LucideArchive, LucideTrash2, LucideCheck],
   templateUrl: './lead-detail.component.html',
 })
 export class LeadDetailComponent implements OnInit {

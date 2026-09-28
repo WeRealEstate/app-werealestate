@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
+import { LucideX } from '@lucide/angular';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Desarrollo, UsuarioResumen } from '../../../../core/models/lead.model';
@@ -66,7 +67,7 @@ const ENGANCHE_LABEL_POR_TIPO: Record<TipoPago, string | null> = {
 @Component({
   selector: 'app-venta-form',
   standalone: true,
-  imports: [ReactiveFormsModule, FormsModule, RouterLink],
+  imports: [ReactiveFormsModule, FormsModule, RouterLink, LucideX],
   templateUrl: './venta-form.component.html',
 })
 export class VentaFormComponent {

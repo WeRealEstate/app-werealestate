@@ -1,5 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
+import { LucideEye } from '@lucide/angular';
 import { inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { VentasService } from '../../../../core/services/ventas.service';
@@ -14,7 +15,7 @@ const DEBOUNCE_BUSQUEDA_MS = 350;
 @Component({
   selector: 'app-ventas-list',
   standalone: true,
-  imports: [DatePipe, RouterLink],
+  imports: [DatePipe, RouterLink, LucideEye],
   templateUrl: './ventas-list.component.html',
 })
 export class VentasListComponent {

@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { LucideChevronLeft, LucideChevronRight, LucidePencil, LucideTrash2 } from '@lucide/angular';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { EventosCalendarioService } from '../../../core/services/eventos-calendario.service';
@@ -61,7 +62,7 @@ function parseIsoDateOnly(value: string): Date {
 @Component({
   selector: 'app-calendario',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, LucideChevronLeft, LucideChevronRight, LucidePencil, LucideTrash2],
   templateUrl: './calendario.component.html',
 })
 export class CalendarioComponent {

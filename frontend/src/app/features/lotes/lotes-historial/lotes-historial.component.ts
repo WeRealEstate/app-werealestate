@@ -1,5 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
+import { LucideEye, LucideTrash2 } from '@lucide/angular';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { ConfirmService } from '../../../core/services/confirm.service';
@@ -16,7 +17,7 @@ const TAMANO_PAGINA = 20;
 @Component({
   selector: 'app-lotes-historial',
   standalone: true,
-  imports: [RouterLink, DatePipe],
+  imports: [RouterLink, DatePipe, LucideEye, LucideTrash2],
   templateUrl: './lotes-historial.component.html',
 })
 export class LotesHistorialComponent {

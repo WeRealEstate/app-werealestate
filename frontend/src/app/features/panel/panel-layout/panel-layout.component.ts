@@ -1,5 +1,17 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import {
+  LucideCalendar,
+  LucideChartLine,
+  LucideHouse,
+  LucideKanban,
+  LucideLandPlot,
+  LucideMap,
+  LucideMenu,
+  LucideReceipt,
+  LucideUser,
+  LucideUsers,
+} from '@lucide/angular';
 import { AuthService } from '../../../core/services/auth.service';
 import { ROLE_LABELS, Role } from '../../../core/models/user.model';
 import { NotificationBellComponent } from '../../../shared/notification-bell/notification-bell.component';
@@ -14,7 +26,7 @@ interface NavItem {
 }
 
 const ASESORES_EXTERNOS_NAV_ITEM: NavItem = { label: 'Asesores externos', route: '/panel/asesores-externos', icon: 'usuarios' };
-const TEAMS_NAV_ITEM: NavItem = { label: 'Teams', route: '/panel/teams', icon: 'usuarios' };
+const TEAMS_NAV_ITEM: NavItem = { label: 'Comunidades We', route: '/panel/teams', icon: 'usuarios' };
 
 /** {@code label: null} agrupa items sin encabezado visible (Inicio, siempre arriba y suelto). */
 interface NavSection {
@@ -99,6 +111,16 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
     ToastContainerComponent,
     ConfirmDialogComponent,
     NotificationBellComponent,
+    LucideHouse,
+    LucideUsers,
+    LucideCalendar,
+    LucideKanban,
+    LucideReceipt,
+    LucideLandPlot,
+    LucideMap,
+    LucideChartLine,
+    LucideUser,
+    LucideMenu,
   ],
   templateUrl: './panel-layout.component.html',
 })

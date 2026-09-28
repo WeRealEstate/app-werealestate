@@ -15,15 +15,9 @@
       [class.dark:border-red-500/25]="t.type === 'error'"
     >
       @if (t.type === 'success') {
-        <svg class="mt-0.5 h-5 w-5 shrink-0 text-green-600 dark:text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <circle cx="12" cy="12" r="10" />
-          <path d="M8 12.5l2.5 2.5L16 9.5" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
+        <svg lucideCircleCheck class="mt-0.5 h-5 w-5 shrink-0 text-green-600 dark:text-green-400" aria-hidden="true"></svg>
       } @else {
-        <svg class="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <circle cx="12" cy="12" r="10" />
-          <path d="M12 8v5M12 16h.01" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
+        <svg lucideCircleAlert class="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true"></svg>
       }
       <p class="flex-1 text-sm font-medium" [class.text-green-800]="t.type === 'success'" [class.dark:text-green-200]="t.type === 'success'" [class.text-red-800]="t.type === 'error'" [class.dark:text-red-200]="t.type === 'error'">
         {{ t.message }}
@@ -34,9 +28,7 @@
         class="shrink-0 text-ink-muted hover:text-ink active:scale-[0.9]"
         aria-label="Cerrar notificación"
       >
-        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path d="M6 6l12 12M18 6L6 18" stroke-linecap="round" />
-        </svg>
+        <svg lucideX class="h-4 w-4" aria-hidden="true"></svg>
       </button>
     </div>
   }

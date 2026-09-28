@@ -91,9 +91,7 @@
                       class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2 hover:text-we-blue-light
                              transition-colors duration-150 active:scale-90"
                     >
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
-                      </svg>
+                      <svg lucideKey [size]="15" aria-hidden="true"></svg>
                     </button>
                   }
                   @if (u.id !== propioId()) {
@@ -105,7 +103,7 @@
                       class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-red-50 hover:text-red-600
                              dark:hover:bg-red-500/10 dark:hover:text-red-400 transition-colors duration-150 active:scale-90 disabled:opacity-60"
                     >
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                      <svg lucideTrash2 [size]="15"></svg>
                     </button>
                   }
                 </div>

@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { ScrollingModule } from '@angular/cdk/scrolling';
+import { LucideArchive, LucideCheck, LucidePencil, LucidePlus, LucideSearch, LucideTrash2, LucideX } from '@lucide/angular';
 import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
 import { UsuariosService } from '../../../core/services/usuarios.service';
@@ -63,7 +64,19 @@ type Destino = { tipo: 'tarjeta'; id: number; nombre: string } | { tipo: 'sin-as
 @Component({
   selector: 'app-pipeline',
   standalone: true,
-  imports: [RouterLink, DragDropModule, ReactiveFormsModule, ScrollingModule],
+  imports: [
+    RouterLink,
+    DragDropModule,
+    ReactiveFormsModule,
+    ScrollingModule,
+    LucideSearch,
+    LucideX,
+    LucideArchive,
+    LucidePlus,
+    LucideCheck,
+    LucidePencil,
+    LucideTrash2,
+  ],
   templateUrl: './pipeline.component.html',
 })
 export class PipelineComponent {

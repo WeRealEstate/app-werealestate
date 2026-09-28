@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { LucidePencil } from '@lucide/angular';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ToastService } from '../../../../core/services/toast.service';
@@ -14,7 +15,7 @@ import { asesorSeleccionDe, parseAsesorSeleccion } from '../venta-form/venta-for
 @Component({
   selector: 'app-venta-detalle',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, LucidePencil],
   templateUrl: './venta-detalle.component.html',
 })
 export class VentaDetalleComponent implements OnInit {

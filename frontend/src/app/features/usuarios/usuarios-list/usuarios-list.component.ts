@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { LucideKey, LucideTrash2 } from '@lucide/angular';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
@@ -12,7 +13,7 @@ const ROLES: Role[] = ['ASESOR', 'LIDER_AREA', 'EQUIPO_INTERNO', 'ADMIN'];
 @Component({
   selector: 'app-usuarios-list',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, LucideKey, LucideTrash2],
   templateUrl: './usuarios-list.component.html',
 })
 export class UsuariosListComponent {

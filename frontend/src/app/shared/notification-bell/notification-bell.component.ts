@@ -1,4 +1,5 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { LucideBell, LucideX } from '@lucide/angular';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { filter } from 'rxjs';
@@ -14,7 +15,7 @@ const INTERVALO_REFRESCO_MS = 60_000;
 @Component({
   selector: 'app-notification-bell',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, LucideBell, LucideX],
   templateUrl: './notification-bell.component.html',
 })
 export class NotificationBellComponent {

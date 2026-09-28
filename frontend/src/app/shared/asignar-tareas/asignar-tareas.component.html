@@ -21,7 +21,7 @@
                 [attr.aria-label]="t.completada ? 'Marcar como pendiente' : 'Marcar como completada'"
               >
                 @if (t.completada) {
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" aria-hidden="true"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <svg lucideCheck [size]="10" color="white" [strokeWidth]="3" aria-hidden="true"></svg>
                 }
               </button>
               <span class="text-sm" [class.text-ink]="!t.completada" [class.text-ink-muted]="t.completada" [class.line-through]="t.completada">
@@ -131,7 +131,7 @@
                 [attr.aria-label]="t.completada ? 'Marcar como pendiente' : 'Marcar como completada'"
               >
                 @if (t.completada) {
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" aria-hidden="true"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <svg lucideCheck [size]="10" color="white" [strokeWidth]="3" aria-hidden="true"></svg>
                 }
               </button>
               <span class="text-sm" [class.text-ink]="!t.completada" [class.text-ink-muted]="t.completada" [class.line-through]="t.completada">

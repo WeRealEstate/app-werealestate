@@ -2,6 +2,7 @@ import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, inject, sig
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { LucideEye, LucideEyeOff, LucideLoaderCircle, LucideMail } from '@lucide/angular';
 import { AuthService } from '../../../core/services/auth.service';
 import { environment } from '../../../../environments/environment';
 
@@ -35,7 +36,7 @@ declare global {
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, LucideMail, LucideEye, LucideEyeOff, LucideLoaderCircle],
   templateUrl: './login.component.html',
 })
 export class LoginComponent implements AfterViewInit, OnDestroy {

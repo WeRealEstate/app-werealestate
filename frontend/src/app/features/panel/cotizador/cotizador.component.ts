@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { LucideCalendar, LucideChevronDown, LucideDollarSign, LucideHistory } from '@lucide/angular';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -45,7 +46,18 @@ function compararNatural(a: string, b: string): number {
 @Component({
   selector: 'app-cotizador',
   standalone: true,
-  imports: [DatePipe, FormsModule, RouterLink, FadeInDirective, PressDirective, ValuePulseDirective],
+  imports: [
+    DatePipe,
+    FormsModule,
+    RouterLink,
+    FadeInDirective,
+    PressDirective,
+    ValuePulseDirective,
+    LucideHistory,
+    LucideDollarSign,
+    LucideCalendar,
+    LucideChevronDown,
+  ],
   templateUrl: './cotizador.component.html',
 })
 export class CotizadorComponent implements OnInit {

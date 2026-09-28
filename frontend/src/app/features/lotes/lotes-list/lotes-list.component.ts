@@ -1,6 +1,7 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
+import { LucideEye, LucidePencil, LucideTrash2 } from '@lucide/angular';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
@@ -57,7 +58,7 @@ const ESTADOS_REQUIEREN_CLIENTE: EstadoLote[] = [
 @Component({
   selector: 'app-lotes-list',
   standalone: true,
-  imports: [FormsModule, RouterLink, DecimalPipe, DatePipe],
+  imports: [FormsModule, RouterLink, DecimalPipe, DatePipe, LucideEye, LucidePencil, LucideTrash2],
   templateUrl: './lotes-list.component.html',
 })
 export class LotesListComponent {

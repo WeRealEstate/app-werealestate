@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { LucidePencil, LucideTrash2 } from '@lucide/angular';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -10,7 +11,7 @@ import { AsesorExterno, AsesorExternoUpdateRequest } from '../../../core/models/
 @Component({
   selector: 'app-asesores-externos-list',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, LucidePencil, LucideTrash2],
   templateUrl: './asesores-externos-list.component.html',
 })
 export class AsesoresExternosListComponent {

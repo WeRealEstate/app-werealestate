@@ -1,6 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
+import { LucidePencil, LucideTrash2 } from '@lucide/angular';
 import { RouterLink } from '@angular/router';
 import { PromocionesService } from '../../../core/services/promociones.service';
 import { Promocion, ProyectoPromocion, TipoPrecioPromocion } from '../../../core/models/promocion.model';
@@ -20,7 +21,7 @@ const PLAZO_PREVIEW_OPCIONES = [12, 24, 36, 48, 60] as const;
 @Component({
   selector: 'app-promociones',
   standalone: true,
-  imports: [RouterLink, DatePipe],
+  imports: [RouterLink, DatePipe, LucidePencil, LucideTrash2],
   templateUrl: './promociones.component.html',
 })
 export class PromocionesComponent {

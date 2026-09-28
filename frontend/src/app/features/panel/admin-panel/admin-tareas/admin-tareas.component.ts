@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { LucideTrash2 } from '@lucide/angular';
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { TareasService } from '../../../../core/services/tareas.service';
@@ -17,7 +18,7 @@ import { UsuarioResumen } from '../../../../core/models/lead.model';
 @Component({
   selector: 'app-admin-tareas',
   standalone: true,
-  imports: [DatePipe],
+  imports: [DatePipe, LucideTrash2],
   templateUrl: './admin-tareas.component.html',
 })
 export class AdminTareasComponent {

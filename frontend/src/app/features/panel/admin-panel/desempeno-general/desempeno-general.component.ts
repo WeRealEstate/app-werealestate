@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
+import { LucideCalendar, LucideCheck, LucideChevronDown, LucideStar, LucideUserCheck, LucideUsers, LucideX } from '@lucide/angular';
 import { ReportesService } from '../../../../core/services/reportes.service';
 import { ReporteDesempeno } from '../../../../core/models/reporte.model';
 import { ESTADO_LEAD_LABELS, EstadoLead } from '../../../../core/models/lead.model';
@@ -97,7 +98,7 @@ function bars(entradas: { etiqueta: string; total: number }[], clases: readonly 
 @Component({
   selector: 'app-desempeno-general',
   standalone: true,
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, LucideUsers, LucideStar, LucideCalendar, LucideChevronDown, LucideUserCheck, LucideCheck, LucideX],
   templateUrl: './desempeno-general.component.html',
 })
 export class DesempenoGeneralComponent {
