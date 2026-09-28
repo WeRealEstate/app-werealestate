@@ -273,6 +273,16 @@ input, select, textarea {
 .cdk-drag-preview.card-enter {
   animation: none;
 }
+/* Teams: además del tratamiento genérico de .cdk-drag-preview de arriba, un anillo del color de
+   marca (para que "esto es lo que se está moviendo" no dependa solo de la sombra) y un
+   levantamiento un poco más marcado — declarada después para ganarle a .cdk-drag-preview en el
+   transform/box-shadow que comparten. */
+.teams-drag-preview {
+  transform: rotate(-3deg) scale(1.08);
+  box-shadow:
+    0 0 0 2px var(--color-we-primary),
+    0 20px 40px -14px rgb(0 0 0 / 0.45);
+}
 .cdk-drag-placeholder {
   opacity: 0.35;
   border: 1.5px dashed var(--border);

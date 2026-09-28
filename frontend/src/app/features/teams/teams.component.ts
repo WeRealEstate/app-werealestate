@@ -45,6 +45,11 @@ export class TeamsComponent {
    * cualquier arrastre, no solo en la que está debajo del cursor. */
   readonly dropZoneHover = signal<string | null>(null);
 
+  /** Id del asesor que acaba de aterrizar en su nueva posición tras un arrastre: se resalta un
+   * instante (.card-moved, mismo efecto que ya usa el Pipeline al mover un lead) y luego se apaga
+   * solo — para que el cambio se sienta reconocido, no solo un reacomodo silencioso. */
+  readonly recienMovidoId = signal<number | null>(null);
+
   onHoverEntered(zona: string): void {
     this.dropZoneHover.set(zona);
   }
@@ -143,6 +148,10 @@ export class TeamsComponent {
         liderDirectoId,
       });
       this.asesores.update((lista) => lista.map((a) => (a.id === actualizado.id ? actualizado : a)));
+      this.recienMovidoId.set(actualizado.id);
+      setTimeout(() => {
+        if (this.recienMovidoId() === actualizado.id) this.recienMovidoId.set(null);
+      }, 900);
     } catch (error) {
       const mensaje =
         error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
