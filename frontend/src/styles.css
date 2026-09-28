@@ -282,6 +282,15 @@ input, select, textarea {
 .cdk-drag-placeholder * {
   visibility: hidden;
 }
+/* El elemento que se está arrastrando de verdad (no la vista previa clonada) sigue siendo el
+   original en su lugar del DOM, con el "transform" que CDK actualiza a mano en cada frame para
+   seguir al cursor. Si ese mismo elemento tiene alguna transición CSS sobre "transform" (ej. un
+   efecto hover de elevación), el navegador intenta "suavizar" cada micro-movimiento del arrastre
+   como si fuera una animación normal, en vez de seguir el cursor al instante — se siente con lag.
+   Quitarla mientras CDK controla el elemento resuelve eso sin tener que auditar cada componente. */
+.cdk-drag.cdk-drag-dragging {
+  transition: none !important;
+}
 
 /* Columna receptora: mientras se arrastra una tarjetita justo sobre ESTA columna (no
    sobre cualquier columna válida — cdkDropListEntered/Exited en el componente rastrean

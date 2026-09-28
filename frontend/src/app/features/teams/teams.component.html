@@ -89,7 +89,7 @@
                         [class.opacity-50]="savingId() === l1.id"
                         (click)="abrirDetalle(l1)"
                         class="flex w-full cursor-grab flex-col items-center gap-0.5 rounded-xl border border-border bg-surface px-3 py-2.5
-                               text-center shadow-sm transition-transform duration-150 hover:-translate-y-0.5 active:cursor-grabbing"
+                               text-center shadow-sm transition-colors duration-150 hover:border-we-primary/50 active:cursor-grabbing"
                       >
                         <span class="text-[10px] font-bold uppercase tracking-wide text-ink-muted">Línea 1</span>
                         <span class="text-sm font-medium text-ink">{{ l1.nombre }}</span>
@@ -121,7 +121,9 @@
                       (cdkDropListExited)="onHoverExited('2-' + l1.id)"
                       [class.bg-we-primary/10]="dropZoneHover() === '2-' + l1.id"
                       [class.border-we-primary]="dropZoneHover() === '2-' + l1.id"
-                      class="relative flex min-h-[52px] flex-col items-center gap-1.5 rounded-xl border border-dashed border-border/70 px-2 py-2.5 transition-colors duration-150"
+                      [class.border-dashed]="dropZoneHover() === '2-' + l1.id"
+                      [class.border]="dropZoneHover() === '2-' + l1.id"
+                      class="relative flex min-h-[52px] flex-col items-center gap-1.5 rounded-xl px-2 py-2.5 transition-colors duration-150"
                     >
                       <div class="pointer-events-none absolute left-1/2 -top-1.5 h-1.5 w-0.5 -translate-x-1/2 bg-border" aria-hidden="true"></div>
                       @for (l2 of linea2De(l1.id); track l2.id) {
@@ -131,13 +133,13 @@
                           [class.opacity-50]="savingId() === l2.id"
                           (click)="abrirDetalle(l2)"
                           class="flex w-full cursor-grab flex-col items-center gap-0.5 rounded-lg border border-border bg-surface-2/60 px-2.5 py-2
-                                 text-center shadow-sm transition-transform duration-150 hover:-translate-y-0.5 active:cursor-grabbing"
+                                 text-center shadow-sm transition-colors duration-150 hover:border-we-primary/50 active:cursor-grabbing"
                         >
                           <span class="text-[9px] font-bold uppercase tracking-wide text-ink-muted">Línea 2</span>
                           <span class="text-xs font-medium text-ink">{{ l2.nombre }}</span>
                         </div>
                       }
-                      @if (linea2De(l1.id).length === 0) {
+                      @if (linea2De(l1.id).length === 0 && dropZoneHover() === '2-' + l1.id) {
                         <p class="text-center text-[9px] leading-tight text-ink-muted">Suelta aquí<br />para línea 2</p>
                       }
                     </div>
@@ -173,7 +175,7 @@
               [class.opacity-50]="savingId() === a.id"
               (click)="abrirDetalle(a)"
               class="cursor-grab rounded-full border border-border bg-surface px-3.5 py-2 text-sm font-medium text-ink shadow-sm
-                     transition-transform duration-150 hover:-translate-y-0.5 active:cursor-grabbing"
+                     transition-colors duration-150 hover:border-we-primary/50 active:cursor-grabbing"
             >
               {{ a.nombre }}
             </div>
