@@ -45,7 +45,7 @@
             {{ plano()!.planoUrl ? 'Reemplazar plano' : 'Subir plano' }}
             <input
               type="file"
-              accept="image/png,image/jpeg,image/webp"
+              accept="image/png,image/jpeg,image/webp,application/pdf"
               class="hidden"
               [disabled]="subiendoPlano()"
               (change)="onArchivoPlanoSeleccionado($event)"
