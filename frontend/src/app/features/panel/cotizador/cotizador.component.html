@@ -402,6 +402,31 @@
           </select>
         </div>
 
+        @if (selectedProject === 'nanuu') {
+          <div class="flex items-center justify-between gap-4 rounded-xl border border-border bg-surface-2/50 px-4 py-3.5">
+            <div>
+              <p class="text-sm font-medium text-ink">Incluir intereses</p>
+              <p class="text-xs text-ink-muted">Actívalo o desactívalo según lo acordado con el cliente.</p>
+            </div>
+            <button
+              type="button"
+              weMotionPress
+              role="switch"
+              [attr.aria-checked]="interesesActivados()"
+              (click)="toggleIntereses()"
+              [class.bg-we-primary]="interesesActivados()"
+              [class.bg-border]="!interesesActivados()"
+              class="relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors duration-200"
+            >
+              <span
+                class="inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200"
+                [class.translate-x-6]="interesesActivados()"
+                [class.translate-x-1]="!interesesActivados()"
+              ></span>
+            </button>
+          </div>
+        }
+
         <!-- PRECIO TOTAL -->
         <!-- Con varios lotes ya agregados y estos campos vacíos a propósito (ver
              requiereLoteEnCaptura), no hay "lote en captura" que mostrar aquí. -->

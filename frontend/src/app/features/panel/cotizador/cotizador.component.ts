@@ -214,6 +214,14 @@ export class CotizadorComponent implements OnInit {
 
   selectedMonths: number = 60;
 
+  /** Nanuu: permite cotizar un plazo sin intereses (p. ej. una promoción puntual) sin tener que
+   * cambiar de proyecto ni de plazo — activado por defecto porque es la condición normal. */
+  readonly interesesActivados = signal(true);
+
+  toggleIntereses(): void {
+    this.interesesActivados.update((activos) => !activos);
+  }
+
   advisorName: string = this.auth.currentUser()?.nombre ?? '';
 
   clientName: string = '';
@@ -324,6 +332,7 @@ export class CotizadorComponent implements OnInit {
     this.promocionSeleccionada = null;
     this.selectedProject = project;
     this.loteBloqueado = false;
+    this.interesesActivados.set(true);
 
     if (project === 'samai') {
       this.pricePerM2 = 800;
@@ -1161,7 +1170,7 @@ export class CotizadorComponent implements OnInit {
   }
 
   get interestPercentage(): number {
-    if (this.selectedProject === 'samai') {
+    if (this.selectedProject === 'samai' || !this.interesesActivados()) {
       return 0;
     }
 
