@@ -3,7 +3,8 @@
     <div>
       <h1 class="font-heading text-2xl font-semibold text-ink">Teams</h1>
       <p class="mt-1 text-sm text-ink-muted">
-        Estructura de equipos de asesores externos: un líder, su línea 1, y hasta línea 2 de cada uno de ellos.
+        Arrastra a alguien sobre un líder para ponerlo en línea 1, sobre alguien de línea 1 para ponerlo en línea 2, o sobre
+        "Independientes" para sacarlo del equipo. Clic en cualquiera para ver sus datos.
       </p>
     </div>
     <a
@@ -25,125 +26,197 @@
   @if (isLoading()) {
     <p class="mt-8 text-sm text-ink-muted">Cargando equipos…</p>
   } @else {
-    <!-- EQUIPOS -->
-    <div class="mt-6 space-y-4">
-      @if (lideres().length === 0) {
-        <div class="rounded-xl border border-dashed border-border p-10 text-center">
-          <p class="text-sm text-ink-muted">Todavía no hay ningún líder. Hazlo desde "Independientes" abajo.</p>
-        </div>
-      }
-
-      @for (lider of lideres(); track lider.id) {
-        <div class="rounded-xl border border-border bg-surface p-5">
-          <div class="flex items-center justify-between gap-3">
-            <div>
-              <span class="text-xs font-semibold uppercase tracking-wide text-we-primary dark:text-we-blue-light">Líder</span>
-              <p class="font-medium text-ink">{{ lider.nombre }}</p>
-            </div>
-            <button
-              type="button"
-              [disabled]="savingId() === lider.id"
-              (click)="quitarDeEquipo(lider)"
-              class="text-xs font-semibold text-red-600 hover:underline dark:text-red-400 disabled:opacity-50"
-            >
-              Quitar de líder
-            </button>
+    <div cdkDropListGroup>
+      <!-- EQUIPOS: mapa mental, un árbol por líder -->
+      <div class="mt-8 overflow-x-auto pb-4">
+        @if (lideres().length === 0) {
+          <div class="rounded-xl border border-dashed border-border p-10 text-center">
+            <p class="text-sm text-ink-muted">Todavía no hay ningún líder. Hazlo desde "Independientes" abajo.</p>
           </div>
+        }
 
-          <div class="mt-4 ml-2 space-y-4 border-l border-border pl-4 sm:ml-4">
-            @for (l1 of linea1De(lider.id); track l1.id) {
-              <div>
-                <div class="flex items-center justify-between gap-3">
-                  <div>
-                    <span class="text-xs font-medium uppercase tracking-wide text-ink-muted">Línea 1</span>
-                    <p class="text-sm font-medium text-ink">{{ l1.nombre }}</p>
-                  </div>
-                  <button
-                    type="button"
-                    [disabled]="savingId() === l1.id"
-                    (click)="quitarDeEquipo(l1)"
-                    class="text-xs font-semibold text-red-600 hover:underline dark:text-red-400 disabled:opacity-50"
-                  >
-                    Quitar
-                  </button>
-                </div>
+        <div class="flex min-w-max items-start gap-10 px-1">
+          @for (lider of lideres(); track lider.id) {
+            <div class="flex flex-col items-center">
+              <!-- NODO LÍDER (raíz del equipo, no se arrastra) -->
+              <button
+                type="button"
+                (click)="abrirDetalle(lider)"
+                class="flex min-w-[150px] flex-col items-center gap-0.5 rounded-2xl border-2 border-we-primary bg-we-primary/10 px-4 py-3
+                       text-center shadow-sm transition-transform duration-150 hover:-translate-y-0.5 active:scale-[0.97]"
+              >
+                <span class="text-[10px] font-bold uppercase tracking-wide text-we-primary dark:text-we-blue-light">Líder</span>
+                <span class="text-sm font-semibold text-ink">{{ lider.nombre }}</span>
+              </button>
 
-                <div class="mt-2 ml-2 space-y-1.5 border-l border-border pl-4 sm:ml-4">
-                  @for (l2 of linea2De(l1.id); track l2.id) {
-                    <div class="flex items-center justify-between gap-3 py-0.5">
-                      <div>
-                        <span class="text-xs font-medium uppercase tracking-wide text-ink-muted">Línea 2</span>
-                        <span class="ml-1.5 text-sm text-ink">{{ l2.nombre }}</span>
-                      </div>
-                      <button
-                        type="button"
-                        [disabled]="savingId() === l2.id"
-                        (click)="quitarDeEquipo(l2)"
-                        class="text-xs font-semibold text-red-600 hover:underline dark:text-red-400 disabled:opacity-50"
-                      >
-                        Quitar
-                      </button>
-                    </div>
-                  }
-                </div>
-              </div>
-            }
-
-            @if (linea1De(lider.id).length === 0) {
-              <p class="text-xs text-ink-muted">Este equipo todavía no tiene nadie en línea 1.</p>
-            }
-          </div>
-        </div>
-      }
-    </div>
-
-    <!-- INDEPENDIENTES -->
-    <div class="mt-8">
-      <h2 class="font-heading text-lg font-semibold text-ink">Independientes</h2>
-      <p class="mt-1 text-sm text-ink-muted">Trabajan solos; puedes hacerlos líder o asignarlos a un equipo ya existente.</p>
-
-      @if (independientes().length === 0) {
-        <p class="mt-4 text-sm text-ink-muted">No hay asesores independientes.</p>
-      } @else {
-        <div class="mt-4 space-y-2">
-          @for (a of independientes(); track a.id) {
-            <div class="flex flex-col gap-2.5 rounded-lg border border-border bg-surface p-3.5 sm:flex-row sm:items-center sm:justify-between">
-              <span class="text-sm font-medium text-ink">{{ a.nombre }}</span>
-              <div class="flex flex-wrap items-center gap-2">
-                @if (posicionesDisponibles.length > 0) {
-                  <select
-                    [ngModel]="seleccionAsignar()[a.id] || ''"
-                    (ngModelChange)="setSeleccion(a.id, $event)"
-                    class="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs text-ink
-                           focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
-                  >
-                    <option value="">Asignar a un equipo…</option>
-                    @for (op of posicionesDisponibles; track op.value) {
-                      <option [value]="op.value">{{ op.label }}</option>
+              <!-- LÍNEA 1: drop zone del líder -->
+              <div
+                cdkDropList
+                [cdkDropListData]="linea1De(lider.id)"
+                (cdkDropListDropped)="onDropEnLider($event, lider.id)"
+                class="flex min-h-[28px] items-start gap-6 rounded-xl p-2 transition-colors duration-150"
+              >
+                @for (l1 of linea1De(lider.id); track l1.id; let first = $first; let last = $last; let count = $count) {
+                  <div class="relative flex flex-col items-center pt-6">
+                    <!-- conectores hacia el líder -->
+                    <div class="pointer-events-none absolute left-1/2 top-0 h-6 w-0.5 -translate-x-1/2 bg-border" aria-hidden="true"></div>
+                    @if (count > 1) {
+                      <div
+                        class="pointer-events-none absolute top-0 h-0.5 bg-border"
+                        [style.left]="first ? '50%' : '0'"
+                        [style.right]="last ? '50%' : '0'"
+                        aria-hidden="true"
+                      ></div>
                     }
-                  </select>
-                  <button
-                    type="button"
-                    [disabled]="!seleccionAsignar()[a.id] || savingId() === a.id"
-                    (click)="asignar(a)"
-                    class="text-xs font-semibold text-we-primary hover:underline dark:text-we-blue-light disabled:opacity-50"
-                  >
-                    Asignar
-                  </button>
+
+                    <div
+                      cdkDrag
+                      [cdkDragData]="l1"
+                      [class.opacity-50]="savingId() === l1.id"
+                      (click)="abrirDetalle(l1)"
+                      class="flex min-w-[130px] cursor-grab flex-col items-center gap-0.5 rounded-xl border border-border bg-surface px-3.5 py-2.5
+                             text-center shadow-sm transition-transform duration-150 hover:-translate-y-0.5 active:cursor-grabbing"
+                    >
+                      <span class="text-[10px] font-bold uppercase tracking-wide text-ink-muted">Línea 1</span>
+                      <span class="text-sm font-medium text-ink">{{ l1.nombre }}</span>
+                    </div>
+
+                    <!-- LÍNEA 2: drop zone de este asesor de línea 1 -->
+                    <div
+                      cdkDropList
+                      [cdkDropListData]="linea2De(l1.id)"
+                      (cdkDropListDropped)="onDropEnLinea1($event, l1.id)"
+                      class="flex min-h-[20px] items-start gap-4 rounded-xl p-1.5 transition-colors duration-150"
+                    >
+                      @for (l2 of linea2De(l1.id); track l2.id; let first2 = $first; let last2 = $last; let count2 = $count) {
+                        <div class="relative flex flex-col items-center pt-5">
+                          <div class="pointer-events-none absolute left-1/2 top-0 h-5 w-0.5 -translate-x-1/2 bg-border" aria-hidden="true"></div>
+                          @if (count2 > 1) {
+                            <div
+                              class="pointer-events-none absolute top-0 h-0.5 bg-border"
+                              [style.left]="first2 ? '50%' : '0'"
+                              [style.right]="last2 ? '50%' : '0'"
+                              aria-hidden="true"
+                            ></div>
+                          }
+
+                          <div
+                            cdkDrag
+                            [cdkDragData]="l2"
+                            [class.opacity-50]="savingId() === l2.id"
+                            (click)="abrirDetalle(l2)"
+                            class="flex min-w-[110px] cursor-grab flex-col items-center gap-0.5 rounded-lg border border-border bg-surface-2/60 px-3 py-2
+                                   text-center shadow-sm transition-transform duration-150 hover:-translate-y-0.5 active:cursor-grabbing"
+                          >
+                            <span class="text-[9px] font-bold uppercase tracking-wide text-ink-muted">Línea 2</span>
+                            <span class="text-xs font-medium text-ink">{{ l2.nombre }}</span>
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  </div>
                 }
-                <button
-                  type="button"
-                  [disabled]="savingId() === a.id"
-                  (click)="hacerLider(a)"
-                  class="text-xs font-semibold text-ink hover:underline disabled:opacity-50"
-                >
-                  Hacer líder
-                </button>
               </div>
             </div>
           }
         </div>
-      }
+      </div>
+
+      <!-- INDEPENDIENTES -->
+      <div class="mt-4">
+        <h2 class="font-heading text-lg font-semibold text-ink">Independientes</h2>
+        <p class="mt-1 text-sm text-ink-muted">Trabajan solos. Arrastra uno a un equipo, o dale "Hacer líder" desde su detalle.</p>
+
+        <div
+          cdkDropList
+          [cdkDropListData]="independientes()"
+          (cdkDropListDropped)="onDropEnIndependientes($event)"
+          class="mt-4 flex min-h-[64px] flex-wrap items-center gap-2.5 rounded-xl border border-dashed border-border p-4 transition-colors duration-150"
+        >
+          @for (a of independientes(); track a.id) {
+            <div
+              cdkDrag
+              [cdkDragData]="a"
+              [class.opacity-50]="savingId() === a.id"
+              (click)="abrirDetalle(a)"
+              class="cursor-grab rounded-full border border-border bg-surface px-3.5 py-2 text-sm font-medium text-ink shadow-sm
+                     transition-transform duration-150 hover:-translate-y-0.5 active:cursor-grabbing"
+            >
+              {{ a.nombre }}
+            </div>
+          }
+          @if (independientes().length === 0) {
+            <p class="text-xs text-ink-muted">Nadie independiente por ahora.</p>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- TARJETA FLOTANTE: detalle y acciones de un asesor -->
+  @if (detalleAbierto(); as a) {
+    <button type="button" (click)="cerrarDetalle()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="detalle-asesor-titulo">
+      <div class="modal-panel-enter w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <h2 id="detalle-asesor-titulo" class="font-heading text-lg font-semibold text-ink">{{ a.nombre }}</h2>
+        <p class="mt-1 text-xs font-semibold uppercase tracking-wide text-ink-muted">
+          @if (a.tipo === 'LIDER') {
+            Líder de equipo
+          } @else if (a.tipo === 'LINEA') {
+            Línea {{ a.nivelLinea }} · reporta a {{ a.liderDirectoNombre }}
+          } @else {
+            Independiente
+          }
+        </p>
+
+        <div class="mt-4 space-y-2 text-sm">
+          <div class="flex justify-between gap-4">
+            <span class="text-ink-muted">Celular</span>
+            <span class="text-ink">{{ a.celular || '—' }}</span>
+          </div>
+          <div class="flex justify-between gap-4">
+            <span class="text-ink-muted">Correo</span>
+            <span class="text-ink">{{ a.correo || '—' }}</span>
+          </div>
+          <div class="flex justify-between gap-4">
+            <span class="text-ink-muted">Estado</span>
+            <span class="text-ink">{{ a.activo ? 'Activo' : 'Inactivo' }}</span>
+          </div>
+        </div>
+
+        <div class="mt-5 flex justify-end gap-2.5">
+          @if (a.tipo === 'INDEPENDIENTE') {
+            <button
+              type="button"
+              [disabled]="savingId() === a.id"
+              (click)="hacerLiderDesdeDetalle(a)"
+              class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90
+                     active:scale-[0.97] transition-transform duration-150 disabled:opacity-60"
+            >
+              Hacer líder
+            </button>
+          } @else {
+            <button
+              type="button"
+              [disabled]="savingId() === a.id"
+              (click)="quitarDeEquipoDesdeDetalle(a)"
+              class="rounded-lg border border-red-300 px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50
+                     dark:border-red-500/40 dark:text-red-400 dark:hover:bg-red-500/10
+                     active:scale-[0.97] transition-transform duration-150 disabled:opacity-60"
+            >
+              Quitar del equipo
+            </button>
+          }
+          <button
+            type="button"
+            (click)="cerrarDetalle()"
+            class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary
+                   active:scale-[0.97] transition-transform duration-150"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
     </div>
   }
 </div>
