@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, signal } from '@angular/core';
+import { Component, computed, signal } from '@angular/core';
 import { inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { VentasService } from '../../../../core/services/ventas.service';
@@ -26,12 +26,31 @@ export class VentasListComponent {
   readonly hayMas = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly filtro = signal('');
+  readonly samaiLotesVendidos = signal<number | null>(null);
+  readonly samaiLotesVendidosError = signal(false);
+  readonly samaiLotesVendidosTexto = computed(() => {
+    if (this.samaiLotesVendidosError()) return 'No disponible';
+    const total = this.samaiLotesVendidos();
+    if (total === null) return 'Calculando';
+    return `${total.toLocaleString('en-US')} lote${total === 1 ? '' : 's'}`;
+  });
 
   private pagina = 0;
   private debounceHandle: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
+    void this.cargarConteoSamai();
     this.cargar();
+  }
+
+  private async cargarConteoSamai(): Promise<void> {
+    try {
+      this.samaiLotesVendidosError.set(false);
+      this.samaiLotesVendidos.set(await this.ventasService.contarLotesVendidosSamaiCampestre());
+    } catch {
+      this.samaiLotesVendidosError.set(true);
+      this.samaiLotesVendidos.set(null);
+    }
   }
 
   onFiltroInput(valor: string): void {

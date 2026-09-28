@@ -41,6 +41,11 @@ public class VentaController {
         return ventaService.buscarPaginado(busqueda, pagina, tamano);
     }
 
+    @GetMapping("/samai-campestre/lotes-vendidos")
+    public long contarLotesVendidosSamaiCampestre() {
+        return ventaService.contarLotesVendidosSamaiCampestre();
+    }
+
     @GetMapping("/{id}")
     public VentaDto obtener(@PathVariable Long id) {
         return ventaService.obtener(id);

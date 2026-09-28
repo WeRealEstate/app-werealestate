@@ -29,6 +29,10 @@ export class VentasService {
     return firstValueFrom(this.http.get<Pagina<Venta>>(`${this.baseUrl}/buscar`, { params: httpParams }));
   }
 
+  contarLotesVendidosSamaiCampestre(): Promise<number> {
+    return firstValueFrom(this.http.get<number>(`${this.baseUrl}/samai-campestre/lotes-vendidos`));
+  }
+
   obtener(id: number): Promise<Venta> {
     return firstValueFrom(this.http.get<Venta>(`${this.baseUrl}/${id}`));
   }

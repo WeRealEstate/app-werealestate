@@ -50,6 +50,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class VentaService {
 
+    private static final String DESARROLLO_SAMAI_CAMPESTRE = "SAMAI Campestre";
+
     private final VentaRepository ventaRepository;
     private final VentaLoteRepository ventaLoteRepository;
     private final LoteRepository loteRepository;
@@ -184,6 +186,11 @@ public class VentaService {
         Pageable pageable = PageRequest.of(Math.max(pagina, 0), Math.max(tamano, 1));
         Page<Venta> resultado = ventaRepository.findAll(spec, pageable);
         return new PaginaDto<>(resultado.getContent().stream().map(this::toDto).toList(), resultado.hasNext());
+    }
+
+    public long contarLotesVendidosSamaiCampestre() {
+        exigirAdminOLider();
+        return ventaLoteRepository.countLotesVendidosByDesarrolloNombre(DESARROLLO_SAMAI_CAMPESTRE);
     }
 
     /** Abonos de una venta, más reciente primero. */
