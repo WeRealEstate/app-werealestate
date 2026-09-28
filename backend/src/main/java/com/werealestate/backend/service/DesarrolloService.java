@@ -36,7 +36,7 @@ public class DesarrolloService {
     /** Suficiente para que un plano vectorial (AutoCAD, Illustrator, etc.) se vea nítido incluso
      * haciendo zoom en el canvas interactivo — más alto que la resolución típica de un plano
      * exportado apurado como JPG/PNG, que es la causa real del pixeleo. */
-    private static final float DPI_RASTERIZADO_PDF = 600f;
+    private static final float DPI_RASTERIZADO_PDF = 900f;
 
     private final DesarrolloRepository desarrolloRepository;
     private final CurrentUserProvider currentUserProvider;
