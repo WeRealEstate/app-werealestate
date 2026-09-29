@@ -9,13 +9,19 @@ import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.repository.DesarrolloRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
+import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Iterator;
+import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
@@ -46,6 +52,13 @@ public class DesarrolloService {
      * proporción) para quedar dentro del tope — un plano tamaño carta o tabloide sigue rasterizando
      * a los 900 DPI completos. */
     private static final double MAX_PIXELES_RASTERIZADO = 150_000_000d;
+
+    /** El plano rasterizado (fondo tipo foto/satélite con mucha textura, no colores planos) casi
+     * no se beneficia de la compresión sin pérdida de PNG: un plano real de ~150 millones de
+     * píxeles pesaba ~120MB en PNG. Se guarda como JPEG en su lugar — probado a esta calidad contra
+     * el plano real sin ninguna diferencia visible, ni siquiera acercando el texto más chico, y baja
+     * el archivo a ~25% de su peso en PNG. */
+    private static final float CALIDAD_JPEG_RASTERIZADO = 0.9f;
 
     private final DesarrolloRepository desarrolloRepository;
     private final CurrentUserProvider currentUserProvider;
@@ -84,8 +97,8 @@ public class DesarrolloService {
         }
 
         // Un PDF no se puede pintar directo en el canvas interactivo del frontend: se rasteriza
-        // su primera página (se asume un plano de una sola página) a PNG antes de seguir — de ahí
-        // en adelante se guarda y se sirve exactamente igual que cualquier otro plano en PNG.
+        // su primera página (se asume un plano de una sola página) a JPEG antes de seguir — de ahí
+        // en adelante se guarda y se sirve exactamente igual que cualquier otro plano subido en JPG.
         if (empiezaCon(bytes, FIRMA_PDF)) {
             bytes = rasterizarPrimeraPaginaPdf(bytes);
         }
@@ -119,12 +132,40 @@ public class DesarrolloService {
             PDFRenderer renderer = new PDFRenderer(documento);
             BufferedImage imagen = renderer.renderImageWithDPI(0, dpiSeguroPara(documento.getPage(0).getMediaBox()));
 
-            ByteArrayOutputStream salida = new ByteArrayOutputStream();
-            ImageIO.write(imagen, "png", salida);
-            return salida.toByteArray();
+            return codificarJpeg(sinCanalAlfa(imagen), CALIDAD_JPEG_RASTERIZADO);
         } catch (IOException e) {
             throw new ValidationException("No se pudo leer el PDF del plano");
         }
+    }
+
+    /** JPEG no soporta transparencia; PDFRenderer entrega la página ya rasterizada con canal alfa
+     * (siempre opaco en la práctica, una página de PDF no tiene fondo transparente), así que se
+     * aplana sobre blanco para evitar que el escritor de JPEG falle o distorsione los colores. */
+    private static BufferedImage sinCanalAlfa(BufferedImage imagen) {
+        BufferedImage opaca = new BufferedImage(imagen.getWidth(), imagen.getHeight(), BufferedImage.TYPE_INT_RGB);
+        var g = opaca.createGraphics();
+        g.setColor(Color.WHITE);
+        g.fillRect(0, 0, imagen.getWidth(), imagen.getHeight());
+        g.drawImage(imagen, 0, 0, null);
+        g.dispose();
+        return opaca;
+    }
+
+    private static byte[] codificarJpeg(BufferedImage imagen, float calidad) throws IOException {
+        Iterator<ImageWriter> escritores = ImageIO.getImageWritersByFormatName("jpg");
+        ImageWriter escritor = escritores.next();
+        ImageWriteParam parametros = escritor.getDefaultWriteParam();
+        parametros.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+        parametros.setCompressionQuality(calidad);
+
+        ByteArrayOutputStream salida = new ByteArrayOutputStream();
+        try (ImageOutputStream flujo = ImageIO.createImageOutputStream(salida)) {
+            escritor.setOutput(flujo);
+            escritor.write(null, new IIOImage(imagen, null, null), parametros);
+        } finally {
+            escritor.dispose();
+        }
+        return salida.toByteArray();
     }
 
     /** DPI_RASTERIZADO_PDF si el tamaño de página del PDF (en puntos, 72 por pulgada) cabe dentro
