@@ -10,6 +10,22 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/login/login.component').then((m) => m.LoginComponent),
   },
   {
+    // Plano público en pantalla completa, sin sesión ni layout — pensado para compartir el link
+    // directo de un desarrollo. Mismas restricciones que /cotizador-publico/lotes: se puede ver el
+    // estado de cada lote y apartar uno disponible, pero no editar el plano ni liberar un lote ya
+    // apartado. Ver PlanoPublicoComponent.
+    path: 'samai',
+    data: { proyecto: 'samai' },
+    loadComponent: () =>
+      import('./features/publico/plano-publico/plano-publico.component').then((m) => m.PlanoPublicoComponent),
+  },
+  {
+    path: 'aldea-nanuu',
+    data: { proyecto: 'nanuu' },
+    loadComponent: () =>
+      import('./features/publico/plano-publico/plano-publico.component').then((m) => m.PlanoPublicoComponent),
+  },
+  {
     // Sin guard y fuera del layout del panel a propósito: cualquiera con el link puede generar
     // cotizaciones, sin sesión ni acceso al resto de la app. Ver `esPublico` en CotizadorComponent.
     // El layout público solo pone el header/footer de marca y el ancho centrado (lo que
