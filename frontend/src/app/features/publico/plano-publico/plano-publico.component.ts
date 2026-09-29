@@ -74,11 +74,18 @@ export class PlanoPublicoComponent {
   readonly nombreAsesorInvalido = computed(() => this.nombreAsesorInput().trim().length === 0);
   readonly nombreClienteInvalido = computed(() => this.nombreClienteInput().trim().length === 0);
 
-  /** Zoom y desplazamiento del plano — idéntico mecanismo que /panel/plano, sin nada de edición. */
+  /** Zoom y desplazamiento del plano — mismo mecanismo que /panel/plano, sin nada de edición, pero
+   * con un piso de zoom dinámico (ver zoomCubrir) en vez de 1: a diferencia del panel, aquí el
+   * contenedor siempre es la pantalla completa (h-full), así que a zoom 1 (tamaño natural de la
+   * imagen) casi nunca coincide con el alto real de la pantalla — deja una franja en blanco abajo
+   * si la imagen es más ancha que alta. */
   readonly zoom = signal(1);
   readonly zoomMax = ZOOM_MAX;
+  readonly zoomCubrir = signal(ZOOM_MIN);
   readonly panX = signal(0);
   readonly panY = signal(0);
+  private naturalWidth = 0;
+  private naturalHeight = 0;
   private arrastreVista: { inicioX: number; inicioY: number; panXInicial: number; panYInicial: number; movioSuficiente: boolean } | null =
     null;
   /** true si el gesto que se acaba de soltar fue un arrastre para desplazar la vista (no un clic
@@ -170,14 +177,55 @@ export class PlanoPublicoComponent {
     }
   }
 
-  // ---- Zoom y desplazamiento (ver PlanoComponent, mismo mecanismo exacto) ----
+  // ---- Zoom y desplazamiento (ver PlanoComponent; el piso es zoomCubrir(), no ZOOM_MIN) ----
+
+  /** Alto que tendría la imagen en pantalla a zoom 1: como el ancho siempre es el del contenedor
+   * (class="w-full" en el <img>), el alto natural es ese ancho × la proporción real de la imagen. */
+  private altoNaturalEnPantalla(anchoContenedor: number): number {
+    if (this.naturalWidth === 0) return anchoContenedor;
+    return anchoContenedor * (this.naturalHeight / this.naturalWidth);
+  }
+
+  /** Al cargar la imagen (y si la ventana cambia de tamaño): calcula el zoom mínimo que hace que la
+   * imagen cubra toda la pantalla sin dejar franjas en blanco — el equivalente de
+   * "background-size: cover", pero aplicado al mismo zoom/pan del visor en vez de a CSS puro, para
+   * que el overlay de polígonos (que vive dentro del mismo div escalado) se mantenga perfectamente
+   * alineado con la imagen sin importar el recorte. Deja la imagen centrada a ese zoom. */
+  private ajustarZoomParaCubrirPantalla(): void {
+    const contenedor = this.contenedorPlano?.nativeElement;
+    if (!contenedor || this.naturalWidth === 0) return;
+    const rect = contenedor.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+
+    const altoAZoom1 = this.altoNaturalEnPantalla(rect.width);
+    const zoomCubrir = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, rect.height / altoAZoom1));
+    this.zoomCubrir.set(zoomCubrir);
+
+    this.zoom.set(zoomCubrir);
+    this.panX.set((rect.width - rect.width * zoomCubrir) / 2);
+    this.panY.set((rect.height - altoAZoom1 * zoomCubrir) / 2);
+    this.limitarPan(rect);
+  }
+
+  /** Se dispara cuando el <img> termina de cargar — recién ahí se conoce su tamaño real. */
+  onImagenCargada(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    this.naturalWidth = img.naturalWidth;
+    this.naturalHeight = img.naturalHeight;
+    this.ajustarZoomParaCubrirPantalla();
+  }
+
+  @HostListener('window:resize')
+  onResizeVentana(): void {
+    this.ajustarZoomParaCubrirPantalla();
+  }
 
   private zoomEn(clientX: number, clientY: number, nuevoZoom: number): void {
     const contenedor = this.contenedorPlano?.nativeElement;
     if (!contenedor) return;
     const rect = contenedor.getBoundingClientRect();
     const zoomActual = this.zoom();
-    const zoomFinal = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, nuevoZoom));
+    const zoomFinal = Math.min(ZOOM_MAX, Math.max(this.zoomCubrir(), nuevoZoom));
     if (zoomFinal === zoomActual) return;
 
     const puntoX = clientX - rect.left;
@@ -197,10 +245,15 @@ export class PlanoPublicoComponent {
     this.zoomEn(rect.left + rect.width / 2, rect.top + rect.height / 2, nuevoZoom);
   }
 
+  /** A diferencia de PlanoComponent, el alto de la imagen a zoom 1 no siempre es rect.height (ver
+   * altoNaturalEnPantalla) — así que el límite de paneo vertical se calcula sobre el alto real, no
+   * sobre el del contenedor. En el ancho sí coinciden siempre (class="w-full"). */
   private limitarPan(rect: DOMRect): void {
     const zoom = this.zoom();
-    const minPanX = rect.width - rect.width * zoom;
-    const minPanY = rect.height - rect.height * zoom;
+    const anchoContenido = rect.width * zoom;
+    const altoContenido = this.altoNaturalEnPantalla(rect.width) * zoom;
+    const minPanX = Math.min(0, rect.width - anchoContenido);
+    const minPanY = Math.min(0, rect.height - altoContenido);
     this.panX.set(Math.min(0, Math.max(minPanX, this.panX())));
     this.panY.set(Math.min(0, Math.max(minPanY, this.panY())));
   }
@@ -213,10 +266,10 @@ export class PlanoPublicoComponent {
     this.zoomEnCentro(this.zoom() / ZOOM_PASO_BOTON);
   }
 
+  /** "Restablecer" vuelve al zoom que cubre toda la pantalla (centrado), no a zoom 1 — volver a
+   * zoom 1 reintroduciría la franja en blanco que este mismo mecanismo evita. */
   restablecerZoom(): void {
-    this.zoom.set(1);
-    this.panX.set(0);
-    this.panY.set(0);
+    this.ajustarZoomParaCubrirPantalla();
   }
 
   onWheelImagen(event: WheelEvent): void {
@@ -226,7 +279,7 @@ export class PlanoPublicoComponent {
   }
 
   onPointerDownVista(event: PointerEvent): void {
-    if (this.zoom() <= ZOOM_MIN) return;
+    if (this.zoom() <= this.zoomCubrir()) return;
     this.arrastreVista = {
       inicioX: event.clientX,
       inicioY: event.clientY,
