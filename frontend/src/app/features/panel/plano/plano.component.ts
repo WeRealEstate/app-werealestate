@@ -33,9 +33,13 @@ import {
  * cerrar el polígono que se está dibujando. */
 const UMBRAL_CIERRE_PORCENTAJE = 3;
 
-/** Límites de zoom del plano (1 = tamaño normal) y cuánto avanza cada paso de +/- o de la rueda. */
+/** Límites de zoom del plano (1 = tamaño normal) y cuánto avanza cada paso de +/- o de la rueda.
+ * ZOOM_MAX está pensado para poder llegar a la resolución nativa del PNG del plano (varios miles
+ * de px de ancho: se rasteriza a partir del PDF, ver DesarrolloService) aunque el contenedor en
+ * pantalla lo muestre mucho más chico a zoom 1 — más allá de eso ya no hay más detalle que mostrar,
+ * solo se ampliarían los mismos píxeles. */
 const ZOOM_MIN = 1;
-const ZOOM_MAX = 5;
+const ZOOM_MAX = 15;
 const ZOOM_PASO_BOTON = 1.5;
 const ZOOM_PASO_RUEDA = 1.15;
 
@@ -139,6 +143,7 @@ export class PlanoComponent {
    * pan en px sobre el contenedor sin escalar. Se aplican como transform al div interno que
    * envuelve la imagen y sus overlays, así que las posiciones en % de los vértices no cambian. */
   readonly zoom = signal(1);
+  readonly zoomMax = ZOOM_MAX;
   readonly panX = signal(0);
   readonly panY = signal(0);
   private arrastreVista: { inicioX: number; inicioY: number; panXInicial: number; panYInicial: number; movioSuficiente: boolean } | null = null;
