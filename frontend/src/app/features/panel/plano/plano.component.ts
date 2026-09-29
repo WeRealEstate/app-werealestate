@@ -43,6 +43,11 @@ const ZOOM_MAX = 15;
 const ZOOM_PASO_BOTON = 1.5;
 const ZOOM_PASO_RUEDA = 1.15;
 
+/** Lado más largo (en px) del canvas que se convierte en la imagen del PDF descargable — de sobra
+ * para verse nítido en pantalla o impreso; el PNG del plano en sí puede ser mucho más grande (ver
+ * ZOOM_MAX arriba), pero el PDF no necesita esa resolución. */
+const MAX_LADO_CANVAS_PDF_PX = 2400;
+
 /** Si el cursor se movió más que esto (en px de pantalla) entre el pointerdown y el pointerup,
  * fue un arrastre para desplazar la vista, no un clic real sobre el plano. */
 const UMBRAL_ARRASTRE_VISTA_PX = 6;
@@ -554,21 +559,25 @@ export class PlanoComponent {
   }
 
   /** Dibuja la imagen del plano y, encima, el polígono de cada lote ya delimitado con el color de
-   * su estado — el mismo <canvas> que después se convierte en imagen para el PDF. */
+   * su estado — el mismo <canvas> que después se convierte en imagen para el PDF. Se limita el
+   * lado más largo a MAX_LADO_CANVAS_PDF_PX: el PNG del plano puede llegar a varios miles de px de
+   * ancho (para poder hacer zoom nítido en el visor, ver ZOOM_MAX), pero un PDF para ver o imprimir
+   * no necesita esa resolución — dibujarlo a resolución nativa tardaba mucho y pesaba varios MB. */
   private dibujarCanvasPlano(plano: PlanoDesarrollo): Promise<HTMLCanvasElement> {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
+        const escala = Math.min(1, MAX_LADO_CANVAS_PDF_PX / Math.max(img.naturalWidth, img.naturalHeight));
         const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
+        canvas.width = Math.round(img.naturalWidth * escala);
+        canvas.height = Math.round(img.naturalHeight * escala);
         const ctx = canvas.getContext('2d');
         if (!ctx) {
           reject(new Error('Este navegador no soporta canvas 2D'));
           return;
         }
 
-        ctx.drawImage(img, 0, 0);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
         for (const lote of plano.lotes) {
           if (!this.tienePoligono(lote)) continue;
