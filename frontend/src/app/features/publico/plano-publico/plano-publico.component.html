@@ -15,7 +15,7 @@
     <div
       #contenedorPlano
       class="relative h-full w-full touch-none"
-      [class.cursor-grab]="zoom() > zoomCubrir()"
+      [class.cursor-grab]="hayAlgoFueraDeVista()"
       (pointerdown)="onPointerDownVista($event)"
       (wheel)="onWheelImagen($event)"
     >

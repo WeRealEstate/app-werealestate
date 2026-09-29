@@ -278,8 +278,26 @@ export class PlanoPublicoComponent {
     this.zoomEn(event.clientX, event.clientY, this.zoom() * factor);
   }
 
+  /** Si hay algo de la imagen fuera de la vista en cualquiera de los dos ejes — no necesariamente
+   * ambos: en una pantalla mucho más ancha que el plano, el zoom mínimo (zoomCubrir) ya cubre el
+   * ancho exacto (sin margen) pero puede seguir sin alcanzar a cubrir el alto completo (el piso de
+   * zoom no baja de 1, ver ajustarZoomParaCubrirPantalla), recortando arriba/abajo — y es
+   * justo ahí donde hace falta poder arrastrar para ver el resto, aunque el zoom no haya subido del
+   * mínimo. Antes esto se decidía comparando contra zoomCubrir(), lo cual bloqueaba el arrastre
+   * exactamente en ese caso. */
+  hayAlgoFueraDeVista(): boolean {
+    const contenedor = this.contenedorPlano?.nativeElement;
+    if (!contenedor) return false;
+    const rect = contenedor.getBoundingClientRect();
+    const zoom = this.zoom();
+    const anchoContenido = rect.width * zoom;
+    const altoContenido = this.altoNaturalEnPantalla(rect.width) * zoom;
+    const margen = 0.5;
+    return anchoContenido > rect.width + margen || altoContenido > rect.height + margen;
+  }
+
   onPointerDownVista(event: PointerEvent): void {
-    if (this.zoom() <= this.zoomCubrir()) return;
+    if (!this.hayAlgoFueraDeVista()) return;
     this.arrastreVista = {
       inicioX: event.clientX,
       inicioY: event.clientY,
