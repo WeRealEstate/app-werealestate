@@ -160,7 +160,7 @@
                     (click)="onClickPoligono(lote, $event)"
                     class="pointer-events-auto cursor-pointer transition-opacity duration-150 hover:opacity-80"
                     [class]="poligonoClases[lote.estado]"
-                    [attr.stroke-width]="loteAUbicarId() === lote.id || loteActivo()?.id === lote.id ? 1.2 : 0.6"
+                    [attr.stroke-width]="(loteAUbicarId() === lote.id || loteActivo()?.id === lote.id ? 1.2 : 0.6) / zoom()"
                     vector-effect="non-scaling-stroke"
                   >
                     <title>MZ {{ lote.manzana }} - Lote {{ lote.numeroLote }}</title>
@@ -175,7 +175,7 @@
                   [attr.points]="puntosSvg(puntosLineaTrazando())"
                   fill="none"
                   class="stroke-we-primary"
-                  stroke-width="0.5"
+                  [attr.stroke-width]="0.5 / zoom()"
                   vector-effect="non-scaling-stroke"
                 />
               }
