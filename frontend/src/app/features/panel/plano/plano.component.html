@@ -182,20 +182,24 @@
             </svg>
 
             <!-- Vértices del polígono a medio dibujar: puntos sólidos chicos, sin borde ni sombra
-                 para que no se vean como pines (decorativos, el clic lo procesa el contenedor). -->
+                 para que no se vean como pines (decorativos, el clic lo procesa el contenedor).
+                 El tamaño se contra-escala por 1/zoom: este span vive dentro del div que se agranda
+                 con scale(zoom()), así que sin esto el punto crecería junto con la imagen (a 1500%
+                 un punto de 6px se ve como una bola de 90px) en vez de verse igual de chico siempre. -->
             @for (punto of puntosEnProgreso(); track $index) {
               <span
-                class="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-we-primary"
+                class="pointer-events-none absolute rounded-full bg-we-primary"
                 [class]="$index === 0 ? 'h-1.5 w-1.5' : 'h-1 w-1'"
                 [style.left.%]="punto.x"
                 [style.top.%]="punto.y"
+                [style.transform]="'translate(-50%, -50%) scale(' + (1 / zoom()) + ')'"
                 [attr.title]="$index === 0 ? 'Haz clic aquí para cerrar la figura' : ''"
               ></span>
             }
 
             <!-- Vértices arrastrables del lote que se está corrigiendo: el punto visible es chico,
                  pero el área de agarre (el padding del span exterior) es más grande para que siga
-                 siendo fácil de tomar con el mouse. -->
+                 siendo fácil de tomar con el mouse. Mismo contra-escalado por 1/zoom que arriba. -->
             @if (modoEdicion() && loteAUbicarId() !== null && puntosEnProgreso().length === 0) {
               @for (lote of plano()!.lotes; track lote.id) {
                 @if (lote.id === loteAUbicarId() && tienePoligono(lote)) {
@@ -203,9 +207,10 @@
                     <span
                       (pointerdown)="iniciarArrastreVertice(lote, $index, $event)"
                       (click)="$event.stopPropagation()"
-                      class="absolute -translate-x-1/2 -translate-y-1/2 cursor-grab p-2 active:cursor-grabbing"
+                      class="absolute cursor-grab p-2 active:cursor-grabbing"
                       [style.left.%]="punto.x"
                       [style.top.%]="punto.y"
+                      [style.transform]="'translate(-50%, -50%) scale(' + (1 / zoom()) + ')'"
                     >
                       <span
                         class="block h-1.5 w-1.5 rounded-full bg-we-primary transition-transform duration-100 hover:scale-150"
