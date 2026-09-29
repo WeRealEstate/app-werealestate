@@ -252,11 +252,18 @@ export class PlanoComponent {
     const innerY = (clientY - rect.top - this.panY()) / zoom;
     const x = Math.min(100, Math.max(0, (innerX / rect.width) * 100));
     const y = Math.min(100, Math.max(0, (innerY / rect.height) * 100));
-    return { x: Math.round(x * 100) / 100, y: Math.round(y * 100) / 100 };
+    // 4 decimales: a 2 (lo que había antes) cada paso de redondeo ya se sentía como un salto/imán
+    // en vez de seguir el cursor libremente en cuanto el zoom pasaba de unos cientos por ciento.
+    return { x: Math.round(x * 10000) / 10000, y: Math.round(y * 10000) / 10000 };
   }
 
+  /** UMBRAL_CIERRE_PORCENTAJE está en % de la imagen sin escalar; se divide entre el zoom actual
+   * para que la tolerancia se mantenga constante EN PANTALLA sin importar cuánto se haya acercado —
+   * si no, a zoom alto ese mismo % equivale a muchos más píxeles reales, y un clic para el cuarto
+   * vértice cae "cerca" del primero sin querer, cerrando la figura antes de tiempo. */
   private cercaDe(a: PuntoMapa, b: PuntoMapa): boolean {
-    return Math.abs(a.x - b.x) <= UMBRAL_CIERRE_PORCENTAJE && Math.abs(a.y - b.y) <= UMBRAL_CIERRE_PORCENTAJE;
+    const umbral = UMBRAL_CIERRE_PORCENTAJE / this.zoom();
+    return Math.abs(a.x - b.x) <= umbral && Math.abs(a.y - b.y) <= umbral;
   }
 
   /** Sigue el cursor mientras se dibuja, para la línea de vista previa del próximo tramo. */
