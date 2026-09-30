@@ -112,21 +112,31 @@
             </button>
           }
 
-          <p class="text-sm text-ink-muted">
-            @if (puntosEnProgreso().length > 0) {
+          <!-- Grid en vez de @if/@else: las tres variantes del texto viven siempre en el DOM,
+               apiladas en la misma celda (visibility, no display, para que sigan ocupando
+               espacio) — así la fila siempre mide lo que mide la más alta (3 líneas) y cambiar de
+               variante no cambia el alto de este bloque. Antes, al poner el primer punto, el
+               texto pasaba de 3 líneas a 2 (o de 1 a 3, según el caso), el bloque de arriba
+               encogía/crecía, y el contenedor del plano — justo debajo — saltaba unos px verticalmente
+               apenas soltado el clic: el punto quedaba bien puesto en el instante del clic, pero el
+               salto lo dejaba viéndose "más arriba" de donde estaba el mouse. -->
+          <div class="grid text-sm text-ink-muted">
+            <p class="[grid-area:1/1]" [class.invisible]="puntosEnProgreso().length === 0">
               Ya pusiste {{ puntosEnProgreso().length }} punto{{ puntosEnProgreso().length === 1 ? '' : 's' }}. Sigue haciendo
               clic en cada esquina del lote; cuando lleves al menos 3, haz clic de nuevo sobre el
               primer punto (el más grande) para cerrar la figura y guardarla.
-            } @else if (loteAUbicarId() !== null) {
+            </p>
+            <p class="[grid-area:1/1]" [class.invisible]="!(puntosEnProgreso().length === 0 && loteAUbicarId() !== null)">
               Haz clic sobre el plano para empezar a dibujar el contorno del lote, esquina por
               esquina. Si el lote ya tiene un polígono, arrastra sus vértices para corregirlos,
               haz clic en cualquier parte para agregarle una esquina de más, o quítalo del panel de
               la derecha para volver a dibujarlo desde cero.
-            } @else {
+            </p>
+            <p class="[grid-area:1/1]" [class.invisible]="!(puntosEnProgreso().length === 0 && loteAUbicarId() === null)">
               Presiona <kbd class="rounded border border-border px-1 py-0.5 text-xs">Enter</kbd> para empezar, o elige un lote arriba.
               Faltan {{ lotesSinUbicar().length }} por delimitar.
-            }
-          </p>
+            </p>
+          </div>
         </div>
       }
     }
