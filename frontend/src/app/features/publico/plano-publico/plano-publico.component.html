@@ -131,18 +131,26 @@
           </span>
         </div>
 
-        @if (puedeApartar(lote)) {
-          <div class="mt-5">
+        <div class="mt-5 flex gap-2.5">
+          <a
+            routerLink="/cotizador-publico"
+            [queryParams]="{ proyecto: proyecto, manzana: lote.manzana, lote: lote.numeroLote }"
+            class="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink
+                   hover:border-we-primary active:scale-[0.97] transition-transform duration-150"
+          >
+            Cotizar este lote
+          </a>
+          @if (puedeApartar(lote)) {
             <button
               type="button"
               (click)="abrirApartar()"
-              class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
+              class="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
                      hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150"
             >
               Apartar este lote
             </button>
-          </div>
-        }
+          }
+        </div>
       </div>
     </div>
   }

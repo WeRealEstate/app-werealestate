@@ -1,7 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, ElementRef, HostListener, ViewChild, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
   ESTADO_LOTE_BADGE_CLASSES,
   ESTADO_LOTE_LABELS,
@@ -35,7 +35,7 @@ const UMBRAL_ARRASTRE_VISTA_PX = 6;
 @Component({
   selector: 'app-plano-publico',
   standalone: true,
-  imports: [FormsModule, DecimalPipe, ToastContainerComponent],
+  imports: [FormsModule, DecimalPipe, RouterLink, ToastContainerComponent],
   templateUrl: './plano-publico.component.html',
 })
 export class PlanoPublicoComponent {
@@ -45,7 +45,10 @@ export class PlanoPublicoComponent {
 
   @ViewChild('contenedorPlano') private readonly contenedorPlano?: ElementRef<HTMLElement>;
 
-  private readonly proyecto: ProyectoPublico = this.route.snapshot.data['proyecto'] === 'nanuu' ? 'nanuu' : 'samai';
+  /** Fijo por la ruta (/samai o /aldea-nanuu, ver app.routes.ts) — a diferencia del panel, esta
+   * página nunca cotiza más de un desarrollo, así que el HTML lo usa directo para armar el link a
+   * /cotizador-publico sin necesitar un mapeo desde lote.desarrollo.nombre. */
+  readonly proyecto: ProyectoPublico = this.route.snapshot.data['proyecto'] === 'nanuu' ? 'nanuu' : 'samai';
 
   readonly estadoLabels = ESTADO_LOTE_LABELS;
   readonly badgeClases = ESTADO_LOTE_BADGE_CLASSES;
