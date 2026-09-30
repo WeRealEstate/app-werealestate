@@ -11,6 +11,7 @@ import {
   LucideReceipt,
   LucideUser,
   LucideUsers,
+  LucideWallet,
 } from '@lucide/angular';
 import { AuthService } from '../../../core/services/auth.service';
 import { ROLE_LABELS, Role } from '../../../core/models/user.model';
@@ -22,7 +23,7 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
 interface NavItem {
   label: string;
   route: string;
-  icon: 'home' | 'leads' | 'usuarios' | 'calendario' | 'pipeline' | 'cotizador' | 'lotes' | 'plano' | 'ventas';
+  icon: 'home' | 'leads' | 'usuarios' | 'calendario' | 'pipeline' | 'cotizador' | 'lotes' | 'plano' | 'ventas' | 'gastos';
 }
 
 const ASESORES_EXTERNOS_NAV_ITEM: NavItem = { label: 'Asesores externos', route: '/panel/asesores-externos', icon: 'usuarios' };
@@ -62,6 +63,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
       items: [
         { label: 'Lotes', route: '/panel/lotes', icon: 'lotes' },
         { label: 'Ventas', route: '/panel/ventas', icon: 'ventas' },
+        { label: 'Gastos', route: '/panel/gastos', icon: 'gastos' },
       ],
     },
     { label: 'Administración', items: [{ label: 'Calendario', route: '/panel/calendario', icon: 'calendario' }] },
@@ -86,6 +88,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
         { label: 'Lotes', route: '/panel/lotes', icon: 'lotes' },
         { label: 'Plano', route: '/panel/plano', icon: 'plano' },
         { label: 'Ventas', route: '/panel/ventas', icon: 'ventas' },
+        { label: 'Gastos', route: '/panel/gastos', icon: 'gastos' },
       ],
     },
     {
@@ -121,6 +124,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
     LucideChartLine,
     LucideUser,
     LucideMenu,
+    LucideWallet,
   ],
   templateUrl: './panel-layout.component.html',
 })

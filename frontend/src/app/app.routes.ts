@@ -137,6 +137,24 @@ export const routes: Routes = [
           import('./features/panel/cotizador/cotizador.component').then((m) => m.CotizadorComponent),
       },
       {
+        // Ingresos ya se ven como abonos dentro de cada venta (ver VentaDetalleComponent); esta
+        // sección es solo para Gastos (comisiones, renta, etc. — ver GastoService/TipoGasto).
+        path: 'gastos',
+        canActivate: [roleGuard(['ADMIN', 'LIDER_AREA'])],
+        loadComponent: () =>
+          import('./features/panel/gastos/gastos-list/gastos-list.component').then((m) => m.GastosListComponent),
+      },
+      {
+        // Catálogo de tipos de gasto: exclusivo de admin (ver TipoGastoService), por eso no aparece
+        // en la nav de líder de área aunque sí pueda ver/registrar gastos.
+        path: 'gastos/tipos',
+        canActivate: [roleGuard(['ADMIN'])],
+        loadComponent: () =>
+          import('./features/panel/gastos/tipos-gasto-list/tipos-gasto-list.component').then(
+            (m) => m.TiposGastoListComponent,
+          ),
+      },
+      {
         path: 'asesor',
         canActivate: [roleGuard(['ASESOR'])],
         loadComponent: () =>

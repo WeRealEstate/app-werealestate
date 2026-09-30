@@ -1,0 +1,210 @@
+<div class="page-enter">
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="font-heading text-2xl font-semibold text-ink">Gastos</h1>
+      <p class="mt-1 text-sm text-ink-muted">Registra los gastos del mes (comisiones, renta, etc.) y su comprobante cuando aplique.</p>
+    </div>
+    <div class="flex shrink-0 items-center gap-2.5">
+      @if (esAdmin()) {
+        <a
+          routerLink="/panel/gastos/tipos"
+          class="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink
+                 hover:border-we-primary active:scale-[0.97] transition-transform duration-150
+                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
+        >
+          Tipos de gasto
+        </a>
+      }
+      <button
+        type="button"
+        (click)="abrirModalCrear()"
+        class="inline-flex items-center justify-center gap-2 rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
+               hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
+               focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
+      >
+        + Registrar gasto
+      </button>
+    </div>
+  </div>
+
+  @if (errorMessage()) {
+    <div class="mt-6 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  @if (isLoading()) {
+    <p class="mt-8 text-sm text-ink-muted">Cargando gastos…</p>
+  } @else if (gastos().length === 0) {
+    <div class="mt-8 rounded-xl border border-dashed border-border p-10 text-center">
+      <p class="text-sm text-ink-muted">Todavía no hay gastos registrados.</p>
+    </div>
+  } @else {
+    <div class="mt-6 overflow-x-auto rounded-xl border border-border">
+      <table class="min-w-full divide-y divide-border text-sm">
+        <thead class="bg-surface-2">
+          <tr class="text-left text-xs font-medium uppercase tracking-wide text-ink-muted">
+            <th class="px-4 py-3">Fecha</th>
+            <th class="px-4 py-3">Tipo</th>
+            <th class="px-4 py-3">Monto</th>
+            <th class="px-4 py-3">Ticket</th>
+            <th class="px-4 py-3">Registró</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border bg-surface">
+          @for (g of gastos(); track g.id; let i = $index) {
+            <tr class="stagger-item hover:bg-surface-2 transition-colors duration-150" [style.animation-delay.ms]="i < 8 ? i * 40 : 0">
+              <td class="px-4 py-3 text-ink-muted">{{ g.fecha }}</td>
+              <td class="px-4 py-3 font-medium text-ink">{{ g.tipoGasto.nombre }}</td>
+              <td class="px-4 py-3 text-ink-muted">${{ money(g.monto) }}</td>
+              <td class="px-4 py-3">
+                @if (g.tieneTicket) {
+                  <button
+                    type="button"
+                    (click)="verTicket(g)"
+                    class="inline-flex items-center gap-1.5 text-xs font-semibold text-we-primary hover:underline"
+                  >
+                    <svg lucideFileText [size]="14" aria-hidden="true"></svg>
+                    Ver
+                  </button>
+                } @else {
+                  <span class="text-ink-muted">—</span>
+                }
+              </td>
+              <td class="px-4 py-3 text-ink-muted">{{ g.registradoPor.nombre }}</td>
+              <td class="px-4 py-3 text-right">
+                @if (esAdmin()) {
+                  <button
+                    type="button"
+                    [disabled]="savingId() === g.id"
+                    (click)="eliminar(g)"
+                    aria-label="Eliminar gasto"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-red-50 hover:text-red-600
+                           dark:hover:bg-red-500/10 dark:hover:text-red-400 transition-colors duration-150 active:scale-90 disabled:opacity-60"
+                  >
+                    <svg lucideTrash2 [size]="15"></svg>
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+        <tfoot class="bg-surface-2">
+          <tr>
+            <td colspan="2" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ink-muted">Total</td>
+            <td colspan="4" class="px-4 py-3 text-sm font-semibold text-ink">${{ money(totalGastado()) }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  }
+
+  <!-- TARJETA FLOTANTE: registrar gasto -->
+  @if (mostrarModalCrear()) {
+    <button
+      type="button"
+      (click)="cerrarModalCrear()"
+      aria-label="Cerrar"
+      class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"
+    ></button>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="crear-gasto-titulo">
+      <div class="modal-panel-enter w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <h2 id="crear-gasto-titulo" class="font-heading text-lg font-semibold text-ink">Registrar gasto</h2>
+
+        @if (tiposActivos().length === 0) {
+          <p class="mt-4 text-sm text-ink-muted">
+            Todavía no hay tipos de gasto activos.
+            @if (esAdmin()) {
+              <a routerLink="/panel/gastos/tipos" (click)="cerrarModalCrear()" class="text-we-primary hover:underline">Crea uno primero</a>.
+            }
+          </p>
+        } @else {
+          <form (ngSubmit)="crear()" class="mt-4 space-y-3">
+            <div>
+              <label for="crear-tipo" class="block text-xs font-medium text-ink-muted mb-1">Tipo de gasto *</label>
+              <select
+                id="crear-tipo"
+                [ngModel]="nuevoTipoGastoId()"
+                (ngModelChange)="nuevoTipoGastoId.set($event)"
+                name="nuevoTipoGastoId"
+                class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+                       focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+              >
+                <option [ngValue]="null" disabled>Selecciona un tipo…</option>
+                @for (t of tiposActivos(); track t.id) {
+                  <option [ngValue]="t.id">{{ t.nombre }}</option>
+                }
+              </select>
+            </div>
+            <div>
+              <label for="crear-fecha" class="block text-xs font-medium text-ink-muted mb-1">Fecha *</label>
+              <input
+                id="crear-fecha"
+                type="date"
+                [ngModel]="nuevaFecha()"
+                (ngModelChange)="nuevaFecha.set($event)"
+                name="nuevaFecha"
+                class="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
+                       focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+              />
+            </div>
+            <div>
+              <label for="crear-monto" class="block text-xs font-medium text-ink-muted mb-1">Monto *</label>
+              <input
+                id="crear-monto"
+                type="number"
+                step="0.01"
+                min="0.01"
+                [ngModel]="nuevoMonto()"
+                (ngModelChange)="nuevoMonto.set($event)"
+                name="nuevoMonto"
+                placeholder="Ej. 5000"
+                class="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
+                       focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+              />
+            </div>
+            @if (tipoSeleccionado()?.requiereTicket) {
+              <div>
+                <label for="crear-ticket" class="block text-xs font-medium text-ink-muted mb-1">Ticket / comprobante *</label>
+                <input
+                  id="crear-ticket"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,application/pdf"
+                  (change)="onTicketChange($event)"
+                  class="block w-full text-sm text-ink-muted
+                         file:mr-3 file:rounded-lg file:border-0 file:bg-surface-2 file:px-3.5 file:py-2 file:text-sm file:font-medium file:text-ink
+                         hover:file:bg-border"
+                />
+                <p class="mt-1.5 text-xs text-ink-muted">Este tipo de gasto exige comprobante. Foto o PDF.</p>
+              </div>
+            }
+
+            @if (errorCreacion()) {
+              <p class="text-xs text-red-600 dark:text-red-400">{{ errorCreacion() }}</p>
+            }
+
+            <div class="flex justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                (click)="cerrarModalCrear()"
+                class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary
+                       active:scale-[0.97] transition-transform duration-150"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                [disabled]="isCreando()"
+                class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90
+                       active:scale-[0.97] transition-transform duration-150 disabled:opacity-60"
+              >
+                {{ isCreando() ? 'Guardando…' : 'Guardar' }}
+              </button>
+            </div>
+          </form>
+        }
+      </div>
+    </div>
+  }
+</div>
