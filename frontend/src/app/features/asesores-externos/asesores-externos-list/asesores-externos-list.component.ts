@@ -8,6 +8,9 @@ import { ConfirmService } from '../../../core/services/confirm.service';
 import { AsesoresExternosService } from '../../../core/services/asesores-externos.service';
 import { AsesorExterno, AsesorExternoUpdateRequest } from '../../../core/models/asesor-externo.model';
 
+const ordenarAsesoresPorNombre = (asesores: AsesorExterno[]): AsesorExterno[] =>
+  [...asesores].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es-MX', { sensitivity: 'base' }));
+
 @Component({
   selector: 'app-asesores-externos-list',
   standalone: true,
@@ -46,7 +49,7 @@ export class AsesoresExternosListComponent {
     this.isLoading.set(true);
     this.errorMessage.set(null);
     try {
-      this.asesores.set(await this.asesoresExternosService.listar());
+      this.asesores.set(ordenarAsesoresPorNombre(await this.asesoresExternosService.listar()));
     } catch {
       this.errorMessage.set('No se pudieron cargar los asesores externos. Intenta de nuevo.');
     } finally {
@@ -79,7 +82,7 @@ export class AsesoresExternosListComponent {
     this.errorCreacion.set(null);
     try {
       const creado = await this.asesoresExternosService.crear({ nombre, celular, correo: correo || null });
-      this.asesores.update((lista) => [...lista, creado].sort((a, b) => a.nombre.localeCompare(b.nombre)));
+      this.asesores.update((lista) => ordenarAsesoresPorNombre([...lista, creado]));
       this.mostrarModalCrear.set(false);
       this.toast.success(`${creado.nombre} fue agregado.`);
     } catch (error) {
@@ -133,7 +136,7 @@ export class AsesoresExternosListComponent {
     this.savingId.set(asesor.id);
     try {
       const actualizado = await this.asesoresExternosService.actualizar(asesor.id, cambios);
-      this.asesores.update((lista) => lista.map((a) => (a.id === actualizado.id ? actualizado : a)));
+      this.asesores.update((lista) => ordenarAsesoresPorNombre(lista.map((a) => (a.id === actualizado.id ? actualizado : a))));
     } catch {
       this.toast.error('No se pudo actualizar el asesor externo.');
     } finally {
