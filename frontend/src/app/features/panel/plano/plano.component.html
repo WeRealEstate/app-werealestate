@@ -147,17 +147,24 @@
       </div>
     } @else {
       <div class="mt-6 grid gap-4 lg:grid-cols-[1fr_260px]">
-        <div
-          #contenedorPlano
-          class="relative w-full overflow-hidden rounded-xl border border-border bg-surface touch-none"
-          [class.cursor-crosshair]="modoEdicion() && loteAUbicarId() !== null"
-          [class.cursor-grab]="!(modoEdicion() && loteAUbicarId() !== null) && zoom() > 1"
-          (click)="onClickImagen($event)"
-          (mousemove)="onMouseMoveImagen($event)"
-          (mouseleave)="onMouseLeaveImagen()"
-          (pointerdown)="onPointerDownVista($event)"
-          (wheel)="onWheelImagen($event)"
-        >
+        <!-- El borde/esquinas redondeadas viven en este wrapper EXTERIOR, nunca en #contenedorPlano:
+             posicionRelativa() usa getBoundingClientRect() de #contenedorPlano como si fuera
+             exactamente el tamaño de la imagen sin escalar: un border ahí (aunque sea de 1px) hace
+             que ese rect mida 2px más de ancho/alto que la imagen real, un desfase minúsculo a
+             zoom normal pero que se multiplica por el zoom — a 1500% esos 2px de diferencia ya son
+             ~30px de error real en pantalla entre donde haces clic y donde cae el punto. -->
+        <div class="relative w-full overflow-hidden rounded-xl border border-border bg-surface">
+          <div
+            #contenedorPlano
+            class="relative w-full overflow-hidden touch-none"
+            [class.cursor-crosshair]="modoEdicion() && loteAUbicarId() !== null"
+            [class.cursor-grab]="!(modoEdicion() && loteAUbicarId() !== null) && zoom() > 1"
+            (click)="onClickImagen($event)"
+            (mousemove)="onMouseMoveImagen($event)"
+            (mouseleave)="onMouseLeaveImagen()"
+            (pointerdown)="onPointerDownVista($event)"
+            (wheel)="onWheelImagen($event)"
+          >
           <div class="relative origin-top-left" [style.transform]="'translate(' + panX() + 'px, ' + panY() + 'px) scale(' + zoom() + ')'">
             <img [src]="plano()!.planoUrl" alt="Plano de {{ plano()!.desarrolloNombre }}" class="block w-full select-none" draggable="false" />
 
@@ -269,6 +276,7 @@
               +
             </button>
           </div>
+        </div>
         </div>
 
         <div class="flex flex-col gap-4">
