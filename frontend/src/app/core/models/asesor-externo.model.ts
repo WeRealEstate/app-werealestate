@@ -23,11 +23,11 @@ export interface AsesorExterno {
 export interface AsesorExternoCreateRequest {
   nombre: string;
   celular: string;
-  correo: string;
+  correo: string | null;
 }
 
-/** celular/correo no son obligatorios aquí (a diferencia de AsesorExternoCreateRequest): un
- * asesor externo registrado antes de que existieran estos campos debe poder seguir editándose.
+/** celular/correo no son obligatorios aquí: un asesor externo registrado antes de que existieran
+ * estos campos debe poder seguir editándose.
  * tipo/liderDirectoId son la jerarquía de Teams — la pantalla de "Asesores externos" los manda
  * sin cambios (tal como venían) al renombrar/activar; solo Teams los cambia de verdad. */
 export interface AsesorExternoUpdateRequest {

@@ -29,8 +29,8 @@ public class AsesorExterno {
     @Column(nullable = false, length = 200)
     private String nombre;
 
-    // Nullable: se piden al crear uno nuevo (ver AsesorExternoCreateRequest), pero los ya
-    // registrados antes de este campo no los tienen todavía.
+    // Nullable: celular se pide al crear uno nuevo; correo puede omitirse. Los registrados antes
+    // de estos campos tampoco los tienen todavía.
     @Column(length = 20)
     private String celular;
 

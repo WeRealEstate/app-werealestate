@@ -70,15 +70,15 @@ export class AsesoresExternosListComponent {
     const nombre = this.nuevoNombre().trim();
     const celular = this.nuevoCelular().trim();
     const correo = this.nuevoCorreo().trim();
-    if (!nombre || !celular || !correo || this.isCreando()) {
-      this.errorCreacion.set('Nombre, celular y correo son obligatorios.');
+    if (!nombre || !celular || this.isCreando()) {
+      this.errorCreacion.set('Nombre y celular son obligatorios.');
       return;
     }
 
     this.isCreando.set(true);
     this.errorCreacion.set(null);
     try {
-      const creado = await this.asesoresExternosService.crear({ nombre, celular, correo });
+      const creado = await this.asesoresExternosService.crear({ nombre, celular, correo: correo || null });
       this.asesores.update((lista) => [...lista, creado].sort((a, b) => a.nombre.localeCompare(b.nombre)));
       this.mostrarModalCrear.set(false);
       this.toast.success(`${creado.nombre} fue agregado.`);

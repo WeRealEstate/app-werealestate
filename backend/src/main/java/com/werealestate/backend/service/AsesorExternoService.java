@@ -54,7 +54,7 @@ public class AsesorExternoService {
     public AsesorExternoDto crear(AsesorExternoCreateRequest request) {
         exigirAdmin();
         AsesorExterno asesor = new AsesorExterno(
-                request.nombre().trim(), request.celular().trim(), request.correo().trim());
+                request.nombre().trim(), request.celular().trim(), normalizarOpcional(request.correo()));
         return AsesorExternoDto.from(asesorExternoRepository.save(asesor));
     }
 
@@ -63,8 +63,8 @@ public class AsesorExternoService {
         AsesorExterno asesor = asesorExternoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Asesor externo no encontrado"));
         asesor.setNombre(request.nombre().trim());
-        asesor.setCelular(request.celular() == null || request.celular().isBlank() ? null : request.celular().trim());
-        asesor.setCorreo(request.correo() == null || request.correo().isBlank() ? null : request.correo().trim());
+        asesor.setCelular(normalizarOpcional(request.celular()));
+        asesor.setCorreo(normalizarOpcional(request.correo()));
         asesor.setActivo(request.activo());
         aplicarJerarquia(asesor, request.tipo(), request.liderDirectoId());
         return AsesorExternoDto.from(asesorExternoRepository.save(asesor));
@@ -161,5 +161,9 @@ public class AsesorExternoService {
             throw new ForbiddenOperationException("Solo un administrador o líder de área puede consultar esta lista");
         }
         return actual;
+    }
+
+    private String normalizarOpcional(String valor) {
+        return valor == null || valor.isBlank() ? null : valor.trim();
     }
 }
