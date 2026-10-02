@@ -18,8 +18,15 @@
       [class.cursor-grab]="hayAlgoFueraDeVista()"
       (pointerdown)="onPointerDownVista($event)"
       (wheel)="onWheelImagen($event)"
+      (dblclick)="onDobleClickImagen($event)"
     >
-      <div class="relative origin-top-left" [style.transform]="'translate(' + panX() + 'px, ' + panY() + 'px) scale(' + zoom() + ')'">
+      <div
+        class="relative origin-top-left"
+        [class.transition-transform]="animando()"
+        [class.duration-200]="animando()"
+        [class.ease-out]="animando()"
+        [style.transform]="'translate(' + panX() + 'px, ' + panY() + 'px) scale(' + zoom() + ')'"
+      >
         <img
           [src]="planoUrl()"
           alt="Plano de {{ desarrolloNombre() }}"
@@ -73,7 +80,8 @@
           (click)="alejarZoom()"
           [disabled]="zoom() <= zoomCubrir()"
           aria-label="Alejar"
-          class="flex h-8 w-8 items-center justify-center rounded-md text-lg font-semibold text-ink hover:bg-surface-2 disabled:opacity-40 disabled:hover:bg-transparent"
+          title="Alejar (-)"
+          class="flex h-10 w-10 sm:h-8 sm:w-8 items-center justify-center rounded-md text-lg font-semibold text-ink hover:bg-surface-2 disabled:opacity-40 disabled:hover:bg-transparent"
         >
           −
         </button>
@@ -82,7 +90,7 @@
           (click)="restablecerZoom()"
           [disabled]="zoom() === zoomCubrir()"
           class="min-w-[3rem] rounded-md px-1.5 py-1 text-center text-xs font-medium text-ink-muted hover:bg-surface-2 disabled:opacity-60 disabled:hover:bg-transparent"
-          title="Restablecer zoom"
+          title="Restablecer zoom (0)"
         >
           {{ zoom() * 100 | number: '1.0-0' }}%
         </button>
@@ -91,7 +99,8 @@
           (click)="acercarZoom()"
           [disabled]="zoom() >= zoomMax"
           aria-label="Acercar"
-          class="flex h-8 w-8 items-center justify-center rounded-md text-lg font-semibold text-ink hover:bg-surface-2 disabled:opacity-40 disabled:hover:bg-transparent"
+          title="Acercar (+)"
+          class="flex h-10 w-10 sm:h-8 sm:w-8 items-center justify-center rounded-md text-lg font-semibold text-ink hover:bg-surface-2 disabled:opacity-40 disabled:hover:bg-transparent"
         >
           +
         </button>

@@ -24,8 +24,18 @@ const NOTA_MAX_LENGTH = 500;
 const ZOOM_MIN = 1;
 const ZOOM_MAX = 15;
 const ZOOM_PASO_BOTON = 1.5;
-const ZOOM_PASO_RUEDA = 1.15;
 const UMBRAL_ARRASTRE_VISTA_PX = 6;
+
+/** Rueda de mouse (~100 por muesca ≈ x1.16, igual que el paso fijo de antes) y pellizco de trackpad
+ * (el navegador lo manda como rueda con deltas chicos, por eso necesita más sensibilidad). */
+const SENSIBILIDAD_RUEDA = 0.0015;
+const SENSIBILIDAD_PELLIZCO_TRACKPAD = 0.01;
+/** Cuánto acerca un doble clic/toque, y qué tan rápido y cerca deben ser dos toques para contar. */
+const ZOOM_DOBLE_TOQUE = 3;
+const VENTANA_DOBLE_TOQUE_MS = 300;
+const DISTANCIA_DOBLE_TOQUE_PX = 30;
+const PASO_TECLADO_PX = 80;
+const DURACION_ANIMACION_MS = 220;
 
 /** Plano interactivo público, en pantalla completa y sin sesión — para compartir el link de un
  * desarrollo directamente (/samai, /aldea-nanuu, ver app.routes.ts). Mismas restricciones que
@@ -87,6 +97,8 @@ export class PlanoPublicoComponent {
   readonly zoomCubrir = signal(ZOOM_MIN);
   readonly panX = signal(0);
   readonly panY = signal(0);
+  /** true solo durante los cambios discretos (botones/teclado/doble toque) para animar la transición. */
+  readonly animando = signal(false);
   private naturalWidth = 0;
   private naturalHeight = 0;
   private arrastreVista: { inicioX: number; inicioY: number; panXInicial: number; panYInicial: number; movioSuficiente: boolean } | null =
@@ -94,6 +106,14 @@ export class PlanoPublicoComponent {
   /** true si el gesto que se acaba de soltar fue un arrastre para desplazar la vista (no un clic
    * real); onClickPoligono lo consume para no abrir el detalle de un lote sin querer. */
   private ultimoGestoFuePan = false;
+
+  // Multitouch: dedos/punteros apoyados ahora mismo, y el último estado medido del pellizco.
+  private readonly punteros = new Map<number, { x: number; y: number }>();
+  private ultimoPellizco: { distancia: number; cx: number; cy: number } | null = null;
+  private hizoPellizco = false;
+  private toqueActual: { x: number; y: number; sobreLote: boolean } | null = null;
+  private ultimoToque: { x: number; y: number; t: number } | null = null;
+  private ultimoDobleToque = 0;
 
   constructor() {
     this.cargar();
@@ -261,24 +281,113 @@ export class PlanoPublicoComponent {
     this.panY.set(Math.min(0, Math.max(minPanY, this.panY())));
   }
 
+  /** Los cambios discretos (botones, teclado, doble toque) se animan con una transición corta; los
+   * continuos (arrastre, pellizco, rueda) no: con transición el plano se sentiría "arrastrando
+   * tarde" detrás del dedo. */
+  private animar(accion: () => void): void {
+    this.animando.set(true);
+    accion();
+    setTimeout(() => this.animando.set(false), DURACION_ANIMACION_MS);
+  }
+
   acercarZoom(): void {
-    this.zoomEnCentro(this.zoom() * ZOOM_PASO_BOTON);
+    this.animar(() => this.zoomEnCentro(this.zoom() * ZOOM_PASO_BOTON));
   }
 
   alejarZoom(): void {
-    this.zoomEnCentro(this.zoom() / ZOOM_PASO_BOTON);
+    this.animar(() => this.zoomEnCentro(this.zoom() / ZOOM_PASO_BOTON));
   }
 
   /** "Restablecer" vuelve al zoom que cubre toda la pantalla (centrado), no a zoom 1 — volver a
    * zoom 1 reintroduciría la franja en blanco que este mismo mecanismo evita. */
   restablecerZoom(): void {
-    this.ajustarZoomParaCubrirPantalla();
+    this.animar(() => this.ajustarZoomParaCubrirPantalla());
   }
 
+  /** Proporcional a cuánto giró la rueda: una rueda de mouse (saltos grandes) se siente igual que
+   * antes, y un trackpad (muchos eventos chicos) acerca de forma continua en vez de dar un salto
+   * fijo por evento. ctrlKey = pellizco en trackpad (el navegador lo manda como rueda + ctrl). */
   onWheelImagen(event: WheelEvent): void {
     event.preventDefault();
-    const factor = event.deltaY < 0 ? ZOOM_PASO_RUEDA : 1 / ZOOM_PASO_RUEDA;
+    const sensibilidad = event.ctrlKey ? SENSIBILIDAD_PELLIZCO_TRACKPAD : SENSIBILIDAD_RUEDA;
+    const factor = Math.exp(-event.deltaY * sensibilidad);
     this.zoomEn(event.clientX, event.clientY, this.zoom() * factor);
+  }
+
+  /** Doble clic (mouse): acerca justo donde se hizo, o regresa a la vista completa si ya hay zoom.
+   * Se ignora sobre un lote (ahí un clic abre su detalle) y justo después de un doble toque ya
+   * resuelto a mano (algunos navegadores táctiles disparan también dblclick). */
+  onDobleClickImagen(event: MouseEvent): void {
+    if (this.esSobreLote(event.target) || Date.now() - this.ultimoDobleToque < 600) return;
+    this.alternarZoomEn(event.clientX, event.clientY);
+  }
+
+  private alternarZoomEn(clientX: number, clientY: number): void {
+    this.animar(() => {
+      if (this.zoom() > this.zoomCubrir() * 1.05) {
+        this.ajustarZoomParaCubrirPantalla();
+      } else {
+        this.zoomEn(clientX, clientY, this.zoom() * ZOOM_DOBLE_TOQUE);
+      }
+    });
+  }
+
+  private esSobreLote(target: EventTarget | null): boolean {
+    return target instanceof Element && target.closest('polygon') !== null;
+  }
+
+  /** Atajos de teclado: + / - zoom, 0 restablece, flechas desplazan (Shift = más rápido), Esc cierra
+   * lo que esté abierto. Se ignoran con un modal abierto (salvo Esc) o escribiendo en un campo. */
+  @HostListener('document:keydown', ['$event'])
+  onTecla(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      if (this.mostrarApartar()) this.cancelarApartar();
+      else if (this.loteActivo()) this.cerrarDetalle();
+      return;
+    }
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.target instanceof Element && event.target.closest('input, textarea, select, [contenteditable]')) return;
+    if (this.mostrarApartar() || this.loteActivo()) return;
+
+    const paso = event.shiftKey ? PASO_TECLADO_PX * 3 : PASO_TECLADO_PX;
+    switch (event.key) {
+      case '+':
+      case '=':
+        this.acercarZoom();
+        break;
+      case '-':
+      case '_':
+        this.alejarZoom();
+        break;
+      case '0':
+        this.restablecerZoom();
+        break;
+      case 'ArrowLeft':
+        this.moverVista(paso, 0);
+        break;
+      case 'ArrowRight':
+        this.moverVista(-paso, 0);
+        break;
+      case 'ArrowUp':
+        this.moverVista(0, paso);
+        break;
+      case 'ArrowDown':
+        this.moverVista(0, -paso);
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+  }
+
+  private moverVista(dx: number, dy: number): void {
+    const rect = this.contenedorPlano?.nativeElement.getBoundingClientRect();
+    if (!rect) return;
+    this.animar(() => {
+      this.panX.update((x) => x + dx);
+      this.panY.update((y) => y + dy);
+      this.limitarPan(rect);
+    });
   }
 
   /** Si hay algo de la imagen fuera de la vista en cualquiera de los dos ejes — no necesariamente
@@ -299,7 +408,21 @@ export class PlanoPublicoComponent {
     return anchoContenido > rect.width + margen || altoContenido > rect.height + margen;
   }
 
+  /** Un dedo/mouse: arrastra la vista. Dos dedos: pellizco (zoom) + desplazamiento a la vez. */
   onPointerDownVista(event: PointerEvent): void {
+    this.punteros.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+    if (this.punteros.size >= 2) {
+      this.arrastreVista = null;
+      this.hizoPellizco = true;
+      this.ultimoPellizco = this.medirPellizco();
+      return;
+    }
+
+    this.hizoPellizco = false;
+    if (event.pointerType === 'touch') {
+      this.toqueActual = { x: event.clientX, y: event.clientY, sobreLote: this.esSobreLote(event.target) };
+    }
     if (!this.hayAlgoFueraDeVista()) return;
     this.arrastreVista = {
       inicioX: event.clientX,
@@ -310,8 +433,33 @@ export class PlanoPublicoComponent {
     };
   }
 
+  /** Distancia entre los dos primeros dedos y el punto medio — base de cada paso del pellizco. */
+  private medirPellizco(): { distancia: number; cx: number; cy: number } | null {
+    const [a, b] = [...this.punteros.values()];
+    if (!a || !b) return null;
+    return { distancia: Math.hypot(b.x - a.x, b.y - a.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 };
+  }
+
   @HostListener('document:pointermove', ['$event'])
   onPointerMove(event: PointerEvent): void {
+    if (this.punteros.has(event.pointerId)) {
+      this.punteros.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    }
+
+    if (this.punteros.size >= 2 && this.ultimoPellizco) {
+      const actual = this.medirPellizco();
+      const rect = this.contenedorPlano?.nativeElement.getBoundingClientRect();
+      if (!actual || !rect || actual.distancia === 0 || this.ultimoPellizco.distancia === 0) return;
+      // Primero se desplaza lo que se movió el punto medio, y luego se hace zoom alrededor del
+      // nuevo punto medio: así el punto del plano bajo los dedos se queda bajo los dedos.
+      this.panX.update((x) => x + actual.cx - this.ultimoPellizco!.cx);
+      this.panY.update((y) => y + actual.cy - this.ultimoPellizco!.cy);
+      this.limitarPan(rect);
+      this.zoomEn(actual.cx, actual.cy, this.zoom() * (actual.distancia / this.ultimoPellizco.distancia));
+      this.ultimoPellizco = actual;
+      return;
+    }
+
     if (!this.arrastreVista) return;
     const dx = event.clientX - this.arrastreVista.inicioX;
     const dy = event.clientY - this.arrastreVista.inicioY;
@@ -326,10 +474,58 @@ export class PlanoPublicoComponent {
     }
   }
 
-  @HostListener('document:pointerup')
-  onPointerUp(): void {
-    if (!this.arrastreVista) return;
-    this.ultimoGestoFuePan = this.arrastreVista.movioSuficiente;
-    this.arrastreVista = null;
+  @HostListener('document:pointerup', ['$event'])
+  @HostListener('document:pointercancel', ['$event'])
+  onPointerUp(event: PointerEvent): void {
+    const eraPellizco = this.punteros.size >= 2;
+    this.punteros.delete(event.pointerId);
+    this.ultimoPellizco = null;
+
+    if (eraPellizco) {
+      // Un dedo sigue apoyado: que continúe como arrastre normal desde donde está, sin saltos,
+      // y que levantar los dedos no cuente como un toque sobre un lote.
+      const [restante] = [...this.punteros.values()];
+      this.arrastreVista = restante
+        ? { inicioX: restante.x, inicioY: restante.y, panXInicial: this.panX(), panYInicial: this.panY(), movioSuficiente: true }
+        : null;
+      this.marcarGestoComoPan();
+      return;
+    }
+
+    if (this.arrastreVista) {
+      if (this.arrastreVista.movioSuficiente) this.marcarGestoComoPan();
+      this.arrastreVista = null;
+    }
+
+    if (event.type === 'pointerup' && event.pointerType === 'touch') this.registrarToque(event);
+  }
+
+  /** El flag solo debe sobrevivir hasta el click que el navegador dispara justo después del
+   * pointerup (si es que lo dispara): si no, quedaría "pegado" y se tragaría el siguiente toque real. */
+  private marcarGestoComoPan(): void {
+    this.ultimoGestoFuePan = true;
+    setTimeout(() => (this.ultimoGestoFuePan = false), 0);
+  }
+
+  /** Doble toque (dedo): mismo efecto que el doble clic. Un toque cuenta solo si el dedo casi no se
+   * movió y no fue sobre un lote (ahí el primer toque ya abrió su detalle). */
+  private registrarToque(event: PointerEvent): void {
+    const inicio = this.toqueActual;
+    this.toqueActual = null;
+    if (!inicio || inicio.sobreLote || this.hizoPellizco) return;
+    if (Math.hypot(event.clientX - inicio.x, event.clientY - inicio.y) > UMBRAL_ARRASTRE_VISTA_PX) {
+      this.ultimoToque = null;
+      return;
+    }
+
+    const ahora = Date.now();
+    const previo = this.ultimoToque;
+    if (previo && ahora - previo.t < VENTANA_DOBLE_TOQUE_MS && Math.hypot(inicio.x - previo.x, inicio.y - previo.y) < DISTANCIA_DOBLE_TOQUE_PX) {
+      this.ultimoToque = null;
+      this.ultimoDobleToque = ahora;
+      this.alternarZoomEn(inicio.x, inicio.y);
+      return;
+    }
+    this.ultimoToque = { x: inicio.x, y: inicio.y, t: ahora };
   }
 }
