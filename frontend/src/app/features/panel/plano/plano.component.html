@@ -313,7 +313,15 @@
             </h2>
             <p class="mt-0.5 text-sm text-ink-muted">{{ lote.desarrollo.nombre }}</p>
           </div>
-          <button type="button" (click)="loteActivo.set(null)" aria-label="Cerrar" class="text-ink-muted hover:text-ink">✕</button>
+          <button
+            type="button"
+            (click)="loteActivo.set(null)"
+            aria-label="Cerrar"
+            class="-mr-2 -mt-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-ink-muted hover:bg-surface-2 hover:text-ink
+                   active:scale-90 transition-[transform,background-color,color] duration-150"
+          >
+            <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+          </button>
         </div>
 
         <div class="mt-4 flex items-center justify-between gap-3 rounded-lg bg-surface-2/60 px-3.5 py-3">
