@@ -79,6 +79,25 @@ export class PlanoPublicoComponent {
 
   readonly loteActivo = signal<Lote | null>(null);
 
+  /** Lotes ya delimitados con su "points" de SVG y su tooltip calculados una sola vez (cuando cambia
+   * la lista), no en cada ciclo de detección de cambios: con cientos de lotes, armar esos strings en
+   * cada movimiento del mouse o del dedo era lo que más trabajo de JavaScript metía. */
+  readonly poligonos = computed(() =>
+    this.lotes()
+      .filter((l) => this.tienePoligono(l))
+      .map((lote) => ({
+        lote,
+        puntos: this.puntosSvg(lote.mapaPoligono!),
+        titulo: `MZ ${lote.manzana} - Lote ${lote.numeroLote}`,
+      })),
+  );
+
+  /** true solo durante un gesto (arrastre, pellizco, rueda): el navegador promueve el plano a su propia
+   * capa de GPU para moverlo sin repintar. Se quita al terminar para que vuelva a rasterizar nítido
+   * al zoom final (con will-change permanente quedaría borroso al acercar). */
+  readonly enGesto = signal(false);
+  private temporizadorGesto: ReturnType<typeof setTimeout> | undefined;
+
   // Modal "Apartar lote": mismos campos y restricciones que /cotizador-publico/lotes — pide nombre
   // de asesor y de cliente (nota opcional) porque no hay una sesión real detrás de este apartado.
   readonly mostrarApartar = signal(false);
@@ -360,8 +379,17 @@ export class PlanoPublicoComponent {
   /** Proporcional a cuánto giró la rueda: una rueda de mouse (saltos grandes) se siente igual que
    * antes, y un trackpad (muchos eventos chicos) acerca de forma continua en vez de dar un salto
    * fijo por evento. ctrlKey = pellizco en trackpad (el navegador lo manda como rueda + ctrl). */
+  private marcarGesto(): void {
+    this.enGesto.set(true);
+    clearTimeout(this.temporizadorGesto);
+    this.temporizadorGesto = setTimeout(() => {
+      if (this.punteros.size === 0) this.enGesto.set(false);
+    }, 180);
+  }
+
   onWheelImagen(event: WheelEvent): void {
     event.preventDefault();
+    this.marcarGesto();
     const sensibilidad = event.ctrlKey ? SENSIBILIDAD_PELLIZCO_TRACKPAD : SENSIBILIDAD_RUEDA;
     const factor = Math.exp(-event.deltaY * sensibilidad);
     this.zoomEn(event.clientX, event.clientY, this.zoom() * factor);
@@ -460,6 +488,9 @@ export class PlanoPublicoComponent {
   /** Un dedo/mouse: arrastra la vista. Dos dedos: pellizco (zoom) + desplazamiento a la vez. */
   onPointerDownVista(event: PointerEvent): void {
     this.punteros.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    this.escucharPunteros();
+    clearTimeout(this.temporizadorGesto);
+    this.enGesto.set(true);
 
     if (this.punteros.size >= 2) {
       this.arrastreVista = null;
@@ -489,7 +520,30 @@ export class PlanoPublicoComponent {
     return { distancia: Math.hypot(b.x - a.x, b.y - a.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 };
   }
 
-  @HostListener('document:pointermove', ['$event'])
+  /** Los eventos de movimiento/soltado del puntero solo se escuchan mientras hay uno apoyado en el
+   * plano: como HostListener permanente, cada movimiento del mouse por la página (sin tocar nada)
+   * disparaba un ciclo de detección de cambios completo — con cientos de polígonos, lo más caro. */
+  private escuchandoPunteros = false;
+  private readonly alMoverPuntero = (e: PointerEvent) => this.onPointerMove(e);
+  private readonly alSoltarPuntero = (e: PointerEvent) => this.onPointerUp(e);
+
+  private escucharPunteros(): void {
+    if (this.escuchandoPunteros) return;
+    this.escuchandoPunteros = true;
+    document.addEventListener('pointermove', this.alMoverPuntero);
+    document.addEventListener('pointerup', this.alSoltarPuntero);
+    document.addEventListener('pointercancel', this.alSoltarPuntero);
+    this.destroyRef.onDestroy(() => this.dejarDeEscucharPunteros());
+  }
+
+  private dejarDeEscucharPunteros(): void {
+    if (!this.escuchandoPunteros) return;
+    this.escuchandoPunteros = false;
+    document.removeEventListener('pointermove', this.alMoverPuntero);
+    document.removeEventListener('pointerup', this.alSoltarPuntero);
+    document.removeEventListener('pointercancel', this.alSoltarPuntero);
+  }
+
   onPointerMove(event: PointerEvent): void {
     if (this.punteros.has(event.pointerId)) {
       this.punteros.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -523,12 +577,14 @@ export class PlanoPublicoComponent {
     }
   }
 
-  @HostListener('document:pointerup', ['$event'])
-  @HostListener('document:pointercancel', ['$event'])
   onPointerUp(event: PointerEvent): void {
     const eraPellizco = this.punteros.size >= 2;
     this.punteros.delete(event.pointerId);
     this.ultimoPellizco = null;
+    if (this.punteros.size === 0) {
+      this.dejarDeEscucharPunteros();
+      this.marcarGesto();
+    }
 
     if (eraPellizco) {
       // Un dedo sigue apoyado: que continúe como arrastre normal desde donde está, sin saltos,

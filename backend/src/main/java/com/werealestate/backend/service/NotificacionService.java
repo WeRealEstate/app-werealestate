@@ -4,7 +4,9 @@ import com.werealestate.backend.dto.NotificacionDto;
 import com.werealestate.backend.dto.NotificacionMarcarLeidaRequest;
 import com.werealestate.backend.model.EstadoLead;
 import com.werealestate.backend.model.EventoCalendario;
+import com.werealestate.backend.model.EstadoLote;
 import com.werealestate.backend.model.Lead;
+import com.werealestate.backend.model.MovimientoLote;
 import com.werealestate.backend.model.NotificacionLeida;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Seguimiento;
@@ -12,20 +14,19 @@ import com.werealestate.backend.model.Tarea;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.repository.EventoCalendarioRepository;
 import com.werealestate.backend.repository.LeadRepository;
+import com.werealestate.backend.repository.MovimientoLoteRepository;
 import com.werealestate.backend.repository.NotificacionLeidaRepository;
 import com.werealestate.backend.repository.SeguimientoRepository;
 import com.werealestate.backend.repository.TareaRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +40,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class NotificacionService {
 
+    private static final int DIAS_AVISOS_LOTES = 7;
+    private static final Set<EstadoLote> ESTADOS_APARTADO =
+            Set.of(EstadoLote.APARTADO, EstadoLote.APARTADO_A_PLAZO, EstadoLote.APARTADO_CON_DINERO);
     private static final List<EstadoLead> CERRADOS = List.of(EstadoLead.CERRADO_GANADO, EstadoLead.CERRADO_PERDIDO);
 
     private final LeadRepository leadRepository;
@@ -47,9 +51,7 @@ public class NotificacionService {
     private final EventoCalendarioRepository eventoCalendarioRepository;
     private final NotificacionLeidaRepository notificacionLeidaRepository;
     private final CurrentUserProvider currentUserProvider;
-    private final int diasFrio;
-    private final int diasSinContactarNuevo;
-    private final int diasEscalarAdmin;
+    private final MovimientoLoteRepository movimientoLoteRepository;
 
     public NotificacionService(
             LeadRepository leadRepository,
@@ -58,18 +60,14 @@ public class NotificacionService {
             EventoCalendarioRepository eventoCalendarioRepository,
             NotificacionLeidaRepository notificacionLeidaRepository,
             CurrentUserProvider currentUserProvider,
-            @Value("${app.lead.dias-frio}") int diasFrio,
-            @Value("${app.lead.dias-sin-contactar-nuevo}") int diasSinContactarNuevo,
-            @Value("${app.lead.dias-escalar-admin}") int diasEscalarAdmin) {
+            MovimientoLoteRepository movimientoLoteRepository) {
         this.leadRepository = leadRepository;
         this.seguimientoRepository = seguimientoRepository;
         this.tareaRepository = tareaRepository;
         this.eventoCalendarioRepository = eventoCalendarioRepository;
         this.notificacionLeidaRepository = notificacionLeidaRepository;
         this.currentUserProvider = currentUserProvider;
-        this.diasFrio = diasFrio;
-        this.diasSinContactarNuevo = diasSinContactarNuevo;
-        this.diasEscalarAdmin = diasEscalarAdmin;
+        this.movimientoLoteRepository = movimientoLoteRepository;
     }
 
     public List<NotificacionDto> listar() {
@@ -105,44 +103,12 @@ public class NotificacionService {
             Seguimiento ultimo = ultimoSeguimientoPorLead.get(lead.getId());
 
             if (ultimo != null) {
-                // LEAD_FRIO solo aplica a leads que ya tuvieron seguimiento: para los que nunca
-                // fueron contactados ya existe LEAD_SIN_CONTACTAR (rama de abajo) — evaluar ambas
-                // sin distinguir generaba dos notificaciones para el mismo hecho.
-                long dias = ChronoUnit.DAYS.between(lead.getFechaUltimoContacto(), ahora);
-                if (dias >= diasFrio) {
-                    String firma = lead.getFechaUltimoContacto().toString();
-                    if (!leidas.contains(clave("LEAD_FRIO", lead.getId(), firma))) {
-                        notificaciones.add(NotificacionDto.leadFrio(
-                                lead.getNombreCliente() + " lleva " + dias + " días sin seguimiento.",
-                                lead.getId(),
-                                firma));
-                    }
-                }
-
                 LocalDateTime proximo = ultimo.getProximoSeguimiento();
                 if (proximo != null && !proximo.isAfter(ahora)) {
                     String firma = proximo.toString();
                     if (!leidas.contains(clave("SEGUIMIENTO_PENDIENTE", lead.getId(), firma))) {
                         notificaciones.add(NotificacionDto.seguimientoPendiente(
                                 "Seguimiento pendiente con " + lead.getNombreCliente() + ".", lead.getId(), firma));
-                    }
-                }
-            } else {
-                // Regla 1/2: nunca se le ha registrado ningún seguimiento. El asesor lo ve pasado
-                // el umbral normal; el admin solo lo ve si ya escaló (umbral mayor), para no
-                // saturarle la campana con cada lead nuevo de cada asesor.
-                long diasSinContactar = ChronoUnit.DAYS.between(lead.getFechaCreacion(), ahora);
-                boolean esAdmin = actual.getRol() == Role.ADMIN;
-                int umbral = esAdmin ? diasEscalarAdmin : diasSinContactarNuevo;
-                if (diasSinContactar >= umbral) {
-                    String firma = lead.getFechaCreacion().toString();
-                    String mensaje = esAdmin
-                            ? lead.getNombreCliente() + " (asesor: " + lead.getAsesor().getNombre() + ") lleva "
-                                    + diasSinContactar + " días sin ser contactado por primera vez."
-                            : lead.getNombreCliente() + " lleva " + diasSinContactar
-                                    + " días sin ser contactado por primera vez.";
-                    if (!leidas.contains(clave("LEAD_SIN_CONTACTAR", lead.getId(), firma))) {
-                        notificaciones.add(NotificacionDto.leadSinContactar(mensaje, lead.getId(), firma));
                     }
                 }
             }
@@ -185,7 +151,48 @@ public class NotificacionService {
             }
         }
 
+        if (actual.getRol() == Role.ADMIN || actual.getRol() == Role.LIDER_AREA) {
+            agregarAvisosDeLotes(actual, leidas, notificaciones);
+        }
+
         return notificaciones;
+    }
+
+    /** Avisos de que un lote se apartó o se liberó (también por vencimiento automático), solo para
+     * admin y líder de área. Salen de la bitácora de cambios de estado (MovimientoLote), no de una
+     * tabla propia: la firma es la hora exacta del movimiento, así que cada cambio es un aviso
+     * distinto y descartarlo no afecta a los demás. No se le avisa a quien hizo el cambio, y solo se
+     * miran los últimos DIAS_AVISOS_LOTES días para que no se acumulen sin fin. */
+    private void agregarAvisosDeLotes(Usuario actual, Set<String> leidas, List<NotificacionDto> notificaciones) {
+        LocalDateTime desde = LocalDateTime.now().minusDays(DIAS_AVISOS_LOTES);
+        for (MovimientoLote m : movimientoLoteRepository.recientesDeOtros(desde, actual.getId())) {
+            boolean apartado = m.getEstadoAnterior() == EstadoLote.DISPONIBLE && ESTADOS_APARTADO.contains(m.getEstadoNuevo());
+            boolean desapartado = ESTADOS_APARTADO.contains(m.getEstadoAnterior()) && m.getEstadoNuevo() == EstadoLote.DISPONIBLE;
+            if (!apartado && !desapartado) continue;
+
+            String tipo = apartado ? "LOTE_APARTADO" : "LOTE_DESAPARTADO";
+            String firma = m.getFecha().toString();
+            if (leidas.contains(clave(tipo, m.getId(), firma))) continue;
+
+            String lote = "Manzana " + m.getLote().getManzana() + ", Lote " + m.getLote().getNumeroLote() + " ("
+                    + m.getLote().getDesarrollo().getNombre() + ")";
+            String autor = m.getUsuario() != null && m.getNombreAsesor() == null
+                    ? m.getUsuario().getNombre()
+                    : m.getNombreAsesor() != null ? m.getNombreAsesor() + " (cotizador público)" : null;
+            if (apartado) {
+                String conCliente = m.getNombreCliente() != null ? " para " + m.getNombreCliente() : "";
+                String conMonto = m.getMonto() != null ? " con $" + m.getMonto().toPlainString() : "";
+                notificaciones.add(NotificacionDto.loteApartado(
+                        lote + " fue apartado" + conMonto + conCliente + (autor != null ? " por " + autor : "") + ".",
+                        m.getId(),
+                        firma));
+            } else {
+                notificaciones.add(NotificacionDto.loteDesapartado(
+                        lote + (autor != null ? " fue liberado por " + autor + "." : " se liberó automáticamente por vencimiento del apartado."),
+                        m.getId(),
+                        firma));
+            }
+        }
     }
 
     public void marcarLeida(NotificacionMarcarLeidaRequest request) {

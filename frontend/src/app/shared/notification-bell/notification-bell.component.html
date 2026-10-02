@@ -41,11 +41,10 @@
             >
               <span
                 class="mt-1 h-2 w-2 shrink-0 rounded-full"
-                [class.bg-red-500]="n.tipo === 'LEAD_FRIO'"
-                [class.bg-orange-600]="n.tipo === 'LEAD_SIN_CONTACTAR'"
-                [class.bg-amber-500]="n.tipo === 'SEGUIMIENTO_PENDIENTE'"
+                [class.bg-amber-500]="n.tipo === 'SEGUIMIENTO_PENDIENTE' || n.tipo === 'LOTE_APARTADO'"
                 [class.bg-we-blue-light]="n.tipo === 'TAREA_PENDIENTE'"
                 [class.bg-purple-500]="n.tipo === 'EVENTO_PENDIENTE'"
+                [class.bg-green-500]="n.tipo === 'LOTE_DESAPARTADO'"
                 aria-hidden="true"
               ></span>
               <span class="flex-1 text-ink">{{ n.mensaje }}</span>

@@ -415,3 +415,13 @@ select.rounded-full:not([multiple]):not([size]) {
     box-shadow: inset 0 0 0 2px color-mix(in oklch, var(--card-accent, var(--color-we-primary)) 70%, transparent);
   }
 }
+
+/* Polígonos del plano público: el grosor del borde viaja como variable CSS del <svg> (cambia una sola
+   vez por zoom) en vez de un atributo por polígono — con cientos de lotes, reescribir el atributo de
+   todos en cada paso de zoom era trabajo de sobra. */
+.poligono-lote {
+  stroke-width: var(--sw-lote, 0.6);
+}
+.poligono-lote.poligono-activo {
+  stroke-width: var(--sw-activo, 1.2);
+}
