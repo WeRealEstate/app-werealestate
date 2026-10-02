@@ -33,7 +33,7 @@ export const ESTADO_LOTE_BADGE_CLASSES: Record<EstadoLote, string> = {
   DISPONIBLE: 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300',
   APARTADO: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
   APARTADO_A_PLAZO: 'bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-300',
-  APARTADO_CON_DINERO: 'bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300',
+  APARTADO_CON_DINERO: 'bg-gray-100 text-gray-600 dark:bg-gray-400/15 dark:text-gray-300',
   EN_PROCESO_DE_FIRMA: 'bg-we-primary/15 text-we-primary dark:text-we-blue-light',
   VENDIDO: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300',
 };
@@ -44,7 +44,7 @@ export const ESTADO_LOTE_POLIGONO_CLASSES: Record<EstadoLote, string> = {
   DISPONIBLE: 'fill-green-500/35 stroke-green-500 dark:fill-green-400/30 dark:stroke-green-400',
   APARTADO: 'fill-amber-500/35 stroke-amber-500 dark:fill-amber-400/30 dark:stroke-amber-400',
   APARTADO_A_PLAZO: 'fill-purple-500/35 stroke-purple-500 dark:fill-purple-400/30 dark:stroke-purple-400',
-  APARTADO_CON_DINERO: 'fill-orange-500/35 stroke-orange-500 dark:fill-orange-400/30 dark:stroke-orange-400',
+  APARTADO_CON_DINERO: 'fill-gray-400/35 stroke-gray-400 dark:fill-gray-300/30 dark:stroke-gray-300',
   EN_PROCESO_DE_FIRMA: 'fill-we-primary/35 stroke-we-primary',
   VENDIDO: 'fill-red-500/35 stroke-red-500 dark:fill-red-400/30 dark:stroke-red-400',
 };
@@ -55,7 +55,7 @@ export const ESTADO_LOTE_COLOR_RGB: Record<EstadoLote, [number, number, number]>
   DISPONIBLE: [34, 197, 94],
   APARTADO: [245, 158, 11],
   APARTADO_A_PLAZO: [168, 85, 247],
-  APARTADO_CON_DINERO: [249, 115, 22],
+  APARTADO_CON_DINERO: [156, 163, 175],
   EN_PROCESO_DE_FIRMA: [36, 63, 184],
   VENDIDO: [239, 68, 68],
 };
