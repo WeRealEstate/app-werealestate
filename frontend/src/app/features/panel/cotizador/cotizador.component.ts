@@ -127,7 +127,21 @@ export class CotizadorComponent implements OnInit {
     if (loteParam) {
       this.lotNumber = loteParam;
       this.onLoteNumberChange();
+      this.irAFormaDePago();
     }
+  }
+
+  /** Al llegar con un lote ya elegido desde el Plano ("Cotizar este lote"), el proyecto, la manzana
+   * y el lote ya vienen llenos: lo único que falta es escoger la forma de pago, así que se baja
+   * directo ahí en vez de dejar a quien cotiza arriba, en el encabezado, sin saber qué sigue. Se
+   * espera un instante a que Angular pinte los datos del lote antes de medir a dónde desplazarse. */
+  private irAFormaDePago(): void {
+    setTimeout(() => {
+      const destino = document.getElementById('forma-de-pago');
+      if (!destino) return;
+      const reducirMovimiento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      destino.scrollIntoView({ behavior: reducirMovimiento ? 'auto' : 'smooth', block: 'start' });
+    }, 250);
   }
 
   /** 'SAMAI Campestre' / 'Aldea Nanuu': mismo mapeo que ya se usa para armar el PDF de la cotización. */

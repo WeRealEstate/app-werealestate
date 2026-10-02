@@ -342,7 +342,21 @@ input, select, textarea {
   animation: modal-backdrop-in 180ms ease-out both;
 }
 
+/* Teléfono que gira de vertical a horizontal, en bucle, para el aviso "gira tu teléfono". */
+@keyframes rotar-telefono {
+  0%, 20% { transform: rotate(0deg); }
+  50%, 80% { transform: rotate(-90deg); }
+  100% { transform: rotate(0deg); }
+}
+.rotar-telefono {
+  animation: rotar-telefono 2.8s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .rotar-telefono {
+    animation: none;
+    transform: rotate(-90deg);
+  }
   .page-enter,
   .stagger-item,
   .toast-enter,

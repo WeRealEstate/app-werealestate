@@ -54,19 +54,54 @@
         </svg>
       </div>
 
-      <!-- Leyenda de estados -->
-      <div class="absolute left-3 top-3 rounded-lg border border-border bg-surface/95 p-3 shadow-lg backdrop-blur">
-        <p class="text-xs font-semibold text-ink">Estados</p>
-        <ul class="mt-2 flex flex-col gap-1.5">
-          @for (estado of estadosLote; track estado) {
-            <li class="flex items-center gap-2 text-xs text-ink-muted">
-              <svg viewBox="0 0 10 10" class="h-3 w-3 shrink-0">
-                <rect x="0.5" y="0.5" width="9" height="9" rx="1.5" [class]="poligonoClases[estado]" stroke-width="1" />
-              </svg>
-              {{ estadoLabels[estado] }}
-            </li>
-          }
-        </ul>
+      <!-- Leyenda de estados: se puede plegar con la flechita para que no tape el plano. -->
+      <div
+        class="absolute left-3 top-3 rounded-lg border border-border bg-surface/95 shadow-lg backdrop-blur"
+        (click)="$event.stopPropagation()"
+        (pointerdown)="$event.stopPropagation()"
+      >
+        <button
+          type="button"
+          (click)="alternarLeyenda()"
+          [attr.aria-expanded]="leyendaVisible()"
+          aria-controls="leyenda-estados"
+          [attr.aria-label]="leyendaVisible() ? 'Ocultar estados' : 'Mostrar estados'"
+          class="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-xs font-semibold text-ink
+                 hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50"
+        >
+          Estados
+          <svg
+            viewBox="0 0 24 24"
+            class="h-4 w-4 shrink-0 text-ink-muted transition-transform duration-200"
+            [class.rotate-180]="!leyendaVisible()"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m18 15-6-6-6 6" />
+          </svg>
+        </button>
+        <div
+          id="leyenda-estados"
+          class="grid transition-[grid-template-rows] duration-200 ease-out"
+          [class.grid-rows-[1fr]]="leyendaVisible()"
+          [class.grid-rows-[0fr]]="!leyendaVisible()"
+          [attr.inert]="leyendaVisible() ? null : ''"
+        >
+          <ul class="flex min-h-0 flex-col gap-1.5 overflow-hidden px-3">
+            @for (estado of estadosLote; track estado) {
+              <li class="flex items-center gap-2 text-xs text-ink-muted first:pt-0.5 last:pb-3">
+                <svg viewBox="0 0 10 10" class="h-3 w-3 shrink-0">
+                  <rect x="0.5" y="0.5" width="9" height="9" rx="1.5" [class]="poligonoClases[estado]" stroke-width="1" />
+                </svg>
+                {{ estadoLabels[estado] }}
+              </li>
+            }
+          </ul>
+        </div>
       </div>
 
       <!-- Controles de zoom del plano (no del navegador): esquina inferior derecha, estilo mapa. -->
@@ -242,6 +277,31 @@
         </div>
       </div>
     }
+  }
+
+  <!-- Aviso para girar el teléfono: solo en celular en vertical, una vez por visita; el plano es
+       ancho y se aprovecha mucho más en horizontal. -->
+  @if (mostrarAvisoRotar()) {
+    <div class="pointer-events-none fixed inset-x-0 bottom-20 z-30 flex justify-center px-4">
+      <div
+        class="toast-enter pointer-events-auto flex items-center gap-3.5 rounded-2xl border border-border bg-surface/95 py-3 pl-4 pr-2.5 shadow-2xl backdrop-blur"
+        role="status"
+      >
+        <svg viewBox="0 0 24 24" class="rotar-telefono h-9 w-9 shrink-0 text-we-primary dark:text-we-blue-light" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="7" y="2.5" width="10" height="19" rx="2.5" />
+          <path d="M11 18.5h2" />
+        </svg>
+        <p class="text-sm font-medium text-ink">Para una mejor experiencia, gira tu teléfono</p>
+        <button
+          type="button"
+          (click)="cerrarAvisoRotar()"
+          aria-label="Cerrar aviso"
+          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2 active:scale-90 transition-transform duration-150"
+        >
+          <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+        </button>
+      </div>
+    </div>
   }
 
   <app-toast-container />

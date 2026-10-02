@@ -1,5 +1,5 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, ElementRef, HostListener, ViewChild, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, HostListener, ViewChild, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
@@ -36,6 +36,8 @@ const VENTANA_DOBLE_TOQUE_MS = 300;
 const DISTANCIA_DOBLE_TOQUE_PX = 30;
 const PASO_TECLADO_PX = 80;
 const DURACION_ANIMACION_MS = 220;
+const CLAVE_AVISO_ROTAR = 'plano-publico-aviso-rotar';
+const DURACION_AVISO_ROTAR_MS = 9000;
 
 /** Plano interactivo público, en pantalla completa y sin sesión — para compartir el link de un
  * desarrollo directamente (/samai, /aldea-nanuu, ver app.routes.ts). Mismas restricciones que
@@ -52,6 +54,7 @@ export class PlanoPublicoComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly lotesService = inject(LotesService);
   private readonly toast = inject(ToastService);
+  private readonly destroyRef = inject(DestroyRef);
 
   @ViewChild('contenedorPlano') private readonly contenedorPlano?: ElementRef<HTMLElement>;
 
@@ -115,8 +118,58 @@ export class PlanoPublicoComponent {
   private ultimoToque: { x: number; y: number; t: number } | null = null;
   private ultimoDobleToque = 0;
 
+  /** Leyenda de estados plegable (ver alternarLeyenda): en pantallas angostas arranca plegada, ahí
+   * tapa demasiado del plano. */
+  readonly leyendaVisible = signal(typeof window === 'undefined' || window.innerWidth >= 640);
+
+  /** Aviso "gira tu teléfono": celular (puntero táctil) en vertical, y solo una vez por visita. */
+  readonly mostrarAvisoRotar = signal(false);
+
   constructor() {
     this.cargar();
+    this.iniciarAvisoRotar();
+  }
+
+  alternarLeyenda(): void {
+    this.leyendaVisible.update((v) => !v);
+  }
+
+  cerrarAvisoRotar(): void {
+    this.mostrarAvisoRotar.set(false);
+    try {
+      sessionStorage.setItem(CLAVE_AVISO_ROTAR, '1');
+    } catch {
+      // Sin sessionStorage (modo privado estricto) simplemente puede volver a aparecer.
+    }
+  }
+
+  private iniciarAvisoRotar(): void {
+    if (typeof window === 'undefined') return;
+    try {
+      if (sessionStorage.getItem(CLAVE_AVISO_ROTAR)) return;
+    } catch {
+      // Se ignora: se muestra igual.
+    }
+    const esCelular = window.matchMedia('(pointer: coarse)').matches && Math.min(window.innerWidth, window.innerHeight) < 600;
+    if (!esCelular) return;
+
+    const vertical = window.matchMedia('(orientation: portrait)');
+    this.mostrarAvisoRotar.set(vertical.matches);
+
+    let temporizador: ReturnType<typeof setTimeout> | undefined;
+    const alCambiar = () => {
+      clearTimeout(temporizador);
+      if (!vertical.matches) {
+        // Ya lo giró: el aviso cumplió, no hace falta volver a mostrarlo en esta visita.
+        this.cerrarAvisoRotar();
+      }
+    };
+    vertical.addEventListener('change', alCambiar);
+    temporizador = setTimeout(() => this.mostrarAvisoRotar.set(false), DURACION_AVISO_ROTAR_MS);
+    this.destroyRef.onDestroy(() => {
+      clearTimeout(temporizador);
+      vertical.removeEventListener('change', alCambiar);
+    });
   }
 
   async cargar(): Promise<void> {
