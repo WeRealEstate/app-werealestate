@@ -25,7 +25,8 @@ public final class ModulosAcceso {
             case ADMIN -> EnumSet.allOf(Modulo.class);
             case ASESOR -> EnumSet.of(
                     Modulo.LEADS, Modulo.PIPELINE, Modulo.COTIZADOR, Modulo.LOTES, Modulo.PLANO, Modulo.CALENDARIO);
-            case LIDER_AREA -> EnumSet.of(Modulo.LEADS, Modulo.LOTES, Modulo.VENTAS, Modulo.GASTOS, Modulo.CALENDARIO);
+            case LIDER_AREA -> EnumSet.of(
+                    Modulo.LEADS, Modulo.LOTES, Modulo.PLANO, Modulo.VENTAS, Modulo.GASTOS, Modulo.CALENDARIO);
             case EQUIPO_INTERNO -> EnumSet.of(Modulo.CALENDARIO);
         };
     }
@@ -35,6 +36,7 @@ public final class ModulosAcceso {
         modulos.addAll(maximos(rol));
         if (rol == Role.LIDER_AREA) {
             modulos.remove(Modulo.LEADS);
+            modulos.remove(Modulo.PLANO);
         }
         return modulos;
     }

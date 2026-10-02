@@ -64,6 +64,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
       label: 'Inventario',
       items: [
         { label: 'Lotes', route: '/panel/lotes', modulo: 'LOTES', icon: 'lotes' },
+        { label: 'Plano', route: '/panel/plano', modulo: 'PLANO', icon: 'plano' },
         { label: 'Ventas', route: '/panel/ventas', modulo: 'VENTAS', icon: 'ventas' },
         { label: 'Gastos', route: '/panel/gastos', modulo: 'GASTOS', icon: 'gastos' },
       ],

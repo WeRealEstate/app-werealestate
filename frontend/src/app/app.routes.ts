@@ -122,7 +122,7 @@ export const routes: Routes = [
       },
       {
         path: 'plano',
-        canActivate: [roleGuard(['ASESOR', 'ADMIN']), moduloGuard(['PLANO'])],
+        canActivate: [roleGuard(['ASESOR', 'LIDER_AREA', 'ADMIN']), moduloGuard(['PLANO'])],
         loadComponent: () => import('./features/panel/plano/plano.component').then((m) => m.PlanoComponent),
       },
       {
