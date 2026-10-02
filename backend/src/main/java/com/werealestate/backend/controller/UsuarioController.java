@@ -1,5 +1,6 @@
 package com.werealestate.backend.controller;
 
+import com.werealestate.backend.dto.ModuloCatalogoDto;
 import com.werealestate.backend.dto.UsuarioCreateRequest;
 import com.werealestate.backend.dto.UsuarioDto;
 import com.werealestate.backend.dto.UsuarioResetPasswordRequest;
@@ -31,6 +32,16 @@ public class UsuarioController {
     @GetMapping
     public List<UsuarioDto> listar() {
         return usuarioService.listar();
+    }
+
+    @GetMapping("/me")
+    public UsuarioDto perfil() {
+        return usuarioService.perfil();
+    }
+
+    @GetMapping("/modulos")
+    public List<ModuloCatalogoDto> catalogoModulos() {
+        return usuarioService.catalogoModulos();
     }
 
     @GetMapping("/asignables")

@@ -46,8 +46,10 @@ export class AsesorPanelComponent {
   private async cargar(): Promise<void> {
     this.isLoading.set(true);
     try {
+      // Sin Leads ni Pipeline (el admin se los quitó) la API de leads respondería 403: no se pide.
+      const verLeads = this.auth.tieneAlgunModulo(['LEADS', 'PIPELINE']);
       const [leads, notificaciones] = await Promise.all([
-        this.leadsService.listar(),
+        verLeads ? this.leadsService.listar() : Promise.resolve([] as Lead[]),
         this.notificacionesService.listar(),
       ]);
       this.leads.set(leads);

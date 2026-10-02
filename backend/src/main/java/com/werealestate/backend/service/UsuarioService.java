@@ -1,5 +1,6 @@
 package com.werealestate.backend.service;
 
+import com.werealestate.backend.dto.ModuloCatalogoDto;
 import com.werealestate.backend.dto.UsuarioCreateRequest;
 import com.werealestate.backend.dto.UsuarioDto;
 import com.werealestate.backend.dto.UsuarioResetPasswordRequest;
@@ -8,6 +9,8 @@ import com.werealestate.backend.dto.UsuarioUpdateRequest;
 import com.werealestate.backend.exception.ConflictException;
 import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
+import com.werealestate.backend.model.Modulo;
+import com.werealestate.backend.model.ModulosAcceso;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.repository.ComisionRepository;
@@ -21,7 +24,9 @@ import com.werealestate.backend.repository.UsuarioRepository;
 import com.werealestate.backend.repository.VentaRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -117,6 +122,7 @@ public class UsuarioService {
 
         Usuario usuario = new Usuario(
                 request.nombre(), request.email(), passwordEncoder.encode(request.password()), request.rol(), null);
+        usuario.setModulos(modulosAGuardar(request.rol(), request.modulos()));
         return UsuarioDto.from(usuarioRepository.save(usuario));
     }
 
@@ -133,6 +139,7 @@ public class UsuarioService {
         usuario.setNombre(request.nombre());
         usuario.setRol(request.rol());
         usuario.setActivo(request.activo());
+        usuario.setModulos(modulosAGuardar(request.rol(), request.modulos()));
         return UsuarioDto.from(usuarioRepository.save(usuario));
     }
 
@@ -179,6 +186,28 @@ public class UsuarioService {
 
         usuario.setPassword(passwordEncoder.encode(request.password()));
         usuarioRepository.save(usuario);
+    }
+
+    /** Un admin siempre ve todo (no se guarda nada); null = los del rol por defecto; una lista se
+     * acota al máximo del rol — nunca se le puede dar a un usuario un módulo que su rol no tiene. */
+    private static String modulosAGuardar(Role rol, List<Modulo> pedidos) {
+        if (rol == Role.ADMIN || pedidos == null) return null;
+        Set<Modulo> permitidos = EnumSet.noneOf(Modulo.class);
+        permitidos.addAll(pedidos);
+        permitidos.retainAll(ModulosAcceso.maximos(rol));
+        return ModulosAcceso.serializar(permitidos);
+    }
+
+    public List<ModuloCatalogoDto> catalogoModulos() {
+        exigirAdmin();
+        return ModuloCatalogoDto.todos();
+    }
+
+    /** El usuario autenticado tal como está ahora en la base: el frontend lo pide al abrir el panel
+     * para tener sus módulos al día aunque un admin se los haya cambiado después de su login. */
+    @Transactional(readOnly = true)
+    public UsuarioDto perfil() {
+        return UsuarioDto.from(currentUserProvider.getUsuarioActual());
     }
 
     private Usuario exigirAdmin() {

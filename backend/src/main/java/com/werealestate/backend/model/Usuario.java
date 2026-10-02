@@ -37,6 +37,10 @@ public class Usuario {
     @Column(nullable = false)
     private boolean activo = true;
 
+    /** Módulos habilitados, separados por coma (ver ModulosAcceso); null = los de su rol por defecto. */
+    @Column(length = 200)
+    private String modulos;
+
     @Column(name = "fecha_ingreso", nullable = false)
     private LocalDateTime fechaIngreso = LocalDateTime.now();
 
@@ -94,6 +98,14 @@ public class Usuario {
 
     public void setActivo(boolean activo) {
         this.activo = activo;
+    }
+
+    public String getModulos() {
+        return modulos;
+    }
+
+    public void setModulos(String modulos) {
+        this.modulos = modulos;
     }
 
     public LocalDateTime getFechaIngreso() {

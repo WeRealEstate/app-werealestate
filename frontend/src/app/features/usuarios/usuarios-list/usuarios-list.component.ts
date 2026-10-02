@@ -6,14 +6,15 @@ import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { UsuariosService } from '../../../core/services/usuarios.service';
-import { ROLE_LABELS, Role, Usuario } from '../../../core/models/user.model';
+import { ModulosSelectorComponent } from '../../../shared/modulos-selector/modulos-selector.component';
+import { Modulo, ROLE_LABELS, Role, Usuario } from '../../../core/models/user.model';
 
 const ROLES: Role[] = ['ASESOR', 'LIDER_AREA', 'EQUIPO_INTERNO', 'ADMIN'];
 
 @Component({
   selector: 'app-usuarios-list',
   standalone: true,
-  imports: [RouterLink, LucideKey, LucideTrash2],
+  imports: [RouterLink, LucideKey, LucideTrash2, ModulosSelectorComponent],
   templateUrl: './usuarios-list.component.html',
 })
 export class UsuariosListComponent {
@@ -61,7 +62,8 @@ export class UsuariosListComponent {
     if (nuevoRol === usuario.rol) return;
     await this.guardar(
       usuario,
-      { nombre: usuario.nombre, rol: nuevoRol, activo: usuario.activo },
+      // Al cambiar de rol, sus módulos se reinician a los de ese rol (modulos: null).
+      { nombre: usuario.nombre, rol: nuevoRol, activo: usuario.activo, modulos: null },
       `Rol de ${usuario.nombre} actualizado a ${this.roleLabels[nuevoRol]}.`,
     );
   }
@@ -97,14 +99,14 @@ export class UsuariosListComponent {
     const nuevoEstado = !usuario.activo;
     await this.guardar(
       usuario,
-      { nombre: usuario.nombre, rol: usuario.rol, activo: nuevoEstado },
+      { nombre: usuario.nombre, rol: usuario.rol, activo: nuevoEstado, modulos: usuario.rol === 'ADMIN' ? null : usuario.modulos },
       `${usuario.nombre} ahora está ${nuevoEstado ? 'activo' : 'inactivo'}.`,
     );
   }
 
   private async guardar(
     usuario: Usuario,
-    cambios: { nombre: string; rol: Role; activo: boolean },
+    cambios: { nombre: string; rol: Role; activo: boolean; modulos: Modulo[] | null },
     mensajeExito: string,
   ): Promise<void> {
     this.savingId.set(usuario.id);
@@ -119,6 +121,36 @@ export class UsuariosListComponent {
     } finally {
       this.savingId.set(null);
     }
+  }
+
+  // --- Módulos de un usuario: se editan en un modal aparte con casillas ---
+  readonly editandoModulosDe = signal<Usuario | null>(null);
+  readonly modulosEnEdicion = signal<Modulo[]>([]);
+
+  abrirModulos(usuario: Usuario): void {
+    this.modulosEnEdicion.set([...usuario.modulos]);
+    this.editandoModulosDe.set(usuario);
+  }
+
+  cerrarModulos(): void {
+    this.editandoModulosDe.set(null);
+  }
+
+  async guardarModulos(): Promise<void> {
+    const usuario = this.editandoModulosDe();
+    if (!usuario) return;
+    await this.guardar(
+      usuario,
+      { nombre: usuario.nombre, rol: usuario.rol, activo: usuario.activo, modulos: this.modulosEnEdicion() },
+      `Módulos de ${usuario.nombre} actualizados.`,
+    );
+    this.editandoModulosDe.set(null);
+  }
+
+  resumenModulos(usuario: Usuario): string {
+    if (usuario.rol === 'ADMIN') return 'Todos';
+    const n = usuario.modulos.length;
+    return n === 0 ? 'Ninguno' : `${n} módulo${n === 1 ? '' : 's'}`;
   }
 
   abrirReset(usuario: Usuario): void {

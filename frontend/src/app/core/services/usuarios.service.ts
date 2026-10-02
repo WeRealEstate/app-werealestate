@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Usuario, UsuarioCreateRequest, UsuarioUpdateRequest } from '../models/user.model';
+import { ModuloCatalogo, Usuario, UsuarioCreateRequest, UsuarioUpdateRequest } from '../models/user.model';
 import { UsuarioResumen } from '../models/lead.model';
 
 @Injectable({ providedIn: 'root' })
@@ -12,6 +12,16 @@ export class UsuariosService {
 
   listar(): Promise<Usuario[]> {
     return firstValueFrom(this.http.get<Usuario[]>(this.baseUrl));
+  }
+
+  /** Qué módulos existen, para qué roles aplican y con cuáles arranca cada rol. */
+  catalogoModulos(): Promise<ModuloCatalogo[]> {
+    return firstValueFrom(this.http.get<ModuloCatalogo[]>(`${this.baseUrl}/modulos`));
+  }
+
+  /** El usuario autenticado tal como está ahora en el servidor (módulos al día). */
+  perfil(): Promise<Usuario> {
+    return firstValueFrom(this.http.get<Usuario>(`${this.baseUrl}/me`));
   }
 
   /** Lista ligera (id/nombre) de usuarios activos no-admin, para pickers de "asignar a". Accesible también para líderes de área. */

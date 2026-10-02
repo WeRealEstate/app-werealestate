@@ -3,7 +3,7 @@ import { Injectable, computed, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { LoginRequest, LoginResponse, Role, User } from '../models/user.model';
+import { LoginRequest, LoginResponse, Modulo, Role, User } from '../models/user.model';
 
 const TOKEN_KEY = 'we_auth_token';
 const USER_KEY = 'we_auth_user';
@@ -36,6 +36,33 @@ export class AuthService {
     localStorage.setItem(USER_KEY, JSON.stringify(response.user));
 
     return response.user;
+  }
+
+  /** true si el usuario puede usar ese módulo. Un admin siempre; mientras la sesión no traiga la lista
+   * (login anterior a esta función) se deja pasar y el backend sigue siendo quien manda — el panel la
+   * refresca al abrirse (ver refrescarPerfil). */
+  tieneModulo(modulo: Modulo): boolean {
+    const user = this.currentUserSignal();
+    if (!user) return false;
+    if (user.rol === 'ADMIN' || !user.modulos) return true;
+    return user.modulos.includes(modulo);
+  }
+
+  tieneAlgunModulo(modulos: Modulo[]): boolean {
+    return modulos.some((m) => this.tieneModulo(m));
+  }
+
+  /** Vuelve a pedir el usuario al servidor para que un cambio de módulos hecho por un admin se vea
+   * sin tener que cerrar sesión. Si falla (sin red), se queda con lo que ya había. */
+  async refrescarPerfil(): Promise<void> {
+    if (!this.tokenSignal()) return;
+    try {
+      const fresco = await firstValueFrom(this.http.get<User>(`${environment.apiUrl}/usuarios/me`));
+      this.currentUserSignal.set(fresco);
+      localStorage.setItem(USER_KEY, JSON.stringify(fresco));
+    } catch {
+      // Una caída de red no debe sacar al usuario ni dejarlo sin menú.
+    }
   }
 
   logout(): void {

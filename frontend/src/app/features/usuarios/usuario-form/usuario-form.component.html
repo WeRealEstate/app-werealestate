@@ -63,6 +63,11 @@
       </select>
     </div>
 
+    <div>
+      <p class="block text-sm font-medium text-ink mb-1.5">Módulos que puede usar</p>
+      <app-modulos-selector [rol]="rolElegido()" [(valor)]="modulos" [iniciarConDefecto]="true" />
+    </div>
+
     @if (errorMessage()) {
       <div class="rounded-lg bg-red-50 border border-red-200 px-3.5 py-2.5 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
         {{ errorMessage() }}

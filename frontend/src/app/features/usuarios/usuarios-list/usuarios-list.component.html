@@ -34,6 +34,7 @@
           <tr class="text-left text-xs font-medium uppercase tracking-wide text-ink-muted">
             <th class="px-4 py-3">Nombre</th>
             <th class="px-4 py-3">Rol</th>
+            <th class="px-4 py-3">Módulos</th>
             <th class="px-4 py-3">Estado</th>
             <th class="px-4 py-3"></th>
           </tr>
@@ -61,6 +62,19 @@
                     <option [value]="r" [selected]="r === u.rol">{{ roleLabels[r] }}</option>
                   }
                 </select>
+              </td>
+              <td class="px-4 py-3">
+                <button
+                  type="button"
+                  [disabled]="u.rol === 'ADMIN' || savingId() === u.id"
+                  (click)="abrirModulos(u)"
+                  [attr.aria-label]="'Editar módulos de ' + u.nombre"
+                  class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-ink
+                         hover:border-we-primary active:scale-[0.97] transition-transform duration-150
+                         disabled:opacity-60 disabled:cursor-default disabled:hover:border-border disabled:active:scale-100"
+                >
+                  {{ resumenModulos(u) }}
+                </button>
               </td>
               <td class="px-4 py-3">
                 <button
@@ -111,7 +125,7 @@
             </tr>
             @if (resetId() === u.id) {
               <tr class="bg-surface-2">
-                <td colspan="4" class="px-4 py-3">
+                <td colspan="5" class="px-4 py-3">
                   <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <label [for]="'nueva-password-' + u.id" class="text-xs font-medium text-ink-muted whitespace-nowrap">
                       Nueva contraseña para {{ u.nombre }}
@@ -154,6 +168,38 @@
           }
         </tbody>
       </table>
+    </div>
+  }
+
+  @if (editandoModulosDe(); as u) {
+    <button type="button" (click)="cerrarModulos()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="modulos-titulo">
+      <div class="modal-panel-enter w-full max-w-md max-h-[85vh] overflow-y-auto rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <h2 id="modulos-titulo" class="font-heading text-lg font-semibold text-ink">Módulos de {{ u.nombre }}</h2>
+        <p class="mt-1 text-sm text-ink-muted">{{ roleLabels[u.rol] }} · elige qué secciones del panel puede usar.</p>
+        <div class="mt-4">
+          <app-modulos-selector [rol]="u.rol" [(valor)]="modulosEnEdicion" />
+        </div>
+        <div class="mt-5 flex justify-end gap-2.5">
+          <button
+            type="button"
+            (click)="cerrarModulos()"
+            class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary
+                   active:scale-[0.97] transition-transform duration-150"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            [disabled]="savingId() === u.id"
+            (click)="guardarModulos()"
+            class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90
+                   active:scale-[0.97] transition-transform duration-150 disabled:opacity-60"
+          >
+            {{ savingId() === u.id ? 'Guardando…' : 'Guardar' }}
+          </button>
+        </div>
+      </div>
     </div>
   }
 </div>

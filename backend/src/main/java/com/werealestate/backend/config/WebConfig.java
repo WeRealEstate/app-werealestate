@@ -1,10 +1,12 @@
 package com.werealestate.backend.config;
 
+import com.werealestate.backend.security.ModuloAccesoInterceptor;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.CacheControl;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -15,9 +17,17 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebConfig implements WebMvcConfigurer {
 
     private final String uploadsDir;
+    private final ModuloAccesoInterceptor moduloAccesoInterceptor;
 
-    public WebConfig(@Value("${app.uploads.dir:uploads}") String uploadsDir) {
+    public WebConfig(
+            @Value("${app.uploads.dir:uploads}") String uploadsDir, ModuloAccesoInterceptor moduloAccesoInterceptor) {
         this.uploadsDir = uploadsDir;
+        this.moduloAccesoInterceptor = moduloAccesoInterceptor;
+    }
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(moduloAccesoInterceptor).addPathPatterns("/api/**");
     }
 
     @Override
