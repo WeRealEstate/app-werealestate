@@ -2,7 +2,7 @@ export type Role = 'ASESOR' | 'LIDER_AREA' | 'EQUIPO_INTERNO' | 'ADMIN';
 
 export const ROLE_LABELS: Record<Role, string> = {
   ASESOR: 'Asesor',
-  LIDER_AREA: 'Líder de área',
+  LIDER_AREA: 'Administración',
   EQUIPO_INTERNO: 'Equipo interno',
   ADMIN: 'Administrador',
 };

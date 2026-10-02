@@ -357,7 +357,7 @@ public class LoteService {
                 ESTADOS_ADMIN_O_LIDER.contains(request.estado()) || ESTADOS_ADMIN_O_LIDER.contains(lote.getEstado());
         if (requiereAdminOLider && actual.getRol() != Role.ADMIN && actual.getRol() != Role.LIDER_AREA) {
             throw new ForbiddenOperationException(
-                    "Solo un administrador o un líder de área puede cambiar el estado de este lote");
+                    "Solo un administrador o personal de administración puede cambiar el estado de este lote");
         }
 
         if (request.estado() == EstadoLote.APARTADO_A_PLAZO) {

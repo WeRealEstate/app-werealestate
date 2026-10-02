@@ -100,7 +100,7 @@ public class TipoGastoService {
     private Usuario exigirAdminOLider() {
         Usuario actual = currentUserProvider.getUsuarioActual();
         if (actual.getRol() != Role.ADMIN && actual.getRol() != Role.LIDER_AREA) {
-            throw new ForbiddenOperationException("Solo un administrador o líder de área puede consultar esta lista");
+            throw new ForbiddenOperationException("Solo un administrador o personal de administración puede consultar esta lista");
         }
         return actual;
     }
