@@ -336,15 +336,11 @@ export class PlanoPublicoComponent {
     return target instanceof Element && target.closest('polygon') !== null;
   }
 
-  /** Atajos de teclado: + / - zoom, 0 restablece, flechas desplazan (Shift = más rápido), Esc cierra
-   * lo que esté abierto. Se ignoran con un modal abierto (salvo Esc) o escribiendo en un campo. */
+  /** Atajos de teclado: + / - zoom, 0 restablece, flechas desplazan (Shift = más rápido). Se
+   * ignoran con un modal abierto o escribiendo en un campo (Esc para cerrar modales lo maneja
+   * AccesibilidadTecladoService). */
   @HostListener('document:keydown', ['$event'])
   onTecla(event: KeyboardEvent): void {
-    if (event.key === 'Escape') {
-      if (this.mostrarApartar()) this.cancelarApartar();
-      else if (this.loteActivo()) this.cerrarDetalle();
-      return;
-    }
     if (event.ctrlKey || event.metaKey || event.altKey) return;
     if (event.target instanceof Element && event.target.closest('input, textarea, select, [contenteditable]')) return;
     if (this.mostrarApartar() || this.loteActivo()) return;

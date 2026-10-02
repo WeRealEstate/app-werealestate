@@ -14,6 +14,7 @@
         <button
           type="button"
           (click)="confirmService.responder(false)"
+          [attr.data-autofocus]="r.peligroso ? '' : null"
           class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary
                  active:scale-[0.97] transition-transform duration-150"
         >
@@ -22,6 +23,7 @@
         <button
           type="button"
           (click)="confirmService.responder(true)"
+          [attr.data-autofocus]="r.peligroso ? null : ''"
           class="rounded-lg px-4 py-2.5 text-sm font-semibold text-white active:scale-[0.97] transition-transform duration-150"
           [class.bg-red-600]="r.peligroso"
           [class.hover:bg-red-700]="r.peligroso"

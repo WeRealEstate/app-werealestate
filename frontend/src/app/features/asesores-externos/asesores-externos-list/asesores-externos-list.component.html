@@ -61,6 +61,8 @@
                     type="text"
                     [ngModel]="nombreEnEdicion()"
                     (ngModelChange)="nombreEnEdicion.set($event)"
+                    (keydown.enter)="guardarEdicion(a)"
+                    (keydown.escape)="cancelarEdicion()"
                     name="nombreEnEdicion"
                     placeholder="Nombre"
                     class="w-full rounded-lg border border-border px-3 py-1.5 text-sm text-ink
@@ -72,6 +74,8 @@
                     type="text"
                     [ngModel]="celularEnEdicion()"
                     (ngModelChange)="celularEnEdicion.set($event)"
+                    (keydown.enter)="guardarEdicion(a)"
+                    (keydown.escape)="cancelarEdicion()"
                     name="celularEnEdicion"
                     placeholder="Celular"
                     class="w-full rounded-lg border border-border px-3 py-1.5 text-sm text-ink
@@ -83,6 +87,8 @@
                     type="email"
                     [ngModel]="correoEnEdicion()"
                     (ngModelChange)="correoEnEdicion.set($event)"
+                    (keydown.enter)="guardarEdicion(a)"
+                    (keydown.escape)="cancelarEdicion()"
                     name="correoEnEdicion"
                     placeholder="Correo"
                     class="w-full rounded-lg border border-border px-3 py-1.5 text-sm text-ink
