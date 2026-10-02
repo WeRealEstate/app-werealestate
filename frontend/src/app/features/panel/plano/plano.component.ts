@@ -21,13 +21,8 @@ import { LeadsService } from '../../../core/services/leads.service';
 import { LotesService } from '../../../core/services/lotes.service';
 import { PdfService } from '../../../core/services/pdf-cotizacion.service';
 import { ToastService } from '../../../core/services/toast.service';
-import {
-  HORAS_OPCIONES,
-  HORA_POR_DEFECTO,
-  MINUTOS_OPCIONES,
-  MINUTO_POR_DEFECTO,
-  combinarFechaHora,
-} from '../../../core/utils/fecha-hora';
+import { LoteCambioEstadoModalComponent } from '../../../shared/lote-cambio-estado-modal/lote-cambio-estado-modal.component';
+import { LoteInfoModalComponent } from '../../../shared/lote-info-modal/lote-info-modal.component';
 
 /** Qué tan cerca (en % del ancho/alto de la imagen) hay que hacer clic del primer vértice para
  * cerrar el polígono que se está dibujando. */
@@ -79,7 +74,7 @@ const NOMBRE_DESARROLLO_A_PROYECTO: Record<string, 'samai' | 'nanuu'> = {
 @Component({
   selector: 'app-plano',
   standalone: true,
-  imports: [FormsModule, DecimalPipe, DatePipe],
+  imports: [FormsModule, DecimalPipe, DatePipe, LoteCambioEstadoModalComponent, LoteInfoModalComponent],
   templateUrl: './plano.component.html',
 })
 export class PlanoComponent {
@@ -99,24 +94,17 @@ export class PlanoComponent {
   readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
   readonly esLider = computed(() => this.auth.currentUser()?.rol === 'LIDER_AREA');
 
-  readonly horasOpciones = HORAS_OPCIONES;
-  readonly minutosOpciones = MINUTOS_OPCIONES;
+  /** Mismo permiso que el módulo de ventas (roleGuard ADMIN/LIDER_AREA): solo ellos pueden ver la
+   * información de un lote comprometido (apartado, en firma o vendido), igual que en /panel/lotes. */
+  readonly puedeVerInfoLote = computed(() => this.esAdmin() || this.esLider());
 
-  /** Cambio de estado que un admin o líder de área está por confirmar desde el panel de detalle:
-   * les pide siempre una nota (y, solo para "Apartado a plazo", también la fecha/hora de
-   * vencimiento). null cuando el modal está cerrado. Un asesor nunca pasa por aquí. */
+  /** Lote sobre el que se pidió "ver información" (ver LoteInfoModalComponent); null cierra el modal. */
+  readonly loteInfo = signal<Lote | null>(null);
+
+  /** Cambio de estado que un admin o líder de área está por confirmar (ver
+   * LoteCambioEstadoModalComponent); null cuando el modal está cerrado. Un asesor nunca pasa por
+   * aquí. */
   readonly cambioEstadoPendiente = signal<{ lote: Lote; nuevoEstado: EstadoLote } | null>(null);
-  readonly notaCambioEstado = signal('');
-  readonly fechaPlazo = signal('');
-  readonly horaPlazo = signal(HORA_POR_DEFECTO);
-  readonly minutoPlazo = signal(MINUTO_POR_DEFECTO);
-  readonly guardandoCambioEstado = signal(false);
-
-  readonly cambioEstadoInvalido = computed(() => {
-    const pendiente = this.cambioEstadoPendiente();
-    if (!pendiente || !this.notaCambioEstado().trim()) return true;
-    return pendiente.nuevoEstado === 'APARTADO_A_PLAZO' && !this.fechaPlazo();
-  });
 
   readonly generandoPdf = signal(false);
 
@@ -469,40 +457,23 @@ export class PlanoComponent {
 
   abrirModalCambioEstado(lote: Lote, nuevoEstado: EstadoLote): void {
     this.cambioEstadoPendiente.set({ lote, nuevoEstado });
-    this.notaCambioEstado.set('');
-    this.fechaPlazo.set('');
-    this.horaPlazo.set(HORA_POR_DEFECTO);
-    this.minutoPlazo.set(MINUTO_POR_DEFECTO);
   }
 
   cancelarCambioEstado(): void {
     this.cambioEstadoPendiente.set(null);
   }
 
-  async confirmarCambioEstado(): Promise<void> {
-    const pendiente = this.cambioEstadoPendiente();
-    if (!pendiente || this.cambioEstadoInvalido()) return;
+  onCambioEstadoConfirmado(actualizado: Lote): void {
+    this.aplicarLoteActualizado(actualizado);
+    this.cambioEstadoPendiente.set(null);
+  }
 
-    this.guardandoCambioEstado.set(true);
-    try {
-      const fechaExpira =
-        pendiente.nuevoEstado === 'APARTADO_A_PLAZO'
-          ? combinarFechaHora(this.fechaPlazo(), this.horaPlazo(), this.minutoPlazo())
-          : undefined;
-      const actualizado = await this.lotesService.cambiarEstado(
-        pendiente.lote.id,
-        pendiente.nuevoEstado,
-        fechaExpira,
-        this.notaCambioEstado().trim(),
-      );
-      this.aplicarLoteActualizado(actualizado);
-      this.cambioEstadoPendiente.set(null);
-      this.toast.success('Estado del lote actualizado.');
-    } catch (error) {
-      this.toast.error(this.mensajeError(error, 'No se pudo cambiar el estado del lote.'));
-    } finally {
-      this.guardandoCambioEstado.set(false);
-    }
+  verInfoLote(lote: Lote): void {
+    this.loteInfo.set(lote);
+  }
+
+  cerrarInfoLote(): void {
+    this.loteInfo.set(null);
   }
 
   /** Refleja el lote actualizado tanto en la lista del plano como en el panel de detalle abierto. */

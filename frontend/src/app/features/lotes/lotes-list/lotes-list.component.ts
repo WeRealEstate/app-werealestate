@@ -8,10 +8,10 @@ import { AuthService } from '../../../core/services/auth.service';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { LeadsService } from '../../../core/services/leads.service';
 import { LotesService } from '../../../core/services/lotes.service';
-import { VentasService } from '../../../core/services/ventas.service';
+import { LoteCambioEstadoModalComponent } from '../../../shared/lote-cambio-estado-modal/lote-cambio-estado-modal.component';
+import { LoteInfoModalComponent } from '../../../shared/lote-info-modal/lote-info-modal.component';
 import { ToastService } from '../../../core/services/toast.service';
 import { Desarrollo } from '../../../core/models/lead.model';
-import { PagoVenta, Venta } from '../../../core/models/venta.model';
 import {
   ESTADO_LOTE_BADGE_CLASSES,
   ESTADO_LOTE_LABELS,
@@ -19,15 +19,7 @@ import {
   ESTADOS_LOTE_SOLO_ADMIN,
   EstadoLote,
   Lote,
-  MovimientoLote,
 } from '../../../core/models/lote.model';
-import {
-  HORAS_OPCIONES,
-  HORA_POR_DEFECTO,
-  MINUTOS_OPCIONES,
-  MINUTO_POR_DEFECTO,
-  combinarFechaHora,
-} from '../../../core/utils/fecha-hora';
 
 const TAMANO_PAGINA = 20;
 
@@ -44,27 +36,25 @@ const ESTADOS_TODOS: EstadoLote[] = [
   'VENDIDO',
 ];
 
-/** Al mover un lote a cualquiera de estos estados desde el modal de admin/líder, el nombre del
- * cliente es obligatorio: son los estados donde alguien real está comprometido con el lote, y sin
- * esto ese dato solo quedaba enterrado (si acaso) en la nota libre. */
-const ESTADOS_REQUIEREN_CLIENTE: EstadoLote[] = [
-  'APARTADO',
-  'APARTADO_A_PLAZO',
-  'APARTADO_CON_DINERO',
-  'EN_PROCESO_DE_FIRMA',
-  'VENDIDO',
-];
-
 @Component({
   selector: 'app-lotes-list',
   standalone: true,
-  imports: [FormsModule, RouterLink, DecimalPipe, DatePipe, LucideEye, LucidePencil, LucideTrash2],
+  imports: [
+    FormsModule,
+    RouterLink,
+    DecimalPipe,
+    DatePipe,
+    LucideEye,
+    LucidePencil,
+    LucideTrash2,
+    LoteCambioEstadoModalComponent,
+    LoteInfoModalComponent,
+  ],
   templateUrl: './lotes-list.component.html',
 })
 export class LotesListComponent {
   private readonly lotesService = inject(LotesService);
   private readonly leadsService = inject(LeadsService);
-  private readonly ventasService = inject(VentasService);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly confirmService = inject(ConfirmService);
@@ -78,56 +68,13 @@ export class LotesListComponent {
    * información de un lote comprometido (apartado, en firma o vendido). */
   readonly puedeVerInfoLote = computed(() => this.esAdmin() || this.esLider());
 
-  /** Lote sobre el que se pidió "ver información"; null cierra el modal. Un lote Vendido muestra
-   * su Venta si existe en el módulo de Ventas ('venta'); cualquier otro estado comprometido (o un
-   * Vendido marcado a mano sin pasar por Ventas) muestra su historial de movimientos ('estado'). */
+  /** Lote sobre el que se pidió "ver información" (ver LoteInfoModalComponent); null cierra el modal. */
   readonly loteInfo = signal<Lote | null>(null);
-  readonly infoModo = signal<'venta' | 'estado' | null>(null);
-  readonly ventaDeLote = signal<Venta | null>(null);
-  readonly historialInfoLote = signal<MovimientoLote[]>([]);
-  readonly cargandoInfoLote = signal(false);
-  readonly errorInfoLote = signal<string | null>(null);
 
-  /** Historial de abonos de la venta mostrada en el modal, y el mini-formulario para registrar uno
-   * nuevo sin salir de /panel/lotes. */
-  readonly pagosInfoLote = signal<PagoVenta[]>([]);
-  readonly fechaPagoInfoLote = signal(new Date().toISOString().slice(0, 10));
-  readonly montoPagoInfoLote = signal<number | null>(null);
-  readonly notasPagoInfoLote = signal('');
-  readonly guardandoPagoInfoLote = signal(false);
-  readonly errorPagoInfoLote = signal<string | null>(null);
-
-  readonly horasOpciones = HORAS_OPCIONES;
-  readonly minutosOpciones = MINUTOS_OPCIONES;
-
-  /** Cambio de estado que un admin o líder de área está por confirmar: les pide siempre una nota
-   * (y, solo para "Apartado a plazo", también la fecha/hora de vencimiento). null cuando el modal
-   * está cerrado. Un asesor nunca pasa por aquí — su cambio se aplica directo. */
+  /** Cambio de estado que un admin o líder de área está por confirmar (ver
+   * LoteCambioEstadoModalComponent); null cuando el modal está cerrado. Un asesor nunca pasa por
+   * aquí — su cambio se aplica directo. */
   readonly cambioEstadoPendiente = signal<{ lote: Lote; nuevoEstado: EstadoLote } | null>(null);
-  readonly notaCambioEstado = signal('');
-  readonly nombreClienteCambioEstado = signal('');
-  readonly montoApartadoCambioEstado = signal<number | null>(null);
-  readonly fechaPlazo = signal('');
-  readonly horaPlazo = signal(HORA_POR_DEFECTO);
-  readonly minutoPlazo = signal(MINUTO_POR_DEFECTO);
-  readonly guardandoCambioEstado = signal(false);
-
-  readonly requiereClienteCambioEstado = computed(() => {
-    const pendiente = this.cambioEstadoPendiente();
-    return pendiente !== null && ESTADOS_REQUIEREN_CLIENTE.includes(pendiente.nuevoEstado);
-  });
-
-  readonly requiereMontoCambioEstado = computed(
-    () => this.cambioEstadoPendiente()?.nuevoEstado === 'APARTADO_CON_DINERO',
-  );
-
-  readonly cambioEstadoInvalido = computed(() => {
-    const pendiente = this.cambioEstadoPendiente();
-    if (!pendiente || !this.notaCambioEstado().trim()) return true;
-    if (pendiente.nuevoEstado === 'APARTADO_A_PLAZO' && !this.fechaPlazo()) return true;
-    if (this.requiereClienteCambioEstado() && !this.nombreClienteCambioEstado().trim()) return true;
-    return this.requiereMontoCambioEstado() && !this.montoApartadoCambioEstado();
-  });
 
   readonly lotes = signal<Lote[]>([]);
   readonly desarrollos = signal<Desarrollo[]>([]);
@@ -164,10 +111,6 @@ export class LotesListComponent {
   /** El precio ya no se captura a mano: siempre es el precio por m² del desarrollo × la superficie. */
   precioEstimado(lote: Lote): number {
     return lote.desarrollo.precioM2 * lote.superficie;
-  }
-
-  money(valor: number): string {
-    return valor.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   /** Un admin y un líder de área tienen control total sobre el estado de cualquier lote; un
@@ -277,44 +220,15 @@ export class LotesListComponent {
 
   abrirModalCambioEstado(lote: Lote, nuevoEstado: EstadoLote): void {
     this.cambioEstadoPendiente.set({ lote, nuevoEstado });
-    this.notaCambioEstado.set('');
-    this.nombreClienteCambioEstado.set('');
-    this.montoApartadoCambioEstado.set(null);
-    this.fechaPlazo.set('');
-    this.horaPlazo.set(HORA_POR_DEFECTO);
-    this.minutoPlazo.set(MINUTO_POR_DEFECTO);
   }
 
   cancelarCambioEstado(): void {
     this.cambioEstadoPendiente.set(null);
   }
 
-  async confirmarCambioEstado(): Promise<void> {
-    const pendiente = this.cambioEstadoPendiente();
-    if (!pendiente || this.cambioEstadoInvalido()) return;
-
-    this.guardandoCambioEstado.set(true);
-    try {
-      const fechaExpira =
-        pendiente.nuevoEstado === 'APARTADO_A_PLAZO'
-          ? combinarFechaHora(this.fechaPlazo(), this.horaPlazo(), this.minutoPlazo())
-          : undefined;
-      const actualizado = await this.lotesService.cambiarEstado(
-        pendiente.lote.id,
-        pendiente.nuevoEstado,
-        fechaExpira,
-        this.notaCambioEstado().trim(),
-        this.requiereClienteCambioEstado() ? this.nombreClienteCambioEstado().trim() : null,
-        this.requiereMontoCambioEstado() ? this.montoApartadoCambioEstado() : null,
-      );
-      this.lotes.update((lista) => lista.map((l) => (l.id === pendiente.lote.id ? actualizado : l)));
-      this.cambioEstadoPendiente.set(null);
-      this.toast.success('Estado del lote actualizado.');
-    } catch (error) {
-      this.toast.error(this.mensajeError(error, 'No se pudo cambiar el estado del lote.'));
-    } finally {
-      this.guardandoCambioEstado.set(false);
-    }
+  onCambioEstadoConfirmado(actualizado: Lote): void {
+    this.lotes.update((lista) => lista.map((l) => (l.id === actualizado.id ? actualizado : l)));
+    this.cambioEstadoPendiente.set(null);
   }
 
   private mensajeError(error: unknown, porDefecto: string): string {
@@ -323,100 +237,12 @@ export class LotesListComponent {
       : porDefecto;
   }
 
-  /** Precio negociado de este lote específico dentro de su venta (puede diferir del estimado si
-   * la venta incluyó varios lotes con precios distintos); null si por algún motivo no aparece en
-   * la lista de lotes de la venta encontrada. */
-  precioDeLoteEnVenta(venta: Venta, loteId: number): number | null {
-    return venta.lotes.find((l) => l.lote.id === loteId)?.precio ?? null;
-  }
-
-  /** Un Vendido muestra su Venta si el módulo de Ventas la tiene registrada; si no (se marcó
-   * vendido a mano, sin pasar por /panel/ventas) o el lote está en cualquier otro estado
-   * comprometido, cae al historial de movimientos — que siempre queda registrado, sin importar
-   * desde dónde se originó el cambio. */
-  async verInfoLote(lote: Lote): Promise<void> {
+  verInfoLote(lote: Lote): void {
     this.loteInfo.set(lote);
-    this.infoModo.set(null);
-    this.ventaDeLote.set(null);
-    this.pagosInfoLote.set([]);
-    this.historialInfoLote.set([]);
-    this.errorInfoLote.set(null);
-    this.reiniciarFormularioAbonoInfoLote();
-    this.cargandoInfoLote.set(true);
-    try {
-      if (lote.estado === 'VENDIDO') {
-        const venta = await this.ventasService.obtenerPorLote(lote.id).catch(() => null);
-        if (venta) {
-          this.ventaDeLote.set(venta);
-          this.pagosInfoLote.set(await this.ventasService.listarPagos(venta.id));
-          this.infoModo.set('venta');
-          return;
-        }
-      }
-      this.historialInfoLote.set(await this.lotesService.historialDeLote(lote.id));
-      this.infoModo.set('estado');
-    } catch {
-      this.errorInfoLote.set('No se pudo cargar la información de este lote.');
-    } finally {
-      this.cargandoInfoLote.set(false);
-    }
   }
 
   cerrarInfoLote(): void {
     this.loteInfo.set(null);
-  }
-
-  private reiniciarFormularioAbonoInfoLote(): void {
-    this.fechaPagoInfoLote.set(new Date().toISOString().slice(0, 10));
-    this.montoPagoInfoLote.set(null);
-    this.notasPagoInfoLote.set('');
-    this.errorPagoInfoLote.set(null);
-  }
-
-  /** Registra un abono sin salir de /panel/lotes; vuelve a cargar la venta y sus pagos desde el
-   * servidor (igual que VentaDetalleComponent.registrarPago) para que total abonado/saldo queden
-   * consistentes con lo que ya calculó el backend, en vez de restar a mano aquí. */
-  async registrarAbonoInfoLote(): Promise<void> {
-    const venta = this.ventaDeLote();
-    const monto = this.montoPagoInfoLote();
-    if (!venta || this.guardandoPagoInfoLote()) return;
-    if (!this.fechaPagoInfoLote() || !monto || monto <= 0) {
-      this.errorPagoInfoLote.set('Ingresa una fecha y un monto válido.');
-      return;
-    }
-
-    this.guardandoPagoInfoLote.set(true);
-    this.errorPagoInfoLote.set(null);
-    try {
-      await this.ventasService.registrarPago(venta.id, {
-        fecha: this.fechaPagoInfoLote(),
-        monto,
-        notas: this.notasPagoInfoLote().trim() || null,
-      });
-      const [ventaActualizada, pagos] = await Promise.all([
-        this.ventasService.obtener(venta.id),
-        this.ventasService.listarPagos(venta.id),
-      ]);
-      this.ventaDeLote.set(ventaActualizada);
-      this.pagosInfoLote.set(pagos);
-      this.reiniciarFormularioAbonoInfoLote();
-      this.toast.success('Abono registrado.');
-    } catch (error) {
-      const mensaje =
-        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
-          ? error.error.message
-          : 'No se pudo registrar el abono.';
-      this.errorPagoInfoLote.set(mensaje);
-      this.toast.error(mensaje);
-    } finally {
-      this.guardandoPagoInfoLote.set(false);
-    }
-  }
-
-  /** Cuántos días completos lleva un lote en su estado actual, a partir de fechaCambioEstado. */
-  diasEnEstado(lote: Lote): number {
-    const ms = Date.now() - new Date(lote.fechaCambioEstado).getTime();
-    return Math.max(0, Math.floor(ms / 86_400_000));
   }
 
   async eliminar(lote: Lote): Promise<void> {
