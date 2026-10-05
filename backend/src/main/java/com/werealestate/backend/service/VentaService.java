@@ -1,5 +1,6 @@
 package com.werealestate.backend.service;
 
+import com.werealestate.backend.dto.ContadoresVentasDto;
 import com.werealestate.backend.dto.PaginaDto;
 import com.werealestate.backend.dto.PagoVentaCreateRequest;
 import com.werealestate.backend.dto.PagoVentaDto;
@@ -186,6 +187,13 @@ public class VentaService {
         Pageable pageable = PageRequest.of(Math.max(pagina, 0), Math.max(tamano, 1));
         Page<Venta> resultado = ventaRepository.findAll(spec, pageable);
         return new PaginaDto<>(resultado.getContent().stream().map(this::toDto).toList(), resultado.hasNext());
+    }
+
+    /** Para los contadores de /panel/ventas: lotes vendidos (cada lote cuenta una vez) y ventas
+     * registradas (una por operación, aunque incluya varios lotes). */
+    public ContadoresVentasDto contadores() {
+        exigirAdminOLider();
+        return new ContadoresVentasDto(ventaLoteRepository.countLotesVendidos(), ventaRepository.count());
     }
 
     public long contarLotesVendidosSamaiCampestre() {

@@ -1,5 +1,6 @@
 package com.werealestate.backend.controller;
 
+import com.werealestate.backend.dto.ContadoresVentasDto;
 import com.werealestate.backend.dto.PaginaDto;
 import com.werealestate.backend.dto.PagoVentaCreateRequest;
 import com.werealestate.backend.dto.PagoVentaDto;
@@ -39,6 +40,11 @@ public class VentaController {
             @RequestParam(defaultValue = "0") int pagina,
             @RequestParam(defaultValue = "10") int tamano) {
         return ventaService.buscarPaginado(busqueda, pagina, tamano);
+    }
+
+    @GetMapping("/contadores")
+    public ContadoresVentasDto contadores() {
+        return ventaService.contadores();
     }
 
     @GetMapping("/samai-campestre/lotes-vendidos")

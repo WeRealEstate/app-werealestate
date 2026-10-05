@@ -36,12 +36,33 @@ export class VentasListComponent {
     return `${total.toLocaleString('en-US')} lote${total === 1 ? '' : 's'}`;
   });
 
+  readonly contadores = signal<{ lotesVendidos: number; ventasRegistradas: number } | null>(null);
+  readonly contadoresError = signal(false);
+  readonly lotesVendidosTexto = computed(() => this.textoContador(this.contadores()?.lotesVendidos));
+  readonly ventasRegistradasTexto = computed(() => this.textoContador(this.contadores()?.ventasRegistradas));
+
+  private textoContador(total: number | undefined): string {
+    if (this.contadoresError()) return 'No disponible';
+    return total === undefined ? 'Calculando' : total.toLocaleString('en-US');
+  }
+
   private pagina = 0;
   private debounceHandle: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
     void this.cargarConteoSamai();
+    void this.cargarContadores();
     this.cargar();
+  }
+
+  private async cargarContadores(): Promise<void> {
+    try {
+      this.contadoresError.set(false);
+      this.contadores.set(await this.ventasService.contadores());
+    } catch {
+      this.contadoresError.set(true);
+      this.contadores.set(null);
+    }
   }
 
   private async cargarConteoSamai(): Promise<void> {

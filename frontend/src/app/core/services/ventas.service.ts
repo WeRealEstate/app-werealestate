@@ -29,6 +29,11 @@ export class VentasService {
     return firstValueFrom(this.http.get<Pagina<Venta>>(`${this.baseUrl}/buscar`, { params: httpParams }));
   }
 
+  /** Lotes vendidos (cada lote una vez) y ventas registradas (una por operación). */
+  contadores(): Promise<{ lotesVendidos: number; ventasRegistradas: number }> {
+    return firstValueFrom(this.http.get<{ lotesVendidos: number; ventasRegistradas: number }>(`${this.baseUrl}/contadores`));
+  }
+
   contarLotesVendidosSamaiCampestre(): Promise<number> {
     return firstValueFrom(this.http.get<number>(`${this.baseUrl}/samai-campestre/lotes-vendidos`));
   }

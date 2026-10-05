@@ -6,6 +6,12 @@
         <span class="inline-flex min-h-8 items-center rounded-full border border-we-primary/20 bg-we-primary/10 px-3 text-xs font-semibold text-we-primary dark:border-we-blue-light/25 dark:bg-we-blue-light/10 dark:text-we-blue-light">
           SAMAI vendidos: {{ samaiLotesVendidosTexto() }}
         </span>
+        <span class="inline-flex min-h-8 items-center rounded-full border border-we-primary/20 bg-we-primary/10 px-3 text-xs font-semibold text-we-primary dark:border-we-blue-light/25 dark:bg-we-blue-light/10 dark:text-we-blue-light">
+          Lotes vendidos: {{ lotesVendidosTexto() }}
+        </span>
+        <span class="inline-flex min-h-8 items-center rounded-full border border-we-primary/20 bg-we-primary/10 px-3 text-xs font-semibold text-we-primary dark:border-we-blue-light/25 dark:bg-we-blue-light/10 dark:text-we-blue-light">
+          Ventas registradas: {{ ventasRegistradasTexto() }}
+        </span>
       </div>
       <p class="mt-1 text-sm text-ink-muted">Registro de ventas cerradas de todos los desarrollos.</p>
     </div>
@@ -61,7 +67,7 @@
         <tbody class="divide-y divide-border bg-surface">
           @for (v of ventas(); track v.id; let i = $index) {
             <tr class="stagger-item hover:bg-surface-2 transition-colors duration-150" [style.animation-delay.ms]="i < 8 ? i * 40 : 0">
-              <td class="px-4 py-3 text-ink-muted">{{ v.fechaVenta | date: 'd MMM y' }}</td>
+              <td class="px-4 py-3 text-ink-muted">{{ v.fechaVenta | date: 'dd/MM/yyyy' }}</td>
               <td class="px-4 py-3 font-medium text-ink">{{ v.cliente }}</td>
               <td class="px-4 py-3 text-ink-muted">{{ v.asesor.nombre }}</td>
               <td class="px-4 py-3 text-ink-muted">{{ v.lotes[0].lote.desarrollo.nombre }}</td>
