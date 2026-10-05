@@ -12,6 +12,8 @@ public record VentaDto(
         // orden se registraron; se calcula al consultar (ver VentaRepository.numerosDe), no se guarda.
         Long numero,
         List<VentaLoteDto> lotes,
+        // Aportaciones programadas de la venta (ver VentaAportacion); vacía si no las tiene.
+        List<VentaAportacionDto> aportaciones,
         String cliente,
         VentaAsesorDto asesor,
         String formaPago,
@@ -27,12 +29,18 @@ public record VentaDto(
         BigDecimal totalAbonado,
         BigDecimal saldoPendiente) {
 
-    public static VentaDto from(Venta venta, Long numero, List<VentaLoteDto> lotes, BigDecimal totalAbonado) {
+    public static VentaDto from(
+            Venta venta,
+            Long numero,
+            List<VentaLoteDto> lotes,
+            List<VentaAportacionDto> aportaciones,
+            BigDecimal totalAbonado) {
         BigDecimal precioVenta = lotes.stream().map(VentaLoteDto::precio).reduce(BigDecimal.ZERO, BigDecimal::add);
         return new VentaDto(
                 venta.getId(),
                 numero,
                 lotes,
+                aportaciones,
                 venta.getCliente(),
                 VentaAsesorDto.from(venta),
                 venta.getFormaPago(),

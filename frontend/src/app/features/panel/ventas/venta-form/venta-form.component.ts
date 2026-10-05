@@ -13,6 +13,13 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { UsuariosService } from '../../../../core/services/usuarios.service';
 import { VentasService } from '../../../../core/services/ventas.service';
 import { MonedaInputDirective } from '../../../../shared/moneda-input/moneda-input.directive';
+import { AportacionesSelectorComponent } from '../../../../shared/aportaciones-selector/aportaciones-selector.component';
+import {
+  Aportacion,
+  aportacionesValidas,
+  mensualidadConAportaciones,
+  totalAportaciones,
+} from '../../../../core/utils/aportaciones';
 
 /** Codifica la selección del <select> de asesor como un solo string ("U-5" / "E-3") porque un
  * formControl reactivo solo puede llevar un valor, y el asesor es uno de dos tipos distintos (ver
@@ -45,13 +52,14 @@ interface LoteAgregado {
 
 /** Mismos tipos de pago que ya usa el Cotizador (ver CotizadorComponent.PaymentType), para no
  * inventar un segundo vocabulario: cada uno define si hay enganche/aportación y cómo se etiqueta. */
-type TipoPago = 'msi' | 'downpayment' | 'initial' | 'annualities' | 'cash';
+type TipoPago = 'msi' | 'downpayment' | 'initial' | 'annualities' | 'aportaciones' | 'cash';
 
 const TIPO_PAGO_OPCIONES: { value: TipoPago; label: string; sublabel: string }[] = [
   { value: 'msi', label: 'Sin enganche', sublabel: 'Meses sin intereses' },
   { value: 'downpayment', label: 'Con enganche', sublabel: 'Monto libre' },
   { value: 'initial', label: 'Pago inicial', sublabel: 'Baja la mensualidad' },
   { value: 'annualities', label: 'Con anualidades', sublabel: 'Aportación anual' },
+  { value: 'aportaciones', label: 'Con aportaciones', sublabel: 'Varias, cada una en su mes' },
   { value: 'cash', label: 'Contado', sublabel: 'Pago único' },
 ];
 
@@ -62,13 +70,14 @@ const ENGANCHE_LABEL_POR_TIPO: Record<TipoPago, string | null> = {
   downpayment: 'Enganche',
   initial: 'Pago inicial',
   annualities: 'Aportación anual',
+  aportaciones: null,
   cash: null,
 };
 
 @Component({
   selector: 'app-venta-form',
   standalone: true,
-  imports: [ReactiveFormsModule, FormsModule, RouterLink, LucideX, MonedaInputDirective],
+  imports: [ReactiveFormsModule, FormsModule, RouterLink, LucideX, MonedaInputDirective, AportacionesSelectorComponent],
   templateUrl: './venta-form.component.html',
 })
 export class VentaFormComponent {
@@ -110,6 +119,18 @@ export class VentaFormComponent {
 
   readonly tipoPagoOpciones = TIPO_PAGO_OPCIONES;
   readonly tipoPago = signal<TipoPago>('msi');
+
+  /** Aportaciones del esquema "Con aportaciones" (varias por año, cada una con su mes y monto). */
+  readonly aportaciones = signal<Aportacion[]>([]);
+  readonly esAportaciones = computed(() => this.tipoPago() === 'aportaciones');
+  readonly totalAportaciones = computed(() => totalAportaciones(this.aportaciones()));
+  /** Las aportaciones corren desde el mes de la venta durante el plazo (ver aniosElegibles). */
+  readonly fechaVentaIso = signal(new Date().toISOString().slice(0, 10));
+  readonly plazoActual = signal<number | null>(null);
+  readonly inicioAportaciones = computed(() => {
+    const [anio, mes] = this.fechaVentaIso().split('-').map(Number);
+    return new Date(anio, (mes || 1) - 1, 1);
+  });
   readonly montoEnganche = signal<number | null>(null);
 
   /** Sin enganche/Con enganche usan "MSI" (meses sin intereses); pago inicial/anualidades usan
@@ -153,8 +174,15 @@ export class VentaFormComponent {
     // Cualquier cambio en plazo regenera el texto de forma de pago Y recalcula la mensualidad
     // (mismo cálculo que ya usa el Cotizador: saldo a financiar ÷ meses); ambos siguen editables
     // a mano por si el trato real fue distinto.
-    this.form.controls.plazoMeses.valueChanges.subscribe(() => {
+    this.form.controls.plazoMeses.valueChanges.subscribe((plazo) => {
+      this.plazoActual.set(plazo);
       this.actualizarFormaPago();
+      this.actualizarMensualidad();
+    });
+    // Cambiar la fecha de venta mueve el calendario de las aportaciones (el selector descarta las
+    // que queden fuera y avisa por onAportacionesChange).
+    this.form.controls.fechaVenta.valueChanges.subscribe((fecha) => {
+      this.fechaVentaIso.set(fecha);
       this.actualizarMensualidad();
     });
   }
@@ -170,6 +198,9 @@ export class VentaFormComponent {
       this.form.controls.mensualidad.setValue(null);
       this.form.controls.plazoMeses.setValue(null);
       this.aplicarDepositoA.set(null);
+    }
+    if (tipo !== 'aportaciones') {
+      this.aportaciones.set([]);
     }
     this.actualizarFormaPago();
     this.actualizarMensualidad();
@@ -202,6 +233,19 @@ export class VentaFormComponent {
 
     const enganche = this.mostrarEnganche() ? (this.montoEnganche() ?? 0) : 0;
     const depositoParaMensualidad = this.aplicarDepositoA() === 'mensualidad' ? this.depositoTotal() : 0;
+
+    // Con aportaciones: en un mes con aportación se paga solo la aportación, así que la
+    // mensualidad regular es lo que queda entre los meses sin aportación.
+    if (this.tipoPago() === 'aportaciones') {
+      const regular = mensualidadConAportaciones(
+        this.precioTotal() - depositoParaMensualidad,
+        this.aportaciones(),
+        plazo,
+      );
+      this.form.controls.mensualidad.setValue(regular > 0 ? Math.round(regular * 100) / 100 : null);
+      return;
+    }
+
     const saldoAFinanciar = this.precioTotal() - enganche - depositoParaMensualidad;
     if (saldoAFinanciar <= 0) {
       this.form.controls.mensualidad.setValue(null);
@@ -209,6 +253,26 @@ export class VentaFormComponent {
     }
 
     this.form.controls.mensualidad.setValue(Math.round((saldoAFinanciar / plazo) * 100) / 100);
+  }
+
+  onAportacionesChange(lista: Aportacion[]): void {
+    this.aportaciones.set(lista);
+    this.actualizarMensualidad();
+  }
+
+  /** Por qué las aportaciones no se pueden guardar todavía (null si están bien o si no aplican). */
+  private errorAportaciones(): string | null {
+    if (!this.esAportaciones()) return null;
+    const plazo = this.form.controls.plazoMeses.value;
+    if (!plazo) return 'Indica el plazo para registrar aportaciones.';
+    const lista = this.aportaciones();
+    if (lista.length === 0) return 'Elige al menos un mes para las aportaciones.';
+    if (lista.some((a) => a.monto === null || a.monto <= 0)) return 'Ingresa el monto de todas las aportaciones elegidas.';
+    const depositoParaMensualidad = this.aplicarDepositoA() === 'mensualidad' ? this.depositoTotal() : 0;
+    if (!aportacionesValidas(this.precioTotal() - depositoParaMensualidad, lista, plazo)) {
+      return 'Las aportaciones suman todo el saldo: deja saldo para las mensualidades regulares.';
+    }
+    return null;
   }
 
   /** Se llama al elegir cómo aplicar el dinero ya recibido al apartar (ver depositoTotal). */
@@ -275,11 +339,13 @@ export class VentaFormComponent {
   async onSubmit(): Promise<void> {
     const faltaMontoEnganche = this.mostrarEnganche() && !this.montoEnganche();
     const faltaElegirDeposito = this.requiereElegirDeposito() && !this.aplicarDepositoA();
+    const errorAportaciones = this.errorAportaciones();
     if (
       this.form.invalid ||
       this.lotesAgregados().length === 0 ||
       faltaMontoEnganche ||
       faltaElegirDeposito ||
+      errorAportaciones !== null ||
       this.isLoading()
     ) {
       this.form.markAllAsTouched();
@@ -289,6 +355,8 @@ export class VentaFormComponent {
         this.errorMessage.set(`Ingresa el monto de ${this.engancheLabelActual()!.toLowerCase()}.`);
       } else if (faltaElegirDeposito) {
         this.errorMessage.set('Indica si el dinero ya apartado baja la mensualidad o el saldo.');
+      } else if (errorAportaciones !== null) {
+        this.errorMessage.set(errorAportaciones);
       }
       return;
     }
@@ -312,6 +380,9 @@ export class VentaFormComponent {
         enganche: this.mostrarEnganche() ? this.montoEnganche() : null,
         notas: v.notas?.trim() || null,
         marcarLoteVendido: v.marcarLoteVendido,
+        aportaciones: this.esAportaciones()
+          ? this.aportaciones().map((a) => ({ anio: a.anio, mes: a.mes, monto: a.monto as number }))
+          : [],
       });
 
       if (registrarDepositoComoAbono) {

@@ -21,11 +21,20 @@ export interface VentaAsesor {
  * un asesor externo registrado. Puede incluir varios lotes (misma operación, una sola
  * mensualidad/plazo/saldo combinado — ver VentaLote).
  */
+/** Una aportación programada de la venta (esquema "Con aportaciones"): mes (1-12), año y monto. */
+export interface VentaAportacion {
+  anio: number;
+  mes: number;
+  monto: number;
+}
+
 export interface Venta {
   id: number;
   /** Posición por fecha de venta: la más antigua es la 1, sin importar el orden de registro. */
   numero: number;
   lotes: VentaLote[];
+  /** Vacía si la venta no se pactó con aportaciones. */
+  aportaciones: VentaAportacion[];
   cliente: string;
   asesor: VentaAsesor;
   formaPago: string;
@@ -64,6 +73,8 @@ export interface VentaCreateRequest {
   enganche: number | null;
   notas: string | null;
   marcarLoteVendido: boolean;
+  /** Solo con el tipo de pago "Con aportaciones"; el backend las valida (ver VentaService). */
+  aportaciones?: VentaAportacion[];
 }
 
 /** Igual que VentaCreateRequest pero sin lotes ni marcarLoteVendido: no toca qué lotes incluye la

@@ -4,6 +4,7 @@ import { LucidePencil } from '@lucide/angular';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Location } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { MESES_NOMBRE } from '../../../../core/utils/aportaciones';
 import { ToastService } from '../../../../core/services/toast.service';
 import { VentasService } from '../../../../core/services/ventas.service';
 import { UsuariosService } from '../../../../core/services/usuarios.service';
@@ -132,6 +133,14 @@ export class VentaDetalleComponent implements OnInit {
     } finally {
       this.isSavingPago.set(false);
     }
+  }
+
+  totalAportaciones(): number {
+    return (this.venta()?.aportaciones ?? []).reduce((suma, a) => suma + a.monto, 0);
+  }
+
+  nombreMes(mes: number): string {
+    return MESES_NOMBRE[mes - 1];
   }
 
   money(valor: number): string {

@@ -6,6 +6,8 @@ import com.werealestate.backend.dto.PagoVentaCreateRequest;
 import com.werealestate.backend.dto.PagoVentaDto;
 import com.werealestate.backend.dto.VentaCreateRequest;
 import com.werealestate.backend.dto.VentaDto;
+import com.werealestate.backend.dto.VentaAportacionDto;
+import com.werealestate.backend.dto.VentaAportacionItemRequest;
 import com.werealestate.backend.dto.VentaLoteDto;
 import com.werealestate.backend.dto.VentaLoteItemRequest;
 import com.werealestate.backend.dto.VentaUpdateRequest;
@@ -19,17 +21,20 @@ import com.werealestate.backend.model.PagoVenta;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.model.Venta;
+import com.werealestate.backend.model.VentaAportacion;
 import com.werealestate.backend.model.VentaLote;
 import com.werealestate.backend.repository.AsesorExternoRepository;
 import com.werealestate.backend.repository.LoteRepository;
 import com.werealestate.backend.repository.PagoVentaRepository;
 import com.werealestate.backend.repository.UsuarioRepository;
+import com.werealestate.backend.repository.VentaAportacionRepository;
 import com.werealestate.backend.repository.VentaLoteRepository;
 import com.werealestate.backend.repository.VentaRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import java.math.BigDecimal;
+import java.time.YearMonth;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -55,6 +60,7 @@ public class VentaService {
 
     private final VentaRepository ventaRepository;
     private final VentaLoteRepository ventaLoteRepository;
+    private final VentaAportacionRepository ventaAportacionRepository;
     private final LoteRepository loteRepository;
     private final LoteService loteService;
     private final PagoVentaRepository pagoVentaRepository;
@@ -65,6 +71,7 @@ public class VentaService {
     public VentaService(
             VentaRepository ventaRepository,
             VentaLoteRepository ventaLoteRepository,
+            VentaAportacionRepository ventaAportacionRepository,
             LoteRepository loteRepository,
             LoteService loteService,
             PagoVentaRepository pagoVentaRepository,
@@ -73,6 +80,7 @@ public class VentaService {
             CurrentUserProvider currentUserProvider) {
         this.ventaRepository = ventaRepository;
         this.ventaLoteRepository = ventaLoteRepository;
+        this.ventaAportacionRepository = ventaAportacionRepository;
         this.loteRepository = loteRepository;
         this.loteService = loteService;
         this.pagoVentaRepository = pagoVentaRepository;
@@ -92,6 +100,9 @@ public class VentaService {
         }
 
         AsesorResuelto asesor = resolverAsesor(request.usuarioAsesorId(), request.asesorExternoId());
+        List<VentaAportacionItemRequest> aportaciones =
+                request.aportaciones() == null ? List.of() : request.aportaciones();
+        validarAportaciones(aportaciones, request);
 
         String cliente = request.cliente().trim();
         String notas = request.notas() == null || request.notas().isBlank() ? null : request.notas().trim();
@@ -105,6 +116,10 @@ public class VentaService {
                 request.mensualidad(), request.plazoMeses(), engancheLabel, request.enganche(), notas);
         venta = ventaRepository.save(venta);
 
+        for (VentaAportacionItemRequest item : aportaciones) {
+            ventaAportacionRepository.save(new VentaAportacion(venta, item.anio(), item.mes(), item.monto()));
+        }
+
         for (VentaLoteItemRequest item : request.lotes()) {
             Lote lote = loteRepository
                     .findById(item.loteId())
@@ -117,6 +132,46 @@ public class VentaService {
         }
 
         return toDto(renumerar(venta.getId()));
+    }
+
+    /** Reglas de las aportaciones (el frontend ya las aplica, aquí se hacen valer en el servidor):
+     * necesitan plazo; cada una cae dentro de los meses del plan (desde el mes de la venta) y no en el
+     * último año calendario del plazo (queda libre para mensualidades regulares); no se repite el mes;
+     * y juntas dejan saldo por pagar en mensualidades. */
+    private void validarAportaciones(List<VentaAportacionItemRequest> aportaciones, VentaCreateRequest request) {
+        if (aportaciones.isEmpty()) {
+            return;
+        }
+        if (request.plazoMeses() == null) {
+            throw new ValidationException("Indica el plazo para registrar aportaciones");
+        }
+
+        YearMonth inicio = YearMonth.from(request.fechaVenta());
+        YearMonth fin = inicio.plusMonths(request.plazoMeses() - 1L);
+        Set<YearMonth> usados = new HashSet<>();
+        BigDecimal total = BigDecimal.ZERO;
+
+        for (VentaAportacionItemRequest a : aportaciones) {
+            YearMonth mes = YearMonth.of(a.anio(), a.mes());
+            if (mes.isBefore(inicio) || mes.isAfter(fin)) {
+                throw new ValidationException(
+                        "La aportación de " + a.mes() + "/" + a.anio() + " queda fuera del plazo de la venta");
+            }
+            if (mes.getYear() == fin.getYear()) {
+                throw new ValidationException(
+                        "No puede haber aportaciones en el último año del plazo (" + fin.getYear() + ")");
+            }
+            if (!usados.add(mes)) {
+                throw new ValidationException("Hay dos aportaciones en " + a.mes() + "/" + a.anio());
+            }
+            total = total.add(a.monto());
+        }
+
+        BigDecimal precio =
+                request.lotes().stream().map(VentaLoteItemRequest::precio).reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (total.compareTo(precio) >= 0) {
+            throw new ValidationException("Las aportaciones no pueden sumar todo el precio de la venta");
+        }
     }
 
     public VentaDto obtener(Long id) {
@@ -256,7 +311,12 @@ public class VentaService {
     private VentaDto toDto(Venta venta) {
         List<VentaLoteDto> lotes =
                 ventaLoteRepository.findByVentaId(venta.getId()).stream().map(VentaLoteDto::from).toList();
-        return VentaDto.from(venta, venta.getNumero(), lotes, totalAbonado(venta.getId()));
+        List<VentaAportacionDto> aportaciones = ventaAportacionRepository
+                .findByVentaIdOrderByAnioAscMesAsc(venta.getId())
+                .stream()
+                .map(VentaAportacionDto::from)
+                .toList();
+        return VentaDto.from(venta, venta.getNumero(), lotes, aportaciones, totalAbonado(venta.getId()));
     }
 
     /** Reacomoda el número de todas las ventas por fecha y devuelve la venta pedida ya leída de nuevo

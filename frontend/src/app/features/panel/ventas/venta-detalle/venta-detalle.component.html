@@ -216,6 +216,24 @@
       </div>
     }
 
+    <!-- APORTACIONES PROGRAMADAS -->
+    @if (v.aportaciones.length > 0) {
+      <div class="mt-6 rounded-2xl border border-border bg-surface p-5">
+        <div class="mb-3 flex items-center justify-between">
+          <p class="text-xs text-ink-muted">Aportaciones programadas ({{ v.aportaciones.length }})</p>
+          <p class="text-sm font-semibold text-ink">Total ${{ money(totalAportaciones()) }}</p>
+        </div>
+        <div class="grid gap-2 sm:grid-cols-2">
+          @for (a of v.aportaciones; track a.anio + '-' + a.mes) {
+            <div class="flex items-center justify-between gap-3 rounded-lg bg-surface-2 px-3.5 py-2.5">
+              <span class="text-sm text-ink">{{ nombreMes(a.mes) }} {{ a.anio }}</span>
+              <span class="text-sm font-medium text-we-primary dark:text-we-blue-light">${{ money(a.monto) }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
     <!-- COBRANZA -->
     <div class="mt-6 grid gap-4 sm:grid-cols-3">
       <div class="rounded-2xl border border-border bg-surface p-5">

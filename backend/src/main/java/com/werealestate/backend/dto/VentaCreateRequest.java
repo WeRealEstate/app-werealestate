@@ -31,5 +31,8 @@ public record VentaCreateRequest(
         @Size(max = 1000) String notas,
         // Si es true, además de registrar la venta se marca cada lote como VENDIDO (con su
         // historial normal, ver LoteService.marcarVendido). Ver VentaService.
-        boolean marcarLoteVendido) {
+        boolean marcarLoteVendido,
+        // Esquema "Con aportaciones": varias por año, cada una con su mes y monto. Opcional (null o
+        // vacío = sin aportaciones); ver VentaService.validarAportaciones.
+        @Valid List<VentaAportacionItemRequest> aportaciones) {
 }

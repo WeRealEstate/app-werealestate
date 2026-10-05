@@ -288,6 +288,24 @@
       </div>
     }
 
+    @if (esAportaciones()) {
+      <div class="rounded-xl border border-we-primary/20 bg-we-primary/5 p-4 dark:border-we-primary/25 dark:bg-we-primary/10">
+        <p class="text-sm font-semibold text-ink">Aportaciones</p>
+        <p class="mt-1 text-xs text-ink-muted">
+          Elige el mes de cada aportación (hasta 12 por año, desde el mes de la venta; el último año del plazo queda libre).
+          En un mes con aportación se paga solo la aportación. Al escribir un monto las demás se igualan; cada una se puede editar.
+        </p>
+        <div class="mt-4">
+          <app-aportaciones-selector
+            [inicio]="inicioAportaciones()"
+            [meses]="plazoActual() ?? 0"
+            [valor]="aportaciones()"
+            (valorChange)="onAportacionesChange($event)"
+          />
+        </div>
+      </div>
+    }
+
     <div>
       <label for="formaPago" class="block text-sm font-medium text-ink mb-1.5">Forma de pago *</label>
       <input
