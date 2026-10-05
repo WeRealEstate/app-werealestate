@@ -12,7 +12,7 @@ import {
   PuntoMapa,
 } from '../../../core/models/lote.model';
 import { LotesService } from '../../../core/services/lotes.service';
-import { fondoDePagina, pantallaCompleta } from '../../../core/utils/pagina';
+import { colorDeBarra, fondoDePagina } from '../../../core/utils/pagina';
 import { ToastService } from '../../../core/services/toast.service';
 import { ToastContainerComponent } from '../../../shared/toast-container/toast-container.component';
 
@@ -149,9 +149,9 @@ export class PlanoPublicoComponent {
   readonly mostrarAvisoRotar = signal(false);
 
   constructor() {
-    // Fondo negro en toda la página y pantalla completa real en celulares: ver core/utils/pagina.ts.
+    // Fondo negro en toda la página y barra del navegador negra: ver core/utils/pagina.ts.
     fondoDePagina(this.destroyRef, 'fondo-negro');
-    pantallaCompleta(this.destroyRef, '#000000');
+    colorDeBarra(this.destroyRef, '#000000');
     this.escucharVisualViewport();
     this.cargar();
     this.iniciarAvisoRotar();

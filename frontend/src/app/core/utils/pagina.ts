@@ -9,17 +9,11 @@ export function fondoDePagina(destroyRef: DestroyRef, clase: 'fondo-marca' | 'fo
   destroyRef.onDestroy(() => raiz.classList.remove(clase));
 }
 
-/** Vista a pantalla completa mientras el componente esté en pantalla: el viewport llega hasta los
- * bordes (viewport-fit=cover) y la barra del navegador toma `color`. Solo vive en esa vista a
- * propósito: con viewport-fit=cover global, el resto del panel quedaría bajo la muesca del iPhone
- * en horizontal. Al salir se restaura el <meta> original. */
-export function pantallaCompleta(destroyRef: DestroyRef, color: string): void {
-  const viewport = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
-  const viewportOriginal = viewport?.content ?? null;
-  if (viewport && !viewport.content.includes('viewport-fit')) {
-    viewport.content = `${viewport.content}, viewport-fit=cover`;
-  }
-
+/** Barra del navegador (Android) del color indicado mientras el componente esté en pantalla. El
+ * viewport ya es viewport-fit=cover para toda la app (ver index.html), así que la página llega hasta
+ * el borde inferior y cada vista deja su propio margen con env(safe-area-inset-*). Al salir se
+ * restaura el <meta name="theme-color"> original. */
+export function colorDeBarra(destroyRef: DestroyRef, color: string): void {
   let themeColor = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
   const creado = themeColor === null;
   const colorOriginal = themeColor?.content ?? null;
@@ -31,7 +25,6 @@ export function pantallaCompleta(destroyRef: DestroyRef, color: string): void {
   themeColor.content = color;
 
   destroyRef.onDestroy(() => {
-    if (viewport && viewportOriginal !== null) viewport.content = viewportOriginal;
     if (creado) themeColor?.remove();
     else if (themeColor && colorOriginal !== null) themeColor.content = colorOriginal;
   });
