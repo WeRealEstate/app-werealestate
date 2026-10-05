@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { LucidePencil } from '@lucide/angular';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Location } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ToastService } from '../../../../core/services/toast.service';
 import { VentasService } from '../../../../core/services/ventas.service';
@@ -20,6 +21,7 @@ import { asesorSeleccionDe, parseAsesorSeleccion } from '../venta-form/venta-for
 })
 export class VentaDetalleComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly location = inject(Location);
   private readonly ventasService = inject(VentasService);
   private readonly usuariosService = inject(UsuariosService);
   private readonly asesoresExternosService = inject(AsesoresExternosService);
@@ -35,7 +37,9 @@ export class VentaDetalleComponent implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly pagoError = signal<string | null>(null);
 
-  private ventaId!: number;
+  /** id estable de la venta (para escribir); se conoce al cargarla por el número de la dirección. */
+  private ventaId: number | null = null;
+  private numeroEnUrl!: number;
 
   readonly pagoForm = this.fb.group({
     fecha: this.fb.control(new Date().toISOString().slice(0, 10), { nonNullable: true, validators: [Validators.required] }),
@@ -61,22 +65,35 @@ export class VentaDetalleComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.ventaId = Number(this.route.snapshot.paramMap.get('id'));
+    this.numeroEnUrl = Number(this.route.snapshot.paramMap.get('numero'));
     this.cargar();
     this.usuariosService.paraVenta().then((u) => this.asesoresInternos.set(u));
     this.asesoresExternosService.listarActivos().then((a) => this.asesoresExternos.set(a));
+  }
+
+  /** Si el número de la venta cambió (se editó su fecha o se registró otra con fecha anterior), la
+   * dirección se actualiza en su lugar para que un refresh o un enlace copiado abra esta misma venta. */
+  private sincronizarDireccion(numero: number): void {
+    if (numero === this.numeroEnUrl) return;
+    this.numeroEnUrl = numero;
+    this.location.replaceState(`/panel/ventas/${numero}`);
   }
 
   async cargar(): Promise<void> {
     this.isLoading.set(true);
     this.errorMessage.set(null);
     try {
-      const [venta, pagos] = await Promise.all([
-        this.ventasService.obtener(this.ventaId),
-        this.ventasService.listarPagos(this.ventaId),
-      ]);
+      // La primera vez se busca por el número de la dirección; después, por el id estable (el número
+      // pudo moverse si alguien registró una venta con fecha anterior mientras esta pantalla estaba abierta).
+      const venta =
+        this.ventaId === null
+          ? await this.ventasService.obtenerPorNumero(this.numeroEnUrl)
+          : await this.ventasService.obtener(this.ventaId);
+      this.ventaId = venta.id;
+      const pagos = await this.ventasService.listarPagos(venta.id);
       this.venta.set(venta);
       this.pagos.set(pagos);
+      this.sincronizarDireccion(venta.numero);
     } catch {
       this.errorMessage.set('No se pudo cargar la venta.');
     } finally {
@@ -95,7 +112,7 @@ export class VentaDetalleComponent implements OnInit {
     const v = this.pagoForm.getRawValue();
 
     try {
-      await this.ventasService.registrarPago(this.ventaId, {
+      await this.ventasService.registrarPago(this.ventaId!, {
         fecha: v.fecha,
         monto: v.monto!,
         notas: v.notas?.trim() || null,
@@ -156,7 +173,7 @@ export class VentaDetalleComponent implements OnInit {
     const v = this.edicionForm.getRawValue();
 
     try {
-      const actualizada = await this.ventasService.actualizar(this.ventaId, {
+      const actualizada = await this.ventasService.actualizar(this.ventaId!, {
         cliente: v.cliente,
         ...parseAsesorSeleccion(v.asesor),
         fechaVenta: v.fechaVenta,
@@ -168,6 +185,7 @@ export class VentaDetalleComponent implements OnInit {
         notas: v.notas?.trim() || null,
       });
       this.venta.set(actualizada);
+      this.sincronizarDireccion(actualizada.numero);
       this.editando.set(false);
       this.toast.success('Venta actualizada.');
     } catch (error) {

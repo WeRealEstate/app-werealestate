@@ -41,6 +41,13 @@ export class VentasService {
     return firstValueFrom(this.http.get<number>(`${this.baseUrl}/samai-campestre/lotes-vendidos`));
   }
 
+  /** Abrir una venta por su número visible (/panel/ventas/11). El número puede cambiar si se registra
+   * otra venta con fecha anterior, así que solo sirve para encontrarla: lo que escribe (abonos,
+   * modificar) usa el `id` de la venta devuelta. */
+  obtenerPorNumero(numero: number): Promise<Venta> {
+    return firstValueFrom(this.http.get<Venta>(`${this.baseUrl}/por-numero/${numero}`));
+  }
+
   obtener(id: number): Promise<Venta> {
     return firstValueFrom(this.http.get<Venta>(`${this.baseUrl}/${id}`));
   }

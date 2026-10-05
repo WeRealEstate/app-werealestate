@@ -30,10 +30,8 @@ import com.werealestate.backend.security.CurrentUserProvider;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import java.math.BigDecimal;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -118,12 +116,21 @@ public class VentaService {
             }
         }
 
-        return toDto(venta);
+        return toDto(renumerar(venta.getId()));
     }
 
     public VentaDto obtener(Long id) {
         exigirAdminOLider();
         return toDto(obtenerEntidad(id));
+    }
+
+    /** Para abrir una venta desde su dirección (/panel/ventas/11): el número solo sirve para
+     * encontrarla; todo lo que escribe (abonos, modificar) sigue usando el id estable de la venta
+     * que devuelve esto, porque un número puede cambiar si se registra otra venta con fecha anterior. */
+    public VentaDto obtenerPorNumero(Long numero) {
+        exigirAdminOLider();
+        return toDto(
+                ventaRepository.findByNumero(numero).orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada")));
     }
 
     /** Modifica los datos capturados de una venta (cliente, fechas, términos de financiamiento);
@@ -149,7 +156,8 @@ public class VentaService {
                 engancheLabel,
                 request.enganche(),
                 notas);
-        return toDto(venta);
+        // La fecha pudo cambiar: se reacomodan los números y se vuelve a leer con el nuevo.
+        return toDto(renumerar(venta.getId()));
     }
 
     /** Para el ícono de "ver información de venta" en /panel/lotes: qué venta vendió este lote, si
@@ -164,8 +172,7 @@ public class VentaService {
     }
 
     /** ascendente = la venta más antigua primero (número 1 arriba); si no, la más reciente primero.
-     * Ordena por fecha de venta y, a igual fecha, por orden de registro: el mismo criterio que
-     * numera las ventas (ver VentaRepository.numerosDe), así el número siempre sube o baja parejo. */
+     * Ordena por número de venta, que ya sigue la fecha de venta (ver VentaRepository.renumerar). */
     public PaginaDto<VentaDto> buscarPaginado(String busqueda, boolean ascendente, int pagina, int tamano) {
         exigirAdminOLider();
         Specification<Venta> spec = (root, query, cb) -> cb.conjunction();
@@ -185,19 +192,13 @@ public class VentaService {
             });
         }
         spec = spec.and((root, query, cb) -> {
-            query.orderBy(
-                    ascendente ? cb.asc(root.get("fechaVenta")) : cb.desc(root.get("fechaVenta")),
-                    ascendente ? cb.asc(root.get("id")) : cb.desc(root.get("id")));
+            query.orderBy(ascendente ? cb.asc(root.get("numero")) : cb.desc(root.get("numero")));
             return cb.conjunction();
         });
 
         Pageable pageable = PageRequest.of(Math.max(pagina, 0), Math.max(tamano, 1));
         Page<Venta> resultado = ventaRepository.findAll(spec, pageable);
-        Map<Long, Long> numeros = resultado.getContent().isEmpty()
-                ? Map.of()
-                : numerosDe(resultado.getContent().stream().map(Venta::getId).toList());
-        return new PaginaDto<>(
-                resultado.getContent().stream().map(v -> toDto(v, numeros)).toList(), resultado.hasNext());
+        return new PaginaDto<>(resultado.getContent().stream().map(this::toDto).toList(), resultado.hasNext());
     }
 
     /** Para los contadores de /panel/ventas: lotes vendidos (cada lote cuenta una vez) y ventas
@@ -253,22 +254,17 @@ public class VentaService {
     }
 
     private VentaDto toDto(Venta venta) {
-        return toDto(venta, numerosDe(List.of(venta.getId())));
-    }
-
-    private VentaDto toDto(Venta venta, Map<Long, Long> numeros) {
         List<VentaLoteDto> lotes =
                 ventaLoteRepository.findByVentaId(venta.getId()).stream().map(VentaLoteDto::from).toList();
-        return VentaDto.from(venta, numeros.get(venta.getId()), lotes, totalAbonado(venta.getId()));
+        return VentaDto.from(venta, venta.getNumero(), lotes, totalAbonado(venta.getId()));
     }
 
-    /** Número (por fecha de venta) de cada venta pedida, en una sola consulta. */
-    private Map<Long, Long> numerosDe(List<Long> ids) {
-        Map<Long, Long> numeros = new HashMap<>();
-        for (VentaRepository.NumeroVenta n : ventaRepository.numerosDe(ids)) {
-            numeros.put(n.getId(), n.getNumero());
-        }
-        return numeros;
+    /** Reacomoda el número de todas las ventas por fecha y devuelve la venta pedida ya leída de nuevo
+     * (con su número definitivo). Va con candado para que dos registros simultáneos no se pisen. */
+    private Venta renumerar(Long ventaId) {
+        ventaRepository.bloquearNumeracion();
+        ventaRepository.renumerar();
+        return obtenerEntidad(ventaId);
     }
 
     private Usuario exigirAdminOLider() {

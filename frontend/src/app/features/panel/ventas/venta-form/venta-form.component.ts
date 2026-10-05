@@ -326,7 +326,7 @@ export class VentaFormComponent {
             'La venta se registró, pero no se pudo aplicar el depósito de apartado como abono. Regístralo a mano en la venta.',
           );
         }
-        await this.router.navigate(['/panel/ventas', venta.id]);
+        await this.router.navigate(['/panel/ventas', venta.numero]);
         return;
       }
 

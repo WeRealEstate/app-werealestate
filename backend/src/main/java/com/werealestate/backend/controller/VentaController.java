@@ -53,6 +53,12 @@ public class VentaController {
         return ventaService.contarLotesVendidosSamaiCampestre();
     }
 
+    /** Abrir una venta por su número visible (/panel/ventas/11), ver VentaService.obtenerPorNumero. */
+    @GetMapping("/por-numero/{numero}")
+    public VentaDto obtenerPorNumero(@PathVariable Long numero) {
+        return ventaService.obtenerPorNumero(numero);
+    }
+
     @GetMapping("/{id}")
     public VentaDto obtener(@PathVariable Long id) {
         return ventaService.obtener(id);

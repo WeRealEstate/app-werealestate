@@ -1,30 +1,31 @@
 package com.werealestate.backend.repository;
 
 import com.werealestate.backend.model.Venta;
-import java.util.Collection;
-import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
 public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecificationExecutor<Venta> {
 
-    /** Número de venta = posición según la fecha de venta (la más antigua es la 1); a igual fecha,
-     * desempata el orden de registro. Se calcula sobre TODAS las ventas, no solo sobre las pedidas,
-     * así que un número no cambia por filtrar, paginar ni ordenar la lista. */
+    Optional<Venta> findByNumero(Long numero);
+
+    /** Serializa el reacomodo de números entre transacciones (dos ventas registradas a la vez). El
+     * candado se suelta solo al terminar la transacción. */
+    @Query(value = "select cast(pg_advisory_xact_lock(39001) as text)", nativeQuery = true)
+    String bloquearNumeracion();
+
+    /** Reasigna el número de TODAS las ventas según fecha de venta y, a igual fecha, orden de
+     * registro (la más antigua es la 1). Solo toca las filas cuyo número cambia. Vacía el contexto de
+     * persistencia: las entidades cargadas antes quedan con el número viejo, hay que volver a leerlas. */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(
-            value = "select t.id as id, t.numero as numero from ("
-                    + "select id, row_number() over (order by fecha_venta asc, id asc) as numero from venta"
-                    + ") t where t.id in (:ids)",
+            value = "update venta v set numero = r.n from ("
+                    + "select id, row_number() over (order by fecha_venta asc, id asc) as n from venta"
+                    + ") r where v.id = r.id and v.numero is distinct from r.n",
             nativeQuery = true)
-    List<NumeroVenta> numerosDe(@Param("ids") Collection<Long> ids);
-
-    interface NumeroVenta {
-        Long getId();
-
-        Long getNumero();
-    }
+    int renumerar();
 
     boolean existsByUsuarioAsesorId(Long usuarioId);
 
