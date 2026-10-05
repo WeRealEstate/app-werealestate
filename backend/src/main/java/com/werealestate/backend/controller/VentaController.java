@@ -37,9 +37,10 @@ public class VentaController {
     @GetMapping("/buscar")
     public PaginaDto<VentaDto> buscar(
             @RequestParam(required = false) String busqueda,
+            @RequestParam(defaultValue = "desc") String orden,
             @RequestParam(defaultValue = "0") int pagina,
             @RequestParam(defaultValue = "10") int tamano) {
-        return ventaService.buscarPaginado(busqueda, pagina, tamano);
+        return ventaService.buscarPaginado(busqueda, "asc".equalsIgnoreCase(orden), pagina, tamano);
     }
 
     @GetMapping("/contadores")

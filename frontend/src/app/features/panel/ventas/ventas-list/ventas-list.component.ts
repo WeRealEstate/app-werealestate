@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
-import { LucideEye } from '@lucide/angular';
+import { LucideArrowDown, LucideArrowUp, LucideEye } from '@lucide/angular';
 import { inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { VentasService } from '../../../../core/services/ventas.service';
@@ -15,7 +15,7 @@ const DEBOUNCE_BUSQUEDA_MS = 350;
 @Component({
   selector: 'app-ventas-list',
   standalone: true,
-  imports: [DatePipe, RouterLink, LucideEye],
+  imports: [DatePipe, RouterLink, LucideEye, LucideArrowUp, LucideArrowDown],
   templateUrl: './ventas-list.component.html',
 })
 export class VentasListComponent {
@@ -27,6 +27,8 @@ export class VentasListComponent {
   readonly hayMas = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly filtro = signal('');
+  /** Orden de la lista por fecha de venta (y por tanto por número): desc = la más reciente arriba. */
+  readonly orden = signal<'asc' | 'desc'>('desc');
 
   readonly contadores = signal<{ lotesVendidos: number; ventasRegistradas: number } | null>(null);
   readonly contadoresError = signal(false);
@@ -54,6 +56,11 @@ export class VentasListComponent {
       this.contadoresError.set(true);
       this.contadores.set(null);
     }
+  }
+
+  alternarOrden(): void {
+    this.orden.update((o) => (o === 'desc' ? 'asc' : 'desc'));
+    void this.cargar();
   }
 
   onFiltroInput(valor: string): void {
@@ -94,7 +101,7 @@ export class VentasListComponent {
   }
 
   private buscarPagina(pagina: number, tamano: number) {
-    return this.ventasService.buscarPaginado({ busqueda: this.filtro().trim() || undefined, pagina, tamano });
+    return this.ventasService.buscarPaginado({ busqueda: this.filtro().trim() || undefined, orden: this.orden(), pagina, tamano });
   }
 
   money(valor: number): string {

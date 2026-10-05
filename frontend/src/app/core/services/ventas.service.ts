@@ -13,6 +13,8 @@ import {
 
 export interface BuscarVentasParams {
   busqueda?: string;
+  /** Por fecha de venta: "desc" = la más reciente primero (default), "asc" = la más antigua primero. */
+  orden?: 'asc' | 'desc';
   pagina: number;
   tamano: number;
 }
@@ -25,6 +27,7 @@ export class VentasService {
   buscarPaginado(params: BuscarVentasParams): Promise<Pagina<Venta>> {
     let httpParams = new HttpParams().set('pagina', params.pagina).set('tamano', params.tamano);
     if (params.busqueda) httpParams = httpParams.set('busqueda', params.busqueda);
+    if (params.orden) httpParams = httpParams.set('orden', params.orden);
 
     return firstValueFrom(this.http.get<Pagina<Venta>>(`${this.baseUrl}/buscar`, { params: httpParams }));
   }

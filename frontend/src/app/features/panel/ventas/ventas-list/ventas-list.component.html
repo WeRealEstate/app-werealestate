@@ -50,8 +50,36 @@
       <table class="min-w-full divide-y divide-border text-sm">
         <thead class="bg-surface-2">
           <tr class="text-left text-xs font-medium uppercase tracking-wide text-ink-muted">
-            <th class="px-4 py-3">No.</th>
-            <th class="px-4 py-3">Fecha</th>
+            <th class="px-4 py-3" [attr.aria-sort]="orden() === 'asc' ? 'ascending' : 'descending'">
+              <button
+                type="button"
+                (click)="alternarOrden()"
+                [attr.title]="orden() === 'desc' ? 'Más recientes primero: clic para ver las más antiguas primero' : 'Más antiguas primero: clic para ver las más recientes primero'"
+                class="inline-flex items-center gap-1 uppercase tracking-wide hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50 rounded"
+              >
+                No.
+                @if (orden() === 'desc') {
+                  <svg lucideArrowDown [size]="13" aria-hidden="true"></svg>
+                } @else {
+                  <svg lucideArrowUp [size]="13" aria-hidden="true"></svg>
+                }
+              </button>
+            </th>
+            <th class="px-4 py-3" [attr.aria-sort]="orden() === 'asc' ? 'ascending' : 'descending'">
+              <button
+                type="button"
+                (click)="alternarOrden()"
+                [attr.title]="orden() === 'desc' ? 'Más recientes primero: clic para ver las más antiguas primero' : 'Más antiguas primero: clic para ver las más recientes primero'"
+                class="inline-flex items-center gap-1 uppercase tracking-wide hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50 rounded"
+              >
+                Fecha
+                @if (orden() === 'desc') {
+                  <svg lucideArrowDown [size]="13" aria-hidden="true"></svg>
+                } @else {
+                  <svg lucideArrowUp [size]="13" aria-hidden="true"></svg>
+                }
+              </button>
+            </th>
             <th class="px-4 py-3">Cliente</th>
             <th class="px-4 py-3">Asesor</th>
             <th class="px-4 py-3">Desarrollo</th>

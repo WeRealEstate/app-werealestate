@@ -163,7 +163,10 @@ public class VentaService {
         return toDto(ventaLote.getVenta());
     }
 
-    public PaginaDto<VentaDto> buscarPaginado(String busqueda, int pagina, int tamano) {
+    /** ascendente = la venta más antigua primero (número 1 arriba); si no, la más reciente primero.
+     * Ordena por fecha de venta y, a igual fecha, por orden de registro: el mismo criterio que
+     * numera las ventas (ver VentaRepository.numerosDe), así el número siempre sube o baja parejo. */
+    public PaginaDto<VentaDto> buscarPaginado(String busqueda, boolean ascendente, int pagina, int tamano) {
         exigirAdminOLider();
         Specification<Venta> spec = (root, query, cb) -> cb.conjunction();
 
@@ -182,7 +185,9 @@ public class VentaService {
             });
         }
         spec = spec.and((root, query, cb) -> {
-            query.orderBy(cb.desc(root.get("fechaVenta")), cb.desc(root.get("id")));
+            query.orderBy(
+                    ascendente ? cb.asc(root.get("fechaVenta")) : cb.desc(root.get("fechaVenta")),
+                    ascendente ? cb.asc(root.get("id")) : cb.desc(root.get("id")));
             return cb.conjunction();
         });
 
