@@ -12,6 +12,7 @@ import {
   PuntoMapa,
 } from '../../../core/models/lote.model';
 import { LotesService } from '../../../core/services/lotes.service';
+import { fondoDePagina, pantallaCompleta } from '../../../core/utils/pagina';
 import { ToastService } from '../../../core/services/toast.service';
 import { ToastContainerComponent } from '../../../shared/toast-container/toast-container.component';
 
@@ -148,8 +149,22 @@ export class PlanoPublicoComponent {
   readonly mostrarAvisoRotar = signal(false);
 
   constructor() {
+    // Fondo negro en toda la página y pantalla completa real en celulares: ver core/utils/pagina.ts.
+    fondoDePagina(this.destroyRef, 'fondo-negro');
+    pantallaCompleta(this.destroyRef, '#000000');
+    this.escucharVisualViewport();
     this.cargar();
     this.iniciarAvisoRotar();
+  }
+
+  /** En Android la barra de URL aparece y desaparece cambiando el área visible sin que siempre se
+   * dispare el resize de la ventana: visualViewport sí avisa, y así el plano se vuelve a ajustar. */
+  private escucharVisualViewport(): void {
+    const visual = window.visualViewport;
+    if (!visual) return;
+    const alCambiar = () => this.ajustarZoomParaVerCompleto();
+    visual.addEventListener('resize', alCambiar);
+    this.destroyRef.onDestroy(() => visual.removeEventListener('resize', alCambiar));
   }
 
   alternarLeyenda(): void {

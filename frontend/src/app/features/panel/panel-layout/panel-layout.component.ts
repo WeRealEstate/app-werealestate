@@ -1,4 +1,4 @@
-import { Component, HostListener, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import {
   LucideCalendar,
@@ -14,6 +14,7 @@ import {
   LucideWallet,
 } from '@lucide/angular';
 import { AuthService } from '../../../core/services/auth.service';
+import { fondoDePagina } from '../../../core/utils/pagina';
 import { Modulo, ROLE_LABELS, Role } from '../../../core/models/user.model';
 import { NotificationBellComponent } from '../../../shared/notification-bell/notification-bell.component';
 import { ThemeToggleComponent } from '../../../shared/theme-toggle/theme-toggle.component';
@@ -155,6 +156,7 @@ export class PanelLayoutComponent {
   readonly sidebarOpen = signal(false);
 
   constructor() {
+    fondoDePagina(inject(DestroyRef), 'fondo-marca');
     // Los módulos pueden haber cambiado desde el último login (un admin se los quitó o dio): se
     // vuelven a pedir al abrir el panel para que el menú y las rutas reflejen lo de hoy.
     void this.auth.refrescarPerfil();

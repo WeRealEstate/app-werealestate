@@ -1,4 +1,4 @@
-<div class="fixed inset-0 bg-surface-2 overflow-hidden">
+<div class="fixed inset-x-0 top-0 h-dvh bg-surface-2 overflow-hidden">
   @if (isLoading()) {
     <div class="flex h-full items-center justify-center">
       <p class="text-sm text-ink-muted">Cargando plano…</p>
@@ -63,7 +63,7 @@
 
       <!-- Leyenda de estados: se puede plegar con la flechita para que no tape el plano. -->
       <div
-        class="absolute left-3 top-3 rounded-lg border border-border bg-surface/95 shadow-lg"
+        class="absolute left-[max(0.75rem,env(safe-area-inset-left))] top-[max(0.75rem,env(safe-area-inset-top))] rounded-lg border border-border bg-surface/95 shadow-lg"
         (click)="$event.stopPropagation()"
         (pointerdown)="$event.stopPropagation()"
       >
@@ -113,7 +113,7 @@
 
       <!-- Controles de zoom del plano (no del navegador): esquina inferior derecha, estilo mapa. -->
       <div
-        class="absolute bottom-3 right-3 flex items-center gap-1 rounded-lg border border-border bg-surface/95 p-1 shadow-lg"
+        class="absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] flex items-center gap-1 rounded-lg border border-border bg-surface/95 p-1 shadow-lg"
         (click)="$event.stopPropagation()"
         (pointerdown)="$event.stopPropagation()"
       >

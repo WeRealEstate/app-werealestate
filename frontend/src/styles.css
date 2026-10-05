@@ -65,6 +65,20 @@ body {
   transition: background-color 200ms ease, color 200ms ease;
 }
 
+/* Fondo de toda la página para las vistas a pantalla completa (ver fondoDePagina en core/utils/pagina.ts):
+   si un contenedor queda más corto que el área visible (barras del navegador en Android), el hueco
+   se ve del color de la vista y no blanco. */
+html.fondo-marca,
+html.fondo-marca body {
+  background: var(--color-we-dark);
+}
+
+html.fondo-negro,
+html.fondo-negro body {
+  background: #000;
+  overscroll-behavior: none;
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
 }

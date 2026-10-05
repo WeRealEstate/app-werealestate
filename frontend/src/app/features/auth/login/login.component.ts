@@ -1,9 +1,10 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, DestroyRef, ElementRef, OnDestroy, ViewChild, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { LucideEye, LucideEyeOff, LucideLoaderCircle, LucideMail } from '@lucide/angular';
 import { AuthService } from '../../../core/services/auth.service';
+import { fondoDePagina } from '../../../core/utils/pagina';
 import { environment } from '../../../../environments/environment';
 
 interface LoginForm {
@@ -43,6 +44,10 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+
+  constructor() {
+    fondoDePagina(inject(DestroyRef), 'fondo-marca');
+  }
 
   @ViewChild('turnstileContainer') private readonly turnstileContainer?: ElementRef<HTMLDivElement>;
   private turnstileWidgetId: string | null = null;
