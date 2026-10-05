@@ -23,6 +23,8 @@ export interface VentaAsesor {
  */
 export interface Venta {
   id: number;
+  /** Posición por fecha de venta: la más antigua es la 1, sin importar el orden de registro. */
+  numero: number;
   lotes: VentaLote[];
   cliente: string;
   asesor: VentaAsesor;

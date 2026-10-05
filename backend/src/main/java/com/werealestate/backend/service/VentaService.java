@@ -30,8 +30,10 @@ import com.werealestate.backend.security.CurrentUserProvider;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -186,7 +188,11 @@ public class VentaService {
 
         Pageable pageable = PageRequest.of(Math.max(pagina, 0), Math.max(tamano, 1));
         Page<Venta> resultado = ventaRepository.findAll(spec, pageable);
-        return new PaginaDto<>(resultado.getContent().stream().map(this::toDto).toList(), resultado.hasNext());
+        Map<Long, Long> numeros = resultado.getContent().isEmpty()
+                ? Map.of()
+                : numerosDe(resultado.getContent().stream().map(Venta::getId).toList());
+        return new PaginaDto<>(
+                resultado.getContent().stream().map(v -> toDto(v, numeros)).toList(), resultado.hasNext());
     }
 
     /** Para los contadores de /panel/ventas: lotes vendidos (cada lote cuenta una vez) y ventas
@@ -242,9 +248,22 @@ public class VentaService {
     }
 
     private VentaDto toDto(Venta venta) {
+        return toDto(venta, numerosDe(List.of(venta.getId())));
+    }
+
+    private VentaDto toDto(Venta venta, Map<Long, Long> numeros) {
         List<VentaLoteDto> lotes =
                 ventaLoteRepository.findByVentaId(venta.getId()).stream().map(VentaLoteDto::from).toList();
-        return VentaDto.from(venta, lotes, totalAbonado(venta.getId()));
+        return VentaDto.from(venta, numeros.get(venta.getId()), lotes, totalAbonado(venta.getId()));
+    }
+
+    /** Número (por fecha de venta) de cada venta pedida, en una sola consulta. */
+    private Map<Long, Long> numerosDe(List<Long> ids) {
+        Map<Long, Long> numeros = new HashMap<>();
+        for (VentaRepository.NumeroVenta n : ventaRepository.numerosDe(ids)) {
+            numeros.put(n.getId(), n.getNumero());
+        }
+        return numeros;
     }
 
     private Usuario exigirAdminOLider() {

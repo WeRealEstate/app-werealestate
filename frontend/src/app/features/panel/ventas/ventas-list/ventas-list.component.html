@@ -53,6 +53,7 @@
       <table class="min-w-full divide-y divide-border text-sm">
         <thead class="bg-surface-2">
           <tr class="text-left text-xs font-medium uppercase tracking-wide text-ink-muted">
+            <th class="px-4 py-3">No.</th>
             <th class="px-4 py-3">Fecha</th>
             <th class="px-4 py-3">Cliente</th>
             <th class="px-4 py-3">Asesor</th>
@@ -67,6 +68,7 @@
         <tbody class="divide-y divide-border bg-surface">
           @for (v of ventas(); track v.id; let i = $index) {
             <tr class="stagger-item hover:bg-surface-2 transition-colors duration-150" [style.animation-delay.ms]="i < 8 ? i * 40 : 0">
+              <td class="px-4 py-3 font-semibold text-ink">{{ v.numero }}</td>
               <td class="px-4 py-3 text-ink-muted">{{ v.fechaVenta | date: 'dd/MM/yyyy' }}</td>
               <td class="px-4 py-3 font-medium text-ink">{{ v.cliente }}</td>
               <td class="px-4 py-3 text-ink-muted">{{ v.asesor.nombre }}</td>

@@ -8,6 +8,9 @@ import java.util.List;
 
 public record VentaDto(
         Long id,
+        // Posición de la venta ordenada por fecha de venta (la más antigua es la 1), sin importar en qué
+        // orden se registraron; se calcula al consultar (ver VentaRepository.numerosDe), no se guarda.
+        Long numero,
         List<VentaLoteDto> lotes,
         String cliente,
         VentaAsesorDto asesor,
@@ -24,10 +27,11 @@ public record VentaDto(
         BigDecimal totalAbonado,
         BigDecimal saldoPendiente) {
 
-    public static VentaDto from(Venta venta, List<VentaLoteDto> lotes, BigDecimal totalAbonado) {
+    public static VentaDto from(Venta venta, Long numero, List<VentaLoteDto> lotes, BigDecimal totalAbonado) {
         BigDecimal precioVenta = lotes.stream().map(VentaLoteDto::precio).reduce(BigDecimal.ZERO, BigDecimal::add);
         return new VentaDto(
                 venta.getId(),
+                numero,
                 lotes,
                 venta.getCliente(),
                 VentaAsesorDto.from(venta),
