@@ -12,13 +12,24 @@ import { PromocionesService } from '../../../core/services/promociones.service';
 import { Desarrollo } from '../../../core/models/lead.model';
 import { Lote } from '../../../core/models/lote.model';
 import { Promocion, TipoPrecioPromocion } from '../../../core/models/promocion.model';
+import {
+  Aportacion,
+  MESES_NOMBRE,
+  aniosElegibles,
+  aportacionesValidas,
+  mensualidadConAportaciones,
+  ordenarAportaciones,
+  tablaConAportaciones,
+  totalAportaciones,
+} from '../../../core/utils/aportaciones';
+import { AportacionesSelectorComponent } from '../../../shared/aportaciones-selector/aportaciones-selector.component';
 import { PROJECTS_CONFIG } from '../../../core/data/proyectos-cotizador.config';
 import { FadeInDirective } from '../../../shared/motion/fade-in.directive';
 import { PressDirective } from '../../../shared/motion/press.directive';
 import { ValuePulseDirective } from '../../../shared/motion/value-pulse.directive';
 
 export type ProjectId = 'samai' | 'nanuu';
-export type PaymentType = 'msi' | 'downpayment' | 'annualities' | 'cash' | 'initial' | 'promocion';
+export type PaymentType = 'msi' | 'downpayment' | 'annualities' | 'aportaciones' | 'cash' | 'initial' | 'promocion';
 
 /** Un lote ya confirmado dentro de una cotización de varios lotes juntos. Cada uno guarda su
  * propio precio por m² (no uno solo compartido) porque el umbral de macrolote de SAMAI depende
@@ -57,6 +68,7 @@ function compararNatural(a: string, b: string): number {
     LucideDollarSign,
     LucideCalendar,
     LucideChevronDown,
+    AportacionesSelectorComponent,
   ],
   templateUrl: './cotizador.component.html',
 })
@@ -217,6 +229,9 @@ export class CotizadorComponent implements OnInit {
 
   currentDate = new Date();
 
+  /** Mes del primer pago del plan (referencia estable: es la entrada del selector de aportaciones). */
+  readonly inicioPlan = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth(), 1);
+
   // Superficie seleccionada
   selectedArea: number = 200;
 
@@ -356,6 +371,8 @@ export class CotizadorComponent implements OnInit {
 
   selectProject(project: ProjectId): void {
     this.promocionSeleccionada = null;
+    this.promocionUsaAportaciones = false;
+    this.aportaciones = [];
     this.selectedProject = project;
     this.loteBloqueado = false;
     this.interesesActivados.set(true);
@@ -562,7 +579,7 @@ export class CotizadorComponent implements OnInit {
   }
 
   selectPaymentType(type: PaymentType): void {
-    if (type === 'annualities' && !this.annualitiesAvailable) {
+    if ((type === 'annualities' || type === 'aportaciones') && !this.annualitiesAvailable) {
       return;
     }
 
@@ -612,6 +629,7 @@ export class CotizadorComponent implements OnInit {
 
   quitarPromocion(): void {
     this.promocionSeleccionada = null;
+    this.promocionUsaAportaciones = false;
     this.selectedPaymentType = 'msi';
     this.mostrarSelectorPromociones.set(false);
   }
@@ -652,11 +670,44 @@ export class CotizadorComponent implements OnInit {
    * importar la superficie del lote — por eso oculta el panel entero (selector de mes, resumen)
    * y solo muestra el aviso de que hace falta un plazo mayor. */
   get promocionSinAportacionesDisponibles(): boolean {
-    return this.isPromocion && this.annualContributionsCount <= 0;
+    if (!this.isPromocion) {
+      return false;
+    }
+    // Con aportaciones por mes, lo que importa es que el plazo tenga meses elegibles (ver aniosElegibles).
+    return this.promocionUsaAportaciones
+      ? aniosElegibles(this.inicioPlan, this.selectedMonths).length === 0
+      : this.annualContributionsCount <= 0;
   }
 
   get promocionInvalida(): boolean {
-    return this.promocionSinAportacionesDisponibles;
+    if (this.promocionSinAportacionesDisponibles) {
+      return true;
+    }
+    // Con aportaciones por mes hace falta elegir al menos una y que todas tengan monto.
+    return (
+      this.promocionUsaAportaciones &&
+      (this.aportaciones.length === 0 || this.aportaciones.some((a) => a.monto === null || a.monto <= 0))
+    );
+  }
+
+  /** Promoción con aportaciones por mes (varias por año, cada una con su mes y monto) en lugar de
+   * una sola aportación anual: las aportaciones no editadas a mano reparten igual lo que la
+   * promoción exige (ver promocionAnnualContributionEstandar). */
+  promocionUsaAportaciones = false;
+
+  /** Cuántas aportaciones lleva la promoción: las elegidas mes por mes, o las anuales de siempre. */
+  get promocionContribucionesCount(): number {
+    return this.promocionUsaAportaciones ? this.aportaciones.length : this.annualContributionsCount;
+  }
+
+  /** Monto igual para repartir entre las aportaciones de la promoción (editable en cada una). */
+  get promocionMontoSugerido(): number {
+    return Math.round(this.promocionAnnualContribution * 100) / 100;
+  }
+
+  cambiarPromocionUsaAportaciones(valor: boolean): void {
+    this.promocionUsaAportaciones = valor;
+    this.aportaciones = [];
   }
 
   /** Precio total del lote estándar (200 m²) al precio por m² vigente: la mensualidad fija de la
@@ -687,13 +738,14 @@ export class CotizadorComponent implements OnInit {
    * promoción: mismo cálculo que `annualitiesMonthlyPayment` pero despejando la aportación en
    * vez de la mensualidad, y sobre el total del lote estándar (no el real). */
   get promocionAnnualContributionEstandar(): number {
-    if (!this.promocionSeleccionada || this.annualContributionsCount <= 0) {
+    if (!this.promocionSeleccionada || this.promocionContribucionesCount <= 0) {
       return 0;
     }
 
     const mensualidadFija = this.promocionSeleccionada.mensualidadFija;
-    const cubiertoPorMensualidades = mensualidadFija * this.regularPaymentMonths;
-    const requerido = (this.promocionTotalEstandar - cubiertoPorMensualidades) / this.annualContributionsCount;
+    const mesesRegulares = this.selectedMonths - this.promocionContribucionesCount;
+    const cubiertoPorMensualidades = mensualidadFija * mesesRegulares;
+    const requerido = (this.promocionTotalEstandar - cubiertoPorMensualidades) / this.promocionContribucionesCount;
 
     return Math.max(requerido, 0);
   }
@@ -747,7 +799,7 @@ export class CotizadorComponent implements OnInit {
       return this.totalPrice - this.downPayment;
     }
 
-    if (this.isAnnualities) {
+    if (this.isAnnualities || this.isAportaciones) {
       return this.totalPrice;
     }
 
@@ -763,6 +815,7 @@ export class CotizadorComponent implements OnInit {
       this.selectedPaymentType === 'msi' ||
       this.selectedPaymentType === 'downpayment' ||
       this.selectedPaymentType === 'annualities' ||
+      this.selectedPaymentType === 'aportaciones' ||
       this.selectedPaymentType === 'initial' ||
       this.selectedPaymentType === 'promocion'
     ) {
@@ -789,6 +842,10 @@ export class CotizadorComponent implements OnInit {
 
     if (this.selectedPaymentType === 'annualities') {
       return this.annualitiesMonthlyPayment;
+    }
+
+    if (this.isAportaciones) {
+      return this.aportacionesMonthlyPayment;
     }
 
     // SAMAI
@@ -822,6 +879,10 @@ export class CotizadorComponent implements OnInit {
 
     if (this.selectedPaymentType === 'annualities') {
       return `Con anualidades · ${this.selectedMonths} meses`;
+    }
+
+    if (this.selectedPaymentType === 'aportaciones') {
+      return `Con aportaciones · ${this.selectedMonths} meses`;
     }
 
     if (this.selectedPaymentType === 'initial') {
@@ -938,12 +999,42 @@ export class CotizadorComponent implements OnInit {
     }
 
     // ==============================
+    // SAMAI - APORTACIONES
+    // ==============================
+
+    if (this.isAportaciones) {
+      if (this.aportacionesInvalid) {
+        return [];
+      }
+
+      return tablaConAportaciones(
+        this.inicioPlan,
+        this.selectedMonths,
+        this.totalPrice,
+        this.aportacionesMonthlyPayment,
+        this.aportaciones,
+        this.monthNames,
+      );
+    }
+
+    // ==============================
     // PROMOCIÓN
     // ==============================
 
     if (this.isPromocion) {
       if (this.promocionInvalida) {
         return [];
+      }
+
+      if (this.promocionUsaAportaciones) {
+        return tablaConAportaciones(
+          this.inicioPlan,
+          this.selectedMonths,
+          this.totalInvestment,
+          this.monthlyPayment,
+          this.aportaciones,
+          this.monthNames,
+        );
       }
 
       return this.buildAnnualContributionAmortizationTable(
@@ -1128,12 +1219,22 @@ export class CotizadorComponent implements OnInit {
       paymentMethod: this.paymentMethodLabel,
 
       downPaymentLabel: this.isPromocion
-        ? 'Aportación anual'
-        : this.selectedPaymentType === 'initial'
-          ? 'Pago inicial'
-          : 'Enganche',
+        ? this.promocionUsaAportaciones
+          ? 'Total en aportaciones'
+          : 'Aportación anual'
+        : this.isAportaciones
+          ? 'Total en aportaciones'
+          : this.selectedPaymentType === 'initial'
+            ? 'Pago inicial'
+            : 'Enganche',
 
-      downPayment: this.isPromocion ? this.promocionAnnualContribution : this.downPayment,
+      downPayment: this.isPromocion
+        ? this.promocionUsaAportaciones
+          ? this.aportacionesTotal
+          : this.promocionAnnualContribution
+        : this.isAportaciones
+          ? this.aportacionesTotal
+          : this.downPayment,
 
       financedAmount: this.financedAmount,
 
@@ -1144,6 +1245,8 @@ export class CotizadorComponent implements OnInit {
       date: this.currentDate.toLocaleDateString('es-MX'),
 
       amortizationTable: this.amortizationTable,
+
+      aportaciones: this.aportacionesParaPdf,
 
       interestPercentage: this.interestPercentage,
       interestAmount: this.interestAmount,
@@ -1277,6 +1380,57 @@ export class CotizadorComponent implements OnInit {
 
   get lotNumberInvalid(): boolean {
     return this.showQuoteErrors && this.requiereLoteEnCaptura && !this.lotNumber.trim();
+  }
+
+  // ==============================
+  // APORTACIONES - SAMAI
+  // ==============================
+
+  // Varias aportaciones por año, cada una con su mes y su monto (a diferencia de las anualidades:
+  // una por año, mismo mes y mismo monto). La lógica de cálculo vive en core/utils/aportaciones.ts.
+  aportaciones: Aportacion[] = [];
+
+  get isAportaciones(): boolean {
+    return this.selectedProject === 'samai' && this.selectedPaymentType === 'aportaciones';
+  }
+
+  get aportacionesTotal(): number {
+    return totalAportaciones(this.aportaciones);
+  }
+
+  get aportacionesMonthlyPayment(): number {
+    return mensualidadConAportaciones(this.totalPrice, this.aportaciones, this.selectedMonths);
+  }
+
+  get aportacionesInvalid(): boolean {
+    return this.isAportaciones && !aportacionesValidas(this.totalPrice, this.aportaciones, this.selectedMonths);
+  }
+
+  /** Mensaje de por qué las aportaciones no son válidas (null si lo son o si todavía no hay ninguna). */
+  get aportacionesError(): string | null {
+    if (!this.isAportaciones || this.aportaciones.length === 0) {
+      return null;
+    }
+    if (this.aportaciones.some((a) => a.monto === null || a.monto <= 0)) {
+      return 'Ingresa el monto de todas las aportaciones elegidas.';
+    }
+    if (this.aportacionesMonthlyPayment <= 0) {
+      return 'Las aportaciones suman todo el precio: deja saldo para las mensualidades regulares.';
+    }
+    return null;
+  }
+
+  /** Aportaciones ordenadas para el PDF, con el nombre del mes (null si no es el esquema activo). */
+  private get aportacionesParaPdf(): { mes: string; anio: number; monto: number }[] | undefined {
+    const usan = this.isAportaciones || (this.isPromocion && this.promocionUsaAportaciones);
+    if (!usan || this.aportaciones.length === 0) {
+      return undefined;
+    }
+    return ordenarAportaciones(this.aportaciones).map((a) => ({
+      mes: MESES_NOMBRE[a.mes - 1],
+      anio: a.anio,
+      monto: a.monto ?? 0,
+    }));
   }
 
   // ==============================
@@ -1451,6 +1605,10 @@ export class CotizadorComponent implements OnInit {
       return false;
     }
 
+    if (this.aportacionesInvalid) {
+      return false;
+    }
+
     if (this.selectedPaymentType === 'initial' && this.initialPaymentInvalid) {
       return false;
     }
@@ -1474,4 +1632,6 @@ export interface AmortizationRow {
   payment: number;
   balance: number;
   accumulatedPayment: number;
+  /** true en los meses que llevan una aportación (el PDF los resalta). */
+  esAportacion?: boolean;
 }

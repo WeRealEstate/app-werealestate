@@ -530,6 +530,42 @@
                 plazo de financiamiento mayor a 12 meses. Ajusta el plazo arriba para poder aplicarla.
               </p>
             } @else {
+              <!-- ESQUEMA: una aportación por año, o aportaciones elegidas mes por mes -->
+              <div class="mt-5 inline-flex rounded-xl border border-border bg-surface p-1 text-sm font-medium">
+                <button
+                  type="button"
+                  (click)="cambiarPromocionUsaAportaciones(false)"
+                  [class.bg-we-primary]="!promocionUsaAportaciones"
+                  [class.text-white]="!promocionUsaAportaciones"
+                  class="rounded-lg px-3.5 py-2 transition-colors"
+                >
+                  Una por año
+                </button>
+                <button
+                  type="button"
+                  (click)="cambiarPromocionUsaAportaciones(true)"
+                  [class.bg-we-primary]="promocionUsaAportaciones"
+                  [class.text-white]="promocionUsaAportaciones"
+                  class="rounded-lg px-3.5 py-2 transition-colors"
+                >
+                  Aportaciones por mes
+                </button>
+              </div>
+
+              @if (promocionUsaAportaciones) {
+                <div class="mt-5">
+                  <p class="mb-2 text-sm font-medium text-ink">Elige los meses de cada aportación</p>
+                  <app-aportaciones-selector
+                    [inicio]="inicioPlan"
+                    [meses]="selectedMonths"
+                    [montoSugerido]="promocionMontoSugerido"
+                    [(valor)]="aportaciones"
+                  />
+                  @if (aportaciones.length === 0) {
+                    <p class="mt-2 text-xs text-red-500">Elige al menos un mes para las aportaciones.</p>
+                  }
+                </div>
+              } @else {
               <div class="mt-5 grid gap-5 sm:grid-cols-2">
                 <!-- MES DE APORTACIÓN -->
                 <div>
@@ -559,6 +595,7 @@
                   <p class="mt-1.5 text-xs text-ink-muted">Máximo {{ annualContributionsCountMax }} para el plazo actual.</p>
                 </div>
               </div>
+              }
 
               <!-- RESUMEN DE LA PROMOCIÓN -->
               <div class="mt-5 grid gap-4 rounded-xl bg-surface p-4 sm:grid-cols-2">
@@ -575,10 +612,17 @@
                 </div>
 
                 <div>
-                  <p class="text-xs text-ink-muted">Aportación anual requerida</p>
-                  <p class="mt-1 font-semibold text-ink">
-                    ${{ promocionAnnualContribution.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
-                  </p>
+                  @if (promocionUsaAportaciones) {
+                    <p class="text-xs text-ink-muted">Total en aportaciones</p>
+                    <p class="mt-1 font-semibold text-ink">
+                      ${{ aportacionesTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+                    </p>
+                  } @else {
+                    <p class="text-xs text-ink-muted">Aportación anual requerida</p>
+                    <p class="mt-1 font-semibold text-ink">
+                      ${{ promocionAnnualContribution.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+                    </p>
+                  }
                 </div>
               </div>
             }
@@ -642,6 +686,23 @@
             >
               <p class="font-semibold">Con anualidades</p>
               <p class="mt-1 text-sm text-ink-muted">Aportación anual</p>
+            </button>
+
+            <!-- APORTACIONES -->
+            <button
+              type="button"
+              weMotionPress
+              (click)="selectPaymentType('aportaciones')"
+              [class.border-we-primary]="selectedPaymentType === 'aportaciones'"
+              [class.text-we-primary]="selectedPaymentType === 'aportaciones'"
+              [class.shadow-[0_8px_20px_rgba(36,63,184,0.10)]]="selectedPaymentType === 'aportaciones'"
+              [disabled]="!annualitiesAvailable"
+              [class.opacity-40]="!annualitiesAvailable"
+              [class.cursor-not-allowed]="!annualitiesAvailable"
+              class="rounded-2xl border border-border bg-surface p-5 text-left transition-all hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <p class="font-semibold">Con aportaciones</p>
+              <p class="mt-1 text-sm text-ink-muted">Varias por año, cada una en su mes</p>
             </button>
 
             <!-- CONTADO -->
@@ -798,6 +859,40 @@
                 <p class="text-xs text-ink-muted">Mensualidad resultante</p>
                 <p class="mt-1 font-semibold text-we-primary dark:text-we-blue-light">
                   ${{ annualitiesMonthlyPayment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+                </p>
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (isAportaciones) {
+          <div weFadeIn class="mt-6 rounded-2xl border border-we-primary/20 dark:border-we-primary/25 bg-we-primary/5 dark:bg-we-primary/10 p-5 shadow-[0_6px_18px_rgba(36,63,184,0.06)]">
+            <p class="text-sm font-semibold text-ink">Configura las aportaciones</p>
+            <p class="mt-1 text-xs text-ink-muted">
+              Elige el mes de cada aportación (hasta 12 por año). En un mes con aportación se paga solo la aportación.
+              Al escribir un monto, las demás se igualan; puedes editar cada una.
+            </p>
+
+            <div class="mt-5">
+              <app-aportaciones-selector [inicio]="inicioPlan" [meses]="selectedMonths" [(valor)]="aportaciones" />
+              @if (aportaciones.length === 0) {
+                <p class="mt-2 text-xs text-red-500">Elige al menos un mes para las aportaciones.</p>
+              }
+              @if (aportacionesError; as error) {
+                <p class="mt-2 text-xs text-red-500">{{ error }}</p>
+              }
+            </div>
+
+            <div class="mt-5 grid gap-4 rounded-xl bg-surface p-4 sm:grid-cols-2">
+              <div>
+                <p class="text-xs text-ink-muted">Total en aportaciones</p>
+                <p class="mt-1 font-semibold text-ink">${{ aportacionesTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</p>
+              </div>
+
+              <div>
+                <p class="text-xs text-ink-muted">Mensualidad resultante</p>
+                <p class="mt-1 font-semibold text-we-primary dark:text-we-blue-light">
+                  ${{ aportacionesMonthlyPayment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
                 </p>
               </div>
             </div>
@@ -963,13 +1058,23 @@
 
           @if (isPromocion) {
             <div class="mt-4 flex justify-between gap-4">
-              <span class="text-sm text-ink-muted">Aportación anual</span>
-              <strong class="text-sm text-ink">${{ promocionAnnualContribution.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} MXN</strong>
+              <span class="text-sm text-ink-muted">{{ promocionUsaAportaciones ? 'Total en aportaciones' : 'Aportación anual' }}</span>
+              <strong class="text-sm text-ink">${{ (promocionUsaAportaciones ? aportacionesTotal : promocionAnnualContribution).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} MXN</strong>
             </div>
 
             <div class="mt-4 flex justify-between gap-4">
               <span class="text-sm text-ink-muted">Número de aportaciones</span>
-              <strong class="text-sm text-ink">{{ annualContributionsCount }}</strong>
+              <strong class="text-sm text-ink">{{ promocionContribucionesCount }}</strong>
+            </div>
+          } @else if (isAportaciones) {
+            <div class="mt-4 flex justify-between gap-4">
+              <span class="text-sm text-ink-muted">Aportaciones ({{ aportaciones.length }})</span>
+              <strong class="text-sm text-ink">${{ aportacionesTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} MXN</strong>
+            </div>
+
+            <div class="mt-4 flex justify-between gap-4">
+              <span class="text-sm text-ink-muted">Saldo</span>
+              <strong class="text-sm text-ink">${{ financedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} MXN</strong>
             </div>
           } @else {
             <div class="mt-4 flex justify-between gap-4">

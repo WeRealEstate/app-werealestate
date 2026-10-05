@@ -37,7 +37,13 @@ export interface QuotePdfData {
     payment: number;
     balance: number;
     accumulatedPayment: number;
+    /** true en los meses que llevan una aportación: se resaltan en la tabla. */
+    esAportacion?: boolean;
     }[];
+
+  /** Aportaciones elegidas (esquema "Con aportaciones" o Promoción por mes): se listan aparte al
+   * final de la tabla de amortización. */
+  aportaciones?: { mes: string; anio: number; monto: number }[];
 }
 
 export interface PlanoPdfData {
@@ -1045,6 +1051,17 @@ export class PdfService {
 
         },
 
+        // Los meses que llevan una aportación se resaltan en azul claro y negritas.
+        didParseCell: (hook) => {
+          if (
+            hook.section === 'body' &&
+            data.amortizationTable[hook.row.index]?.esAportacion
+          ) {
+            hook.cell.styles.fillColor = [226, 234, 255];
+            hook.cell.styles.fontStyle = 'bold';
+          }
+        },
+
         didDrawPage: () => {
 
         const currentPage =
@@ -1084,6 +1101,10 @@ export class PdfService {
 
     });
 
+    if (data.aportaciones && data.aportaciones.length > 0) {
+      this.addResumenAportaciones(doc, data.aportaciones, pageWidth, pageHeight);
+    }
+
     }
 
     // ==============================
@@ -1092,6 +1113,78 @@ export class PdfService {
 
     return doc;
 
+  }
+
+  /** Lista de las aportaciones (mes, año y monto) debajo de la tabla de amortización, con su total.
+   * Si no cabe en la página donde terminó la tabla, pasa a una nueva. */
+  private addResumenAportaciones(
+    doc: jsPDF,
+    aportaciones: { mes: string; anio: number; monto: number }[],
+    pageWidth: number,
+    pageHeight: number
+  ): void {
+    const ultimaTabla = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable;
+    let y = (ultimaTabla?.finalY ?? 40) + 12;
+
+    // Título + encabezado + un par de filas deben caber; si no, página nueva.
+    if (y > pageHeight - 50) {
+      doc.addPage('letter', 'portrait');
+      y = 24;
+    }
+
+    doc.setTextColor(...this.WE_DARK);
+    doc.setFont(this.FONT, 'bold');
+    doc.setFontSize(10);
+    doc.text('APORTACIONES PROGRAMADAS', 18, y);
+
+    const total = aportaciones.reduce((suma, a) => suma + a.monto, 0);
+
+    autoTable(doc, {
+      startY: y + 4,
+      head: [['#', 'MES', 'AÑO', 'APORTACIÓN']],
+      body: aportaciones.map((a, i) => [i + 1, a.mes, a.anio, this.money(a.monto)]),
+      foot: [['', '', 'TOTAL', this.money(total)]],
+      margin: { left: 18, right: 18, bottom: 18 },
+      theme: 'grid',
+      styles: {
+        font: this.FONT,
+        fontSize: 7,
+        cellPadding: 2.2,
+        textColor: this.TEXT,
+        lineColor: this.BORDER,
+        lineWidth: 0.15,
+        valign: 'middle',
+      },
+      headStyles: {
+        font: this.FONT,
+        fontStyle: 'bold',
+        fillColor: this.WE_BLUE,
+        textColor: [255, 255, 255],
+        halign: 'center',
+      },
+      footStyles: {
+        font: this.FONT,
+        fontStyle: 'bold',
+        fillColor: [226, 234, 255],
+        textColor: this.TEXT,
+      },
+      alternateRowStyles: { fillColor: [248, 250, 253] },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 17 },
+        1: { halign: 'center' },
+        2: { halign: 'center', cellWidth: 25 },
+        3: { halign: 'right', cellWidth: 45 },
+      },
+      didDrawPage: () => {
+        doc.setDrawColor(...this.BORDER);
+        doc.line(18, pageHeight - 12, pageWidth - 18, pageHeight - 12);
+        doc.setTextColor(...this.MUTED);
+        doc.setFont(this.FONT, 'normal');
+        doc.setFontSize(6.5);
+        doc.text('WE Real Estate · Tabla de amortización', 18, pageHeight - 7);
+        doc.text(`Página ${doc.getCurrentPageInfo().pageNumber}`, pageWidth - 18, pageHeight - 7, { align: 'right' });
+      },
+    });
   }
 
 private addNanuuFinancingTable(

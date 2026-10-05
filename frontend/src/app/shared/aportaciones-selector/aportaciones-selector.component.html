@@ -1,0 +1,78 @@
+@if (anios().length === 0) {
+  <p class="rounded-lg border border-dashed border-border px-3.5 py-3 text-sm text-ink-muted">
+    Con este plazo no hay meses disponibles para aportaciones: se necesita más de un año y siempre queda libre el último año.
+  </p>
+} @else {
+  <div class="space-y-4">
+    @for (a of anios(); track a.anio) {
+      <div class="rounded-xl border border-border p-3.5">
+        <div class="mb-2.5 flex items-center justify-between">
+          <p class="text-sm font-semibold text-ink">{{ a.anio }}</p>
+          <p class="text-xs text-ink-muted">{{ aportacionesDe(a.anio).length }} de {{ a.meses.length }} meses</p>
+        </div>
+
+        <div class="grid grid-cols-4 gap-1.5 sm:grid-cols-6 lg:grid-cols-12">
+          @for (nombre of mesesAbreviados; track $index) {
+            @let mes = $index + 1;
+            @let disponible = a.meses.includes(mes);
+            <button
+              type="button"
+              (click)="alternar(a.anio, mes)"
+              [disabled]="!disponible"
+              [attr.aria-pressed]="elegida(a.anio, mes)"
+              [attr.title]="mesesNombre[$index] + ' ' + a.anio"
+              [class.bg-we-primary]="elegida(a.anio, mes)"
+              [class.text-white]="elegida(a.anio, mes)"
+              [class.border-we-primary]="elegida(a.anio, mes)"
+              [class.opacity-35]="!disponible"
+              [class.cursor-not-allowed]="!disponible"
+              class="min-h-[36px] rounded-lg border border-border px-1 text-xs font-medium text-ink transition-colors duration-150
+                     hover:border-we-primary disabled:hover:border-border"
+            >
+              {{ nombre }}
+            </button>
+          }
+        </div>
+
+        @if (aportacionesDe(a.anio).length > 0) {
+          <div class="mt-3 grid gap-2 sm:grid-cols-2">
+            @for (ap of aportacionesDe(a.anio); track trackClave(ap)) {
+              <label class="flex items-center gap-2 rounded-lg bg-surface-2 px-3 py-2">
+                <span class="w-24 shrink-0 text-xs font-medium text-ink-muted">{{ mesesNombre[ap.mes - 1] }}</span>
+                <span class="text-sm text-ink-muted">$</span>
+                <input
+                  appMoneda
+                  [ngModel]="ap.monto"
+                  [ngModelOptions]="{ standalone: true }"
+                  (ngModelChange)="cambiarMonto(ap.anio, ap.mes, $event)"
+                  placeholder="Monto"
+                  [attr.aria-label]="'Monto de la aportación de ' + mesesNombre[ap.mes - 1] + ' ' + ap.anio"
+                  class="block w-full min-w-0 rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-ink
+                         focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+                />
+              </label>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <p class="text-sm text-ink-muted">
+        {{ valor().length }} {{ valor().length === 1 ? 'aportación' : 'aportaciones' }} ·
+        <span class="font-semibold text-ink">
+          Total ${{ total().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+        </span>
+      </p>
+      @if (valor().length > 1) {
+        <button
+          type="button"
+          (click)="igualar()"
+          class="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-ink hover:border-we-primary"
+        >
+          {{ montoSugerido() !== null ? 'Repartir igual' : 'Igualar montos' }}
+        </button>
+      }
+    </div>
+  </div>
+}
