@@ -13,6 +13,7 @@ import {
 } from '../../../core/models/lote.model';
 import { LotesService } from '../../../core/services/lotes.service';
 import { colorDeBarra, fondoDePagina } from '../../../core/utils/pagina';
+import { DetectorDeRueda } from '../../../core/utils/rueda';
 import { ToastService } from '../../../core/services/toast.service';
 import { ToastContainerComponent } from '../../../shared/toast-container/toast-container.component';
 
@@ -412,12 +413,27 @@ export class PlanoPublicoComponent {
     }, 180);
   }
 
+  private readonly detectorRueda = new DetectorDeRueda();
+
+  /** Pellizco (ctrl + rueda) y rueda de mouse: zoom. Dos dedos sobre el trackpad: desplazan el plano. */
   onWheelImagen(event: WheelEvent): void {
     event.preventDefault();
     this.marcarGesto();
+    if (!event.ctrlKey && !this.detectorRueda.esRuedaDeMouse(event)) {
+      this.desplazarConTrackpad(event);
+      return;
+    }
     const sensibilidad = event.ctrlKey ? SENSIBILIDAD_PELLIZCO_TRACKPAD : SENSIBILIDAD_RUEDA;
     const factor = Math.exp(-event.deltaY * sensibilidad);
     this.zoomEn(event.clientX, event.clientY, this.zoom() * factor);
+  }
+
+  private desplazarConTrackpad(event: WheelEvent): void {
+    const rect = this.contenedorPlano?.nativeElement.getBoundingClientRect();
+    if (!rect) return;
+    this.panX.update((x) => x - event.deltaX);
+    this.panY.update((y) => y - event.deltaY);
+    this.limitarPan(rect);
   }
 
   /** Doble clic (mouse): acerca justo donde se hizo, o regresa a la vista completa si ya hay zoom.

@@ -20,6 +20,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
 import { LotesService } from '../../../core/services/lotes.service';
 import { PdfService } from '../../../core/services/pdf-cotizacion.service';
+import { DetectorDeRueda } from '../../../core/utils/rueda';
 import { ToastService } from '../../../core/services/toast.service';
 import { LoteCambioEstadoModalComponent } from '../../../shared/lote-cambio-estado-modal/lote-cambio-estado-modal.component';
 import { LoteInfoModalComponent } from '../../../shared/lote-info-modal/lote-info-modal.component';
@@ -682,10 +683,21 @@ export class PlanoComponent {
     this.panY.set(0);
   }
 
-  /** La rueda del mouse hace zoom solo del plano (hacia donde apunta el cursor), nunca de la
-   * página completa: por eso el preventDefault, que bloquea el zoom nativo del navegador. */
+  private readonly detectorRueda = new DetectorDeRueda();
+
+  /** La rueda del mouse (y el pellizco del trackpad) hacen zoom solo del plano (hacia donde apunta
+   * el cursor), nunca de la página completa: por eso el preventDefault, que bloquea el zoom nativo
+   * del navegador. Dos dedos sobre el trackpad, en cambio, desplazan el plano. */
   onWheelImagen(event: WheelEvent): void {
     event.preventDefault();
+    if (!event.ctrlKey && !this.detectorRueda.esRuedaDeMouse(event)) {
+      const rect = this.contenedorPlano?.nativeElement.getBoundingClientRect();
+      if (!rect) return;
+      this.panX.update((x) => x - event.deltaX);
+      this.panY.update((y) => y - event.deltaY);
+      this.limitarPan(rect);
+      return;
+    }
     const factor = event.deltaY < 0 ? ZOOM_PASO_RUEDA : 1 / ZOOM_PASO_RUEDA;
     this.zoomEn(event.clientX, event.clientY, this.zoom() * factor);
   }
