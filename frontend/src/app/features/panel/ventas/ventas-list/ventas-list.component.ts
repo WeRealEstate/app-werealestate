@@ -27,14 +27,6 @@ export class VentasListComponent {
   readonly hayMas = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly filtro = signal('');
-  readonly samaiLotesVendidos = signal<number | null>(null);
-  readonly samaiLotesVendidosError = signal(false);
-  readonly samaiLotesVendidosTexto = computed(() => {
-    if (this.samaiLotesVendidosError()) return 'No disponible';
-    const total = this.samaiLotesVendidos();
-    if (total === null) return 'Calculando';
-    return `${total.toLocaleString('en-US')} lote${total === 1 ? '' : 's'}`;
-  });
 
   readonly contadores = signal<{ lotesVendidos: number; ventasRegistradas: number } | null>(null);
   readonly contadoresError = signal(false);
@@ -50,7 +42,6 @@ export class VentasListComponent {
   private debounceHandle: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
-    void this.cargarConteoSamai();
     void this.cargarContadores();
     this.cargar();
   }
@@ -62,16 +53,6 @@ export class VentasListComponent {
     } catch {
       this.contadoresError.set(true);
       this.contadores.set(null);
-    }
-  }
-
-  private async cargarConteoSamai(): Promise<void> {
-    try {
-      this.samaiLotesVendidosError.set(false);
-      this.samaiLotesVendidos.set(await this.ventasService.contarLotesVendidosSamaiCampestre());
-    } catch {
-      this.samaiLotesVendidosError.set(true);
-      this.samaiLotesVendidos.set(null);
     }
   }
 
