@@ -150,4 +150,12 @@ export class LotesService {
   actualizarPoligonoMapa(id: number, puntos: PuntoMapa[] | null): Promise<Lote> {
     return firstValueFrom(this.http.put<Lote>(`${this.baseUrl}/${id}/mapa`, { puntos }));
   }
+
+  /** Quita la delimitación de todos los lotes de un desarrollo. Exclusivo de admin y exige su
+   * contraseña; responde 403 "Contraseña incorrecta" si no coincide. */
+  limpiarMapa(desarrolloId: number, password: string): Promise<{ limpiados: number }> {
+    return firstValueFrom(
+      this.http.post<{ limpiados: number }>(`${this.baseUrl}/mapa/limpiar`, { desarrolloId, password }),
+    );
+  }
 }

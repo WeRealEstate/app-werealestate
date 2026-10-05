@@ -4,6 +4,7 @@ import com.werealestate.backend.dto.ActualizarPoligonoMapaRequest;
 import com.werealestate.backend.dto.CambiarEstadoLotePublicoRequest;
 import com.werealestate.backend.dto.CambiarEstadoLoteRequest;
 import com.werealestate.backend.dto.LoteCreateRequest;
+import com.werealestate.backend.dto.LimpiarMapaRequest;
 import com.werealestate.backend.dto.LoteDto;
 import com.werealestate.backend.dto.LoteImportBatchRequest;
 import com.werealestate.backend.dto.LoteImportError;
@@ -43,6 +44,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -90,6 +92,7 @@ public class LoteService {
     private final MovimientoLoteRepository movimientoLoteRepository;
     private final VentaLoteRepository ventaLoteRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final PasswordEncoder passwordEncoder;
 
     public LoteService(
             LoteRepository loteRepository,
@@ -97,13 +100,15 @@ public class LoteService {
             UsuarioRepository usuarioRepository,
             MovimientoLoteRepository movimientoLoteRepository,
             VentaLoteRepository ventaLoteRepository,
-            CurrentUserProvider currentUserProvider) {
+            CurrentUserProvider currentUserProvider,
+            PasswordEncoder passwordEncoder) {
         this.loteRepository = loteRepository;
         this.desarrolloRepository = desarrolloRepository;
         this.usuarioRepository = usuarioRepository;
         this.movimientoLoteRepository = movimientoLoteRepository;
         this.ventaLoteRepository = ventaLoteRepository;
         this.currentUserProvider = currentUserProvider;
+        this.passwordEncoder = passwordEncoder;
     }
 
     /** Único punto que cambia el estado de un lote Y dejar registro en la bitácora: así el
@@ -437,6 +442,28 @@ public class LoteService {
         return LoteDto.from(lote);
     }
 
+    /** Borra la delimitación de TODOS los lotes de un desarrollo. Es destructivo (hay que volver a
+     * dibujar cada polígono), así que además de ser exclusivo de admin exige su contraseña. Devuelve
+     * cuántos lotes tenían delimitación. */
+    public int limpiarMapa(LimpiarMapaRequest request) {
+        Usuario actual = exigirAdmin("quitar la delimitación de todos los lotes");
+        if (!passwordEncoder.matches(request.password(), actual.getPassword())) {
+            throw new ForbiddenOperationException("Contraseña incorrecta");
+        }
+        desarrolloRepository
+                .findById(request.desarrolloId())
+                .orElseThrow(() -> new ResourceNotFoundException("Desarrollo no encontrado"));
+
+        int limpiados = 0;
+        for (Lote lote : loteRepository.findByDesarrolloId(request.desarrolloId())) {
+            if (lote.getMapaPoligonoJson() != null) {
+                lote.actualizarPoligonoMapa(null);
+                limpiados++;
+            }
+        }
+        return limpiados;
+    }
+
     /** Marca el lote como VENDIDO a raíz de un registro de {@code Venta} (ver VentaService), con el
      * mismo mecanismo de historial que cualquier otro cambio de estado. No repite el chequeo de rol
      * de {@link #cambiarEstado}: VentaService ya exige admin/líder de área para registrar una venta. */
@@ -452,11 +479,12 @@ public class LoteService {
         return LoteDto.from(lote);
     }
 
-    private void exigirAdmin(String accion) {
+    private Usuario exigirAdmin(String accion) {
         Usuario actual = currentUserProvider.getUsuarioActual();
         if (actual.getRol() != Role.ADMIN) {
             throw new ForbiddenOperationException("Solo un administrador puede " + accion);
         }
+        return actual;
     }
 
     public LoteImportResultado importar(LoteImportBatchRequest request) {

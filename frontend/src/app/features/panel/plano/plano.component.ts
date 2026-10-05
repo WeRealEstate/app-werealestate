@@ -411,6 +411,52 @@ export class PlanoComponent {
     }
   }
 
+  // ---- Quitar la delimitación de todos los lotes (solo admin, con contraseña) ----
+
+  readonly confirmandoLimpiarTodo = signal(false);
+  readonly passwordLimpiar = signal('');
+  readonly errorLimpiar = signal<string | null>(null);
+  readonly limpiandoTodo = signal(false);
+
+  abrirLimpiarTodo(): void {
+    this.passwordLimpiar.set('');
+    this.errorLimpiar.set(null);
+    this.confirmandoLimpiarTodo.set(true);
+  }
+
+  cerrarLimpiarTodo(): void {
+    if (this.limpiandoTodo()) return;
+    this.confirmandoLimpiarTodo.set(false);
+    this.passwordLimpiar.set('');
+  }
+
+  async confirmarLimpiarTodo(): Promise<void> {
+    const id = this.desarrolloId();
+    const password = this.passwordLimpiar();
+    if (id === null || !password || this.limpiandoTodo()) return;
+
+    this.limpiandoTodo.set(true);
+    this.errorLimpiar.set(null);
+    try {
+      const { limpiados } = await this.lotesService.limpiarMapa(id, password);
+      this.confirmandoLimpiarTodo.set(false);
+      this.passwordLimpiar.set('');
+      this.loteActivo.set(null);
+      this.loteAUbicarId.set(null);
+      this.puntosEnProgreso.set([]);
+      await this.cargarMapa();
+      this.toast.success(`Se quitó la delimitación de ${limpiados} lote${limpiados === 1 ? '' : 's'}.`);
+    } catch (error) {
+      this.errorLimpiar.set(
+        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+          ? error.error.message
+          : 'No se pudo quitar la delimitación. Intenta de nuevo.',
+      );
+    } finally {
+      this.limpiandoTodo.set(false);
+    }
+  }
+
   async quitarDelimitacion(lote: Lote): Promise<void> {
     try {
       const actualizado = await this.lotesService.actualizarPoligonoMapa(lote.id, null);

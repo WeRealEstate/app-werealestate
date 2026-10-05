@@ -3,6 +3,7 @@ package com.werealestate.backend.controller;
 import com.werealestate.backend.dto.ActualizarPoligonoMapaRequest;
 import com.werealestate.backend.dto.CambiarEstadoLotePublicoRequest;
 import com.werealestate.backend.dto.CambiarEstadoLoteRequest;
+import com.werealestate.backend.dto.LimpiarMapaRequest;
 import com.werealestate.backend.dto.LoteCreateRequest;
 import com.werealestate.backend.dto.LoteDto;
 import com.werealestate.backend.dto.LoteImportBatchRequest;
@@ -15,6 +16,7 @@ import com.werealestate.backend.service.LoteService;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -126,6 +128,12 @@ public class LoteController {
     public LoteDto actualizarPoligonoMapa(
             @PathVariable Long id, @Valid @RequestBody ActualizarPoligonoMapaRequest request) {
         return loteService.actualizarPoligonoMapa(id, request);
+    }
+
+    /** Quita la delimitación de todos los lotes de un desarrollo; solo admin y con su contraseña. */
+    @PostMapping("/mapa/limpiar")
+    public Map<String, Integer> limpiarMapa(@Valid @RequestBody LimpiarMapaRequest request) {
+        return Map.of("limpiados", loteService.limpiarMapa(request));
     }
 
     @DeleteMapping("/{id}")
