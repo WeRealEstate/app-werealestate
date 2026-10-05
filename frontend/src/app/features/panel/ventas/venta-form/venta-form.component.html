@@ -82,9 +82,7 @@
           <label for="precioParaAgregar" class="block text-xs font-medium text-ink-muted mb-1.5">Precio</label>
           <input
             id="precioParaAgregar"
-            type="number"
-            step="0.01"
-            min="1"
+            appMoneda
             [ngModel]="precioParaAgregar()"
             [ngModelOptions]="{ standalone: true }"
             (ngModelChange)="precioParaAgregar.set($event)"
@@ -206,9 +204,7 @@
         </label>
         <input
           id="montoEnganche"
-          type="number"
-          step="0.01"
-          min="1"
+          appMoneda
           [ngModel]="montoEnganche()"
           [ngModelOptions]="{ standalone: true }"
           (ngModelChange)="onMontoEngancheChange($event)"
@@ -259,23 +255,6 @@
     @if (mostrarPlazo()) {
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label for="mensualidad" class="block text-sm font-medium text-ink mb-1.5">Mensualidad</label>
-          <input
-            id="mensualidad"
-            type="number"
-            step="0.01"
-            min="1"
-            formControlName="mensualidad"
-            placeholder="Opcional"
-            class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
-                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
-          />
-          @if (form.controls.mensualidad.invalid && form.controls.mensualidad.touched) {
-            <p class="mt-1.5 text-xs text-red-600">Debe ser mayor a 0.</p>
-          }
-          <p class="mt-1.5 text-xs text-ink-muted">Se recalcula sola con el precio, el enganche y el plazo; edítala si el trato fue distinto.</p>
-        </div>
-        <div>
           <label for="plazoMeses" class="block text-sm font-medium text-ink mb-1.5">Plazo ({{ unidadPlazo() }})</label>
           <input
             id="plazoMeses"
@@ -290,6 +269,21 @@
           @if (form.controls.plazoMeses.invalid && form.controls.plazoMeses.touched) {
             <p class="mt-1.5 text-xs text-red-600">Debe ser mayor a 0.</p>
           }
+        </div>
+        <div>
+          <label for="mensualidad" class="block text-sm font-medium text-ink mb-1.5">Mensualidad</label>
+          <input
+            id="mensualidad"
+            appMoneda
+            formControlName="mensualidad"
+            placeholder="Opcional"
+            class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          />
+          @if (form.controls.mensualidad.invalid && form.controls.mensualidad.touched) {
+            <p class="mt-1.5 text-xs text-red-600">Debe ser mayor a 0.</p>
+          }
+          <p class="mt-1.5 text-xs text-ink-muted">Se recalcula sola con el precio, el enganche y el plazo; edítala si el trato fue distinto.</p>
         </div>
       </div>
     }

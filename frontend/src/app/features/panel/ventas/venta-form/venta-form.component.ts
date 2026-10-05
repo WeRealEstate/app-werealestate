@@ -12,6 +12,7 @@ import { LotesService } from '../../../../core/services/lotes.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { UsuariosService } from '../../../../core/services/usuarios.service';
 import { VentasService } from '../../../../core/services/ventas.service';
+import { MonedaInputDirective } from '../../../../shared/moneda-input/moneda-input.directive';
 
 /** Codifica la selección del <select> de asesor como un solo string ("U-5" / "E-3") porque un
  * formControl reactivo solo puede llevar un valor, y el asesor es uno de dos tipos distintos (ver
@@ -67,7 +68,7 @@ const ENGANCHE_LABEL_POR_TIPO: Record<TipoPago, string | null> = {
 @Component({
   selector: 'app-venta-form',
   standalone: true,
-  imports: [ReactiveFormsModule, FormsModule, RouterLink, LucideX],
+  imports: [ReactiveFormsModule, FormsModule, RouterLink, LucideX, MonedaInputDirective],
   templateUrl: './venta-form.component.html',
 })
 export class VentaFormComponent {
