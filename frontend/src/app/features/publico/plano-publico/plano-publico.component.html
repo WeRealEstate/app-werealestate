@@ -14,7 +14,7 @@
   } @else {
     <div
       #contenedorPlano
-      class="relative h-full w-full touch-none"
+      class="relative h-full w-full touch-none bg-black"
       [class.cursor-grab]="hayAlgoFueraDeVista()"
       (pointerdown)="onPointerDownVista($event)"
       (wheel)="onWheelImagen($event)"
@@ -120,7 +120,7 @@
         <button
           type="button"
           (click)="alejarZoom()"
-          [disabled]="zoom() <= zoomCubrir()"
+          [disabled]="zoom() <= zoomAjuste()"
           aria-label="Alejar"
           title="Alejar (-)"
           class="flex h-10 w-10 sm:h-8 sm:w-8 items-center justify-center rounded-md text-lg font-semibold text-ink hover:bg-surface-2 disabled:opacity-40 disabled:hover:bg-transparent"
@@ -130,7 +130,7 @@
         <button
           type="button"
           (click)="restablecerZoom()"
-          [disabled]="zoom() === zoomCubrir()"
+          [disabled]="zoom() === zoomAjuste()"
           class="min-w-[3rem] rounded-md px-1.5 py-1 text-center text-xs font-medium text-ink-muted hover:bg-surface-2 disabled:opacity-60 disabled:hover:bg-transparent"
           title="Restablecer zoom (0)"
         >
