@@ -54,7 +54,7 @@
               <button
                 type="button"
                 (click)="alternarOrden()"
-                [attr.title]="orden() === 'desc' ? 'Más recientes primero: clic para ver las más antiguas primero' : 'Más antiguas primero: clic para ver las más recientes primero'"
+                [attr.title]="orden() === 'desc' ? 'Del número mayor al menor: clic para ordenar del menor al mayor' : 'Del número menor al mayor: clic para ordenar del mayor al menor'"
                 class="inline-flex items-center gap-1 uppercase tracking-wide hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50 rounded"
               >
                 No.
@@ -65,21 +65,7 @@
                 }
               </button>
             </th>
-            <th class="px-4 py-3" [attr.aria-sort]="orden() === 'asc' ? 'ascending' : 'descending'">
-              <button
-                type="button"
-                (click)="alternarOrden()"
-                [attr.title]="orden() === 'desc' ? 'Más recientes primero: clic para ver las más antiguas primero' : 'Más antiguas primero: clic para ver las más recientes primero'"
-                class="inline-flex items-center gap-1 uppercase tracking-wide hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50 rounded"
-              >
-                Fecha
-                @if (orden() === 'desc') {
-                  <svg lucideArrowDown [size]="13" aria-hidden="true"></svg>
-                } @else {
-                  <svg lucideArrowUp [size]="13" aria-hidden="true"></svg>
-                }
-              </button>
-            </th>
+            <th class="px-4 py-3">Fecha</th>
             <th class="px-4 py-3">Cliente</th>
             <th class="px-4 py-3">Asesor</th>
             <th class="px-4 py-3">Desarrollo</th>
