@@ -248,17 +248,19 @@
                   <td class="px-3 py-3 text-right text-ink-muted">${{ money(c.devengado) }}</td>
                   <td class="px-3 py-3 text-right text-ink-muted">${{ money(c.entregado) }}</td>
                   <td class="px-3 py-3 text-right text-ink-muted">${{ money(c.porEntregar) }}</td>
-                  <td class="px-3 py-3">
-                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" [class]="estadoClases[c.estado]">{{ estadoLabels[c.estado] }}</span>
-                    @if (c.retrasada) {
-                      <span class="ml-1 inline-flex rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700 dark:bg-red-500/15 dark:text-red-300" title="Se debía entregar desde el sábado {{ fecha(c.proximaEntrega) }}">
-                        Retrasada ${{ money(c.montoRetrasado) }}
-                      </span>
-                    }
-                    <p class="mt-1 text-xs text-ink-muted">{{ modalidadLabels[c.modalidad] }}</p>
+                  <td class="min-w-[9rem] px-3 py-3">
+                    <div class="flex flex-col items-start gap-1.5">
+                      <span class="inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium" [class]="estadoClases[c.estado]">{{ estadoLabels[c.estado] }}</span>
+                      @if (c.retrasada) {
+                        <span class="inline-flex whitespace-nowrap rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700 dark:bg-red-500/15 dark:text-red-300" title="Se debía entregar desde el sábado {{ fecha(c.proximaEntrega) }}">
+                          Retrasada · ${{ money(c.montoRetrasado) }}
+                        </span>
+                      }
+                      <p class="text-xs text-ink-muted">{{ modalidadLabels[c.modalidad] }}</p>
+                    </div>
                   </td>
                   <td class="px-3 py-3 text-right">
-                    <div class="flex items-center justify-end gap-2 whitespace-nowrap text-xs font-semibold">
+                    <div class="flex max-w-[9.5rem] flex-wrap items-center justify-end gap-x-3 gap-y-1 text-xs font-semibold">
                       <button type="button" (click)="alternarDetalle(c)" class="text-ink-muted hover:underline">
                         {{ expandidaId() === c.id ? 'Ocultar' : 'Detalle' }}
                       </button>
