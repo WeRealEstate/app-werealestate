@@ -190,26 +190,28 @@
           </span>
         </div>
 
-        <div class="mt-5 flex gap-2.5">
-          <a
-            routerLink="/cotizador-publico"
-            [queryParams]="{ proyecto: proyecto, manzana: lote.manzana, lote: lote.numeroLote }"
-            class="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink
-                   hover:border-we-primary active:scale-[0.97] transition-transform duration-150"
-          >
-            Cotizar este lote
-          </a>
-          @if (puedeApartar(lote)) {
-            <button
-              type="button"
-              (click)="abrirApartar()"
-              class="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
-                     hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150"
+        @if (asesorVerificado()) {
+          <div class="mt-5 flex gap-2.5">
+            <a
+              routerLink="/cotizador-publico"
+              [queryParams]="{ proyecto: proyecto, manzana: lote.manzana, lote: lote.numeroLote }"
+              class="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink
+                     hover:border-we-primary active:scale-[0.97] transition-transform duration-150"
             >
-              Apartar este lote
-            </button>
-          }
-        </div>
+              Cotizar este lote
+            </a>
+            @if (puedeApartar(lote)) {
+              <button
+                type="button"
+                (click)="abrirApartar()"
+                class="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
+                       hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150"
+              >
+                Apartar este lote
+              </button>
+            }
+          </div>
+        }
       </div>
     </div>
   }
@@ -234,11 +236,11 @@
               [ngModel]="nombreAsesorInput()"
               (ngModelChange)="nombreAsesorInput.set($event)"
               placeholder="Ej. Juan Pérez García"
-              autofocus
+              readonly
               class="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition-all
                      focus:border-we-primary focus:ring-2 focus:ring-we-primary/50"
             />
-            <p class="mt-1.5 text-xs text-ink-muted">Necesario para saber quién gestionó este apartado.</p>
+            <p class="mt-1.5 text-xs text-ink-muted">Asesor verificado: este apartado quedará registrado a su nombre.</p>
           </div>
 
           <div class="mt-4">
@@ -316,6 +318,70 @@
           <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
         </button>
       </div>
+    </div>
+  }
+
+  <!-- Candado discreto: el botón "Asesor" pide el nombre de un asesor registrado para mostrar los
+       botones de cotizar y apartar. Ya verificado, muestra el nombre y permite salir. -->
+  @if (!isLoading() && !errorMessage() && planoUrl()) {
+    <div class="absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] z-20">
+      @if (asesorVerificado(); as asesor) {
+        <button
+          type="button"
+          (click)="cerrarSesionAsesor()"
+          title="Salir del modo asesor"
+          class="max-w-[14rem] truncate rounded-md bg-black/50 px-2.5 py-1.5 text-xs font-medium text-white/80 hover:bg-black/70"
+        >
+          {{ asesor }} · salir
+        </button>
+      } @else {
+        <button
+          type="button"
+          (click)="abrirAcceso()"
+          class="rounded-md bg-black/30 px-2.5 py-1.5 text-xs font-medium text-white/50 hover:bg-black/60 hover:text-white/90"
+        >
+          Asesor
+        </button>
+      }
+    </div>
+  }
+
+  @if (mostrarAcceso()) {
+    <button type="button" (click)="cerrarAcceso()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="acceso-asesor-titulo">
+      <form (ngSubmit)="confirmarAcceso()" class="modal-panel-enter w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <h2 id="acceso-asesor-titulo" class="font-heading text-lg font-semibold text-ink">Acceso de asesor</h2>
+        <p class="mt-2 text-sm text-ink-muted">Escribe tu nombre completo, tal como estás registrado, para cotizar y apartar lotes.</p>
+        <input
+          type="text"
+          name="nombreAsesorAcceso"
+          [ngModel]="accesoNombre()"
+          (ngModelChange)="accesoNombre.set($event); accesoError.set(null)"
+          placeholder="Nombre del asesor"
+          autocomplete="off"
+          class="mt-4 w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition-all
+                 focus:border-we-primary focus:ring-2 focus:ring-we-primary/50"
+        />
+        @if (accesoError(); as error) {
+          <p class="mt-2 text-xs text-red-600 dark:text-red-400" role="alert">{{ error }}</p>
+        }
+        <div class="flex justify-end gap-2.5 pt-5">
+          <button
+            type="button"
+            (click)="cerrarAcceso()"
+            class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            [disabled]="!accesoNombre().trim() || isVerificando()"
+            class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {{ isVerificando() ? 'Verificando…' : 'Entrar' }}
+          </button>
+        </div>
+      </form>
     </div>
   }
 

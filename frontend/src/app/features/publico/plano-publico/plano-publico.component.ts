@@ -1,6 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, DestroyRef, ElementRef, HostListener, ViewChild, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
   ESTADO_LOTE_BADGE_CLASSES,
@@ -20,6 +21,7 @@ import { ToastContainerComponent } from '../../../shared/toast-container/toast-c
 type ProyectoPublico = 'samai' | 'nanuu';
 
 const NOTA_MAX_LENGTH = 500;
+const CLAVE_ASESOR = 'plano-publico-asesor';
 
 /** Mismos límites/pasos de zoom que /panel/plano (ver ese componente para el porqué de cada
  * valor); no se comparte el código porque esta vista no tiene nada de edición. */
@@ -42,6 +44,23 @@ const PASO_TECLADO_PX = 80;
 const DURACION_ANIMACION_MS = 220;
 const CLAVE_AVISO_ROTAR = 'plano-publico-aviso-rotar';
 const DURACION_AVISO_ROTAR_MS = 9000;
+
+function leerAsesorGuardado(): string | null {
+  try {
+    return sessionStorage.getItem(CLAVE_ASESOR);
+  } catch {
+    return null;
+  }
+}
+
+function guardarAsesor(nombre: string | null): void {
+  try {
+    if (nombre) sessionStorage.setItem(CLAVE_ASESOR, nombre);
+    else sessionStorage.removeItem(CLAVE_ASESOR);
+  } catch {
+    // Sin almacenamiento: el acceso solo dura hasta recargar.
+  }
+}
 
 /** Plano interactivo público, en pantalla completa y sin sesión — para compartir el link de un
  * desarrollo directamente (/samai, /aldea-nanuu, ver app.routes.ts). Mismas restricciones que
@@ -105,6 +124,14 @@ export class PlanoPublicoComponent {
   // Modal "Apartar lote": mismos campos y restricciones que /cotizador-publico/lotes — pide nombre
   // de asesor y de cliente (nota opcional) porque no hay una sesión real detrás de este apartado.
   readonly mostrarApartar = signal(false);
+
+  // Candado: sin un asesor verificado no se muestran los botones de cotizar ni apartar. Se recuerda
+  // solo mientras dure la pestaña (sessionStorage), nunca de forma permanente.
+  readonly asesorVerificado = signal<string | null>(leerAsesorGuardado());
+  readonly mostrarAcceso = signal(false);
+  readonly accesoNombre = signal('');
+  readonly accesoError = signal<string | null>(null);
+  readonly isVerificando = signal(false);
   readonly nombreAsesorInput = signal('');
   readonly nombreClienteInput = signal('');
   readonly notaInput = signal('');
@@ -257,9 +284,50 @@ export class PlanoPublicoComponent {
     this.mostrarApartar.set(false);
   }
 
+  abrirAcceso(): void {
+    this.accesoNombre.set('');
+    this.accesoError.set(null);
+    this.mostrarAcceso.set(true);
+  }
+
+  cerrarAcceso(): void {
+    this.mostrarAcceso.set(false);
+  }
+
+  async confirmarAcceso(): Promise<void> {
+    const nombre = this.accesoNombre().trim();
+    if (!nombre || this.isVerificando()) return;
+    this.isVerificando.set(true);
+    this.accesoError.set(null);
+    try {
+      const registrado = await this.lotesService.verificarAsesorPublico(nombre);
+      this.asesorVerificado.set(registrado);
+      guardarAsesor(registrado);
+      this.mostrarAcceso.set(false);
+      this.toast.success(`Bienvenido, ${registrado}.`);
+    } catch (e) {
+      const estado = e instanceof HttpErrorResponse ? e.status : 0;
+      this.accesoError.set(
+        estado === 404
+          ? 'No encontramos un asesor con ese nombre.'
+          : estado === 429
+            ? 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.'
+            : 'No se pudo verificar. Intenta de nuevo.',
+      );
+    } finally {
+      this.isVerificando.set(false);
+    }
+  }
+
+  cerrarSesionAsesor(): void {
+    this.asesorVerificado.set(null);
+    guardarAsesor(null);
+    this.mostrarApartar.set(false);
+  }
+
   abrirApartar(): void {
     this.mostrarApartar.set(true);
-    this.nombreAsesorInput.set('');
+    this.nombreAsesorInput.set(this.asesorVerificado() ?? '');
     this.nombreClienteInput.set('');
     this.notaInput.set('');
   }
@@ -465,7 +533,7 @@ export class PlanoPublicoComponent {
   onTecla(event: KeyboardEvent): void {
     if (event.ctrlKey || event.metaKey || event.altKey) return;
     if (event.target instanceof Element && event.target.closest('input, textarea, select, [contenteditable]')) return;
-    if (this.mostrarApartar() || this.loteActivo()) return;
+    if (this.mostrarApartar() || this.mostrarAcceso() || this.loteActivo()) return;
 
     const paso = event.shiftKey ? PASO_TECLADO_PX * 3 : PASO_TECLADO_PX;
     switch (event.key) {

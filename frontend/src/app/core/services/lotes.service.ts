@@ -61,6 +61,15 @@ export class LotesService {
     return firstValueFrom(this.http.get<Lote[]>(`${this.baseUrl}/publico`, { params: { proyecto } }));
   }
 
+  /** Botón "Asesor" de /samai y /aldea-nanuu: devuelve el nombre registrado si existe un asesor
+   * activo con ese nombre; falla con 404 si no existe o 429 por demasiados intentos. */
+  async verificarAsesorPublico(nombre: string): Promise<string> {
+    const r = await firstValueFrom(
+      this.http.post<{ nombre: string }>(`${this.baseUrl}/publico/verificar-asesor`, { nombre }),
+    );
+    return r.nombre;
+  }
+
   /** Apartar un lote desde /cotizador-publico/lotes: nombreAsesor y nombreCliente son
    * obligatorios, nota es opcional — ver LoteService.cambiarEstadoPublico. Liberar un lote ya
    * apartado no está permitido desde aquí. */

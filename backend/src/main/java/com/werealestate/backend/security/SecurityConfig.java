@@ -82,6 +82,8 @@ public class SecurityConfig {
                         // (ver LoteService). /uploads/** tiene su propia cadena arriba.
                         .requestMatchers(HttpMethod.GET, "/api/lotes/publico").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/lotes/publico/*/estado").permitAll()
+                        // Botón "Asesor" de /samai y /aldea-nanuu: confirma que el nombre existe.
+                        .requestMatchers(HttpMethod.POST, "/api/lotes/publico/verificar-asesor").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, authException) -> {
                     response.setContentType("application/json");
