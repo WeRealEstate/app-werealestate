@@ -1,0 +1,342 @@
+<div class="page-enter">
+  <div>
+    <h1 class="font-heading text-2xl font-semibold text-ink">Finanzas</h1>
+    <p class="mt-1 text-sm text-ink-muted">
+      Comisiones de venta: el 5% de cada venta (editable), lo que va ganando con los abonos del cliente y lo que se entrega los sábados.
+    </p>
+  </div>
+
+  @if (errorMessage()) {
+    <div class="mt-6 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  @if (isLoading()) {
+    <p class="mt-8 text-sm text-ink-muted">Cargando finanzas…</p>
+  } @else {
+    <!-- Resumen -->
+    @if (resumen(); as r) {
+      <div class="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <div class="rounded-xl border border-border bg-surface p-4">
+          <p class="text-xs text-ink-muted">Comisiones totales</p>
+          <p class="mt-1 text-lg font-semibold text-ink">${{ money(r.total) }}</p>
+          <p class="text-xs text-ink-muted">{{ r.cantidad }} {{ r.cantidad === 1 ? 'comisión' : 'comisiones' }}</p>
+        </div>
+        <div class="rounded-xl border border-border bg-surface p-4">
+          <p class="text-xs text-ink-muted">Ganado por abonos</p>
+          <p class="mt-1 text-lg font-semibold text-ink">${{ money(r.devengado) }}</p>
+        </div>
+        <div class="rounded-xl border border-border bg-surface p-4">
+          <p class="text-xs text-ink-muted">Entregado</p>
+          <p class="mt-1 text-lg font-semibold text-green-600 dark:text-green-400">${{ money(r.entregado) }}</p>
+        </div>
+        <div class="rounded-xl border border-border bg-surface p-4">
+          <p class="text-xs text-ink-muted">Por entregar</p>
+          <p class="mt-1 text-lg font-semibold text-amber-600 dark:text-amber-400">${{ money(r.porEntregar) }}</p>
+        </div>
+        <div class="col-span-2 rounded-xl border border-border bg-surface p-4 lg:col-span-1">
+          <p class="text-xs text-ink-muted">Falta por generar</p>
+          <p class="mt-1 text-lg font-semibold text-ink">${{ money(r.pendienteDeDevengar) }}</p>
+          <p class="text-xs text-ink-muted">Cuando el cliente vaya pagando</p>
+        </div>
+      </div>
+    }
+
+    <!-- Por entregar el sábado -->
+    @if (porEntregar(); as pe) {
+      <section class="mt-8">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="font-heading text-lg font-semibold text-ink">Por entregar el sábado {{ fecha(pe.sabado) }}</h2>
+            <p class="text-xs text-ink-muted">Lo ganado hasta ese sábado que todavía no se entrega.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" (click)="cambiarSabado(-7)" class="rounded-lg border border-border px-3 py-1.5 text-sm text-ink-muted hover:border-we-primary">← Anterior</button>
+            <button type="button" (click)="cambiarSabado(7)" class="rounded-lg border border-border px-3 py-1.5 text-sm text-ink-muted hover:border-we-primary">Siguiente →</button>
+          </div>
+        </div>
+
+        @if (pe.items.length === 0) {
+          <div class="mt-3 rounded-xl border border-dashed border-border p-6 text-center text-sm text-ink-muted">
+            No hay comisiones por entregar a esa fecha.
+          </div>
+        } @else {
+          <div class="mt-3 overflow-x-auto rounded-xl border border-border">
+            <table class="min-w-full divide-y divide-border text-sm">
+              <thead class="bg-surface-2">
+                <tr class="text-left text-xs font-medium uppercase tracking-wide text-ink-muted">
+                  <th class="px-3 py-3">Venta</th>
+                  <th class="px-3 py-3">Cliente</th>
+                  <th class="px-3 py-3">Asesor</th>
+                  <th class="px-3 py-3 text-right">A entregar</th>
+                  <th class="px-3 py-3"></th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border bg-surface">
+                @for (i of pe.items; track i.comision.id) {
+                  <tr>
+                    <td class="px-3 py-3 text-ink-muted">#{{ i.comision.ventaNumero ?? '—' }}</td>
+                    <td class="px-3 py-3 font-medium text-ink">{{ i.comision.cliente }}</td>
+                    <td class="px-3 py-3 text-ink-muted">{{ i.comision.asesorNombre }}{{ i.comision.asesorExterno ? ' (externo)' : '' }}</td>
+                    <td class="px-3 py-3 text-right font-semibold text-ink">${{ money(i.montoAlSabado) }}</td>
+                    <td class="px-3 py-3 text-right">
+                      <button type="button" (click)="abrirEntrega(i.comision, i.montoAlSabado)" class="text-xs font-semibold text-we-primary hover:underline">Entregar</button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot class="bg-surface-2">
+                <tr>
+                  <td colspan="3" class="px-3 py-3 text-right text-xs font-medium uppercase tracking-wide text-ink-muted">Total</td>
+                  <td class="px-3 py-3 text-right font-semibold text-ink">${{ money(pe.total) }}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        }
+      </section>
+    }
+
+    <!-- Todas las comisiones -->
+    <section class="mt-8">
+      <h2 class="font-heading text-lg font-semibold text-ink">Comisiones</h2>
+      <div class="mt-3 flex flex-wrap items-end gap-3">
+        <div>
+          <label for="filtro-estado" class="mb-1 block text-xs font-medium text-ink-muted">Estado</label>
+          <select
+            id="filtro-estado"
+            [ngModel]="filtroEstado()"
+            (ngModelChange)="filtroEstado.set($event)"
+            class="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+          >
+            <option value="">Todos</option>
+            @for (e of estados; track e) {
+              <option [value]="e">{{ estadoLabels[e] }}</option>
+            }
+          </select>
+        </div>
+        <div>
+          <label for="filtro-busqueda" class="mb-1 block text-xs font-medium text-ink-muted">Buscar</label>
+          <input
+            id="filtro-busqueda"
+            type="text"
+            [ngModel]="busqueda()"
+            (ngModelChange)="busqueda.set($event)"
+            placeholder="Cliente, asesor o # de venta"
+            class="w-64 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+          />
+        </div>
+        <p class="pb-2 text-xs text-ink-muted">{{ comisionesFiltradas().length }} de {{ comisiones().length }}</p>
+      </div>
+
+      @if (comisionesFiltradas().length === 0) {
+        <div class="mt-3 rounded-xl border border-dashed border-border p-8 text-center text-sm text-ink-muted">
+          No hay comisiones que mostrar.
+        </div>
+      } @else {
+        <div class="mt-3 overflow-x-auto rounded-xl border border-border">
+          <table class="min-w-full divide-y divide-border text-sm">
+            <thead class="bg-surface-2">
+              <tr class="text-left text-xs font-medium uppercase tracking-wide text-ink-muted">
+                <th class="px-3 py-3">Venta</th>
+                <th class="px-3 py-3">Cliente</th>
+                <th class="px-3 py-3">Asesor</th>
+                <th class="px-3 py-3 text-right">Comisión</th>
+                <th class="px-3 py-3 text-right">Ganado</th>
+                <th class="px-3 py-3 text-right">Entregado</th>
+                <th class="px-3 py-3 text-right">Por entregar</th>
+                <th class="px-3 py-3">Estado</th>
+                <th class="px-3 py-3"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border bg-surface">
+              @for (c of comisionesFiltradas(); track c.id) {
+                <tr class="hover:bg-surface-2 transition-colors duration-150">
+                  <td class="px-3 py-3">
+                    @if (c.ventaId !== null && c.ventaNumero !== null) {
+                      <a [routerLink]="['/panel/ventas', c.ventaNumero]" class="text-we-primary hover:underline">#{{ c.ventaNumero }}</a>
+                    } @else {
+                      <span class="text-xs text-ink-muted">Venta eliminada</span>
+                    }
+                  </td>
+                  <td class="px-3 py-3 font-medium text-ink">{{ c.cliente }}</td>
+                  <td class="px-3 py-3 text-ink-muted">{{ c.asesorNombre }}{{ c.asesorExterno ? ' (externo)' : '' }}</td>
+                  <td class="px-3 py-3 text-right">
+                    <p class="font-semibold text-ink">${{ money(c.monto) }}</p>
+                    <p class="text-xs text-ink-muted">
+                      {{ c.porcentaje }}% de ${{ money(c.base) }}
+                      @if (c.montoManual) {
+                        <span class="ml-0.5 text-we-primary" title="Editado a mano">✎</span>
+                      }
+                    </p>
+                  </td>
+                  <td class="px-3 py-3 text-right text-ink-muted">${{ money(c.devengado) }}</td>
+                  <td class="px-3 py-3 text-right text-ink-muted">${{ money(c.entregado) }}</td>
+                  <td class="px-3 py-3 text-right text-ink-muted">${{ money(c.porEntregar) }}</td>
+                  <td class="px-3 py-3">
+                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" [class]="estadoClases[c.estado]">{{ estadoLabels[c.estado] }}</span>
+                    <p class="mt-1 text-xs text-ink-muted">{{ modalidadLabels[c.modalidad] }}</p>
+                  </td>
+                  <td class="px-3 py-3 text-right">
+                    <div class="flex items-center justify-end gap-2 whitespace-nowrap text-xs font-semibold">
+                      <button type="button" (click)="alternarDetalle(c)" class="text-ink-muted hover:underline">
+                        {{ expandidaId() === c.id ? 'Ocultar' : 'Detalle' }}
+                      </button>
+                      <button type="button" (click)="abrirEdicion(c)" class="text-we-primary hover:underline">Editar</button>
+                      @if (c.porEntregar > 0) {
+                        <button type="button" (click)="abrirEntrega(c)" class="text-we-primary hover:underline">Entregar</button>
+                      }
+                      <button type="button" (click)="alternarCancelada(c)" class="text-ink-muted hover:underline">
+                        {{ c.cancelada ? 'Reactivar' : 'Cancelar' }}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                @if (expandidaId() === c.id) {
+                  <tr class="bg-surface-2/60">
+                    <td colspan="9" class="px-4 py-4">
+                      @if (detalle(); as d) {
+                        <div class="grid gap-6 md:grid-cols-2">
+                          <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Lo que ha ganado</p>
+                            @if (d.devengos.length === 0) {
+                              <p class="mt-2 text-sm text-ink-muted">Todavía no gana nada: aún no hay abonos del cliente.</p>
+                            } @else {
+                              <ul class="mt-2 space-y-1.5 text-sm">
+                                @for (g of d.devengos; track $index) {
+                                  <li class="flex justify-between gap-3">
+                                    <span class="text-ink-muted">
+                                      {{ c.modalidad === 'UNA_EXHIBICION' ? 'Venta' : 'Abono' }} del {{ fecha(g.fechaOrigen) }} · se entrega el sáb {{ fecha(g.fechaEntrega) }}
+                                    </span>
+                                    <span class="font-medium text-ink">${{ money(g.monto) }}</span>
+                                  </li>
+                                }
+                              </ul>
+                            }
+                          </div>
+                          <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Entregas</p>
+                            @if (d.entregas.length === 0) {
+                              <p class="mt-2 text-sm text-ink-muted">Todavía no se ha entregado nada.</p>
+                            } @else {
+                              <ul class="mt-2 space-y-1.5 text-sm">
+                                @for (e of d.entregas; track e.id) {
+                                  <li class="flex items-start justify-between gap-3">
+                                    <span class="text-ink-muted">
+                                      {{ fecha(e.fecha) }} · {{ e.registradaPor }}{{ e.notas ? ' · ' + e.notas : '' }}
+                                    </span>
+                                    <span class="flex items-center gap-3 whitespace-nowrap">
+                                      <span class="font-medium text-ink">${{ money(e.monto) }}</span>
+                                      <button type="button" (click)="anularEntrega(c, e.id)" class="text-xs font-semibold text-red-600 hover:underline dark:text-red-400">Anular</button>
+                                    </span>
+                                  </li>
+                                }
+                              </ul>
+                            }
+                          </div>
+                        </div>
+                      } @else {
+                        <p class="text-sm text-ink-muted">Cargando detalle…</p>
+                      }
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  }
+
+  <!-- Editar comisión -->
+  @if (editando(); as c) {
+    <button type="button" (click)="cerrarEdicion()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="editar-comision-titulo">
+      <form (ngSubmit)="guardarEdicion()" class="modal-panel-enter w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <h2 id="editar-comision-titulo" class="font-heading text-lg font-semibold text-ink">Editar comisión</h2>
+        <p class="mt-1 text-sm text-ink-muted">{{ c.cliente }} · valor de la venta ${{ money(c.base) }}</p>
+        <div class="mt-4 grid grid-cols-2 gap-3">
+          <div>
+            <label for="ed-porcentaje" class="mb-1 block text-xs font-medium text-ink-muted">Porcentaje (%)</label>
+            <input
+              id="ed-porcentaje" name="porcentaje" type="number" step="0.01" min="0" max="100"
+              [ngModel]="editPorcentaje()" (ngModelChange)="onPorcentajeChange($event)"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+            />
+          </div>
+          <div>
+            <label for="ed-monto" class="mb-1 block text-xs font-medium text-ink-muted">Monto ($)</label>
+            <input
+              id="ed-monto" name="monto" type="number" step="0.01" min="0"
+              [ngModel]="editMonto()" (ngModelChange)="onMontoChange($event)"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+            />
+          </div>
+        </div>
+        <p class="mt-2 text-xs text-ink-muted">Al cambiar uno, el otro se calcula solo. No puede quedar por debajo de lo ya entregado (${{ money(c.entregado) }}).</p>
+        @if (errorModal(); as error) {
+          <p class="mt-3 text-xs text-red-600 dark:text-red-400" role="alert">{{ error }}</p>
+        }
+        <div class="flex justify-end gap-2.5 pt-5">
+          <button type="button" (click)="cerrarEdicion()" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cancelar</button>
+          <button type="submit" [disabled]="guardando()" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
+            {{ guardando() ? 'Guardando…' : 'Guardar' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+
+  <!-- Entregar comisión -->
+  @if (entregando(); as c) {
+    <button type="button" (click)="cerrarEntrega()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="entregar-comision-titulo">
+      <form (ngSubmit)="confirmarEntrega()" class="modal-panel-enter w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <h2 id="entregar-comision-titulo" class="font-heading text-lg font-semibold text-ink">Entregar comisión</h2>
+        <p class="mt-1 text-sm text-ink-muted">
+          {{ c.cliente }} · {{ c.asesorNombre }}<br />
+          Ganado por entregar: <strong class="text-ink">${{ money(entregaMax()) }}</strong>
+        </p>
+        <div class="mt-4 space-y-3">
+          <div>
+            <label for="en-monto" class="mb-1 block text-xs font-medium text-ink-muted">Monto a entregar ($)</label>
+            <input
+              id="en-monto" name="monto" type="number" step="0.01" min="0.01"
+              [ngModel]="entregaMonto()" (ngModelChange)="entregaMonto.set($event)"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+            />
+          </div>
+          <div>
+            <label for="en-fecha" class="mb-1 block text-xs font-medium text-ink-muted">Fecha de entrega</label>
+            <input
+              id="en-fecha" name="fecha" type="date"
+              [ngModel]="entregaFecha()" (ngModelChange)="entregaFecha.set($event)"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+            />
+          </div>
+          <div>
+            <label for="en-notas" class="mb-1 block text-xs font-medium text-ink-muted">Nota (opcional)</label>
+            <input
+              id="en-notas" name="notas" type="text" maxlength="500"
+              [ngModel]="entregaNotas()" (ngModelChange)="entregaNotas.set($event)"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+            />
+          </div>
+        </div>
+        <p class="mt-2 text-xs text-ink-muted">Se registra también como gasto de tipo "Comisiones".</p>
+        @if (errorModal(); as error) {
+          <p class="mt-3 text-xs text-red-600 dark:text-red-400" role="alert">{{ error }}</p>
+        }
+        <div class="flex justify-end gap-2.5 pt-5">
+          <button type="button" (click)="cerrarEntrega()" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cancelar</button>
+          <button type="submit" [disabled]="guardando()" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
+            {{ guardando() ? 'Guardando…' : 'Entregar' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+</div>

@@ -2,6 +2,7 @@ import { Component, HostListener, computed, inject, signal } from '@angular/core
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import {
   LucideCalendar,
+  LucideHandCoins,
   LucideChartLine,
   LucideHouse,
   LucideKanban,
@@ -25,7 +26,7 @@ interface NavItem {
   route: string;
   /** Si lo tiene, el item solo se muestra a quien tenga ese módulo activo (ver AuthService.tieneModulo). */
   modulo?: Modulo;
-  icon: 'home' | 'leads' | 'usuarios' | 'calendario' | 'pipeline' | 'cotizador' | 'lotes' | 'plano' | 'ventas' | 'gastos';
+  icon: 'home' | 'leads' | 'usuarios' | 'calendario' | 'pipeline' | 'cotizador' | 'lotes' | 'plano' | 'ventas' | 'finanzas' | 'gastos';
 }
 
 const ASESORES_EXTERNOS_NAV_ITEM: NavItem = {
@@ -71,6 +72,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
         { label: 'Lotes', route: '/panel/lotes', modulo: 'LOTES', icon: 'lotes' },
         { label: 'Plano', route: '/panel/plano', modulo: 'PLANO', icon: 'plano' },
         { label: 'Ventas', route: '/panel/ventas', modulo: 'VENTAS', icon: 'ventas' },
+        { label: 'Finanzas', route: '/panel/finanzas', modulo: 'FINANZAS', icon: 'finanzas' },
         { label: 'Gastos', route: '/panel/gastos', modulo: 'GASTOS', icon: 'gastos' },
       ],
     },
@@ -103,6 +105,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
         { label: 'Lotes', route: '/panel/lotes', modulo: 'LOTES', icon: 'lotes' },
         { label: 'Plano', route: '/panel/plano', modulo: 'PLANO', icon: 'plano' },
         { label: 'Ventas', route: '/panel/ventas', modulo: 'VENTAS', icon: 'ventas' },
+        { label: 'Finanzas', route: '/panel/finanzas', modulo: 'FINANZAS', icon: 'finanzas' },
         { label: 'Gastos', route: '/panel/gastos', modulo: 'GASTOS', icon: 'gastos' },
       ],
     },
@@ -132,6 +135,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
     LucideHouse,
     LucideUsers,
     LucideCalendar,
+    LucideHandCoins,
     LucideKanban,
     LucideReceipt,
     LucideLandPlot,

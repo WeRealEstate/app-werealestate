@@ -38,6 +38,7 @@ public class ModuloAccesoInterceptor implements HandlerInterceptor {
         MODULOS_POR_PREFIJO.put("/api/cotizaciones", EnumSet.of(Modulo.COTIZADOR));
         MODULOS_POR_PREFIJO.put("/api/lotes", EnumSet.of(Modulo.LOTES, Modulo.PLANO, Modulo.VENTAS, Modulo.COTIZADOR));
         MODULOS_POR_PREFIJO.put("/api/ventas", EnumSet.of(Modulo.VENTAS));
+        MODULOS_POR_PREFIJO.put("/api/finanzas", EnumSet.of(Modulo.FINANZAS));
         MODULOS_POR_PREFIJO.put("/api/gastos", EnumSet.of(Modulo.GASTOS));
         MODULOS_POR_PREFIJO.put("/api/tipos-gasto", EnumSet.of(Modulo.GASTOS));
         // Más específico primero: la lista de activos también la usa el formulario de ventas.

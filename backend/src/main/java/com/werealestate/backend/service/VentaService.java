@@ -64,6 +64,7 @@ public class VentaService {
     private final LoteRepository loteRepository;
     private final LoteService loteService;
     private final PagoVentaRepository pagoVentaRepository;
+    private final ComisionService comisionService;
     private final UsuarioRepository usuarioRepository;
     private final AsesorExternoRepository asesorExternoRepository;
     private final CurrentUserProvider currentUserProvider;
@@ -75,6 +76,7 @@ public class VentaService {
             LoteRepository loteRepository,
             LoteService loteService,
             PagoVentaRepository pagoVentaRepository,
+            ComisionService comisionService,
             UsuarioRepository usuarioRepository,
             AsesorExternoRepository asesorExternoRepository,
             CurrentUserProvider currentUserProvider) {
@@ -84,6 +86,7 @@ public class VentaService {
         this.loteRepository = loteRepository;
         this.loteService = loteService;
         this.pagoVentaRepository = pagoVentaRepository;
+        this.comisionService = comisionService;
         this.usuarioRepository = usuarioRepository;
         this.asesorExternoRepository = asesorExternoRepository;
         this.currentUserProvider = currentUserProvider;
@@ -132,6 +135,7 @@ public class VentaService {
             }
         }
 
+        comisionService.sincronizar(venta);
         return toDto(renumerar(venta.getId()));
     }
 
@@ -216,6 +220,7 @@ public class VentaService {
                         ? request.primeraMensualidadMesVenta()
                         : venta.isPrimeraMensualidadMesVenta(),
                 notas);
+        comisionService.sincronizar(venta);
         // La fecha pudo cambiar: se reacomodan los números y se vuelve a leer con el nuevo.
         return toDto(renumerar(venta.getId()));
     }
@@ -294,7 +299,9 @@ public class VentaService {
 
         String notas = request.notas() == null || request.notas().isBlank() ? null : request.notas().trim();
         PagoVenta pago = new PagoVenta(venta, request.fecha(), request.monto(), notas, actual);
-        return PagoVentaDto.from(pagoVentaRepository.save(pago));
+        PagoVentaDto guardado = PagoVentaDto.from(pagoVentaRepository.save(pago));
+        comisionService.sincronizar(venta);
+        return guardado;
     }
 
     private Venta obtenerEntidad(Long id) {

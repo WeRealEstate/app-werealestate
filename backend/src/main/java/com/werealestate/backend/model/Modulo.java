@@ -11,6 +11,7 @@ public enum Modulo {
     LOTES("Lotes"),
     PLANO("Plano"),
     VENTAS("Ventas"),
+    FINANZAS("Finanzas"),
     GASTOS("Gastos"),
     CALENDARIO("Calendario"),
     ASESORES_EXTERNOS("Asesores externos"),

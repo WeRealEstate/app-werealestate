@@ -144,6 +144,12 @@ export const routes: Routes = [
           import('./features/panel/cotizador/cotizador.component').then((m) => m.CotizadorComponent),
       },
       {
+        path: 'finanzas',
+        canActivate: [roleGuard(['ADMIN', 'LIDER_AREA']), moduloGuard(['FINANZAS'])],
+        loadComponent: () =>
+          import('./features/panel/finanzas/finanzas.component').then((m) => m.FinanzasComponent),
+      },
+      {
         // Ingresos ya se ven como abonos dentro de cada venta (ver VentaDetalleComponent); esta
         // sección es solo para Gastos (comisiones, renta, etc. — ver GastoService/TipoGasto).
         path: 'gastos',

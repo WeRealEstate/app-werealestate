@@ -1,0 +1,86 @@
+export type ModalidadComision = 'UNA_EXHIBICION' | 'PARCIALIDADES';
+export type EstadoComision = 'PENDIENTE' | 'ACUMULANDO' | 'PARCIAL' | 'PAGADA' | 'CANCELADA';
+
+export const ESTADO_COMISION_LABELS: Record<EstadoComision, string> = {
+  PENDIENTE: 'Pendiente',
+  ACUMULANDO: 'Acumulando',
+  PARCIAL: 'Parcial',
+  PAGADA: 'Pagada',
+  CANCELADA: 'Cancelada',
+};
+
+export const ESTADO_COMISION_CLASES: Record<EstadoComision, string> = {
+  PENDIENTE: 'bg-surface-2 text-ink-muted',
+  ACUMULANDO: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
+  PARCIAL: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300',
+  PAGADA: 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300',
+  CANCELADA: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300',
+};
+
+export const MODALIDAD_COMISION_LABELS: Record<ModalidadComision, string> = {
+  UNA_EXHIBICION: 'Una exhibición',
+  PARCIALIDADES: 'Parcialidades',
+};
+
+/** Comisión de una venta: 5% de su valor por defecto, editable (ver backend ComisionService). */
+export interface Comision {
+  id: number;
+  /** null cuando la venta ya no existe: la comisión se queda en el historial. */
+  ventaId: number | null;
+  ventaNumero: number | null;
+  ventaEliminada: boolean;
+  cliente: string;
+  asesorNombre: string;
+  asesorExterno: boolean;
+  base: number;
+  porcentaje: number;
+  monto: number;
+  montoManual: boolean;
+  modalidad: ModalidadComision;
+  estado: EstadoComision;
+  cancelada: boolean;
+  /** Ganado por los abonos de la venta / ya entregado / ganado y aún sin entregar. */
+  devengado: number;
+  entregado: number;
+  porEntregar: number;
+  /** Sábado (yyyy-MM-dd) en que toca entregar lo primero pendiente; null si no hay nada. */
+  proximaEntrega: string | null;
+  fechaCreacion: string;
+}
+
+export interface ComisionDevengo {
+  fechaOrigen: string;
+  fechaEntrega: string;
+  monto: number;
+}
+
+export interface ComisionEntrega {
+  id: number;
+  fecha: string;
+  monto: number;
+  notas: string | null;
+  gastoId: number | null;
+  registradaPor: string;
+  fechaCreacion: string;
+}
+
+export interface ComisionDetalle {
+  comision: Comision;
+  devengos: ComisionDevengo[];
+  entregas: ComisionEntrega[];
+}
+
+export interface ComisionResumen {
+  cantidad: number;
+  total: number;
+  devengado: number;
+  entregado: number;
+  porEntregar: number;
+  pendienteDeDevengar: number;
+}
+
+export interface ComisionesPorEntregar {
+  sabado: string;
+  total: number;
+  items: { comision: Comision; montoAlSabado: number }[];
+}

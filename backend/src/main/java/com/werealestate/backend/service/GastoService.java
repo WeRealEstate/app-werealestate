@@ -1,6 +1,7 @@
 package com.werealestate.backend.service;
 
 import com.werealestate.backend.dto.GastoDto;
+import com.werealestate.backend.exception.ConflictException;
 import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.exception.ValidationException;
@@ -10,6 +11,7 @@ import com.werealestate.backend.model.TipoGasto;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.repository.GastoRepository;
 import com.werealestate.backend.repository.TipoGastoRepository;
+import com.werealestate.backend.repository.VentaComisionEntregaRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -45,16 +47,19 @@ public class GastoService {
 
     private final GastoRepository gastoRepository;
     private final TipoGastoRepository tipoGastoRepository;
+    private final VentaComisionEntregaRepository entregaComisionRepository;
     private final CurrentUserProvider currentUserProvider;
     private final String uploadsPrivadosDir;
 
     public GastoService(
             GastoRepository gastoRepository,
             TipoGastoRepository tipoGastoRepository,
+            VentaComisionEntregaRepository entregaComisionRepository,
             CurrentUserProvider currentUserProvider,
             @Value("${app.uploads-privados.dir:uploads-privados}") String uploadsPrivadosDir) {
         this.gastoRepository = gastoRepository;
         this.tipoGastoRepository = tipoGastoRepository;
+        this.entregaComisionRepository = entregaComisionRepository;
         this.currentUserProvider = currentUserProvider;
         this.uploadsPrivadosDir = uploadsPrivadosDir;
     }
@@ -119,6 +124,10 @@ public class GastoService {
             throw new ForbiddenOperationException("Solo un administrador puede eliminar un gasto");
         }
         Gasto gasto = obtenerEntidad(id);
+        if (entregaComisionRepository.existsByGastoId(id)) {
+            throw new ConflictException(
+                    "Este gasto viene de una entrega de comisión: anula la entrega en Finanzas para eliminarlo");
+        }
 
         if (gasto.getTicketExtension() != null) {
             try {
