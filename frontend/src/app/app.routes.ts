@@ -1,4 +1,5 @@
-import { Routes } from '@angular/router';
+import { inject } from '@angular/core';
+import { Router, Routes } from '@angular/router';
 import { authGuard, guestGuard } from './core/guards/auth.guard';
 import { moduloGuard } from './core/guards/modulo.guard';
 import { roleGuard } from './core/guards/role.guard';
@@ -145,17 +146,16 @@ export const routes: Routes = [
       },
       {
         path: 'finanzas',
-        canActivate: [roleGuard(['ADMIN', 'LIDER_AREA']), moduloGuard(['FINANZAS'])],
+        canActivate: [roleGuard(['ADMIN', 'LIDER_AREA']), moduloGuard(['FINANZAS', 'GASTOS'])],
         loadComponent: () =>
           import('./features/panel/finanzas/finanzas.component').then((m) => m.FinanzasComponent),
       },
       {
-        // Ingresos ya se ven como abonos dentro de cada venta (ver VentaDetalleComponent); esta
-        // sección es solo para Gastos (comisiones, renta, etc. — ver GastoService/TipoGasto).
+        // Gastos ahora vive como pestaña dentro de Finanzas (ver FinanzasComponent); la ruta vieja
+        // redirige ahí para no romper links ni el "Volver a gastos" de Tipos de gasto.
         path: 'gastos',
-        canActivate: [roleGuard(['ADMIN', 'LIDER_AREA']), moduloGuard(['GASTOS'])],
-        loadComponent: () =>
-          import('./features/panel/gastos/gastos-list/gastos-list.component').then((m) => m.GastosListComponent),
+        canActivate: [() => inject(Router).createUrlTree(['/panel/finanzas'], { queryParams: { pestana: 'gastos' } })],
+        children: [],
       },
       {
         // Catálogo de tipos de gasto: exclusivo de admin (ver TipoGastoService), por eso no aparece

@@ -2,17 +2,17 @@
   <div>
     <h1 class="font-heading text-2xl font-semibold text-ink">Finanzas</h1>
     <p class="mt-1 text-sm text-ink-muted">
-      Comisiones de venta, ingresos esperados contra recibidos y valor vendido.
+      Comisiones de venta, ingresos esperados contra recibidos, valor vendido y gastos.
     </p>
   </div>
 
   <div class="mt-5 flex gap-1 border-b border-border" role="tablist">
-    @for (t of [{ id: 'comisiones', label: 'Comisiones' }, { id: 'ingresos', label: 'Ingresos' }, { id: 'valor', label: 'Valor vendido' }]; track t.id) {
+    @for (t of pestanas; track t.id) {
       <button
         type="button"
         role="tab"
         [attr.aria-selected]="pestana() === t.id"
-        (click)="pestana.set($any(t.id))"
+        (click)="pestana.set(t.id)"
         class="-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors duration-150"
         [class.border-we-primary]="pestana() === t.id"
         [class.text-we-primary]="pestana() === t.id"
@@ -28,6 +28,8 @@
     <div class="mt-6"><app-finanzas-ingresos /></div>
   } @else if (pestana() === 'valor') {
     <div class="mt-6"><app-finanzas-valor /></div>
+  } @else if (pestana() === 'gastos') {
+    <div class="mt-6"><app-gastos-list /></div>
   } @else {
 
   @if (errorMessage()) {

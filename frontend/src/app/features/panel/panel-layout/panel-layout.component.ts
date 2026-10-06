@@ -26,6 +26,8 @@ interface NavItem {
   route: string;
   /** Si lo tiene, el item solo se muestra a quien tenga ese módulo activo (ver AuthService.tieneModulo). */
   modulo?: Modulo;
+  /** Alternativa: el item también se muestra a quien tenga este otro módulo (Finanzas incluye la pestaña Gastos). */
+  tambienConModulo?: Modulo;
   icon: 'home' | 'leads' | 'usuarios' | 'calendario' | 'pipeline' | 'cotizador' | 'lotes' | 'plano' | 'ventas' | 'finanzas' | 'gastos';
 }
 
@@ -72,8 +74,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
         { label: 'Lotes', route: '/panel/lotes', modulo: 'LOTES', icon: 'lotes' },
         { label: 'Plano', route: '/panel/plano', modulo: 'PLANO', icon: 'plano' },
         { label: 'Ventas', route: '/panel/ventas', modulo: 'VENTAS', icon: 'ventas' },
-        { label: 'Finanzas', route: '/panel/finanzas', modulo: 'FINANZAS', icon: 'finanzas' },
-        { label: 'Gastos', route: '/panel/gastos', modulo: 'GASTOS', icon: 'gastos' },
+        { label: 'Finanzas', route: '/panel/finanzas', modulo: 'FINANZAS', tambienConModulo: 'GASTOS', icon: 'finanzas' },
       ],
     },
     {
@@ -105,8 +106,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
         { label: 'Lotes', route: '/panel/lotes', modulo: 'LOTES', icon: 'lotes' },
         { label: 'Plano', route: '/panel/plano', modulo: 'PLANO', icon: 'plano' },
         { label: 'Ventas', route: '/panel/ventas', modulo: 'VENTAS', icon: 'ventas' },
-        { label: 'Finanzas', route: '/panel/finanzas', modulo: 'FINANZAS', icon: 'finanzas' },
-        { label: 'Gastos', route: '/panel/gastos', modulo: 'GASTOS', icon: 'gastos' },
+        { label: 'Finanzas', route: '/panel/finanzas', modulo: 'FINANZAS', tambienConModulo: 'GASTOS', icon: 'finanzas' },
       ],
     },
     {
@@ -163,7 +163,14 @@ export class PanelLayoutComponent {
     return NAV_BY_ROLE[user.rol]
       .map((seccion) => ({
         ...seccion,
-        items: seccion.items.filter((item) => !item.modulo || user.rol === 'ADMIN' || !user.modulos || user.modulos.includes(item.modulo)),
+        items: seccion.items.filter(
+          (item) =>
+            !item.modulo ||
+            user.rol === 'ADMIN' ||
+            !user.modulos ||
+            user.modulos.includes(item.modulo) ||
+            (item.tambienConModulo !== undefined && user.modulos.includes(item.tambienConModulo)),
+        ),
       }))
       .filter((seccion) => seccion.items.length > 0);
   });

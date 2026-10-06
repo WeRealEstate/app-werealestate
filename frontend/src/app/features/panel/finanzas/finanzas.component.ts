@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
   Comision,
   ComisionDetalle,
@@ -14,11 +14,15 @@ import {
   EstadoComision,
   MODALIDAD_COMISION_LABELS,
 } from '../../../core/models/finanzas.model';
+import { AuthService } from '../../../core/services/auth.service';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { FinanzasService } from '../../../core/services/finanzas.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { GastosListComponent } from '../gastos/gastos-list/gastos-list.component';
 import { FinanzasIngresosComponent } from './finanzas-ingresos.component';
 import { FinanzasValorComponent } from './finanzas-valor.component';
+
+type Pestana = 'comisiones' | 'ingresos' | 'valor' | 'gastos';
 
 const ESTADOS: EstadoComision[] = ['PENDIENTE', 'ACUMULANDO', 'PARCIAL', 'PAGADA', 'CANCELADA'];
 
@@ -27,16 +31,31 @@ const ESTADOS: EstadoComision[] = ['PENDIENTE', 'ACUMULANDO', 'PARCIAL', 'PAGADA
 @Component({
   selector: 'app-finanzas',
   standalone: true,
-  imports: [FormsModule, RouterLink, FinanzasIngresosComponent, FinanzasValorComponent],
+  imports: [FormsModule, RouterLink, FinanzasIngresosComponent, FinanzasValorComponent, GastosListComponent],
   templateUrl: './finanzas.component.html',
 })
 export class FinanzasComponent {
   private readonly finanzasService = inject(FinanzasService);
   private readonly toast = inject(ToastService);
   private readonly confirmService = inject(ConfirmService);
+  private readonly auth = inject(AuthService);
+  private readonly route = inject(ActivatedRoute);
 
   /** Pestaña visible; las de ingresos y valor cargan sus datos solo al abrirse. */
-  readonly pestana = signal<'comisiones' | 'ingresos' | 'valor'>('comisiones');
+  readonly pestana = signal<Pestana>('comisiones');
+
+  /** Comisiones, Ingresos y Valor vendido dependen del módulo Finanzas; Gastos, del módulo Gastos. */
+  readonly puedeFinanzas = this.auth.tieneModulo('FINANZAS');
+  readonly pestanas: { id: Pestana; label: string }[] = [
+    ...(this.puedeFinanzas
+      ? [
+          { id: 'comisiones' as Pestana, label: 'Comisiones' },
+          { id: 'ingresos' as Pestana, label: 'Ingresos' },
+          { id: 'valor' as Pestana, label: 'Valor vendido' },
+        ]
+      : []),
+    ...(this.auth.tieneModulo('GASTOS') ? [{ id: 'gastos' as Pestana, label: 'Gastos' }] : []),
+  ];
 
   readonly estados = ESTADOS;
   readonly estadoLabels = ESTADO_COMISION_LABELS;
@@ -89,7 +108,11 @@ export class FinanzasComponent {
   readonly errorModal = signal<string | null>(null);
 
   constructor() {
-    void this.cargar();
+    const pedida = this.route.snapshot.queryParamMap.get('pestana');
+    const inicial = this.pestanas.find((t) => t.id === pedida) ?? this.pestanas[0];
+    if (inicial) this.pestana.set(inicial.id);
+    if (this.puedeFinanzas) void this.cargar();
+    else this.isLoading.set(false);
   }
 
   async cargar(): Promise<void> {
