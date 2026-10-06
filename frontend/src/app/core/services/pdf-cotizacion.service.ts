@@ -1721,51 +1721,60 @@ private addNanuuFinancingTable(
   // PDF DEL PLANO INTERACTIVO
   // ==============================
 
-  /** Hoja A3 horizontal: un plano con cientos de lotes necesita espacio para que cada uno se lea;
-   * los tamaños de texto y márgenes se escalan (`k`) respecto de la hoja carta con la que se diseñó. */
+  /** Hoja a la medida del plano: del ancho de una A3 y con el alto que pide la proporción de la imagen,
+   * así el plano llena la hoja sin franjas vacías. Fondo azul de marca, título arriba y leyenda debajo.
+   * Los tamaños de texto y márgenes se escalan (`k`) respecto de la hoja carta con la que se diseñó. */
   private async buildPlanoPdf(data: PlanoPdfData): Promise<jsPDF> {
-    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3' });
+    const pageWidth = 420; // ancho de una A3 horizontal
+    const k = pageWidth / 279.4; // 279.4 mm = ancho de la hoja carta horizontal
+    const margin = 3.5 * k;
+    const headerHeight = 10 * k;
+    const legendHeight = 8.5 * k;
+    const alturaMaxima = 594; // lado largo de una A2: tope para planos muy altos
+
+    // La imagen toma todo el ancho disponible; el alto de la hoja sale de su proporción.
+    const aspecto = data.anchoImagen / data.altoImagen;
+    let drawWidth = pageWidth - margin * 2;
+    let drawHeight = drawWidth / aspecto;
+    let pageHeight = headerHeight + drawHeight + legendHeight + margin;
+    if (pageHeight > alturaMaxima) {
+      pageHeight = alturaMaxima;
+      drawHeight = pageHeight - headerHeight - legendHeight - margin;
+      drawWidth = drawHeight * aspecto;
+    }
+    const drawX = (pageWidth - drawWidth) / 2;
+    const drawY = headerHeight;
+
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [pageWidth, pageHeight] });
     await this.loadFonts(doc);
 
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const k = pageWidth / 279.4; // 279.4 mm = ancho de la hoja carta horizontal
-    // Márgenes, encabezado y leyenda compactos: así el plano ocupa la mayor parte de la hoja.
-    const margin = 6 * k;
-    const headerHeight = 12 * k;
-
-    // HEADER
+    // FONDO
     doc.setFillColor(...this.WE_DARK);
-    doc.rect(0, 0, pageWidth, headerHeight, 'F');
+    doc.rect(0, 0, pageWidth, pageHeight, 'F');
+
+    // ENCABEZADO: acento azul, título y fecha
+    doc.setFillColor(96, 165, 250);
+    doc.roundedRect(margin, headerHeight / 2 - 2.6 * k, 1.1 * k, 5.2 * k, 0.5 * k, 0.5 * k, 'F');
 
     doc.setTextColor(255, 255, 255);
     doc.setFont(this.FONT, 'bold');
     doc.setFontSize(11 * k);
-    doc.text(`Plano interactivo · ${data.desarrolloNombre}`, margin, headerHeight / 2 + 1.5 * k);
+    doc.text(`Plano interactivo · ${data.desarrolloNombre}`, margin + 3.2 * k, headerHeight / 2 + 1.5 * k);
 
+    doc.setTextColor(148, 163, 184);
     doc.setFont(this.FONT, 'normal');
     doc.setFontSize(7 * k);
     doc.text(`Generado el ${data.fecha}`, pageWidth - margin, headerHeight / 2 + 1.5 * k, { align: 'right' });
 
-    // IMAGEN DEL PLANO
-    const legendHeight = 9 * k;
-    const availableWidth = pageWidth - margin * 2;
-    const availableHeight = pageHeight - headerHeight - legendHeight - margin * 2;
-
-    const aspecto = data.anchoImagen / data.altoImagen;
-    let drawWidth = availableWidth;
-    let drawHeight = drawWidth / aspecto;
-    if (drawHeight > availableHeight) {
-      drawHeight = availableHeight;
-      drawWidth = drawHeight * aspecto;
-    }
-    const drawX = (pageWidth - drawWidth) / 2;
-    const drawY = headerHeight + margin;
-
-    // El JPEG original se incrusta tal cual ('NONE': sin recomprimir), no repintado en un canvas.
+    // IMAGEN DEL PLANO con esquinas redondeadas. El JPEG original se incrusta tal cual ('NONE': sin
+    // recomprimir), no repintado en un canvas.
+    const radio = 2 * k;
+    doc.saveGraphicsState();
+    doc.roundedRect(drawX, drawY, drawWidth, drawHeight, radio, radio, null);
+    doc.clip();
+    doc.discardPath();
     doc.addImage(data.imagenBytes, 'JPEG', drawX, drawY, drawWidth, drawHeight, undefined, 'NONE');
-    doc.setDrawColor(...this.BORDER);
-    doc.rect(drawX, drawY, drawWidth, drawHeight);
+    doc.restoreGraphicsState();
 
     // POLÍGONOS DE LOS LOTES (vectoriales). Contorno fino del color del estado, para seguir la línea
     // del propio plano sin taparla; relleno ligero, para que se lean los números y medidas de cada lote.
@@ -1794,32 +1803,26 @@ private addNanuuFinancingTable(
     }
     doc.setGState(opaco);
 
-    // LEYENDA
-    const legendY = drawY + drawHeight + 5.5 * k;
-    let legendX = margin;
-    const swatchSize = 3.2 * k;
+    // LEYENDA (puntos de color y etiquetas) y nota al pie, en una sola franja bajo el plano
+    const legendY = drawY + drawHeight + legendHeight / 2 + 0.8 * k;
+    let legendX = drawX;
+    const radioPunto = 1.5 * k;
 
+    doc.setFont(this.FONT, 'normal');
     doc.setFontSize(7 * k);
     for (const item of data.leyenda) {
       doc.setFillColor(...item.color);
-      doc.rect(legendX, legendY - swatchSize + k, swatchSize, swatchSize, 'F');
+      doc.circle(legendX + radioPunto, legendY - 0.9 * k, radioPunto, 'F');
 
-      doc.setTextColor(...this.TEXT);
-      doc.setFont(this.FONT, 'normal');
-      doc.text(item.label, legendX + swatchSize + 2 * k, legendY);
+      doc.setTextColor(226, 232, 240);
+      doc.text(item.label, legendX + radioPunto * 2 + 1.6 * k, legendY);
 
-      legendX += swatchSize + 2 * k + doc.getTextWidth(item.label) + 10 * k;
+      legendX += radioPunto * 2 + 1.6 * k + doc.getTextWidth(item.label) + 8 * k;
     }
 
-    // FOOTER
-    doc.setDrawColor(...this.BORDER);
-    doc.setLineWidth(0.2);
-    doc.line(margin, pageHeight - 5.5 * k, pageWidth - margin, pageHeight - 5.5 * k);
-
-    doc.setTextColor(...this.MUTED);
-    doc.setFont(this.FONT, 'normal');
+    doc.setTextColor(148, 163, 184);
     doc.setFontSize(6 * k);
-    doc.text('WE Real Estate · Plano informativo, sujeto a cambios', margin, pageHeight - 2.5 * k);
+    doc.text('WE Real Estate · Plano informativo, sujeto a cambios', drawX + drawWidth, legendY, { align: 'right' });
 
     return doc;
   }
