@@ -1,0 +1,107 @@
+@if (errorMessage()) {
+  <div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
+    {{ errorMessage() }}
+  </div>
+}
+
+@if (isLoading()) {
+  <p class="text-sm text-ink-muted">Cargando valor vendido…</p>
+} @else if (datos(); as d) {
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div class="rounded-xl border border-border bg-surface p-4">
+      <p class="text-xs text-ink-muted">Valor total vendido</p>
+      <p class="mt-1 text-lg font-semibold text-ink">${{ money(d.total) }}</p>
+      <p class="text-xs text-ink-muted">{{ d.lotes }} {{ d.lotes === 1 ? 'lote' : 'lotes' }}</p>
+    </div>
+    <div class="rounded-xl border border-border bg-surface p-4">
+      <p class="text-xs text-ink-muted">Cobrado (abonos)</p>
+      <p class="mt-1 text-lg font-semibold text-green-600 dark:text-green-400">${{ money(d.cobrado) }}</p>
+    </div>
+    <div class="rounded-xl border border-border bg-surface p-4">
+      <p class="text-xs text-ink-muted">Saldo por cobrar</p>
+      <p class="mt-1 text-lg font-semibold text-amber-600 dark:text-amber-400">${{ money(d.saldoPendiente) }}</p>
+    </div>
+    <div class="rounded-xl border border-border bg-surface p-4">
+      <p class="text-xs text-ink-muted">Cobrado del total</p>
+      <p class="mt-1 text-lg font-semibold text-ink">{{ d.total > 0 ? ((d.cobrado / d.total) * 100 | number: '1.0-1') : 0 }}%</p>
+    </div>
+  </div>
+
+  <h2 class="mt-8 font-heading text-lg font-semibold text-ink">Por desarrollo</h2>
+  @if (d.porDesarrollo.length === 0) {
+    <div class="mt-3 rounded-xl border border-dashed border-border p-8 text-center text-sm text-ink-muted">Todavía no hay ventas registradas.</div>
+  } @else {
+    <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      @for (x of d.porDesarrollo; track x.desarrolloId) {
+        <div class="rounded-xl border border-border bg-surface p-4">
+          <div class="flex items-baseline justify-between gap-2">
+            <p class="font-medium text-ink">{{ x.desarrollo }}</p>
+            <p class="text-xs text-ink-muted">{{ x.lotes }} {{ x.lotes === 1 ? 'lote' : 'lotes' }}</p>
+          </div>
+          <p class="mt-1 text-lg font-semibold text-ink">${{ money(x.valor) }}</p>
+          <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-2">
+            <div class="h-full rounded-full bg-we-primary" [style.width.%]="porcentaje(x.valor)"></div>
+          </div>
+          <p class="mt-1 text-xs text-ink-muted">{{ porcentaje(x.valor) }}% del total</p>
+        </div>
+      }
+    </div>
+  }
+
+  <h2 class="mt-8 font-heading text-lg font-semibold text-ink">Por lote</h2>
+  <div class="mt-3 flex flex-wrap items-end gap-3">
+    <div>
+      <label for="valor-desarrollo" class="mb-1 block text-xs font-medium text-ink-muted">Desarrollo</label>
+      <select
+        id="valor-desarrollo"
+        [ngModel]="filtroDesarrollo()"
+        (ngModelChange)="filtroDesarrollo.set($event)"
+        class="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+      >
+        <option value="">Todos</option>
+        @for (x of d.porDesarrollo; track x.desarrolloId) {
+          <option [value]="x.desarrollo">{{ x.desarrollo }}</option>
+        }
+      </select>
+    </div>
+    <div>
+      <label for="valor-busqueda" class="mb-1 block text-xs font-medium text-ink-muted">Buscar</label>
+      <input
+        id="valor-busqueda"
+        type="text"
+        [ngModel]="busqueda()"
+        (ngModelChange)="busqueda.set($event)"
+        placeholder="Cliente, lote o # de venta"
+        class="w-64 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+      />
+    </div>
+    <p class="pb-2 text-xs text-ink-muted">{{ detalleFiltrado().length }} de {{ d.detalle.length }} · ${{ money(totalFiltrado()) }}</p>
+  </div>
+
+  <div class="mt-3 overflow-x-auto rounded-xl border border-border">
+    <table class="min-w-full divide-y divide-border text-sm">
+      <thead class="bg-surface-2">
+        <tr class="text-left text-xs font-medium uppercase tracking-wide text-ink-muted">
+          <th class="px-3 py-3">Desarrollo</th>
+          <th class="px-3 py-3">Manzana</th>
+          <th class="px-3 py-3">Lote</th>
+          <th class="px-3 py-3">Venta</th>
+          <th class="px-3 py-3">Cliente</th>
+          <th class="px-3 py-3 text-right">Precio</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border bg-surface">
+        @for (l of detalleFiltrado(); track $index) {
+          <tr class="hover:bg-surface-2 transition-colors duration-150">
+            <td class="px-3 py-3 text-ink-muted">{{ l.desarrollo }}</td>
+            <td class="px-3 py-3 text-ink-muted">{{ l.manzana }}</td>
+            <td class="px-3 py-3 text-ink">{{ l.numeroLote }}</td>
+            <td class="px-3 py-3"><a [routerLink]="['/panel/ventas', l.ventaNumero]" class="text-we-primary hover:underline">#{{ l.ventaNumero }}</a></td>
+            <td class="px-3 py-3 text-ink">{{ l.cliente }}</td>
+            <td class="px-3 py-3 text-right font-medium text-ink">${{ money(l.precio) }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

@@ -7,12 +7,16 @@ import {
   ComisionDetalle,
   ComisionResumen,
   ComisionesPorEntregar,
+  FinanzasIngresos,
+  FinanzasValor,
+  IngresoDetalle,
 } from '../models/finanzas.model';
 
 @Injectable({ providedIn: 'root' })
 export class FinanzasService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = `${environment.apiUrl}/finanzas/comisiones`;
+  private readonly apiUrl = `${environment.apiUrl}/finanzas`;
+  private readonly baseUrl = `${this.apiUrl}/comisiones`;
 
   listarComisiones(): Promise<Comision[]> {
     return firstValueFrom(this.http.get<Comision[]>(this.baseUrl));
@@ -51,5 +55,24 @@ export class FinanzasService {
 
   anularEntrega(comisionId: number, entregaId: number): Promise<ComisionDetalle> {
     return firstValueFrom(this.http.delete<ComisionDetalle>(`${this.baseUrl}/${comisionId}/entregas/${entregaId}`));
+  }
+
+  /** Valor total vendido, por desarrollo y por lote. */
+  valorVendido(): Promise<FinanzasValor> {
+    return firstValueFrom(this.http.get<FinanzasValor>(`${this.apiUrl}/valor-vendido`));
+  }
+
+  /** Esperado contra recibido por mes (desde/hasta como "yyyy-MM"; el atraso se calcula desde el primer mes). */
+  ingresos(desde: string | null, hasta: string | null, desarrolloId: number | null): Promise<FinanzasIngresos> {
+    let params = new HttpParams();
+    if (desde) params = params.set('desde', desde);
+    if (hasta) params = params.set('hasta', hasta);
+    if (desarrolloId) params = params.set('desarrolloId', desarrolloId);
+    return firstValueFrom(this.http.get<FinanzasIngresos>(`${this.apiUrl}/ingresos`, { params }));
+  }
+
+  ingresosDelMes(mes: string, desarrolloId: number | null): Promise<IngresoDetalle> {
+    const params = desarrolloId ? new HttpParams().set('desarrolloId', desarrolloId) : undefined;
+    return firstValueFrom(this.http.get<IngresoDetalle>(`${this.apiUrl}/ingresos/${mes}`, { params }));
   }
 }

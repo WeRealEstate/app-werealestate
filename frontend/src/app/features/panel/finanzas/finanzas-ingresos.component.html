@@ -1,0 +1,172 @@
+@if (errorMessage()) {
+  <div class="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
+    {{ errorMessage() }}
+  </div>
+}
+
+<!-- Este mes: esperado contra recibido -->
+@if (datos(); as d) {
+  <div class="rounded-xl border border-border bg-surface p-5">
+    <div class="flex flex-wrap items-baseline justify-between gap-2">
+      <h2 class="font-heading text-lg font-semibold text-ink">Este mes · {{ nombreMes(d.mesActual.mes) }}</h2>
+      <p class="text-xs text-ink-muted">Mensualidades esperadas contra recibidas</p>
+    </div>
+    <div class="mt-4 grid gap-4 sm:grid-cols-3">
+      <div>
+        <p class="text-xs text-ink-muted">Esperado este mes</p>
+        <p class="mt-1 text-xl font-semibold text-ink">${{ money(d.mesActual.esperado) }}</p>
+      </div>
+      <div>
+        <p class="text-xs text-ink-muted">Recibido este mes</p>
+        <p class="mt-1 text-xl font-semibold text-green-600 dark:text-green-400">${{ money(d.mesActual.recibido) }}</p>
+      </div>
+      <div>
+        <p class="text-xs text-ink-muted">Atraso acumulado</p>
+        <p class="mt-1 text-xl font-semibold" [class.text-red-600]="d.mesActual.atrasoAcumulado > 0" [class.dark:text-red-400]="d.mesActual.atrasoAcumulado > 0" [class.text-ink]="d.mesActual.atrasoAcumulado <= 0">
+          ${{ money(d.mesActual.atrasoAcumulado) }}
+        </p>
+        <p class="text-xs text-ink-muted">Lo esperado hasta hoy que aún no llega</p>
+      </div>
+    </div>
+    <div class="mt-4 h-2 overflow-hidden rounded-full bg-surface-2">
+      <div class="h-full rounded-full bg-green-500" [style.width.%]="avanceMes()"></div>
+    </div>
+    <p class="mt-1 text-xs text-ink-muted">{{ avanceMes() }}% de lo esperado este mes ya se recibió</p>
+  </div>
+}
+
+<!-- Filtros -->
+<div class="mt-6 flex flex-wrap items-end gap-3">
+  <div>
+    <label for="ing-desarrollo" class="mb-1 block text-xs font-medium text-ink-muted">Desarrollo</label>
+    <select
+      id="ing-desarrollo"
+      [ngModel]="desarrolloId() ?? ''"
+      (ngModelChange)="cambiarDesarrollo($event)"
+      class="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+    >
+      <option value="">Todos</option>
+      @for (x of desarrollos(); track x.id) {
+        <option [value]="x.id">{{ x.nombre }}</option>
+      }
+    </select>
+  </div>
+  <div>
+    <label for="ing-desde" class="mb-1 block text-xs font-medium text-ink-muted">Desde</label>
+    <input
+      id="ing-desde" type="month" [ngModel]="desde()" (ngModelChange)="cambiarDesde($event)"
+      class="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+    />
+  </div>
+  <div>
+    <label for="ing-hasta" class="mb-1 block text-xs font-medium text-ink-muted">Hasta</label>
+    <input
+      id="ing-hasta" type="month" [ngModel]="hasta()" (ngModelChange)="cambiarHasta($event)"
+      class="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+    />
+  </div>
+</div>
+
+@if (isLoading()) {
+  <p class="mt-6 text-sm text-ink-muted">Cargando ingresos…</p>
+} @else if (datos(); as d) {
+  @if (d.meses.length === 0) {
+    <div class="mt-4 rounded-xl border border-dashed border-border p-8 text-center text-sm text-ink-muted">
+      No hay ingresos esperados ni recibidos en ese rango.
+    </div>
+  } @else {
+    <div class="mt-4 overflow-x-auto rounded-xl border border-border">
+      <table class="min-w-full divide-y divide-border text-sm">
+        <thead class="bg-surface-2">
+          <tr class="text-left text-xs font-medium uppercase tracking-wide text-ink-muted">
+            <th class="px-3 py-3">Mes</th>
+            <th class="px-3 py-3 text-right">Esperado</th>
+            <th class="px-3 py-3 text-right">Recibido</th>
+            <th class="px-3 py-3 text-right">Diferencia</th>
+            <th class="px-3 py-3 text-right">Atraso acumulado</th>
+            <th class="px-3 py-3 text-right">Ventas</th>
+            <th class="px-3 py-3"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border bg-surface">
+          @for (m of d.meses; track m.mes) {
+            <tr class="hover:bg-surface-2 transition-colors duration-150" [class.bg-we-primary/5]="m.mes === d.mesActual.mes">
+              <td class="px-3 py-3 font-medium capitalize text-ink">
+                {{ nombreMes(m.mes) }}
+                @if (m.mes === d.mesActual.mes) {
+                  <span class="ml-1.5 rounded-full bg-we-primary/10 px-2 py-0.5 text-xs font-medium normal-case text-we-primary">Este mes</span>
+                }
+              </td>
+              <td class="px-3 py-3 text-right text-ink">${{ money(m.esperado) }}</td>
+              <td class="px-3 py-3 text-right text-ink-muted">{{ m.futuro ? '—' : '$' + money(m.recibido) }}</td>
+              <td class="px-3 py-3 text-right" [class.text-red-600]="!m.futuro && m.diferencia < 0" [class.dark:text-red-400]="!m.futuro && m.diferencia < 0" [class.text-green-600]="!m.futuro && m.diferencia > 0" [class.dark:text-green-400]="!m.futuro && m.diferencia > 0">
+                {{ m.futuro ? '—' : (m.diferencia > 0 ? '+' : '') + '$' + money(m.diferencia) }}
+              </td>
+              <td class="px-3 py-3 text-right text-ink-muted">{{ m.futuro ? '—' : '$' + money(m.atrasoAcumulado) }}</td>
+              <td class="px-3 py-3 text-right text-ink-muted">{{ m.ventas }}</td>
+              <td class="px-3 py-3 text-right">
+                <button type="button" (click)="alternarMes(m)" class="text-xs font-semibold text-we-primary hover:underline">
+                  {{ expandido() === m.mes ? 'Ocultar' : 'Detalle' }}
+                </button>
+              </td>
+            </tr>
+            @if (expandido() === m.mes) {
+              <tr class="bg-surface-2/60">
+                <td colspan="7" class="px-4 py-4">
+                  @if (detalle(); as det) {
+                    <div class="grid gap-6 lg:grid-cols-2">
+                      <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Se espera</p>
+                        @if (det.esperados.length === 0) {
+                          <p class="mt-2 text-sm text-ink-muted">Nada programado este mes.</p>
+                        } @else {
+                          <ul class="mt-2 space-y-1.5 text-sm">
+                            @for (c of det.esperados; track $index) {
+                              <li class="flex justify-between gap-3">
+                                <span class="text-ink-muted">
+                                  {{ fecha(c.fechaEsperada) }} ·
+                                  <a [routerLink]="['/panel/ventas', c.ventaNumero]" class="text-we-primary hover:underline">#{{ c.ventaNumero }}</a>
+                                  {{ c.cliente }} · {{ c.concepto }}
+                                </span>
+                                <span class="font-medium text-ink">${{ money(c.esperado) }}</span>
+                              </li>
+                            }
+                          </ul>
+                        }
+                      </div>
+                      <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Se recibió</p>
+                        @if (det.recibidos.length === 0) {
+                          <p class="mt-2 text-sm text-ink-muted">Todavía no se registra ningún abono este mes.</p>
+                        } @else {
+                          <ul class="mt-2 space-y-1.5 text-sm">
+                            @for (a of det.recibidos; track $index) {
+                              <li class="flex justify-between gap-3">
+                                <span class="text-ink-muted">
+                                  {{ fecha(a.fecha) }} ·
+                                  <a [routerLink]="['/panel/ventas', a.ventaNumero]" class="text-we-primary hover:underline">#{{ a.ventaNumero }}</a>
+                                  {{ a.cliente }}
+                                </span>
+                                <span class="font-medium text-ink">${{ money(a.monto) }}</span>
+                              </li>
+                            }
+                          </ul>
+                        }
+                      </div>
+                    </div>
+                  } @else {
+                    <p class="text-sm text-ink-muted">Cargando detalle…</p>
+                  }
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+    <p class="mt-3 text-xs text-ink-muted">
+      Lo esperado sale del enganche (el día de la venta), las mensualidades y las aportaciones de cada venta en su día de pago.
+      Las anualidades no se proyectan. Lo recibido son los abonos registrados en cada venta.
+    </p>
+  }
+}

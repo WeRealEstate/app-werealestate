@@ -84,3 +84,61 @@ export interface ComisionesPorEntregar {
   total: number;
   items: { comision: Comision; montoAlSabado: number }[];
 }
+
+/** Valor vendido: suma del precio de los lotes vendidos (ver backend FinanzasService.valorVendido). */
+export interface FinanzasValor {
+  total: number;
+  lotes: number;
+  cobrado: number;
+  saldoPendiente: number;
+  porDesarrollo: { desarrolloId: number; desarrollo: string; lotes: number; valor: number }[];
+  detalle: {
+    desarrollo: string;
+    manzana: string;
+    numeroLote: string;
+    ventaId: number;
+    ventaNumero: number;
+    cliente: string;
+    precio: number;
+  }[];
+}
+
+/** mes = "yyyy-MM". atrasoAcumulado = lo esperado hasta ese mes que aún no se recibe (nunca negativo). */
+export interface IngresoMes {
+  mes: string;
+  esperado: number;
+  recibido: number;
+  diferencia: number;
+  atrasoAcumulado: number;
+  ventas: number;
+  futuro: boolean;
+}
+
+export interface FinanzasIngresos {
+  mesActual: IngresoMes;
+  meses: IngresoMes[];
+}
+
+export interface IngresoConcepto {
+  ventaId: number;
+  ventaNumero: number;
+  cliente: string;
+  desarrollo: string;
+  concepto: string;
+  fechaEsperada: string;
+  esperado: number;
+}
+
+export interface IngresoAbono {
+  ventaId: number;
+  ventaNumero: number;
+  cliente: string;
+  fecha: string;
+  monto: number;
+}
+
+export interface IngresoDetalle {
+  mes: string;
+  esperados: IngresoConcepto[];
+  recibidos: IngresoAbono[];
+}

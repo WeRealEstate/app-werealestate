@@ -15,6 +15,8 @@ import {
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { FinanzasService } from '../../../core/services/finanzas.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { FinanzasIngresosComponent } from './finanzas-ingresos.component';
+import { FinanzasValorComponent } from './finanzas-valor.component';
 
 const ESTADOS: EstadoComision[] = ['PENDIENTE', 'ACUMULANDO', 'PARCIAL', 'PAGADA', 'CANCELADA'];
 
@@ -23,13 +25,16 @@ const ESTADOS: EstadoComision[] = ['PENDIENTE', 'ACUMULANDO', 'PARCIAL', 'PAGADA
 @Component({
   selector: 'app-finanzas',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, FinanzasIngresosComponent, FinanzasValorComponent],
   templateUrl: './finanzas.component.html',
 })
 export class FinanzasComponent {
   private readonly finanzasService = inject(FinanzasService);
   private readonly toast = inject(ToastService);
   private readonly confirmService = inject(ConfirmService);
+
+  /** Pestaña visible; las de ingresos y valor cargan sus datos solo al abrirse. */
+  readonly pestana = signal<'comisiones' | 'ingresos' | 'valor'>('comisiones');
 
   readonly estados = ESTADOS;
   readonly estadoLabels = ESTADO_COMISION_LABELS;

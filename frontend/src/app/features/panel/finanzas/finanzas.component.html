@@ -2,9 +2,33 @@
   <div>
     <h1 class="font-heading text-2xl font-semibold text-ink">Finanzas</h1>
     <p class="mt-1 text-sm text-ink-muted">
-      Comisiones de venta: el 5% de cada venta (editable), lo que va ganando con los abonos del cliente y lo que se entrega los sábados.
+      Comisiones de venta, ingresos esperados contra recibidos y valor vendido.
     </p>
   </div>
+
+  <div class="mt-5 flex gap-1 border-b border-border" role="tablist">
+    @for (t of [{ id: 'comisiones', label: 'Comisiones' }, { id: 'ingresos', label: 'Ingresos' }, { id: 'valor', label: 'Valor vendido' }]; track t.id) {
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="pestana() === t.id"
+        (click)="pestana.set($any(t.id))"
+        class="-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors duration-150"
+        [class.border-we-primary]="pestana() === t.id"
+        [class.text-we-primary]="pestana() === t.id"
+        [class.border-transparent]="pestana() !== t.id"
+        [class.text-ink-muted]="pestana() !== t.id"
+      >
+        {{ t.label }}
+      </button>
+    }
+  </div>
+
+  @if (pestana() === 'ingresos') {
+    <div class="mt-6"><app-finanzas-ingresos /></div>
+  } @else if (pestana() === 'valor') {
+    <div class="mt-6"><app-finanzas-valor /></div>
+  } @else {
 
   @if (errorMessage()) {
     <div class="mt-6 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
@@ -249,6 +273,7 @@
         </div>
       }
     </section>
+  }
   }
 
   <!-- Editar comisión -->
