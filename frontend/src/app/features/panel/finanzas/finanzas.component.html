@@ -122,6 +122,9 @@
                       @if (i.comision.retrasada) {
                         <span class="ml-1.5 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-500/15 dark:text-red-300" title="Entrega vencida desde el sábado {{ fecha(i.comision.proximaEntrega) }}">Retrasada</span>
                       }
+                      @if (i.comision.mensualidad) {
+                        <p class="text-xs font-normal text-ink-muted">Mensualidad ${{ money(i.comision.mensualidad) }}</p>
+                      }
                     </td>
                     <td class="px-3 py-3 text-ink-muted">{{ i.comision.asesorNombre }}{{ i.comision.asesorExterno ? ' (externo)' : '' }}</td>
                     <td class="px-3 py-3 text-right font-semibold text-ink">${{ money(i.montoAlSabado) }}</td>
@@ -207,7 +210,13 @@
                       <span class="text-xs text-ink-muted">Venta eliminada</span>
                     }
                   </td>
-                  <td class="px-3 py-3 font-medium text-ink">{{ c.cliente }}</td>
+                  <td class="px-3 py-3">
+                    <p class="font-medium text-ink">{{ c.cliente }}</p>
+                    @if (c.mensualidad) {
+                      <p class="text-xs text-ink-muted">Mensualidad ${{ money(c.mensualidad) }}</p>
+                    }
+                    <p class="text-xs text-ink-muted">Lleva pagado ${{ money(c.abonado) }}</p>
+                  </td>
                   <td class="px-3 py-3 text-ink-muted">{{ c.asesorNombre }}{{ c.asesorExterno ? ' (externo)' : '' }}</td>
                   <td class="px-3 py-3 text-right">
                     <p class="font-semibold text-ink">${{ money(c.monto) }}</p>

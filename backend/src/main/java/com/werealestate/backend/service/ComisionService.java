@@ -368,8 +368,12 @@ public class ComisionService {
     private final class Totales {
         private final Map<Long, List<VentaComisionDevengo>> devengos = new HashMap<>();
         private final Map<Long, BigDecimal> entregado = new HashMap<>();
+        private final Map<Long, BigDecimal> abonadoPorVenta = new HashMap<>();
 
         Totales() {
+            for (PagoVenta p : pagoVentaRepository.findAll()) {
+                abonadoPorVenta.merge(p.getVenta().getId(), p.getMonto(), BigDecimal::add);
+            }
             for (VentaComisionDevengo d : devengoRepository.findAllByOrderByFechaEntregaAscIdAsc()) {
                 devengos.computeIfAbsent(d.getComision().getId(), k -> new ArrayList<>()).add(d);
             }
@@ -393,6 +397,10 @@ public class ComisionService {
 
         BigDecimal entregado(Long id) {
             return entregado.getOrDefault(id, BigDecimal.ZERO);
+        }
+
+        BigDecimal abonadoDeVenta(Long ventaId) {
+            return ventaId == null ? BigDecimal.ZERO : abonadoPorVenta.getOrDefault(ventaId, BigDecimal.ZERO);
         }
 
         /** Lo ganado cuyo sábado de entrega ya pasó (anterior a hoy) y todavía no se entrega. */
@@ -445,6 +453,8 @@ public class ComisionService {
                 asesor,
                 externo,
                 c.getBase(),
+                venta != null ? venta.getMensualidad() : null,
+                totales.abonadoDeVenta(venta != null ? venta.getId() : null),
                 c.getPorcentaje(),
                 c.getMonto(),
                 c.isMontoManual(),

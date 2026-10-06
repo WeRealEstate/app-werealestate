@@ -16,6 +16,10 @@ public record ComisionDto(
         String asesorNombre,
         boolean asesorExterno,
         BigDecimal base,
+        // Mensualidad pactada de la venta (null en una venta de contado o ya eliminada) y lo que el
+        // cliente lleva abonado en total.
+        BigDecimal mensualidad,
+        BigDecimal abonado,
         BigDecimal porcentaje,
         BigDecimal monto,
         boolean montoManual,

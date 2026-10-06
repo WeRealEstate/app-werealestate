@@ -33,6 +33,10 @@ export interface Comision {
   asesorNombre: string;
   asesorExterno: boolean;
   base: number;
+  /** Mensualidad pactada de la venta; null en una venta de contado o ya eliminada. */
+  mensualidad: number | null;
+  /** Lo que el cliente lleva abonado en total. */
+  abonado: number;
   porcentaje: number;
   monto: number;
   montoManual: boolean;
