@@ -22,9 +22,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Roster de asesores externos: gente que vende pero no tiene cuenta en el sistema (ver
- * AsesorExterno). Gestionarlo (crear/editar/desactivar/eliminar) es exclusivo de admin, igual que
- * Usuarios; listar los activos también lo puede hacer un líder de área, porque también registra
- * ventas y necesita poder elegir un asesor externo ahí (ver VentaService).
+ * AsesorExterno). Lo gestionan (crear/editar/desactivar/eliminar) un admin y el personal de
+ * administración (líder de área), siempre que este último tenga el módulo activo (ver
+ * ModuloAccesoInterceptor); también necesita listar los activos para elegir uno al registrar una
+ * venta (ver VentaService).
  */
 @Service
 @Transactional
@@ -44,7 +45,7 @@ public class AsesorExternoService {
     }
 
     public List<AsesorExternoDto> listar() {
-        exigirAdmin();
+        exigirAdminOLider();
         return asesorExternoRepository.findAllByOrderByNombreAsc().stream().map(AsesorExternoDto::from).toList();
     }
 
@@ -54,7 +55,7 @@ public class AsesorExternoService {
     }
 
     public AsesorExternoDto crear(AsesorExternoCreateRequest request) {
-        exigirAdmin();
+        exigirAdminOLider();
         AsesorExterno asesor = new AsesorExterno(
                 request.nombre().trim(), request.celular().trim(), normalizarOpcional(request.correo()));
         aplicarContrato(
@@ -68,7 +69,7 @@ public class AsesorExternoService {
     }
 
     public AsesorExternoDto actualizar(Long id, AsesorExternoUpdateRequest request) {
-        exigirAdmin();
+        exigirAdminOLider();
         AsesorExterno asesor = asesorExternoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Asesor externo no encontrado"));
         asesor.setNombre(request.nombre().trim());
@@ -89,7 +90,7 @@ public class AsesorExternoService {
      * colgando: en ese caso hay que desactivarlo en vez de eliminarlo (igual que un Usuario).
      * También se rechaza si tiene gente reportándole en Teams (ver aplicarJerarquia). */
     public void eliminar(Long id) {
-        exigirAdmin();
+        exigirAdminOLider();
         AsesorExterno asesor = asesorExternoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Asesor externo no encontrado"));
 
@@ -170,14 +171,6 @@ public class AsesorExternoService {
         asesor.setTipo(TipoAsesorExterno.LINEA);
         asesor.setLiderDirecto(liderDirecto);
         asesor.setNivelLinea(nivel);
-    }
-
-    private Usuario exigirAdmin() {
-        Usuario actual = currentUserProvider.getUsuarioActual();
-        if (actual.getRol() != Role.ADMIN) {
-            throw new ForbiddenOperationException("Solo un administrador puede gestionar asesores externos");
-        }
-        return actual;
     }
 
     private Usuario exigirAdminOLider() {

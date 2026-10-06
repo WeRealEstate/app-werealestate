@@ -28,8 +28,13 @@ interface NavItem {
   icon: 'home' | 'leads' | 'usuarios' | 'calendario' | 'pipeline' | 'cotizador' | 'lotes' | 'plano' | 'ventas' | 'gastos';
 }
 
-const ASESORES_EXTERNOS_NAV_ITEM: NavItem = { label: 'Asesores externos', route: '/panel/asesores-externos', icon: 'usuarios' };
-const TEAMS_NAV_ITEM: NavItem = { label: 'Comunidades We', route: '/panel/teams', icon: 'usuarios' };
+const ASESORES_EXTERNOS_NAV_ITEM: NavItem = {
+  label: 'Asesores externos',
+  route: '/panel/asesores-externos',
+  modulo: 'ASESORES_EXTERNOS',
+  icon: 'usuarios',
+};
+const TEAMS_NAV_ITEM: NavItem = { label: 'Comunidades We', route: '/panel/teams', modulo: 'COMUNIDADES', icon: 'usuarios' };
 
 /** {@code label: null} agrupa items sin encabezado visible (Inicio, siempre arriba y suelto). */
 interface NavSection {
@@ -69,7 +74,14 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
         { label: 'Gastos', route: '/panel/gastos', modulo: 'GASTOS', icon: 'gastos' },
       ],
     },
-    { label: 'Administración', items: [{ label: 'Calendario', route: '/panel/calendario', modulo: 'CALENDARIO', icon: 'calendario' }] },
+    {
+      label: 'Administración',
+      items: [
+        ASESORES_EXTERNOS_NAV_ITEM,
+        TEAMS_NAV_ITEM,
+        { label: 'Calendario', route: '/panel/calendario', modulo: 'CALENDARIO', icon: 'calendario' },
+      ],
+    },
   ],
   EQUIPO_INTERNO: [
     { label: null, items: [{ label: 'Inicio', route: '/panel/equipo', icon: 'home' }] },

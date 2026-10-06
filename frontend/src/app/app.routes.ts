@@ -227,7 +227,7 @@ export const routes: Routes = [
       },
       {
         path: 'asesores-externos',
-        canActivate: [roleGuard(['ADMIN'])],
+        canActivate: [roleGuard(['ADMIN', 'LIDER_AREA']), moduloGuard(['ASESORES_EXTERNOS'])],
         loadComponent: () =>
           import('./features/asesores-externos/asesores-externos-list/asesores-externos-list.component').then(
             (m) => m.AsesoresExternosListComponent,
@@ -235,7 +235,7 @@ export const routes: Routes = [
       },
       {
         path: 'teams',
-        canActivate: [roleGuard(['ADMIN'])],
+        canActivate: [roleGuard(['ADMIN', 'LIDER_AREA']), moduloGuard(['COMUNIDADES'])],
         loadComponent: () => import('./features/teams/teams.component').then((m) => m.TeamsComponent),
       },
     ],

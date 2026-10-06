@@ -26,7 +26,14 @@ public final class ModulosAcceso {
             case ASESOR -> EnumSet.of(
                     Modulo.LEADS, Modulo.PIPELINE, Modulo.COTIZADOR, Modulo.LOTES, Modulo.PLANO, Modulo.CALENDARIO);
             case LIDER_AREA -> EnumSet.of(
-                    Modulo.LEADS, Modulo.LOTES, Modulo.PLANO, Modulo.VENTAS, Modulo.GASTOS, Modulo.CALENDARIO);
+                    Modulo.LEADS,
+                    Modulo.LOTES,
+                    Modulo.PLANO,
+                    Modulo.VENTAS,
+                    Modulo.GASTOS,
+                    Modulo.CALENDARIO,
+                    Modulo.ASESORES_EXTERNOS,
+                    Modulo.COMUNIDADES);
             case EQUIPO_INTERNO -> EnumSet.of(Modulo.CALENDARIO);
         };
     }

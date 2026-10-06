@@ -8,7 +8,7 @@ export const ROLE_LABELS: Record<Role, string> = {
 };
 
 /** Secciones del panel que un admin puede activar o quitar por usuario; ver backend ModulosAcceso. */
-export type Modulo = 'LEADS' | 'PIPELINE' | 'COTIZADOR' | 'LOTES' | 'PLANO' | 'VENTAS' | 'GASTOS' | 'CALENDARIO';
+export type Modulo = 'LEADS' | 'PIPELINE' | 'COTIZADOR' | 'LOTES' | 'PLANO' | 'VENTAS' | 'GASTOS' | 'CALENDARIO' | 'ASESORES_EXTERNOS' | 'COMUNIDADES';
 
 /** Un módulo con los roles que pueden tenerlo y con los que arranca por defecto (viene del backend). */
 export interface ModuloCatalogo {
