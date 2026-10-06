@@ -324,13 +324,13 @@
   <!-- Candado discreto: el botón "Asesor" pide el nombre de un asesor registrado para mostrar los
        botones de cotizar y apartar. Ya verificado, muestra el nombre y permite salir. -->
   @if (!isLoading() && !errorMessage() && planoUrl()) {
-    <div class="absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] z-20">
+    <div class="absolute right-[max(0.75rem,env(safe-area-inset-right))] top-[max(0.75rem,env(safe-area-inset-top))] z-20">
       @if (asesorVerificado(); as asesor) {
         <button
           type="button"
           (click)="cerrarSesionAsesor()"
           title="Salir del modo asesor"
-          class="max-w-[14rem] truncate rounded-md bg-black/50 px-2.5 py-1.5 text-xs font-medium text-white/80 hover:bg-black/70"
+          class="max-w-[14rem] truncate rounded-md border border-gray-400/60 bg-black/50 px-2.5 py-1.5 text-xs font-medium text-white/80 hover:bg-black/70"
         >
           {{ asesor }} · salir
         </button>
@@ -338,7 +338,7 @@
         <button
           type="button"
           (click)="abrirAcceso()"
-          class="rounded-md bg-black/30 px-2.5 py-1.5 text-xs font-medium text-white/50 hover:bg-black/60 hover:text-white/90"
+          class="rounded-md border border-gray-400/60 bg-black/30 px-2.5 py-1.5 text-xs font-medium text-white/60 hover:bg-black/60 hover:text-white/90"
         >
           Asesor
         </button>
