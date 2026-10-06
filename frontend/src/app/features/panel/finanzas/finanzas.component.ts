@@ -47,13 +47,14 @@ export class FinanzasComponent {
   readonly resumen = signal<ComisionResumen | null>(null);
   readonly porEntregar = signal<ComisionesPorEntregar | null>(null);
 
-  readonly filtroEstado = signal<'' | EstadoComision>('');
+  /** 'RETRASADA' no es un estado: filtra las que tienen entregas vencidas por pagar. */
+  readonly filtroEstado = signal<'' | EstadoComision | 'RETRASADA'>('');
   readonly busqueda = signal('');
   readonly comisionesFiltradas = computed(() => {
     const estado = this.filtroEstado();
     const texto = this.busqueda().trim().toLowerCase();
     return this.comisiones().filter((c) => {
-      if (estado && c.estado !== estado) return false;
+      if (estado === 'RETRASADA' ? !c.retrasada : estado && c.estado !== estado) return false;
       if (!texto) return true;
       return (
         c.cliente.toLowerCase().includes(texto) ||

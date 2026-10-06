@@ -9,5 +9,8 @@ public record ComisionResumenDto(
         BigDecimal devengado,
         BigDecimal entregado,
         BigDecimal porEntregar,
-        BigDecimal pendienteDeDevengar) {
+        BigDecimal pendienteDeDevengar,
+        // Comisiones con entregas vencidas (el sábado en que tocaba ya pasó) y cuánto se debe por ellas.
+        long retrasadas,
+        BigDecimal montoRetrasado) {
 }

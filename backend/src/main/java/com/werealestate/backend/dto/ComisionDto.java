@@ -28,5 +28,9 @@ public record ComisionDto(
         BigDecimal porEntregar,
         // Sábado en que toca entregar lo primero que sigue sin entregarse; null si no hay nada.
         LocalDate proximaEntrega,
+        // Retrasada: ya pasó el sábado en que tocaba entregar algo ganado y sigue sin entregarse;
+        // montoRetrasado es lo que se debe de ese tiempo (lo ganado con sábado vencido menos lo entregado).
+        boolean retrasada,
+        BigDecimal montoRetrasado,
         LocalDateTime fechaCreacion) {
 }

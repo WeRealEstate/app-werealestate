@@ -45,6 +45,10 @@ export interface Comision {
   porEntregar: number;
   /** Sábado (yyyy-MM-dd) en que toca entregar lo primero pendiente; null si no hay nada. */
   proximaEntrega: string | null;
+  /** Ya pasó el sábado en que tocaba entregar algo ganado y sigue sin entregarse. */
+  retrasada: boolean;
+  /** Lo que se debe de esas entregas vencidas. */
+  montoRetrasado: number;
   fechaCreacion: string;
 }
 
@@ -77,6 +81,9 @@ export interface ComisionResumen {
   entregado: number;
   porEntregar: number;
   pendienteDeDevengar: number;
+  /** Comisiones con entregas vencidas y cuánto se debe por ellas. */
+  retrasadas: number;
+  montoRetrasado: number;
 }
 
 export interface ComisionesPorEntregar {

@@ -171,7 +171,15 @@ public class ComisionService {
         BigDecimal entregado = BigDecimal.ZERO;
         BigDecimal porEntregar = BigDecimal.ZERO;
         BigDecimal pendiente = BigDecimal.ZERO;
+        long retrasadas = 0;
+        BigDecimal montoRetrasado = BigDecimal.ZERO;
+        LocalDate hoy = LocalDate.now();
         for (VentaComision c : comisionRepository.findAll()) {
+            BigDecimal vencido = totales.vencido(c.getId(), hoy);
+            if (vencido.signum() > 0) {
+                retrasadas++;
+                montoRetrasado = montoRetrasado.add(vencido);
+            }
             if (c.isCancelada()) continue;
             BigDecimal dev = totales.devengado(c.getId());
             BigDecimal ent = totales.entregado(c.getId());
@@ -182,7 +190,8 @@ public class ComisionService {
             porEntregar = porEntregar.add(dev.subtract(ent).max(BigDecimal.ZERO));
             pendiente = pendiente.add(c.getMonto().subtract(dev).max(BigDecimal.ZERO));
         }
-        return new ComisionResumenDto(cantidad, total, devengado, entregado, porEntregar, pendiente);
+        return new ComisionResumenDto(
+                cantidad, total, devengado, entregado, porEntregar, pendiente, retrasadas, montoRetrasado);
     }
 
     /** Qué toca entregar al sábado indicado (null = el próximo sábado, hoy si es sábado). */
@@ -386,6 +395,15 @@ public class ComisionService {
             return entregado.getOrDefault(id, BigDecimal.ZERO);
         }
 
+        /** Lo ganado cuyo sábado de entrega ya pasó (anterior a hoy) y todavía no se entrega. */
+        BigDecimal vencido(Long id, LocalDate hoy) {
+            BigDecimal alCorte = devengos.getOrDefault(id, List.of()).stream()
+                    .filter(d -> d.getFechaEntrega().isBefore(hoy))
+                    .map(VentaComisionDevengo::getMonto)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            return alCorte.subtract(entregado(id)).max(BigDecimal.ZERO);
+        }
+
         /** Primer sábado en que lo ganado supera lo ya entregado (los devengos van por fecha). */
         LocalDate proximaEntrega(Long id) {
             BigDecimal yaEntregado = entregado(id);
@@ -414,6 +432,7 @@ public class ComisionService {
         else if (devengado.signum() > 0) estado = EstadoComision.ACUMULANDO;
         else estado = EstadoComision.PENDIENTE;
 
+        BigDecimal vencido = totales.vencido(c.getId(), LocalDate.now());
         Venta venta = c.getVenta();
         boolean externo = c.getAsesorExterno() != null;
         String asesor = externo ? c.getAsesorExterno().getNombre() : c.getUsuarioAsesor().getNombre();
@@ -436,6 +455,8 @@ public class ComisionService {
                 entregado,
                 porEntregar,
                 porEntregar.signum() > 0 ? totales.proximaEntrega(c.getId()) : null,
+                vencido.signum() > 0,
+                vencido,
                 c.getFechaCreacion());
     }
 
