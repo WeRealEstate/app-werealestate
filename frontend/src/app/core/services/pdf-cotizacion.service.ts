@@ -60,6 +60,11 @@ export interface PlanoPdfData {
   leyenda: { label: string; color: [number, number, number] }[];
 }
 
+/** Contorno de cada lote en el PDF del plano: fino (≈0.3 pt) para que siga la línea del propio plano
+ * en vez de taparla, y relleno ligero para que se lean los números y medidas de cada lote. */
+const GROSOR_CONTORNO_LOTE_PDF_MM = 0.1;
+const OPACIDAD_RELLENO_LOTE_PDF = 0.25;
+
 @Injectable({
   providedIn: 'root'
 })
@@ -1716,14 +1721,17 @@ private addNanuuFinancingTable(
   // PDF DEL PLANO INTERACTIVO
   // ==============================
 
+  /** Hoja A3 horizontal: un plano con cientos de lotes necesita espacio para que cada uno se lea;
+   * los tamaños de texto y márgenes se escalan (`k`) respecto de la hoja carta con la que se diseñó. */
   private async buildPlanoPdf(data: PlanoPdfData): Promise<jsPDF> {
-    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' });
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3' });
     await this.loadFonts(doc);
 
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 12;
-    const headerHeight = 18;
+    const k = pageWidth / 279.4; // 279.4 mm = ancho de la hoja carta horizontal
+    const margin = 12 * k;
+    const headerHeight = 18 * k;
 
     // HEADER
     doc.setFillColor(...this.WE_DARK);
@@ -1731,15 +1739,15 @@ private addNanuuFinancingTable(
 
     doc.setTextColor(255, 255, 255);
     doc.setFont(this.FONT, 'bold');
-    doc.setFontSize(13);
-    doc.text(`Plano interactivo · ${data.desarrolloNombre}`, margin, headerHeight / 2 + 3);
+    doc.setFontSize(13 * k);
+    doc.text(`Plano interactivo · ${data.desarrolloNombre}`, margin, headerHeight / 2 + 3 * k);
 
     doc.setFont(this.FONT, 'normal');
-    doc.setFontSize(8);
-    doc.text(`Generado el ${data.fecha}`, pageWidth - margin, headerHeight / 2 + 3, { align: 'right' });
+    doc.setFontSize(8 * k);
+    doc.text(`Generado el ${data.fecha}`, pageWidth - margin, headerHeight / 2 + 3 * k, { align: 'right' });
 
-    // IMAGEN DEL PLANO (con los polígonos ya pintados encima)
-    const legendHeight = 14;
+    // IMAGEN DEL PLANO
+    const legendHeight = 14 * k;
     const availableWidth = pageWidth - margin * 2;
     const availableHeight = pageHeight - headerHeight - legendHeight - margin * 2;
 
@@ -1758,11 +1766,11 @@ private addNanuuFinancingTable(
     doc.setDrawColor(...this.BORDER);
     doc.rect(drawX, drawY, drawWidth, drawHeight);
 
-    // POLÍGONOS DE LOS LOTES (vectoriales): relleno semitransparente y contorno sólido del color de
-    // su estado, como en el visor.
-    const rellenoTransparente = new GState({ opacity: 0.45 });
+    // POLÍGONOS DE LOS LOTES (vectoriales). Contorno fino del color del estado, para seguir la línea
+    // del propio plano sin taparla; relleno ligero, para que se lean los números y medidas de cada lote.
+    const rellenoLigero = new GState({ opacity: OPACIDAD_RELLENO_LOTE_PDF });
     const opaco = new GState({ opacity: 1 });
-    doc.setLineWidth(Math.max(drawWidth, drawHeight) * 0.002);
+    doc.setLineWidth(GROSOR_CONTORNO_LOTE_PDF_MM);
     doc.setLineJoin('round');
 
     for (const poligono of data.poligonos) {
@@ -1775,7 +1783,7 @@ private addNanuuFinancingTable(
       // jsPDF.lines recibe cada vértice como desplazamiento respecto del anterior.
       const segmentos = absolutos.slice(1).map((p, i) => [p.x - absolutos[i].x, p.y - absolutos[i].y]);
 
-      doc.setGState(rellenoTransparente);
+      doc.setGState(rellenoLigero);
       doc.setFillColor(...poligono.color);
       doc.lines(segmentos, absolutos[0].x, absolutos[0].y, [1, 1], 'F', true);
 
@@ -1786,30 +1794,31 @@ private addNanuuFinancingTable(
     doc.setGState(opaco);
 
     // LEYENDA
-    const legendY = drawY + drawHeight + 8;
+    const legendY = drawY + drawHeight + 8 * k;
     let legendX = margin;
-    const swatchSize = 4;
+    const swatchSize = 4 * k;
 
-    doc.setFontSize(8);
+    doc.setFontSize(8 * k);
     for (const item of data.leyenda) {
       doc.setFillColor(...item.color);
-      doc.rect(legendX, legendY - swatchSize + 1, swatchSize, swatchSize, 'F');
+      doc.rect(legendX, legendY - swatchSize + k, swatchSize, swatchSize, 'F');
 
       doc.setTextColor(...this.TEXT);
       doc.setFont(this.FONT, 'normal');
-      doc.text(item.label, legendX + swatchSize + 2, legendY);
+      doc.text(item.label, legendX + swatchSize + 2 * k, legendY);
 
-      legendX += swatchSize + 2 + doc.getTextWidth(item.label) + 10;
+      legendX += swatchSize + 2 * k + doc.getTextWidth(item.label) + 10 * k;
     }
 
     // FOOTER
     doc.setDrawColor(...this.BORDER);
-    doc.line(margin, pageHeight - 8, pageWidth - margin, pageHeight - 8);
+    doc.setLineWidth(0.2);
+    doc.line(margin, pageHeight - 8 * k, pageWidth - margin, pageHeight - 8 * k);
 
     doc.setTextColor(...this.MUTED);
     doc.setFont(this.FONT, 'normal');
-    doc.setFontSize(6.5);
-    doc.text('WE Real Estate · Plano informativo, sujeto a cambios', margin, pageHeight - 4);
+    doc.setFontSize(6.5 * k);
+    doc.text('WE Real Estate · Plano informativo, sujeto a cambios', margin, pageHeight - 4 * k);
 
     return doc;
   }
