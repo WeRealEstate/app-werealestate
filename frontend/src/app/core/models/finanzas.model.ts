@@ -1,3 +1,20 @@
+/** Cómo va el cliente con lo que le toca pagar este mes. */
+export type EstadoPagoCliente = 'YA_ABONO' | 'ABONO_PARCIAL' | 'POR_VENCER' | 'SIN_ABONAR';
+
+export const ESTADO_PAGO_CLIENTE_LABELS: Record<EstadoPagoCliente, string> = {
+  YA_ABONO: 'Ya abonó este mes',
+  ABONO_PARCIAL: 'Abono parcial',
+  POR_VENCER: 'Aún no abona',
+  SIN_ABONAR: 'Sin abonar',
+};
+
+export const ESTADO_PAGO_CLIENTE_CLASES: Record<EstadoPagoCliente, string> = {
+  YA_ABONO: 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300',
+  ABONO_PARCIAL: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300',
+  POR_VENCER: 'bg-surface-2 text-ink-muted',
+  SIN_ABONAR: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300',
+};
+
 export type ModalidadComision = 'UNA_EXHIBICION' | 'PARCIALIDADES';
 export type EstadoComision = 'PENDIENTE' | 'ACUMULANDO' | 'PARCIAL' | 'PAGADA' | 'CANCELADA';
 
@@ -37,6 +54,14 @@ export interface Comision {
   mensualidad: number | null;
   /** Lo que el cliente lleva abonado en total. */
   abonado: number;
+  /** Mensualidades vencidas que el cliente aún no cubre (0 si va al corriente) y a cuánto equivalen. */
+  mensualidadesAtrasadas: number;
+  montoAtrasadoCliente: number;
+  /** Cómo va el cliente este mes; null si este mes no le toca pagar nada. */
+  estadoPagoMes: EstadoPagoCliente | null;
+  esperadoMes: number;
+  recibidoMes: number;
+  fechaPagoMes: string | null;
   porcentaje: number;
   monto: number;
   montoManual: boolean;

@@ -11,6 +11,7 @@ import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.exception.ValidationException;
 import com.werealestate.backend.model.EstadoComision;
+import com.werealestate.backend.model.EstadoPagoCliente;
 import com.werealestate.backend.model.Gasto;
 import com.werealestate.backend.model.ModalidadComision;
 import com.werealestate.backend.model.PagoVenta;
@@ -82,6 +83,7 @@ public class ComisionService {
     private final PagoVentaRepository pagoVentaRepository;
     private final GastoRepository gastoRepository;
     private final TipoGastoRepository tipoGastoRepository;
+    private final FinanzasService finanzasService;
     private final CurrentUserProvider currentUserProvider;
 
     public ComisionService(
@@ -93,6 +95,7 @@ public class ComisionService {
             PagoVentaRepository pagoVentaRepository,
             GastoRepository gastoRepository,
             TipoGastoRepository tipoGastoRepository,
+            FinanzasService finanzasService,
             CurrentUserProvider currentUserProvider) {
         this.comisionRepository = comisionRepository;
         this.devengoRepository = devengoRepository;
@@ -102,6 +105,7 @@ public class ComisionService {
         this.pagoVentaRepository = pagoVentaRepository;
         this.gastoRepository = gastoRepository;
         this.tipoGastoRepository = tipoGastoRepository;
+        this.finanzasService = finanzasService;
         this.currentUserProvider = currentUserProvider;
     }
 
@@ -369,6 +373,7 @@ public class ComisionService {
         private final Map<Long, List<VentaComisionDevengo>> devengos = new HashMap<>();
         private final Map<Long, BigDecimal> entregado = new HashMap<>();
         private final Map<Long, BigDecimal> abonadoPorVenta = new HashMap<>();
+        private final Map<Long, FinanzasService.CobroVenta> cobros = finanzasService.cobroPorVenta();
 
         Totales() {
             for (PagoVenta p : pagoVentaRepository.findAll()) {
@@ -397,6 +402,12 @@ public class ComisionService {
 
         BigDecimal entregado(Long id) {
             return entregado.getOrDefault(id, BigDecimal.ZERO);
+        }
+
+        FinanzasService.CobroVenta cobroDeVenta(Long ventaId) {
+            return ventaId == null
+                    ? FinanzasService.CobroVenta.NINGUNO
+                    : cobros.getOrDefault(ventaId, FinanzasService.CobroVenta.NINGUNO);
         }
 
         BigDecimal abonadoDeVenta(Long ventaId) {
@@ -442,6 +453,7 @@ public class ComisionService {
 
         BigDecimal vencido = totales.vencido(c.getId(), LocalDate.now());
         Venta venta = c.getVenta();
+        FinanzasService.CobroVenta cobro = totales.cobroDeVenta(venta != null ? venta.getId() : null);
         boolean externo = c.getAsesorExterno() != null;
         String asesor = externo ? c.getAsesorExterno().getNombre() : c.getUsuarioAsesor().getNombre();
         return new ComisionDto(
@@ -455,6 +467,12 @@ public class ComisionService {
                 c.getBase(),
                 venta != null ? venta.getMensualidad() : null,
                 totales.abonadoDeVenta(venta != null ? venta.getId() : null),
+                cobro.mensualidadesAtrasadas(),
+                cobro.atrasoMonto(),
+                estadoPagoMes(cobro),
+                cobro.esperadoMes(),
+                cobro.recibidoMes(),
+                cobro.fechaMes(),
                 c.getPorcentaje(),
                 c.getMonto(),
                 c.isMontoManual(),
@@ -468,6 +486,18 @@ public class ComisionService {
                 vencido.signum() > 0,
                 vencido,
                 c.getFechaCreacion());
+    }
+
+    /** Cómo va el cliente este mes; null si este mes no le toca pagar nada. */
+    private static EstadoPagoCliente estadoPagoMes(FinanzasService.CobroVenta cobro) {
+        if (cobro.esperadoMes().signum() <= 0) return null;
+        if (cobro.recibidoMes().add(new BigDecimal("0.01")).compareTo(cobro.esperadoMes()) >= 0) {
+            return EstadoPagoCliente.YA_ABONO;
+        }
+        if (cobro.recibidoMes().signum() > 0) return EstadoPagoCliente.ABONO_PARCIAL;
+        return cobro.fechaMes() != null && cobro.fechaMes().isBefore(LocalDate.now())
+                ? EstadoPagoCliente.SIN_ABONAR
+                : EstadoPagoCliente.POR_VENCER;
     }
 
     private ComisionDetalleDto detalle(VentaComision comision) {

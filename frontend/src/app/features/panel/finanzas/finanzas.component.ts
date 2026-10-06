@@ -8,6 +8,8 @@ import {
   ComisionResumen,
   ComisionesPorEntregar,
   ESTADO_COMISION_CLASES,
+  ESTADO_PAGO_CLIENTE_CLASES,
+  ESTADO_PAGO_CLIENTE_LABELS,
   ESTADO_COMISION_LABELS,
   EstadoComision,
   MODALIDAD_COMISION_LABELS,
@@ -40,6 +42,8 @@ export class FinanzasComponent {
   readonly estadoLabels = ESTADO_COMISION_LABELS;
   readonly estadoClases = ESTADO_COMISION_CLASES;
   readonly modalidadLabels = MODALIDAD_COMISION_LABELS;
+  readonly pagoClienteLabels = ESTADO_PAGO_CLIENTE_LABELS;
+  readonly pagoClienteClases = ESTADO_PAGO_CLIENTE_CLASES;
 
   readonly isLoading = signal(true);
   readonly errorMessage = signal<string | null>(null);

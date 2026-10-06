@@ -210,12 +210,30 @@
                       <span class="text-xs text-ink-muted">Venta eliminada</span>
                     }
                   </td>
-                  <td class="px-3 py-3">
+                  <td class="min-w-[14rem] px-3 py-3">
                     <p class="font-medium text-ink">{{ c.cliente }}</p>
                     @if (c.mensualidad) {
                       <p class="text-xs text-ink-muted">Mensualidad ${{ money(c.mensualidad) }}</p>
                     }
                     <p class="text-xs text-ink-muted">Lleva pagado ${{ money(c.abonado) }}</p>
+                    @if (c.estadoPagoMes; as pago) {
+                      <span class="mt-1 inline-flex rounded-full px-2 py-0.5 text-xs font-medium" [class]="pagoClienteClases[pago]">
+                        {{ pagoClienteLabels[pago] }}
+                        @if (pago === 'ABONO_PARCIAL') {
+                          · ${{ money(c.recibidoMes) }} de ${{ money(c.esperadoMes) }}
+                        } @else if (pago === 'POR_VENCER') {
+                          · le toca el {{ fecha(c.fechaPagoMes) }}
+                        } @else if (pago === 'SIN_ABONAR') {
+                          · tocaba el {{ fecha(c.fechaPagoMes) }}
+                        }
+                      </span>
+                    }
+                    @if (c.mensualidadesAtrasadas > 0) {
+                      <p class="mt-1 text-xs font-medium text-red-600 dark:text-red-400">
+                        {{ c.mensualidadesAtrasadas }} {{ c.mensualidadesAtrasadas === 1 ? 'mensualidad atrasada' : 'mensualidades atrasadas' }}
+                        (${{ money(c.montoAtrasadoCliente) }})
+                      </p>
+                    }
                   </td>
                   <td class="px-3 py-3 text-ink-muted">{{ c.asesorNombre }}{{ c.asesorExterno ? ' (externo)' : '' }}</td>
                   <td class="px-3 py-3 text-right">

@@ -204,6 +204,67 @@ public class FinanzasService {
         return new FinanzasIngresosDto.Detalle(ym.toString(), esperados, recibidos);
     }
 
+    // ---------------------------------------------------------------- cobro del cliente
+
+    /** Cómo va el cliente: lo que debe por pagos ya vencidos (monto y a cuántas mensualidades
+     * equivale) y lo de este mes (esperado, recibido y fecha en que le toca pagar; esperadoMes es
+     * cero si este mes no le toca nada). */
+    public record CobroVenta(
+            BigDecimal atrasoMonto,
+            int mensualidadesAtrasadas,
+            BigDecimal esperadoMes,
+            BigDecimal recibidoMes,
+            LocalDate fechaMes) {
+        public static final CobroVenta NINGUNO =
+                new CobroVenta(BigDecimal.ZERO, 0, BigDecimal.ZERO, BigDecimal.ZERO, null);
+    }
+
+    /**
+     * Cobro de cada venta con mensualidad. Atraso: lo esperado con fecha anterior a hoy menos lo que
+     * el cliente lleva abonado (mismo criterio que el atraso acumulado de Ingresos), y a cuántas
+     * mensualidades equivale (redondeado hacia arriba, sin pasar de las ya vencidas). Uso interno
+     * (no revisa rol): lo llaman servicios que ya lo hicieron.
+     */
+    public Map<Long, CobroVenta> cobroPorVenta() {
+        Datos datos = cargar();
+        LocalDate hoy = LocalDate.now();
+        YearMonth mesActual = YearMonth.from(hoy);
+        Map<Long, CobroVenta> resultado = new HashMap<>();
+        for (Venta venta : datos.ventas) {
+            if (venta.getMensualidad() == null || venta.getMensualidad().signum() <= 0) continue;
+            BigDecimal vencido = BigDecimal.ZERO;
+            int mensualidadesVencidas = 0;
+            BigDecimal esperadoMes = BigDecimal.ZERO;
+            LocalDate fechaMes = null;
+            for (Concepto c : calendario(datos, venta)) {
+                if (c.fecha.isBefore(hoy)) {
+                    vencido = vencido.add(c.monto);
+                    if (c.concepto.startsWith("Mensualidad")) mensualidadesVencidas++;
+                }
+                if (YearMonth.from(c.fecha).equals(mesActual)) {
+                    esperadoMes = esperadoMes.add(c.monto);
+                    if (fechaMes == null || c.fecha.isBefore(fechaMes)) fechaMes = c.fecha;
+                }
+            }
+            BigDecimal abonado = BigDecimal.ZERO;
+            BigDecimal recibidoMes = BigDecimal.ZERO;
+            for (PagoVenta p : datos.pagosDe(venta.getId())) {
+                abonado = abonado.add(p.getMonto());
+                if (YearMonth.from(p.getFecha()).equals(mesActual)) recibidoMes = recibidoMes.add(p.getMonto());
+            }
+            BigDecimal atraso = vencido.subtract(abonado);
+            int mensualidades = 0;
+            if (atraso.compareTo(new BigDecimal("0.01")) > 0) {
+                int necesarias = atraso.divide(venta.getMensualidad(), 0, java.math.RoundingMode.CEILING).intValue();
+                mensualidades = Math.min(necesarias, Math.max(mensualidadesVencidas, 1));
+            } else {
+                atraso = BigDecimal.ZERO;
+            }
+            resultado.put(venta.getId(), new CobroVenta(atraso, mensualidades, esperadoMes, recibidoMes, fechaMes));
+        }
+        return resultado;
+    }
+
     // ---------------------------------------------------------------- calendario de una venta
 
     private record Concepto(LocalDate fecha, String concepto, BigDecimal monto) {

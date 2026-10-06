@@ -1,6 +1,7 @@
 package com.werealestate.backend.dto;
 
 import com.werealestate.backend.model.EstadoComision;
+import com.werealestate.backend.model.EstadoPagoCliente;
 import com.werealestate.backend.model.ModalidadComision;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -20,6 +21,16 @@ public record ComisionDto(
         // cliente lleva abonado en total.
         BigDecimal mensualidad,
         BigDecimal abonado,
+        // Atraso del cliente: cuántas mensualidades lleva sin pagar de las ya vencidas (0 si va al
+        // corriente) y a cuánto dinero equivale.
+        int mensualidadesAtrasadas,
+        BigDecimal montoAtrasadoCliente,
+        // Cómo va el cliente este mes (null si este mes no le toca pagar), con lo esperado, lo que ya
+        // abonó y la fecha en que le toca.
+        EstadoPagoCliente estadoPagoMes,
+        BigDecimal esperadoMes,
+        BigDecimal recibidoMes,
+        LocalDate fechaPagoMes,
         BigDecimal porcentaje,
         BigDecimal monto,
         boolean montoManual,
