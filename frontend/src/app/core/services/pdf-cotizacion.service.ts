@@ -1722,24 +1722,25 @@ private addNanuuFinancingTable(
   // ==============================
 
   /** Hoja a la medida del plano: del ancho de una A3 y con el alto que pide la proporción de la imagen,
-   * así el plano llena la hoja sin franjas vacías. Fondo azul de marca, título arriba y leyenda debajo.
+   * así el plano llena la hoja de borde a borde, sin márgenes ni franjas vacías. Solo hay una franja de
+   * marca con el título arriba y otra con la leyenda debajo.
    * Los tamaños de texto y márgenes se escalan (`k`) respecto de la hoja carta con la que se diseñó. */
   private async buildPlanoPdf(data: PlanoPdfData): Promise<jsPDF> {
     const pageWidth = 420; // ancho de una A3 horizontal
     const k = pageWidth / 279.4; // 279.4 mm = ancho de la hoja carta horizontal
-    const margin = 3.5 * k;
+    const margen = 4 * k; // solo separa los textos de las franjas del borde de la hoja
     const headerHeight = 10 * k;
     const legendHeight = 8.5 * k;
     const alturaMaxima = 594; // lado largo de una A2: tope para planos muy altos
 
-    // La imagen toma todo el ancho disponible; el alto de la hoja sale de su proporción.
+    // La imagen toma todo el ancho de la hoja; el alto sale de su proporción.
     const aspecto = data.anchoImagen / data.altoImagen;
-    let drawWidth = pageWidth - margin * 2;
+    let drawWidth = pageWidth;
     let drawHeight = drawWidth / aspecto;
-    let pageHeight = headerHeight + drawHeight + legendHeight + margin;
+    let pageHeight = headerHeight + drawHeight + legendHeight;
     if (pageHeight > alturaMaxima) {
       pageHeight = alturaMaxima;
-      drawHeight = pageHeight - headerHeight - legendHeight - margin;
+      drawHeight = pageHeight - headerHeight - legendHeight;
       drawWidth = drawHeight * aspecto;
     }
     const drawX = (pageWidth - drawWidth) / 2;
@@ -1754,27 +1755,21 @@ private addNanuuFinancingTable(
 
     // ENCABEZADO: acento azul, título y fecha
     doc.setFillColor(96, 165, 250);
-    doc.roundedRect(margin, headerHeight / 2 - 2.6 * k, 1.1 * k, 5.2 * k, 0.5 * k, 0.5 * k, 'F');
+    doc.roundedRect(margen, headerHeight / 2 - 2.6 * k, 1.1 * k, 5.2 * k, 0.5 * k, 0.5 * k, 'F');
 
     doc.setTextColor(255, 255, 255);
     doc.setFont(this.FONT, 'bold');
     doc.setFontSize(11 * k);
-    doc.text(`Plano interactivo · ${data.desarrolloNombre}`, margin + 3.2 * k, headerHeight / 2 + 1.5 * k);
+    doc.text(`Plano interactivo · ${data.desarrolloNombre}`, margen + 3.2 * k, headerHeight / 2 + 1.5 * k);
 
     doc.setTextColor(148, 163, 184);
     doc.setFont(this.FONT, 'normal');
     doc.setFontSize(7 * k);
-    doc.text(`Generado el ${data.fecha}`, pageWidth - margin, headerHeight / 2 + 1.5 * k, { align: 'right' });
+    doc.text(`Generado el ${data.fecha}`, pageWidth - margen, headerHeight / 2 + 1.5 * k, { align: 'right' });
 
-    // IMAGEN DEL PLANO con esquinas redondeadas. El JPEG original se incrusta tal cual ('NONE': sin
+    // IMAGEN DEL PLANO, de borde a borde. El JPEG original se incrusta tal cual ('NONE': sin
     // recomprimir), no repintado en un canvas.
-    const radio = 2 * k;
-    doc.saveGraphicsState();
-    doc.roundedRect(drawX, drawY, drawWidth, drawHeight, radio, radio, null);
-    doc.clip();
-    doc.discardPath();
     doc.addImage(data.imagenBytes, 'JPEG', drawX, drawY, drawWidth, drawHeight, undefined, 'NONE');
-    doc.restoreGraphicsState();
 
     // POLÍGONOS DE LOS LOTES (vectoriales). Contorno fino del color del estado, para seguir la línea
     // del propio plano sin taparla; relleno ligero, para que se lean los números y medidas de cada lote.
@@ -1805,7 +1800,7 @@ private addNanuuFinancingTable(
 
     // LEYENDA (puntos de color y etiquetas) y nota al pie, en una sola franja bajo el plano
     const legendY = drawY + drawHeight + legendHeight / 2 + 0.8 * k;
-    let legendX = drawX;
+    let legendX = margen;
     const radioPunto = 1.5 * k;
 
     doc.setFont(this.FONT, 'normal');
@@ -1822,7 +1817,7 @@ private addNanuuFinancingTable(
 
     doc.setTextColor(148, 163, 184);
     doc.setFontSize(6 * k);
-    doc.text('WE Real Estate · Plano informativo, sujeto a cambios', drawX + drawWidth, legendY, { align: 'right' });
+    doc.text('WE Real Estate · Plano informativo, sujeto a cambios', pageWidth - margen, legendY, { align: 'right' });
 
     return doc;
   }
