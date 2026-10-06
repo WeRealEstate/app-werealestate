@@ -57,6 +57,19 @@
     <section class="mt-8">
       <h2 class="font-heading text-lg font-semibold text-ink">Próximos pagos</h2>
       <p class="text-xs text-ink-muted">Vencimientos de tus gastos recurrentes (renta, luz, nómina…) que siguen sin pagar.</p>
+      @if (sabadosNomina().length > 0) {
+        <div class="mt-3 flex flex-wrap gap-2">
+          @for (s of sabadosNomina(); track s.fecha) {
+            <button
+              type="button" [disabled]="guardando()" (click)="pagarNomina(s)"
+              class="inline-flex items-center rounded-lg border border-we-primary/40 bg-we-primary/5 px-3.5 py-2 text-sm font-semibold text-we-primary
+                     hover:bg-we-primary/10 active:scale-[0.97] transition-transform duration-150 disabled:opacity-60"
+            >
+              Pagar nómina del sábado {{ fecha(s.fecha) }} · {{ s.personas }} {{ s.personas === 1 ? 'persona' : 'personas' }} · ${{ money(s.total) }}
+            </button>
+          }
+        </div>
+      }
       @if (sinPagar().length === 0) {
         <div class="mt-3 rounded-xl border border-dashed border-border p-6 text-center text-sm text-ink-muted">No hay pagos pendientes.</div>
       } @else {
@@ -75,7 +88,12 @@
               @for (p of sinPagar(); track p.id) {
                 <tr class="hover:bg-surface-2 transition-colors duration-150">
                   <td class="px-3 py-3 text-ink-muted">{{ fecha(p.fechaVencimiento) }}</td>
-                  <td class="px-3 py-3 font-medium text-ink">{{ p.nombre }}</td>
+                  <td class="px-3 py-3 font-medium text-ink">
+                    {{ p.nombre }}
+                    @if (p.esNomina) {
+                      <span class="ml-1.5 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">Nómina</span>
+                    }
+                  </td>
                   <td class="px-3 py-3 text-right text-ink">${{ money(p.montoEstimado) }}</td>
                   <td class="px-3 py-3">
                     @if (p.estado === 'VENCIDO') {
@@ -146,7 +164,9 @@
                   </td>
                   <td class="px-3 py-3 text-ink-muted">{{ g.activo ? 'Activo' : 'Inactivo' }}</td>
                   <td class="px-3 py-3 text-right">
-                    @if (esAdmin()) {
+                    @if (g.esNomina) {
+                      <span class="text-xs text-ink-muted">Se administra en Usuarios</span>
+                    } @else if (esAdmin()) {
                       <div class="flex items-center justify-end gap-3 text-xs font-semibold">
                         <button type="button" (click)="abrirEditarRecurrente(g)" class="text-we-primary hover:underline">Editar</button>
                         <button type="button" [disabled]="savingId() === g.id" (click)="alternarActivo(g)" class="text-ink-muted hover:underline disabled:opacity-60">

@@ -57,6 +57,20 @@ export class GastosListComponent {
     const mes = this.mes();
     return mes ? this.gastos().filter((g) => g.fecha.startsWith(mes)) : this.gastos();
   });
+  /** Sábados con nómina por pagar (ya vencidos o el de esta semana), con cuántas personas y cuánto:
+   * para el botón "Pagar nómina del sábado". Los sábados más lejanos se pagan cuando lleguen. */
+  readonly sabadosNomina = computed(() => {
+    const tope = proximoSabadoIso();
+    const porFecha = new Map<string, { fecha: string; personas: number; total: number }>();
+    for (const p of this.sinPagar()) {
+      if (!p.esNomina || p.fechaVencimiento > tope) continue;
+      const fila = porFecha.get(p.fechaVencimiento) ?? { fecha: p.fechaVencimiento, personas: 0, total: 0 };
+      fila.personas++;
+      fila.total += p.montoEstimado;
+      porFecha.set(p.fechaVencimiento, fila);
+    }
+    return [...porFecha.values()].sort((a, b) => a.fecha.localeCompare(b.fecha));
+  });
   readonly totalHistorial = computed(() => this.gastosDelMes().reduce((suma, g) => suma + g.monto, 0));
 
   // ---- Registrar gasto (una sola vez) ----
@@ -172,6 +186,26 @@ export class GastosListComponent {
       this.pagando.set(null);
       this.toast.success(`${p.nombre} pagado.`);
     }, 'No se pudo registrar el pago.');
+  }
+
+  async pagarNomina(sabado: { fecha: string; personas: number; total: number }): Promise<void> {
+    const confirmado = await this.confirmService.confirm({
+      titulo: 'Pagar nómina',
+      mensaje: `Se marcan como pagadas ${sabado.personas} ${sabado.personas === 1 ? 'nómina' : 'nóminas'} del sábado ${this.fecha(sabado.fecha)} por $${this.money(sabado.total)} (su monto estimado), con fecha de hoy. Si alguna lleva ajuste, págala por separado en la lista.`,
+      textoConfirmar: 'Pagar nómina',
+      peligroso: false,
+    });
+    if (!confirmado) return;
+    this.guardando.set(true);
+    try {
+      const r = await this.gastosService.pagarNomina(sabado.fecha);
+      await this.refrescar();
+      this.toast.success(`Nómina pagada: ${r.pagados} ${r.pagados === 1 ? 'persona' : 'personas'}, $${this.money(r.total)}.`);
+    } catch (error) {
+      this.toast.error(mensajeDe(error, 'No se pudo pagar la nómina.'));
+    } finally {
+      this.guardando.set(false);
+    }
   }
 
   async omitir(p: GastoRecurrentePago): Promise<void> {
@@ -392,6 +426,12 @@ const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'vier
 
 function hoyIso(): string {
   const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function proximoSabadoIso(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7));
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 

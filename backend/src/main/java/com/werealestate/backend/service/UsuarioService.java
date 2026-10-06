@@ -5,10 +5,12 @@ import com.werealestate.backend.dto.UsuarioCreateRequest;
 import com.werealestate.backend.dto.UsuarioDto;
 import com.werealestate.backend.dto.UsuarioResetPasswordRequest;
 import com.werealestate.backend.dto.UsuarioResumenDto;
+import com.werealestate.backend.dto.UsuarioNominaRequest;
 import com.werealestate.backend.dto.UsuarioUpdateRequest;
 import com.werealestate.backend.exception.ConflictException;
 import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
+import com.werealestate.backend.exception.ValidationException;
 import com.werealestate.backend.model.Modulo;
 import com.werealestate.backend.model.ModulosAcceso;
 import com.werealestate.backend.model.Role;
@@ -23,6 +25,9 @@ import com.werealestate.backend.repository.TareaRepository;
 import com.werealestate.backend.repository.UsuarioRepository;
 import com.werealestate.backend.repository.VentaRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
@@ -46,6 +51,7 @@ public class UsuarioService {
     private final VentaRepository ventaRepository;
     private final CurrentUserProvider currentUserProvider;
     private final PasswordEncoder passwordEncoder;
+    private final GastoRecurrenteService gastoRecurrenteService;
 
     public UsuarioService(
             UsuarioRepository usuarioRepository,
@@ -58,7 +64,8 @@ public class UsuarioService {
             EtiquetaRepository etiquetaRepository,
             VentaRepository ventaRepository,
             CurrentUserProvider currentUserProvider,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            GastoRecurrenteService gastoRecurrenteService) {
         this.usuarioRepository = usuarioRepository;
         this.leadRepository = leadRepository;
         this.tareaRepository = tareaRepository;
@@ -70,13 +77,14 @@ public class UsuarioService {
         this.ventaRepository = ventaRepository;
         this.currentUserProvider = currentUserProvider;
         this.passwordEncoder = passwordEncoder;
+        this.gastoRecurrenteService = gastoRecurrenteService;
     }
 
     public List<UsuarioDto> listar() {
         exigirAdmin();
         return usuarioRepository.findAll().stream()
                 .sorted(Comparator.comparing(Usuario::getNombre))
-                .map(UsuarioDto::from)
+                .map(UsuarioDto::conNomina)
                 .toList();
     }
 
@@ -123,7 +131,7 @@ public class UsuarioService {
         Usuario usuario = new Usuario(
                 request.nombre(), request.email(), passwordEncoder.encode(request.password()), request.rol(), null);
         usuario.setModulos(modulosAGuardar(request.rol(), request.modulos()));
-        return UsuarioDto.from(usuarioRepository.save(usuario));
+        return UsuarioDto.conNomina(usuarioRepository.save(usuario));
     }
 
     public UsuarioDto actualizar(Long id, UsuarioUpdateRequest request) {
@@ -140,7 +148,30 @@ public class UsuarioService {
         usuario.setRol(request.rol());
         usuario.setActivo(request.activo());
         usuario.setModulos(modulosAGuardar(request.rol(), request.modulos()));
-        return UsuarioDto.from(usuarioRepository.save(usuario));
+        usuario = usuarioRepository.save(usuario);
+        // Un usuario inactivo deja de generar nómina; uno reactivado la retoma.
+        gastoRecurrenteService.sincronizarNomina(usuario);
+        return UsuarioDto.conNomina(usuario);
+    }
+
+    /** Configura (o quita) la nómina semanal de un usuario: monto y desde cuándo. Solo admin. */
+    public UsuarioDto actualizarNomina(Long id, UsuarioNominaRequest request) {
+        exigirAdmin();
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        BigDecimal sueldo = request.nominaSemanal();
+        if (sueldo != null && sueldo.signum() < 0) {
+            throw new ValidationException("El sueldo no puede ser negativo");
+        }
+        if (sueldo == null || sueldo.signum() == 0) {
+            usuario.setNomina(null, null);
+        } else {
+            LocalDate desde = request.nominaDesde() != null ? request.nominaDesde() : LocalDate.now();
+            usuario.setNomina(sueldo.setScale(2, RoundingMode.HALF_UP), desde);
+        }
+        usuario = usuarioRepository.save(usuario);
+        gastoRecurrenteService.sincronizarNomina(usuario);
+        return UsuarioDto.conNomina(usuario);
     }
 
     /**
@@ -166,13 +197,15 @@ public class UsuarioService {
                 || comisionRepository.existsByAsesorId(id)
                 || cotizacionRepository.existsByAsesorId(id)
                 || seguimientoRepository.existsByAsesorId(id)
-                || ventaRepository.existsByUsuarioAsesorId(id);
+                || ventaRepository.existsByUsuarioAsesorId(id)
+                || gastoRecurrenteService.tieneNominaPagada(id);
         if (tieneActividad) {
             throw new ConflictException("No se puede eliminar a " + usuario.getNombre()
                     + ": tiene actividad registrada (leads, tareas, comisiones, cotizaciones, seguimientos o ventas). "
                     + "Desactívalo para quitarle el acceso sin perder ese historial.");
         }
 
+        gastoRecurrenteService.eliminarNomina(id);
         eventoCalendarioRepository.deleteByUsuarioId(id);
         etiquetaRepository.deleteByAsesorId(id);
         usuarioRepository.delete(usuario);

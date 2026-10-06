@@ -35,6 +35,7 @@
             <th class="px-4 py-3">Nombre</th>
             <th class="px-4 py-3">Rol</th>
             <th class="px-4 py-3">Módulos</th>
+            <th class="px-4 py-3">Nómina</th>
             <th class="px-4 py-3">Estado</th>
             <th class="px-4 py-3"></th>
           </tr>
@@ -74,6 +75,21 @@
                          disabled:opacity-60 disabled:cursor-default disabled:hover:border-border disabled:active:scale-100"
                 >
                   {{ resumenModulos(u) }}
+                </button>
+              </td>
+              <td class="px-4 py-3">
+                <button
+                  type="button"
+                  [disabled]="savingId() === u.id"
+                  (click)="abrirNomina(u)"
+                  [attr.aria-label]="'Editar nómina de ' + u.nombre"
+                  class="rounded-lg border px-3 py-1.5 text-xs font-medium hover:border-we-primary active:scale-[0.97] transition-transform duration-150 disabled:opacity-60"
+                  [class.border-border]="!u.nominaSemanal"
+                  [class.text-ink-muted]="!u.nominaSemanal"
+                  [class.border-we-primary/40]="u.nominaSemanal"
+                  [class.text-ink]="u.nominaSemanal"
+                >
+                  {{ resumenNomina(u) }}
                 </button>
               </td>
               <td class="px-4 py-3">
@@ -200,6 +216,55 @@
           </button>
         </div>
       </div>
+    </div>
+  }
+
+  @if (editandoNominaDe(); as u) {
+    <button type="button" (click)="cerrarNomina()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="nomina-titulo">
+      <form (ngSubmit)="guardarNomina()" class="modal-panel-enter w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <h2 id="nomina-titulo" class="font-heading text-lg font-semibold text-ink">Nómina de {{ u.nombre }}</h2>
+        <p class="mt-1 text-sm text-ink-muted">
+          Cada sábado aparece su pago pendiente en Finanzas → Gastos. Déjalo sin sueldo si esta persona no cobra nómina.
+        </p>
+        <div class="mt-4 space-y-3">
+          <div>
+            <label for="nomina-monto" class="mb-1 block text-xs font-medium text-ink-muted">Sueldo semanal ($)</label>
+            <input
+              id="nomina-monto" name="monto" type="number" step="0.01" min="0" placeholder="Ej. 2500"
+              [ngModel]="nominaMonto()" (ngModelChange)="nominaMonto.set($event)"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+            />
+          </div>
+          <div>
+            <label for="nomina-desde" class="mb-1 block text-xs font-medium text-ink-muted">Nómina desde</label>
+            <input
+              id="nomina-desde" name="desde" type="date"
+              [ngModel]="nominaDesde()" (ngModelChange)="nominaDesde.set($event)"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+            />
+            <p class="mt-1 text-xs text-ink-muted">Se paga cada sábado, desde el primer sábado a partir de esta fecha.</p>
+          </div>
+        </div>
+        @if (nominaError(); as error) {
+          <p class="mt-3 text-xs text-red-600 dark:text-red-400" role="alert">{{ error }}</p>
+        }
+        <div class="mt-5 flex items-center justify-between gap-2.5">
+          @if (u.nominaSemanal) {
+            <button type="button" [disabled]="savingId() === u.id" (click)="guardarNomina(true)" class="text-sm font-medium text-red-600 hover:underline disabled:opacity-60 dark:text-red-400">
+              Quitar nómina
+            </button>
+          } @else {
+            <span></span>
+          }
+          <div class="flex gap-2.5">
+            <button type="button" (click)="cerrarNomina()" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cancelar</button>
+            <button type="submit" [disabled]="savingId() === u.id" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
+              {{ savingId() === u.id ? 'Guardando…' : 'Guardar' }}
+            </button>
+          </div>
+        </div>
+      </form>
     </div>
   }
 </div>

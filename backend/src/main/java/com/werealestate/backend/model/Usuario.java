@@ -41,6 +41,14 @@ public class Usuario {
     @Column(length = 200)
     private String modulos;
 
+    /** Sueldo semanal (null = sin nómina) y desde qué fecha se paga; cada sábado genera un pago en
+     * Gastos (ver GastoRecurrenteService.sincronizarNomina). */
+    @Column(name = "nomina_semanal", precision = 14, scale = 2)
+    private java.math.BigDecimal nominaSemanal;
+
+    @Column(name = "nomina_desde")
+    private java.time.LocalDate nominaDesde;
+
     @Column(name = "fecha_ingreso", nullable = false)
     private LocalDateTime fechaIngreso = LocalDateTime.now();
 
@@ -98,6 +106,19 @@ public class Usuario {
 
     public void setActivo(boolean activo) {
         this.activo = activo;
+    }
+
+    public java.math.BigDecimal getNominaSemanal() {
+        return nominaSemanal;
+    }
+
+    public java.time.LocalDate getNominaDesde() {
+        return nominaDesde;
+    }
+
+    public void setNomina(java.math.BigDecimal nominaSemanal, java.time.LocalDate nominaDesde) {
+        this.nominaSemanal = nominaSemanal;
+        this.nominaDesde = nominaDesde;
     }
 
     public String getModulos() {

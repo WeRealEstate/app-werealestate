@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ModuloCatalogo, Usuario, UsuarioCreateRequest, UsuarioUpdateRequest } from '../models/user.model';
+import { ModuloCatalogo, Usuario, UsuarioCreateRequest, UsuarioNominaRequest, UsuarioUpdateRequest } from '../models/user.model';
 import { UsuarioResumen } from '../models/lead.model';
 
 @Injectable({ providedIn: 'root' })
@@ -41,6 +41,11 @@ export class UsuariosService {
 
   actualizar(id: number, request: UsuarioUpdateRequest): Promise<Usuario> {
     return firstValueFrom(this.http.put<Usuario>(`${this.baseUrl}/${id}`, request));
+  }
+
+  /** Nómina semanal del usuario (solo admin): cada sábado genera un pago pendiente en Gastos. */
+  actualizarNomina(id: number, request: UsuarioNominaRequest): Promise<Usuario> {
+    return firstValueFrom(this.http.put<Usuario>(`${this.baseUrl}/${id}/nomina`, request));
   }
 
   restablecerPassword(id: number, password: string): Promise<void> {

@@ -1,6 +1,7 @@
 package com.werealestate.backend.service;
 
 import com.werealestate.backend.dto.GastoDto;
+import com.werealestate.backend.dto.NominaPagadaDto;
 import com.werealestate.backend.dto.GastoRecurrenteDto;
 import com.werealestate.backend.dto.GastoRecurrentePagoDto;
 import com.werealestate.backend.dto.GastoRecurrenteRequest;
@@ -23,8 +24,10 @@ import com.werealestate.backend.repository.GastoRepository;
 import com.werealestate.backend.repository.PagoVentaRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeSet;
@@ -116,6 +119,7 @@ public class GastoRecurrenteService {
         exigirAdmin();
         validar(request);
         GastoRecurrente g = obtenerRecurrente(id);
+        exigirNoNomina(g);
         g.actualizar(
                 request.nombre().trim(),
                 request.montoEstimado(),
@@ -135,11 +139,93 @@ public class GastoRecurrenteService {
     public void eliminar(Long id) {
         exigirAdmin();
         GastoRecurrente g = obtenerRecurrente(id);
+        exigirNoNomina(g);
         if (pagoRepository.existsByRecurrenteIdAndGastoIsNotNull(id)) {
             throw new ConflictException(
                     "No se puede eliminar \"" + g.getNombre() + "\": ya tiene pagos registrados. Desactívalo para conservar el historial.");
         }
         recurrenteRepository.delete(g);
+    }
+
+    // ---------------------------------------------------------------- nómina por usuario
+
+    /**
+     * Deja la nómina semanal de un usuario reflejada como un gasto recurrente SEMANAL (cada sábado,
+     * desde el primer sábado a partir de su fecha de inicio). Sin sueldo o con el usuario inactivo
+     * se desactiva y se quitan los sábados sin pagar; lo ya pagado queda en el historial. Lo llama
+     * UsuarioService al configurar la nómina o al cambiar el usuario.
+     */
+    public void sincronizarNomina(Usuario usuario) {
+        GastoRecurrente g = recurrenteRepository.findByUsuarioId(usuario.getId()).orElse(null);
+        BigDecimal sueldo = usuario.getNominaSemanal();
+        boolean aplica = usuario.isActivo() && sueldo != null && sueldo.signum() > 0;
+
+        if (!aplica) {
+            if (g != null) {
+                g.setActivo(false);
+                pagoRepository.borrarSinPagarDe(g.getId());
+            }
+            return;
+        }
+
+        LocalDate desde = usuario.getNominaDesde() != null ? usuario.getNominaDesde() : LocalDate.now();
+        LocalDate primerSabado = desde.with(TemporalAdjusters.nextOrSame(DayOfWeek.SATURDAY));
+        String nombre = "Nómina · " + usuario.getNombre();
+        if (g == null) {
+            g = new GastoRecurrente(nombre, sueldo, FrecuenciaGasto.SEMANAL, null, null, primerSabado);
+            g.setUsuario(usuario);
+            g = recurrenteRepository.save(g);
+        } else {
+            g.actualizar(nombre, sueldo, FrecuenciaGasto.SEMANAL, null, null, primerSabado);
+            g.setActivo(true);
+        }
+        pagoRepository.borrarSinPagarDe(g.getId());
+        pagoRepository.flush();
+        generarPendientes();
+    }
+
+    /** ¿Tiene pagos de nómina ya registrados? (para no borrar a un usuario con ese historial). */
+    public boolean tieneNominaPagada(Long usuarioId) {
+        return recurrenteRepository
+                .findByUsuarioId(usuarioId)
+                .map(g -> pagoRepository.existsByRecurrenteIdAndGastoIsNotNull(g.getId()))
+                .orElse(false);
+    }
+
+    /** Quita la nómina de un usuario que se elimina (solo si nunca se le pagó nada). */
+    public void eliminarNomina(Long usuarioId) {
+        recurrenteRepository.findByUsuarioId(usuarioId).ifPresent(recurrenteRepository::delete);
+    }
+
+    /** Paga de una vez la nómina de un sábado: todas las líneas de nómina sin pagar de ese día, con su
+     * monto estimado y la fecha de pago indicada (null = hoy). Se pueden ajustar una por una antes. */
+    public NominaPagadaDto pagarNomina(LocalDate sabado, LocalDate fechaPago) {
+        Usuario actual = exigirAdminOLider();
+        if (sabado == null) throw new ValidationException("Indica el sábado");
+        int pagados = 0;
+        BigDecimal total = BigDecimal.ZERO;
+        for (GastoRecurrentePago pago : pagoRepository.findSinPagar()) {
+            if (pago.getRecurrente().getUsuario() == null || !pago.getFechaVencimiento().equals(sabado)) continue;
+            Gasto gasto = gastoService.crearGasto(
+                    pago.getRecurrente().getNombre(),
+                    OrigenGasto.RECURRENTE,
+                    fechaPago != null ? fechaPago : LocalDate.now(),
+                    pago.getMontoEstimado(),
+                    null,
+                    actual);
+            pago.setGasto(gasto);
+            pagados++;
+            total = total.add(pago.getMontoEstimado());
+        }
+        if (pagados == 0) throw new ConflictException("No hay nómina pendiente en ese sábado");
+        return new NominaPagadaDto(pagados, total);
+    }
+
+    private static void exigirNoNomina(GastoRecurrente g) {
+        if (g.getUsuario() != null) {
+            throw new ConflictException(
+                    g.getNombre() + " es una nómina: se administra desde Usuarios (campo de nómina semanal)");
+        }
     }
 
     // ---------------------------------------------------------------- pagos
@@ -156,7 +242,8 @@ public class GastoRecurrenteService {
                         p.getRecurrente().getNombre(),
                         p.getFechaVencimiento(),
                         p.getMontoEstimado(),
-                        p.getFechaVencimiento().isBefore(hoy) ? "VENCIDO" : "PENDIENTE"))
+                        p.getFechaVencimiento().isBefore(hoy) ? "VENCIDO" : "PENDIENTE",
+                        p.getRecurrente().getUsuario() != null))
                 .toList();
     }
 

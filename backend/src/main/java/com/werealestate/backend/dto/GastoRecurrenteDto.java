@@ -17,7 +17,9 @@ public record GastoRecurrenteDto(
         // Fecha del vencimiento más próximo aún sin pagar (puede estar en el pasado si está vencido).
         LocalDate proximoVencimiento,
         // Cuántos vencimientos siguen sin pagar ni omitir.
-        int sinPagar) {
+        int sinPagar,
+        // Nómina de un usuario: se administra desde Usuarios, no desde Gastos.
+        boolean esNomina) {
 
     public static GastoRecurrenteDto from(GastoRecurrente g, LocalDate proximoVencimiento, int sinPagar) {
         return new GastoRecurrenteDto(
@@ -30,6 +32,7 @@ public record GastoRecurrenteDto(
                 g.getPrimerVencimiento(),
                 g.isActivo(),
                 proximoVencimiento,
-                sinPagar);
+                sinPagar,
+                g.getUsuario() != null);
     }
 }

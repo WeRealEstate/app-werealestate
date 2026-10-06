@@ -8,6 +8,7 @@ import {
   GastoRecurrentePago,
   GastoRecurrenteRequest,
   GastoResumen,
+  NominaPagada,
 } from '../models/gasto.model';
 
 @Injectable({ providedIn: 'root' })
@@ -70,6 +71,13 @@ export class GastosService {
     return firstValueFrom(
       this.http.post<Gasto>(`${this.baseUrl}/recurrentes/pagos/${pagoId}/pagar`, formularioGasto({ monto, fecha }, ticket)),
     );
+  }
+
+  /** Paga de una vez la nómina de un sábado (todas sus líneas pendientes) con su monto estimado. */
+  pagarNomina(sabado: string, fechaPago?: string): Promise<NominaPagada> {
+    let params = new HttpParams().set('sabado', sabado);
+    if (fechaPago) params = params.set('fechaPago', fechaPago);
+    return firstValueFrom(this.http.post<NominaPagada>(`${this.baseUrl}/recurrentes/pagos/pagar-nomina`, {}, { params }));
   }
 
   omitirVencimiento(pagoId: number): Promise<void> {

@@ -45,6 +45,11 @@ public class GastoRecurrente {
     @Column(nullable = false)
     private boolean activo = true;
 
+    /** Si es la nómina de un usuario (se administra desde Usuarios, no desde Gastos). */
+    @jakarta.persistence.ManyToOne(fetch = jakarta.persistence.FetchType.LAZY)
+    @jakarta.persistence.JoinColumn(name = "usuario_id")
+    private Usuario usuario;
+
     @Column(name = "fecha_creacion", nullable = false)
     private LocalDateTime fechaCreacion = LocalDateTime.now();
 
@@ -103,6 +108,14 @@ public class GastoRecurrente {
 
     public LocalDate getPrimerVencimiento() {
         return primerVencimiento;
+    }
+
+    public Usuario getUsuario() {
+        return usuario;
+    }
+
+    public void setUsuario(Usuario usuario) {
+        this.usuario = usuario;
     }
 
     public boolean isActivo() {

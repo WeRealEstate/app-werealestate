@@ -10,5 +10,6 @@ public record GastoRecurrentePagoDto(
         String nombre,
         LocalDate fechaVencimiento,
         BigDecimal montoEstimado,
-        String estado) {
+        String estado,
+        boolean esNomina) {
 }

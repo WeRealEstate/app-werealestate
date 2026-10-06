@@ -53,6 +53,8 @@ export interface GastoRecurrente {
   /** Vencimiento más próximo aún sin pagar (puede estar en el pasado: vencido); null si no hay. */
   proximoVencimiento: string | null;
   sinPagar: number;
+  /** Nómina de un usuario: se administra desde Usuarios, no desde aquí. */
+  esNomina: boolean;
 }
 
 export interface GastoRecurrenteRequest {
@@ -74,6 +76,13 @@ export interface GastoRecurrentePago {
   fechaVencimiento: string;
   montoEstimado: number;
   estado: 'PENDIENTE' | 'VENCIDO';
+  esNomina: boolean;
+}
+
+/** Resultado de pagar la nómina de un sábado: cuántas personas y cuánto en total. */
+export interface NominaPagada {
+  pagados: number;
+  total: number;
 }
 
 /** Resumen del mes (mes = "yyyy-MM"): abonos recibidos, gastos hechos y la diferencia. */

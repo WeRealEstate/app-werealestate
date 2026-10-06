@@ -48,6 +48,15 @@ export interface Usuario {
   areaId: number | null;
   activo: boolean;
   modulos: Modulo[];
+  /** Sueldo semanal (null = sin nómina) y desde cuándo; solo lo trae la administración de usuarios. */
+  nominaSemanal: number | null;
+  nominaDesde: string | null;
+}
+
+/** nominaSemanal null o 0 = quitar la nómina; nominaDesde null = el próximo sábado. */
+export interface UsuarioNominaRequest {
+  nominaSemanal: number | null;
+  nominaDesde: string | null;
 }
 
 export interface UsuarioCreateRequest {

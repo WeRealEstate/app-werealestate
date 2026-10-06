@@ -3,6 +3,7 @@ package com.werealestate.backend.controller;
 import com.werealestate.backend.dto.ModuloCatalogoDto;
 import com.werealestate.backend.dto.UsuarioCreateRequest;
 import com.werealestate.backend.dto.UsuarioDto;
+import com.werealestate.backend.dto.UsuarioNominaRequest;
 import com.werealestate.backend.dto.UsuarioResetPasswordRequest;
 import com.werealestate.backend.dto.UsuarioResumenDto;
 import com.werealestate.backend.dto.UsuarioUpdateRequest;
@@ -62,6 +63,12 @@ public class UsuarioController {
     @PutMapping("/{id}")
     public UsuarioDto actualizar(@PathVariable Long id, @Valid @RequestBody UsuarioUpdateRequest request) {
         return usuarioService.actualizar(id, request);
+    }
+
+    /** Nómina semanal de un usuario (solo admin): monto y desde cuándo; sin monto la quita. */
+    @PutMapping("/{id}/nomina")
+    public UsuarioDto actualizarNomina(@PathVariable Long id, @RequestBody UsuarioNominaRequest request) {
+        return usuarioService.actualizarNomina(id, request);
     }
 
     @PutMapping("/{id}/password")

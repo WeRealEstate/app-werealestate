@@ -5,6 +5,7 @@ import com.werealestate.backend.dto.GastoRecurrenteDto;
 import com.werealestate.backend.dto.GastoRecurrentePagoDto;
 import com.werealestate.backend.dto.GastoRecurrenteRequest;
 import com.werealestate.backend.dto.GastoResumenDto;
+import com.werealestate.backend.dto.NominaPagadaDto;
 import com.werealestate.backend.service.GastoRecurrenteService;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
@@ -72,6 +73,14 @@ public class GastoRecurrenteController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha,
             @RequestParam(value = "ticket", required = false) MultipartFile ticket) {
         return service.pagar(id, monto, fecha, ticket);
+    }
+
+    /** Paga la nómina de un sábado de una vez (todas sus líneas pendientes). */
+    @PostMapping("/recurrentes/pagos/pagar-nomina")
+    public NominaPagadaDto pagarNomina(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate sabado,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaPago) {
+        return service.pagarNomina(sabado, fechaPago);
     }
 
     @PostMapping("/recurrentes/pagos/{id}/omitir")

@@ -1,3 +1,4 @@
+import { FormsModule } from '@angular/forms';
 import { Component, computed, inject, signal } from '@angular/core';
 import { LucideKey, LucideTrash2 } from '@lucide/angular';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -14,7 +15,7 @@ const ROLES: Role[] = ['ASESOR', 'LIDER_AREA', 'EQUIPO_INTERNO', 'ADMIN'];
 @Component({
   selector: 'app-usuarios-list',
   standalone: true,
-  imports: [RouterLink, LucideKey, LucideTrash2, ModulosSelectorComponent],
+  imports: [FormsModule, RouterLink, LucideKey, LucideTrash2, ModulosSelectorComponent],
   templateUrl: './usuarios-list.component.html',
 })
 export class UsuariosListComponent {
@@ -153,6 +154,56 @@ export class UsuariosListComponent {
     return n === 0 ? 'Ninguno' : `${n} módulo${n === 1 ? '' : 's'}`;
   }
 
+  // --- Nómina semanal: monto y desde cuándo, en un modal aparte ---
+  readonly editandoNominaDe = signal<Usuario | null>(null);
+  readonly nominaMonto = signal<number | null>(null);
+  readonly nominaDesde = signal('');
+  readonly nominaError = signal<string | null>(null);
+
+  abrirNomina(usuario: Usuario): void {
+    this.editandoNominaDe.set(usuario);
+    this.nominaMonto.set(usuario.nominaSemanal);
+    this.nominaDesde.set(usuario.nominaDesde ?? proximoSabadoIso());
+    this.nominaError.set(null);
+  }
+
+  cerrarNomina(): void {
+    this.editandoNominaDe.set(null);
+  }
+
+  async guardarNomina(quitar = false): Promise<void> {
+    const usuario = this.editandoNominaDe();
+    if (!usuario) return;
+    const monto = quitar ? null : this.nominaMonto();
+    if (!quitar && (monto === null || monto <= 0)) {
+      this.nominaError.set('Escribe el sueldo semanal (mayor a cero) o usa "Quitar nómina".');
+      return;
+    }
+    this.savingId.set(usuario.id);
+    this.nominaError.set(null);
+    try {
+      const actualizado = await this.usuariosService.actualizarNomina(usuario.id, {
+        nominaSemanal: monto,
+        nominaDesde: quitar ? null : this.nominaDesde() || null,
+      });
+      this.usuarios.update((lista) => lista.map((u) => (u.id === actualizado.id ? actualizado : u)));
+      this.editandoNominaDe.set(null);
+      this.toast.success(quitar ? `Se quitó la nómina de ${usuario.nombre}.` : `Nómina de ${usuario.nombre} guardada.`);
+    } catch (error) {
+      this.nominaError.set(
+        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+          ? error.error.message
+          : 'No se pudo guardar la nómina.',
+      );
+    } finally {
+      this.savingId.set(null);
+    }
+  }
+
+  resumenNomina(usuario: Usuario): string {
+    return usuario.nominaSemanal ? `$${usuario.nominaSemanal.toLocaleString('en-US', { minimumFractionDigits: 2 })} / sáb` : 'Sin nómina';
+  }
+
   abrirReset(usuario: Usuario): void {
     this.resetId.set(usuario.id);
     this.nuevaPassword.set('');
@@ -186,4 +237,10 @@ export class UsuariosListComponent {
       this.savingId.set(null);
     }
   }
+}
+
+function proximoSabadoIso(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7));
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
