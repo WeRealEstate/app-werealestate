@@ -1,5 +1,5 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, DestroyRef, ElementRef, HostListener, ViewChild, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, effect, ElementRef, HostListener, ViewChild, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -21,6 +21,13 @@ import { ToastContainerComponent } from '../../../shared/toast-container/toast-c
 type ProyectoPublico = 'samai' | 'nanuu';
 
 const NOTA_MAX_LENGTH = 500;
+
+/** Interruptor de la optimización "trazo congelado": mientras dura un gesto (zoom, pellizco,
+ * arrastre) el grosor de los bordes de los lotes NO se recalcula — cambiarlo en cada paso obliga al
+ * navegador a reevaluar el estilo de todos los polígonos —, y se ajusta una sola vez al soltar.
+ * Para deshacerla sin tocar nada más: ponerlo en false (vuelve al comportamiento anterior, el
+ * grosor sigue al zoom en vivo), o revertir el commit de esta optimización (git revert). */
+const CONGELAR_TRAZO_EN_GESTO = true;
 const CLAVE_ASESOR = 'plano-publico-asesor-';
 
 /** Mismos límites/pasos de zoom que /panel/plano (ver ese componente para el porqué de cada
@@ -120,6 +127,14 @@ export class PlanoPublicoComponent {
    * al zoom final (con will-change permanente quedaría borroso al acercar). */
   readonly enGesto = signal(false);
   private temporizadorGesto: ReturnType<typeof setTimeout> | undefined;
+
+  /** Zoom con el que se calcula el grosor de los bordes (ver CONGELAR_TRAZO_EN_GESTO): sigue a
+   * zoom() salvo durante un gesto, donde se queda en el último valor. */
+  readonly zoomTrazo = signal(1);
+  private readonly sincronizarTrazo = effect(() => {
+    const zoom = this.zoom();
+    if (!CONGELAR_TRAZO_EN_GESTO || !this.enGesto()) this.zoomTrazo.set(zoom);
+  });
 
   // Modal "Apartar lote": mismos campos y restricciones que /cotizador-publico/lotes — pide nombre
   // de asesor y de cliente (nota opcional) porque no hay una sesión real detrás de este apartado.

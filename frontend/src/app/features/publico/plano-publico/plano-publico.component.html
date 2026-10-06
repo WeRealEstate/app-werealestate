@@ -43,8 +43,8 @@
           class="pointer-events-none absolute inset-0 h-full w-full"
           viewBox="0 0 100 100"
           preserveAspectRatio="none"
-          [style.--sw-lote]="0.6 / zoom()"
-          [style.--sw-activo]="1.2 / zoom()"
+          [style.--sw-lote]="0.6 / zoomTrazo()"
+          [style.--sw-activo]="1.2 / zoomTrazo()"
         >
           @for (p of poligonos(); track p.lote.id) {
             <polygon
