@@ -1746,7 +1746,13 @@ private addNanuuFinancingTable(
     const drawX = (pageWidth - drawWidth) / 2;
     const drawY = headerHeight;
 
-    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [pageWidth, pageHeight] });
+    // jsPDF intercambia ancho y alto si la orientación no coincide con la forma de la hoja: un plano
+    // casi cuadrado o vertical daría una hoja más alta que ancha y saldría cortado. Se elige la que toca.
+    const doc = new jsPDF({
+      orientation: pageWidth >= pageHeight ? 'landscape' : 'portrait',
+      unit: 'mm',
+      format: [pageWidth, pageHeight],
+    });
     await this.loadFonts(doc);
 
     // FONDO
