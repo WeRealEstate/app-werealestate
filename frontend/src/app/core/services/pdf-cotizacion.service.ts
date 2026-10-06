@@ -1730,8 +1730,9 @@ private addNanuuFinancingTable(
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const k = pageWidth / 279.4; // 279.4 mm = ancho de la hoja carta horizontal
-    const margin = 12 * k;
-    const headerHeight = 18 * k;
+    // Márgenes, encabezado y leyenda compactos: así el plano ocupa la mayor parte de la hoja.
+    const margin = 6 * k;
+    const headerHeight = 12 * k;
 
     // HEADER
     doc.setFillColor(...this.WE_DARK);
@@ -1739,15 +1740,15 @@ private addNanuuFinancingTable(
 
     doc.setTextColor(255, 255, 255);
     doc.setFont(this.FONT, 'bold');
-    doc.setFontSize(13 * k);
-    doc.text(`Plano interactivo · ${data.desarrolloNombre}`, margin, headerHeight / 2 + 3 * k);
+    doc.setFontSize(11 * k);
+    doc.text(`Plano interactivo · ${data.desarrolloNombre}`, margin, headerHeight / 2 + 1.5 * k);
 
     doc.setFont(this.FONT, 'normal');
-    doc.setFontSize(8 * k);
-    doc.text(`Generado el ${data.fecha}`, pageWidth - margin, headerHeight / 2 + 3 * k, { align: 'right' });
+    doc.setFontSize(7 * k);
+    doc.text(`Generado el ${data.fecha}`, pageWidth - margin, headerHeight / 2 + 1.5 * k, { align: 'right' });
 
     // IMAGEN DEL PLANO
-    const legendHeight = 14 * k;
+    const legendHeight = 9 * k;
     const availableWidth = pageWidth - margin * 2;
     const availableHeight = pageHeight - headerHeight - legendHeight - margin * 2;
 
@@ -1794,11 +1795,11 @@ private addNanuuFinancingTable(
     doc.setGState(opaco);
 
     // LEYENDA
-    const legendY = drawY + drawHeight + 8 * k;
+    const legendY = drawY + drawHeight + 5.5 * k;
     let legendX = margin;
-    const swatchSize = 4 * k;
+    const swatchSize = 3.2 * k;
 
-    doc.setFontSize(8 * k);
+    doc.setFontSize(7 * k);
     for (const item of data.leyenda) {
       doc.setFillColor(...item.color);
       doc.rect(legendX, legendY - swatchSize + k, swatchSize, swatchSize, 'F');
@@ -1813,12 +1814,12 @@ private addNanuuFinancingTable(
     // FOOTER
     doc.setDrawColor(...this.BORDER);
     doc.setLineWidth(0.2);
-    doc.line(margin, pageHeight - 8 * k, pageWidth - margin, pageHeight - 8 * k);
+    doc.line(margin, pageHeight - 5.5 * k, pageWidth - margin, pageHeight - 5.5 * k);
 
     doc.setTextColor(...this.MUTED);
     doc.setFont(this.FONT, 'normal');
-    doc.setFontSize(6.5 * k);
-    doc.text('WE Real Estate · Plano informativo, sujeto a cambios', margin, pageHeight - 4 * k);
+    doc.setFontSize(6 * k);
+    doc.text('WE Real Estate · Plano informativo, sujeto a cambios', margin, pageHeight - 2.5 * k);
 
     return doc;
   }
