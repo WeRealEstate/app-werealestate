@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { jsPDF } from 'jspdf';
+import { GState, jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 export interface QuotePdfData {
@@ -49,10 +49,14 @@ export interface QuotePdfData {
 export interface PlanoPdfData {
   desarrolloNombre: string;
   fecha: string;
-  /** Imagen del plano YA con los polígonos de cada lote pintados encima (canvas.toDataURL). */
-  imagenDataUrl: string;
+  /** Imagen del plano en JPEG, tal como está en el servidor: se incrusta en el PDF sin volver a
+   * comprimirla ni reducirla, para que conserve todo su detalle al acercar. */
+  imagenBytes: Uint8Array;
   anchoImagen: number;
   altoImagen: number;
+  /** Lotes ya delimitados: se dibujan como figuras vectoriales sobre la imagen (nítidas con cualquier
+   * zoom). Los vértices van en % (0-100) del ancho/alto de la imagen. */
+  poligonos: { puntos: { x: number; y: number }[]; color: [number, number, number] }[];
   leyenda: { label: string; color: [number, number, number] }[];
 }
 
@@ -1749,9 +1753,37 @@ private addNanuuFinancingTable(
     const drawX = (pageWidth - drawWidth) / 2;
     const drawY = headerHeight + margin;
 
-    doc.addImage(data.imagenDataUrl, 'JPEG', drawX, drawY, drawWidth, drawHeight);
+    // El JPEG original se incrusta tal cual ('NONE': sin recomprimir), no repintado en un canvas.
+    doc.addImage(data.imagenBytes, 'JPEG', drawX, drawY, drawWidth, drawHeight, undefined, 'NONE');
     doc.setDrawColor(...this.BORDER);
     doc.rect(drawX, drawY, drawWidth, drawHeight);
+
+    // POLÍGONOS DE LOS LOTES (vectoriales): relleno semitransparente y contorno sólido del color de
+    // su estado, como en el visor.
+    const rellenoTransparente = new GState({ opacity: 0.45 });
+    const opaco = new GState({ opacity: 1 });
+    doc.setLineWidth(Math.max(drawWidth, drawHeight) * 0.002);
+    doc.setLineJoin('round');
+
+    for (const poligono of data.poligonos) {
+      if (poligono.puntos.length < 3) continue;
+
+      const absolutos = poligono.puntos.map((p) => ({
+        x: drawX + (p.x / 100) * drawWidth,
+        y: drawY + (p.y / 100) * drawHeight,
+      }));
+      // jsPDF.lines recibe cada vértice como desplazamiento respecto del anterior.
+      const segmentos = absolutos.slice(1).map((p, i) => [p.x - absolutos[i].x, p.y - absolutos[i].y]);
+
+      doc.setGState(rellenoTransparente);
+      doc.setFillColor(...poligono.color);
+      doc.lines(segmentos, absolutos[0].x, absolutos[0].y, [1, 1], 'F', true);
+
+      doc.setGState(opaco);
+      doc.setDrawColor(...poligono.color);
+      doc.lines(segmentos, absolutos[0].x, absolutos[0].y, [1, 1], 'S', true);
+    }
+    doc.setGState(opaco);
 
     // LEYENDA
     const legendY = drawY + drawHeight + 8;
