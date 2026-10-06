@@ -1,210 +1,440 @@
 <div class="page-enter">
-  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-    <div>
-      <h2 class="font-heading text-lg font-semibold text-ink">Gastos</h2>
-      <p class="mt-1 text-sm text-ink-muted">Registra los gastos del mes (comisiones, renta, etc.) y su comprobante cuando aplique.</p>
-    </div>
-    <div class="flex shrink-0 items-center gap-2.5">
-      @if (esAdmin()) {
-        <a
-          routerLink="/panel/gastos/tipos"
-          class="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink
-                 hover:border-we-primary active:scale-[0.97] transition-transform duration-150
-                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
-        >
-          Tipos de gasto
-        </a>
-      }
-      <button
-        type="button"
-        (click)="abrirModalCrear()"
-        class="inline-flex items-center justify-center gap-2 rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
-               hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
-               focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
-      >
-        + Registrar gasto
-      </button>
-    </div>
-  </div>
-
   @if (errorMessage()) {
-    <div class="mt-6 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
+    <div class="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
       {{ errorMessage() }}
     </div>
   }
 
   @if (isLoading()) {
-    <p class="mt-8 text-sm text-ink-muted">Cargando gastos…</p>
-  } @else if (gastos().length === 0) {
-    <div class="mt-8 rounded-xl border border-dashed border-border p-10 text-center">
-      <p class="text-sm text-ink-muted">Todavía no hay gastos registrados.</p>
-    </div>
+    <p class="text-sm text-ink-muted">Cargando gastos…</p>
   } @else {
-    <div class="mt-6 overflow-x-auto rounded-xl border border-border">
-      <table class="min-w-full divide-y divide-border text-sm">
-        <thead class="bg-surface-2">
-          <tr class="text-left text-xs font-medium uppercase tracking-wide text-ink-muted">
-            <th class="px-4 py-3">Fecha</th>
-            <th class="px-4 py-3">Tipo</th>
-            <th class="px-4 py-3">Monto</th>
-            <th class="px-4 py-3">Ticket</th>
-            <th class="px-4 py-3">Registró</th>
-            <th class="px-4 py-3"></th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-border bg-surface">
-          @for (g of gastos(); track g.id; let i = $index) {
-            <tr class="stagger-item hover:bg-surface-2 transition-colors duration-150" [style.animation-delay.ms]="i < 8 ? i * 40 : 0">
-              <td class="px-4 py-3 text-ink-muted">{{ g.fecha }}</td>
-              <td class="px-4 py-3 font-medium text-ink">{{ g.tipoGasto.nombre }}</td>
-              <td class="px-4 py-3 text-ink-muted">${{ money(g.monto) }}</td>
-              <td class="px-4 py-3">
-                @if (g.tieneTicket) {
-                  <button
-                    type="button"
-                    (click)="verTicket(g)"
-                    class="inline-flex items-center gap-1.5 text-xs font-semibold text-we-primary hover:underline"
-                  >
-                    <svg lucideFileText [size]="14" aria-hidden="true"></svg>
-                    Ver
-                  </button>
-                } @else {
-                  <span class="text-ink-muted">—</span>
-                }
-              </td>
-              <td class="px-4 py-3 text-ink-muted">{{ g.registradoPor.nombre }}</td>
-              <td class="px-4 py-3 text-right">
-                @if (esAdmin()) {
-                  <button
-                    type="button"
-                    [disabled]="savingId() === g.id"
-                    (click)="eliminar(g)"
-                    aria-label="Eliminar gasto"
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-red-50 hover:text-red-600
-                           dark:hover:bg-red-500/10 dark:hover:text-red-400 transition-colors duration-150 active:scale-90 disabled:opacity-60"
-                  >
-                    <svg lucideTrash2 [size]="15"></svg>
-                  </button>
-                }
-              </td>
-            </tr>
-          }
-        </tbody>
-        <tfoot class="bg-surface-2">
-          <tr>
-            <td colspan="2" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ink-muted">Total</td>
-            <td colspan="4" class="px-4 py-3 text-sm font-semibold text-ink">${{ money(totalGastado()) }}</td>
-          </tr>
-        </tfoot>
-      </table>
+    <!-- Resumen del mes -->
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h2 class="font-heading text-lg font-semibold text-ink">Resumen</h2>
+        <p class="text-xs text-ink-muted">Ganancia = abonos recibidos en el mes menos todo lo gastado en el mes (incluye comisiones entregadas).</p>
+      </div>
+      <div>
+        <label for="gasto-mes" class="mb-1 block text-xs font-medium text-ink-muted">Mes</label>
+        <input
+          id="gasto-mes" type="month" [ngModel]="mes()" (ngModelChange)="cambiarMes($event)"
+          class="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+        />
+      </div>
+    </div>
+
+    @if (resumen(); as r) {
+      <div class="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <div class="rounded-xl border border-border bg-surface p-4">
+          <p class="text-xs text-ink-muted">Ingresos del mes</p>
+          <p class="mt-1 text-lg font-semibold text-green-600 dark:text-green-400">${{ money(r.ingresosMes) }}</p>
+          <p class="text-xs text-ink-muted">Abonos recibidos</p>
+        </div>
+        <div class="rounded-xl border border-border bg-surface p-4">
+          <p class="text-xs text-ink-muted">Gastado en el mes</p>
+          <p class="mt-1 text-lg font-semibold text-ink">${{ money(r.gastadoMes) }}</p>
+        </div>
+        <div class="rounded-xl border border-border bg-surface p-4">
+          <p class="text-xs text-ink-muted">Ganancia del mes</p>
+          <p class="mt-1 text-lg font-semibold" [class.text-red-600]="r.gananciaMes < 0" [class.dark:text-red-400]="r.gananciaMes < 0" [class.text-ink]="r.gananciaMes >= 0">
+            {{ r.gananciaMes < 0 ? '-' : '' }}${{ money(r.gananciaMes < 0 ? -r.gananciaMes : r.gananciaMes) }}
+          </p>
+        </div>
+        <div class="rounded-xl border border-border bg-surface p-4">
+          <p class="text-xs text-ink-muted">Por pagar (recurrentes)</p>
+          <p class="mt-1 text-lg font-semibold text-amber-600 dark:text-amber-400">${{ money(r.pendientePorPagar) }}</p>
+          <p class="text-xs text-ink-muted">Estimado, sin pagar</p>
+        </div>
+        <div class="col-span-2 rounded-xl border p-4 lg:col-span-1" [class.border-red-300]="r.vencidosCantidad > 0" [class.bg-red-50]="r.vencidosCantidad > 0" [class.dark:border-red-500/30]="r.vencidosCantidad > 0" [class.dark:bg-red-500/10]="r.vencidosCantidad > 0" [class.border-border]="r.vencidosCantidad === 0" [class.bg-surface]="r.vencidosCantidad === 0">
+          <p class="text-xs text-ink-muted">Vencidos</p>
+          <p class="mt-1 text-lg font-semibold" [class.text-red-600]="r.vencidosCantidad > 0" [class.dark:text-red-400]="r.vencidosCantidad > 0" [class.text-ink]="r.vencidosCantidad === 0">${{ money(r.vencidoMonto) }}</p>
+          <p class="text-xs text-ink-muted">{{ r.vencidosCantidad }} {{ r.vencidosCantidad === 1 ? 'pago vencido' : 'pagos vencidos' }}</p>
+        </div>
+      </div>
+    }
+
+    <!-- Próximos pagos -->
+    <section class="mt-8">
+      <h2 class="font-heading text-lg font-semibold text-ink">Próximos pagos</h2>
+      <p class="text-xs text-ink-muted">Vencimientos de tus gastos recurrentes (renta, luz, nómina…) que siguen sin pagar.</p>
+      @if (sinPagar().length === 0) {
+        <div class="mt-3 rounded-xl border border-dashed border-border p-6 text-center text-sm text-ink-muted">No hay pagos pendientes.</div>
+      } @else {
+        <div class="mt-3 overflow-x-auto rounded-xl border border-border">
+          <table class="min-w-full divide-y divide-border text-sm">
+            <thead class="bg-surface-2">
+              <tr class="text-left text-xs font-medium uppercase tracking-wide text-ink-muted">
+                <th class="px-3 py-3">Vence</th>
+                <th class="px-3 py-3">Concepto</th>
+                <th class="px-3 py-3 text-right">Monto estimado</th>
+                <th class="px-3 py-3">Estado</th>
+                <th class="px-3 py-3"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border bg-surface">
+              @for (p of sinPagar(); track p.id) {
+                <tr class="hover:bg-surface-2 transition-colors duration-150">
+                  <td class="px-3 py-3 text-ink-muted">{{ fecha(p.fechaVencimiento) }}</td>
+                  <td class="px-3 py-3 font-medium text-ink">{{ p.nombre }}</td>
+                  <td class="px-3 py-3 text-right text-ink">${{ money(p.montoEstimado) }}</td>
+                  <td class="px-3 py-3">
+                    @if (p.estado === 'VENCIDO') {
+                      <span class="inline-flex rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700 dark:bg-red-500/15 dark:text-red-300">Vencido</span>
+                    } @else {
+                      <span class="inline-flex rounded-full bg-surface-2 px-2.5 py-1 text-xs font-medium text-ink-muted">Pendiente</span>
+                    }
+                  </td>
+                  <td class="px-3 py-3 text-right">
+                    <div class="flex items-center justify-end gap-3 text-xs font-semibold">
+                      <button type="button" (click)="abrirPago(p)" class="text-we-primary hover:underline">Pagar</button>
+                      <button type="button" (click)="omitir(p)" class="text-ink-muted hover:underline">Omitir</button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+
+    <!-- Gastos recurrentes -->
+    <section class="mt-8">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="font-heading text-lg font-semibold text-ink">Gastos recurrentes</h2>
+          <p class="text-xs text-ink-muted">Renta, luz, agua, nómina… gastos que se repiten y tienen fecha de vencimiento.</p>
+        </div>
+        @if (esAdmin()) {
+          <button
+            type="button" (click)="abrirNuevoRecurrente()"
+            class="inline-flex items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink hover:border-we-primary
+                   active:scale-[0.97] transition-transform duration-150 min-h-[44px]"
+          >
+            + Nuevo gasto recurrente
+          </button>
+        }
+      </div>
+      @if (recurrentes().length === 0) {
+        <div class="mt-3 rounded-xl border border-dashed border-border p-6 text-center text-sm text-ink-muted">
+          Todavía no hay gastos recurrentes.{{ esAdmin() ? '' : ' Un administrador puede crearlos.' }}
+        </div>
+      } @else {
+        <div class="mt-3 overflow-x-auto rounded-xl border border-border">
+          <table class="min-w-full divide-y divide-border text-sm">
+            <thead class="bg-surface-2">
+              <tr class="text-left text-xs font-medium uppercase tracking-wide text-ink-muted">
+                <th class="px-3 py-3">Nombre</th>
+                <th class="px-3 py-3">Frecuencia</th>
+                <th class="px-3 py-3 text-right">Monto estimado</th>
+                <th class="px-3 py-3">Próximo vencimiento</th>
+                <th class="px-3 py-3">Estado</th>
+                <th class="px-3 py-3"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border bg-surface">
+              @for (g of recurrentes(); track g.id) {
+                <tr class="hover:bg-surface-2 transition-colors duration-150" [class.opacity-60]="!g.activo">
+                  <td class="px-3 py-3 font-medium text-ink">{{ g.nombre }}</td>
+                  <td class="px-3 py-3 text-ink-muted">{{ descripcionFrecuencia(g) }}</td>
+                  <td class="px-3 py-3 text-right text-ink">${{ money(g.montoEstimado) }}</td>
+                  <td class="px-3 py-3 text-ink-muted">
+                    {{ g.activo ? fecha(g.proximoVencimiento) : '—' }}
+                    @if (g.activo && g.sinPagar > 1) {
+                      <span class="ml-1 text-xs text-red-600 dark:text-red-400">· {{ g.sinPagar }} sin pagar</span>
+                    }
+                  </td>
+                  <td class="px-3 py-3 text-ink-muted">{{ g.activo ? 'Activo' : 'Inactivo' }}</td>
+                  <td class="px-3 py-3 text-right">
+                    @if (esAdmin()) {
+                      <div class="flex items-center justify-end gap-3 text-xs font-semibold">
+                        <button type="button" (click)="abrirEditarRecurrente(g)" class="text-we-primary hover:underline">Editar</button>
+                        <button type="button" [disabled]="savingId() === g.id" (click)="alternarActivo(g)" class="text-ink-muted hover:underline disabled:opacity-60">
+                          {{ g.activo ? 'Desactivar' : 'Activar' }}
+                        </button>
+                        <button type="button" [disabled]="savingId() === g.id" (click)="eliminarRecurrente(g)" aria-label="Eliminar gasto recurrente" class="text-red-600 hover:underline disabled:opacity-60 dark:text-red-400">
+                          Eliminar
+                        </button>
+                      </div>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+
+    <!-- Historial -->
+    <section class="mt-8">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="font-heading text-lg font-semibold text-ink">Historial de gastos</h2>
+          <p class="text-xs text-ink-muted">
+            {{ mes() ? 'Del mes seleccionado.' : 'Todo el historial.' }}
+            "Registrar gasto" es para compras de una sola vez (papelería, insumos…).
+          </p>
+        </div>
+        <button
+          type="button" (click)="abrirModalGasto()"
+          class="inline-flex items-center justify-center rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90
+                 active:scale-[0.97] transition-transform duration-150 min-h-[44px]"
+        >
+          + Registrar gasto
+        </button>
+      </div>
+      @if (gastosDelMes().length === 0) {
+        <div class="mt-3 rounded-xl border border-dashed border-border p-8 text-center text-sm text-ink-muted">No hay gastos en este periodo.</div>
+      } @else {
+        <div class="mt-3 overflow-x-auto rounded-xl border border-border">
+          <table class="min-w-full divide-y divide-border text-sm">
+            <thead class="bg-surface-2">
+              <tr class="text-left text-xs font-medium uppercase tracking-wide text-ink-muted">
+                <th class="px-3 py-3">Fecha</th>
+                <th class="px-3 py-3">Concepto</th>
+                <th class="px-3 py-3">Origen</th>
+                <th class="px-3 py-3 text-right">Monto</th>
+                <th class="px-3 py-3">Ticket</th>
+                <th class="px-3 py-3">Registró</th>
+                <th class="px-3 py-3"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border bg-surface">
+              @for (g of gastosDelMes(); track g.id) {
+                <tr class="hover:bg-surface-2 transition-colors duration-150">
+                  <td class="px-3 py-3 text-ink-muted">{{ fecha(g.fecha) }}</td>
+                  <td class="px-3 py-3 font-medium text-ink">{{ g.concepto }}</td>
+                  <td class="px-3 py-3">
+                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" [class]="origenClases[g.origen]">{{ origenLabels[g.origen] }}</span>
+                  </td>
+                  <td class="px-3 py-3 text-right text-ink">${{ money(g.monto) }}</td>
+                  <td class="px-3 py-3">
+                    @if (g.tieneTicket) {
+                      <button type="button" (click)="verTicket(g)" class="inline-flex items-center gap-1.5 text-xs font-semibold text-we-primary hover:underline">
+                        <svg lucideFileText [size]="14" aria-hidden="true"></svg>
+                        Ver
+                      </button>
+                    } @else {
+                      <span class="text-ink-muted">—</span>
+                    }
+                  </td>
+                  <td class="px-3 py-3 text-ink-muted">{{ g.registradoPor.nombre }}</td>
+                  <td class="px-3 py-3 text-right">
+                    @if (g.origen === 'RECURRENTE') {
+                      <button type="button" [disabled]="savingId() === g.id" (click)="deshacerPago(g)" class="text-xs font-semibold text-ink-muted hover:underline disabled:opacity-60">Deshacer pago</button>
+                    } @else if (g.origen === 'UNICO' && esAdmin()) {
+                      <button
+                        type="button" [disabled]="savingId() === g.id" (click)="eliminar(g)" aria-label="Eliminar gasto"
+                        class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-red-50 hover:text-red-600
+                               dark:hover:bg-red-500/10 dark:hover:text-red-400 transition-colors duration-150 active:scale-90 disabled:opacity-60"
+                      >
+                        <svg lucideTrash2 [size]="15"></svg>
+                      </button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+            <tfoot class="bg-surface-2">
+              <tr>
+                <td colspan="3" class="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ink-muted">Total</td>
+                <td class="px-3 py-3 text-right text-sm font-semibold text-ink">${{ money(totalHistorial()) }}</td>
+                <td colspan="3"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      }
+    </section>
+  }
+
+  <!-- Registrar gasto (una sola vez) -->
+  @if (mostrarModalGasto()) {
+    <button type="button" (click)="cerrarModales()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="crear-gasto-titulo">
+      <form (ngSubmit)="crearGasto()" class="modal-panel-enter w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <h2 id="crear-gasto-titulo" class="font-heading text-lg font-semibold text-ink">Registrar gasto</h2>
+        <p class="mt-1 text-sm text-ink-muted">Compras de una sola vez: papelería, insumos, mantenimiento…</p>
+        <div class="mt-4 space-y-3">
+          <div>
+            <label for="g-concepto" class="mb-1 block text-xs font-medium text-ink-muted">¿Qué se compró? *</label>
+            <input
+              id="g-concepto" name="concepto" type="text" maxlength="200" placeholder="Ej. Hojas y lapiceros"
+              [ngModel]="nuevoConcepto()" (ngModelChange)="nuevoConcepto.set($event)"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+            />
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="g-monto" class="mb-1 block text-xs font-medium text-ink-muted">Monto ($) *</label>
+              <input
+                id="g-monto" name="monto" type="number" step="0.01" min="0.01"
+                [ngModel]="nuevoMonto()" (ngModelChange)="nuevoMonto.set($event)"
+                class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+              />
+            </div>
+            <div>
+              <label for="g-fecha" class="mb-1 block text-xs font-medium text-ink-muted">Fecha *</label>
+              <input
+                id="g-fecha" name="fecha" type="date"
+                [ngModel]="nuevaFecha()" (ngModelChange)="nuevaFecha.set($event)"
+                class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+              />
+            </div>
+          </div>
+          <div>
+            <label for="g-ticket" class="mb-1 block text-xs font-medium text-ink-muted">Ticket o comprobante (opcional)</label>
+            <input id="g-ticket" type="file" accept="image/png,image/jpeg,image/webp,application/pdf" (change)="onTicketChange($event, 'gasto')" class="block w-full text-sm text-ink-muted" />
+          </div>
+        </div>
+        @if (errorModal(); as error) {
+          <p class="mt-3 text-xs text-red-600 dark:text-red-400" role="alert">{{ error }}</p>
+        }
+        <div class="flex justify-end gap-2.5 pt-5">
+          <button type="button" (click)="cerrarModales()" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cancelar</button>
+          <button type="submit" [disabled]="guardando()" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
+            {{ guardando() ? 'Guardando…' : 'Registrar' }}
+          </button>
+        </div>
+      </form>
     </div>
   }
 
-  <!-- TARJETA FLOTANTE: registrar gasto -->
-  @if (mostrarModalCrear()) {
-    <button
-      type="button"
-      (click)="cerrarModalCrear()"
-      aria-label="Cerrar"
-      class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"
-    ></button>
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="crear-gasto-titulo">
-      <div class="modal-panel-enter w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
-        <h2 id="crear-gasto-titulo" class="font-heading text-lg font-semibold text-ink">Registrar gasto</h2>
-
-        @if (tiposActivos().length === 0) {
-          <p class="mt-4 text-sm text-ink-muted">
-            Todavía no hay tipos de gasto activos.
-            @if (esAdmin()) {
-              <a routerLink="/panel/gastos/tipos" (click)="cerrarModalCrear()" class="text-we-primary hover:underline">Crea uno primero</a>.
-            }
-          </p>
-        } @else {
-          <form (ngSubmit)="crear()" class="mt-4 space-y-3">
+  <!-- Pagar un vencimiento -->
+  @if (pagando(); as p) {
+    <button type="button" (click)="cerrarModales()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="pagar-titulo">
+      <form (ngSubmit)="confirmarPago()" class="modal-panel-enter w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <h2 id="pagar-titulo" class="font-heading text-lg font-semibold text-ink">Pagar {{ p.nombre }}</h2>
+        <p class="mt-1 text-sm text-ink-muted">Vence el {{ fecha(p.fechaVencimiento) }} · estimado ${{ money(p.montoEstimado) }}</p>
+        <div class="mt-4 space-y-3">
+          <div class="grid grid-cols-2 gap-3">
             <div>
-              <label for="crear-tipo" class="block text-xs font-medium text-ink-muted mb-1">Tipo de gasto *</label>
+              <label for="p-monto" class="mb-1 block text-xs font-medium text-ink-muted">Monto real ($) *</label>
+              <input
+                id="p-monto" name="monto" type="number" step="0.01" min="0.01"
+                [ngModel]="pagoMonto()" (ngModelChange)="pagoMonto.set($event)"
+                class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+              />
+            </div>
+            <div>
+              <label for="p-fecha" class="mb-1 block text-xs font-medium text-ink-muted">Fecha de pago *</label>
+              <input
+                id="p-fecha" name="fecha" type="date"
+                [ngModel]="pagoFecha()" (ngModelChange)="pagoFecha.set($event)"
+                class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+              />
+            </div>
+          </div>
+          <div>
+            <label for="p-ticket" class="mb-1 block text-xs font-medium text-ink-muted">Comprobante (opcional)</label>
+            <input id="p-ticket" type="file" accept="image/png,image/jpeg,image/webp,application/pdf" (change)="onTicketChange($event, 'pago')" class="block w-full text-sm text-ink-muted" />
+          </div>
+        </div>
+        @if (errorModal(); as error) {
+          <p class="mt-3 text-xs text-red-600 dark:text-red-400" role="alert">{{ error }}</p>
+        }
+        <div class="flex justify-end gap-2.5 pt-5">
+          <button type="button" (click)="cerrarModales()" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cancelar</button>
+          <button type="submit" [disabled]="guardando()" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
+            {{ guardando() ? 'Guardando…' : 'Marcar pagado' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+
+  <!-- Crear / editar gasto recurrente -->
+  @if (mostrarModalRecurrente()) {
+    <button type="button" (click)="cerrarModales()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="recurrente-titulo">
+      <form (ngSubmit)="guardarRecurrente()" class="modal-panel-enter w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <h2 id="recurrente-titulo" class="font-heading text-lg font-semibold text-ink">
+          {{ editandoRecurrente() ? 'Editar gasto recurrente' : 'Nuevo gasto recurrente' }}
+        </h2>
+        <div class="mt-4 space-y-3">
+          <div>
+            <label for="r-nombre" class="mb-1 block text-xs font-medium text-ink-muted">Nombre *</label>
+            <input
+              id="r-nombre" name="nombre" type="text" maxlength="150" placeholder="Ej. Renta, Luz, Nómina"
+              [ngModel]="recNombre()" (ngModelChange)="recNombre.set($event)"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+            />
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="r-monto" class="mb-1 block text-xs font-medium text-ink-muted">Monto estimado ($) *</label>
+              <input
+                id="r-monto" name="monto" type="number" step="0.01" min="0"
+                [ngModel]="recMonto()" (ngModelChange)="recMonto.set($event)"
+                class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+              />
+            </div>
+            <div>
+              <label for="r-frecuencia" class="mb-1 block text-xs font-medium text-ink-muted">Frecuencia *</label>
               <select
-                id="crear-tipo"
-                [ngModel]="nuevoTipoGastoId()"
-                (ngModelChange)="nuevoTipoGastoId.set($event)"
-                name="nuevoTipoGastoId"
-                class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
-                       focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+                id="r-frecuencia" name="frecuencia" [ngModel]="recFrecuencia()" (ngModelChange)="recFrecuencia.set($event)"
+                class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
               >
-                <option [ngValue]="null" disabled>Selecciona un tipo…</option>
-                @for (t of tiposActivos(); track t.id) {
-                  <option [ngValue]="t.id">{{ t.nombre }}</option>
+                @for (f of frecuencias; track f) {
+                  <option [value]="f">{{ frecuenciaLabels[f] }}</option>
                 }
               </select>
             </div>
-            <div>
-              <label for="crear-fecha" class="block text-xs font-medium text-ink-muted mb-1">Fecha *</label>
-              <input
-                id="crear-fecha"
-                type="date"
-                [ngModel]="nuevaFecha()"
-                (ngModelChange)="nuevaFecha.set($event)"
-                name="nuevaFecha"
-                class="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
-                       focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
-              />
-            </div>
-            <div>
-              <label for="crear-monto" class="block text-xs font-medium text-ink-muted mb-1">Monto *</label>
-              <input
-                id="crear-monto"
-                type="number"
-                step="0.01"
-                min="0.01"
-                [ngModel]="nuevoMonto()"
-                (ngModelChange)="nuevoMonto.set($event)"
-                name="nuevoMonto"
-                placeholder="Ej. 5000"
-                class="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
-                       focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
-              />
-            </div>
-            @if (tipoSeleccionado()?.requiereTicket) {
+          </div>
+          @if (recFrecuencia() !== 'SEMANAL') {
+            <div class="grid grid-cols-2 gap-3">
               <div>
-                <label for="crear-ticket" class="block text-xs font-medium text-ink-muted mb-1">Ticket / comprobante *</label>
+                <label for="r-dia" class="mb-1 block text-xs font-medium text-ink-muted">
+                  {{ recFrecuencia() === 'QUINCENAL' ? 'Primer día del mes *' : 'Día del mes *' }}
+                </label>
                 <input
-                  id="crear-ticket"
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,application/pdf"
-                  (change)="onTicketChange($event)"
-                  class="block w-full text-sm text-ink-muted
-                         file:mr-3 file:rounded-lg file:border-0 file:bg-surface-2 file:px-3.5 file:py-2 file:text-sm file:font-medium file:text-ink
-                         hover:file:bg-border"
+                  id="r-dia" name="dia" type="number" step="1" min="1" max="31"
+                  [ngModel]="recDia()" (ngModelChange)="recDia.set($event)"
+                  class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
                 />
-                <p class="mt-1.5 text-xs text-ink-muted">Este tipo de gasto exige comprobante. Foto o PDF.</p>
               </div>
-            }
-
-            @if (errorCreacion()) {
-              <p class="text-xs text-red-600 dark:text-red-400">{{ errorCreacion() }}</p>
-            }
-
-            <div class="flex justify-end gap-2.5 pt-2">
-              <button
-                type="button"
-                (click)="cerrarModalCrear()"
-                class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary
-                       active:scale-[0.97] transition-transform duration-150"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                [disabled]="isCreando()"
-                class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90
-                       active:scale-[0.97] transition-transform duration-150 disabled:opacity-60"
-              >
-                {{ isCreando() ? 'Guardando…' : 'Guardar' }}
-              </button>
+              @if (recFrecuencia() === 'QUINCENAL') {
+                <div>
+                  <label for="r-dia2" class="mb-1 block text-xs font-medium text-ink-muted">Segundo día del mes *</label>
+                  <input
+                    id="r-dia2" name="dia2" type="number" step="1" min="1" max="31"
+                    [ngModel]="recDia2()" (ngModelChange)="recDia2.set($event)"
+                    class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+                  />
+                </div>
+              }
             </div>
-          </form>
+            <p class="text-xs text-ink-muted">En un mes más corto se vence el último día del mes.</p>
+          }
+          <div>
+            <label for="r-primer" class="mb-1 block text-xs font-medium text-ink-muted">
+              {{ recFrecuencia() === 'SEMANAL' ? 'Primer vencimiento (marca el día de la semana) *' : 'Primer vencimiento *' }}
+            </label>
+            <input
+              id="r-primer" name="primer" type="date" [ngModel]="recPrimer()" (ngModelChange)="recPrimer.set($event)"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+            />
+            <p class="mt-1 text-xs text-ink-muted">Desde esta fecha se generan los pagos; no se generan pagos de meses anteriores.</p>
+          </div>
+          @if (editandoRecurrente()) {
+            <label class="flex items-center gap-2 text-sm text-ink">
+              <input type="checkbox" name="activo" [ngModel]="recActivo()" (ngModelChange)="recActivo.set($event)" />
+              Activo
+            </label>
+          }
+        </div>
+        @if (errorModal(); as error) {
+          <p class="mt-3 text-xs text-red-600 dark:text-red-400" role="alert">{{ error }}</p>
         }
-      </div>
+        <div class="flex justify-end gap-2.5 pt-5">
+          <button type="button" (click)="cerrarModales()" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cancelar</button>
+          <button type="submit" [disabled]="guardando()" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
+            {{ guardando() ? 'Guardando…' : 'Guardar' }}
+          </button>
+        </div>
+      </form>
     </div>
   }
 </div>

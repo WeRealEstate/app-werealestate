@@ -34,11 +34,11 @@ public class GastoController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public GastoDto crear(
-            @RequestParam Long tipoGastoId,
+            @RequestParam String concepto,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha,
             @RequestParam BigDecimal monto,
             @RequestParam(value = "ticket", required = false) MultipartFile ticket) {
-        return gastoService.crear(tipoGastoId, fecha, monto, ticket);
+        return gastoService.crear(concepto, fecha, monto, ticket);
     }
 
     @GetMapping("/{id}/ticket")

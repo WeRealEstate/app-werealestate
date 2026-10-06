@@ -1,13 +1,15 @@
 package com.werealestate.backend.dto;
 
 import com.werealestate.backend.model.Gasto;
+import com.werealestate.backend.model.OrigenGasto;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public record GastoDto(
         Long id,
-        TipoGastoDto tipoGasto,
+        String concepto,
+        OrigenGasto origen,
         LocalDate fecha,
         BigDecimal monto,
         boolean tieneTicket,
@@ -17,7 +19,8 @@ public record GastoDto(
     public static GastoDto from(Gasto gasto) {
         return new GastoDto(
                 gasto.getId(),
-                TipoGastoDto.from(gasto.getTipoGasto()),
+                gasto.getConcepto(),
+                gasto.getOrigen(),
                 gasto.getFecha(),
                 gasto.getMonto(),
                 gasto.getTicketExtension() != null,

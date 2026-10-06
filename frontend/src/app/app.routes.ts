@@ -152,20 +152,10 @@ export const routes: Routes = [
       },
       {
         // Gastos ahora vive como pestaña dentro de Finanzas (ver FinanzasComponent); la ruta vieja
-        // redirige ahí para no romper links ni el "Volver a gastos" de Tipos de gasto.
+        // redirige ahí para no romper links viejos.
         path: 'gastos',
         canActivate: [() => inject(Router).createUrlTree(['/panel/finanzas'], { queryParams: { pestana: 'gastos' } })],
         children: [],
-      },
-      {
-        // Catálogo de tipos de gasto: exclusivo de admin (ver TipoGastoService), por eso no aparece
-        // en la nav de líder de área aunque sí pueda ver/registrar gastos.
-        path: 'gastos/tipos',
-        canActivate: [roleGuard(['ADMIN']), moduloGuard(['GASTOS'])],
-        loadComponent: () =>
-          import('./features/panel/gastos/tipos-gasto-list/tipos-gasto-list.component').then(
-            (m) => m.TiposGastoListComponent,
-          ),
       },
       {
         path: 'asesor',

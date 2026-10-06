@@ -7,10 +7,10 @@ import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.exception.ValidationException;
 import com.werealestate.backend.model.Gasto;
 import com.werealestate.backend.model.Role;
-import com.werealestate.backend.model.TipoGasto;
+import com.werealestate.backend.model.OrigenGasto;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.repository.GastoRepository;
-import com.werealestate.backend.repository.TipoGastoRepository;
+import com.werealestate.backend.repository.GastoRecurrentePagoRepository;
 import com.werealestate.backend.repository.VentaComisionEntregaRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
 import java.io.IOException;
@@ -28,7 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * Gastos registrados mes con mes (ej. comisiones, renta). Ver TipoGasto para el catálogo de tipos
+ * Gastos registrados (únicos, pagos de gastos recurrentes y comisiones entregadas)
  * y si cada uno exige subir un comprobante (ticket) al registrarlo.
  *
  * <p>A diferencia del plano de un desarrollo (público, servido como estático bajo /uploads/**,
@@ -46,20 +46,20 @@ public class GastoService {
     private static final byte[] FIRMA_PDF = {0x25, 0x50, 0x44, 0x46}; // "%PDF"
 
     private final GastoRepository gastoRepository;
-    private final TipoGastoRepository tipoGastoRepository;
     private final VentaComisionEntregaRepository entregaComisionRepository;
+    private final GastoRecurrentePagoRepository pagoRecurrenteRepository;
     private final CurrentUserProvider currentUserProvider;
     private final String uploadsPrivadosDir;
 
     public GastoService(
             GastoRepository gastoRepository,
-            TipoGastoRepository tipoGastoRepository,
             VentaComisionEntregaRepository entregaComisionRepository,
+            GastoRecurrentePagoRepository pagoRecurrenteRepository,
             CurrentUserProvider currentUserProvider,
             @Value("${app.uploads-privados.dir:uploads-privados}") String uploadsPrivadosDir) {
         this.gastoRepository = gastoRepository;
-        this.tipoGastoRepository = tipoGastoRepository;
         this.entregaComisionRepository = entregaComisionRepository;
+        this.pagoRecurrenteRepository = pagoRecurrenteRepository;
         this.currentUserProvider = currentUserProvider;
         this.uploadsPrivadosDir = uploadsPrivadosDir;
     }
@@ -69,31 +69,31 @@ public class GastoService {
         return gastoRepository.findAllByOrderByFechaDescIdDesc().stream().map(GastoDto::from).toList();
     }
 
-    /** ticket es obligatorio si el tipo de gasto elegido lo requiere (ver
-     * TipoGasto.requiereTicket); se valida el archivo por sus primeros bytes, no por el
-     * Content-Type que manda el navegador. */
-    public GastoDto crear(Long tipoGastoId, LocalDate fecha, BigDecimal monto, MultipartFile ticket) {
+    /** Gasto de una sola vez (papelería, insumos...): concepto, fecha y monto; el comprobante es
+     * opcional (se valida el archivo por sus primeros bytes, no por el Content-Type del navegador). */
+    public GastoDto crear(String concepto, LocalDate fecha, BigDecimal monto, MultipartFile ticket) {
         Usuario actual = exigirAdminOLider();
-        TipoGasto tipo = tipoGastoRepository
-                .findById(tipoGastoId)
-                .orElseThrow(() -> new ResourceNotFoundException("Tipo de gasto no encontrado"));
+        return GastoDto.from(crearGasto(concepto, OrigenGasto.UNICO, fecha, monto, ticket, actual));
+    }
 
+    /** Crea y guarda un gasto (y su comprobante, si lo hay); lo usan los gastos únicos y el pago de
+     * los gastos recurrentes. */
+    public Gasto crearGasto(
+            String concepto, OrigenGasto origen, LocalDate fecha, BigDecimal monto, MultipartFile ticket, Usuario actual) {
+        if (concepto == null || concepto.isBlank()) {
+            throw new ValidationException("Indica qué se compró o pagó");
+        }
         if (monto == null || monto.compareTo(BigDecimal.ZERO) <= 0) {
             throw new ValidationException("El monto debe ser mayor a cero");
         }
-        boolean hayTicket = ticket != null && !ticket.isEmpty();
-        if (tipo.isRequiereTicket() && !hayTicket) {
-            throw new ValidationException("\"" + tipo.getNombre() + "\" exige subir un ticket/comprobante");
+        if (fecha == null) {
+            throw new ValidationException("Indica la fecha");
         }
-
-        Gasto gasto = new Gasto(tipo, fecha, monto, actual);
-        gasto = gastoRepository.save(gasto);
-
-        if (hayTicket) {
+        Gasto gasto = gastoRepository.save(new Gasto(concepto.trim(), origen, null, fecha, monto, actual));
+        if (ticket != null && !ticket.isEmpty()) {
             gasto.setTicketExtension(guardarTicket(gasto.getId(), ticket));
         }
-
-        return GastoDto.from(gasto);
+        return gasto;
     }
 
     /** Streamea el ticket del gasto ya autenticado (mismo rol que el resto de Gastos); nunca se
@@ -128,10 +128,18 @@ public class GastoService {
             throw new ConflictException(
                     "Este gasto viene de una entrega de comisión: anula la entrega en Finanzas para eliminarlo");
         }
+        if (pagoRecurrenteRepository.existsByGastoId(id)) {
+            throw new ConflictException(
+                    "Este gasto es el pago de un gasto recurrente: usa \"Deshacer pago\" en Gastos recurrentes");
+        }
+        eliminarGasto(gasto);
+    }
 
+    /** Borra el gasto y el archivo de su ticket, sin revisar a qué está ligado (lo hace quien lo llama). */
+    public void eliminarGasto(Gasto gasto) {
         if (gasto.getTicketExtension() != null) {
             try {
-                Files.deleteIfExists(rutaTicket(id, gasto.getTicketExtension()));
+                Files.deleteIfExists(rutaTicket(gasto.getId(), gasto.getTicketExtension()));
             } catch (IOException ignored) {
                 // No pasa nada si ya no estaba: lo que importa es borrar el registro.
             }

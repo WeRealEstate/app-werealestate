@@ -14,6 +14,7 @@ import com.werealestate.backend.model.EstadoComision;
 import com.werealestate.backend.model.EstadoPagoCliente;
 import com.werealestate.backend.model.Gasto;
 import com.werealestate.backend.model.ModalidadComision;
+import com.werealestate.backend.model.OrigenGasto;
 import com.werealestate.backend.model.PagoVenta;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.TipoGasto;
@@ -292,7 +293,12 @@ public class ComisionService {
 
         LocalDate fecha = request.fecha() != null ? request.fecha() : LocalDate.now();
         String notas = request.notas() == null || request.notas().isBlank() ? null : request.notas().trim();
-        Gasto gasto = gastoRepository.save(new Gasto(tipoGastoComisiones(), fecha, request.monto(), actual));
+        String concepto = "Comisión · " + comision.getCliente()
+                + (comision.getVenta() != null && comision.getVenta().getNumero() != null
+                        ? " (venta #" + comision.getVenta().getNumero() + ")"
+                        : "");
+        Gasto gasto = gastoRepository.save(new Gasto(
+                concepto, OrigenGasto.COMISION, tipoGastoComisiones(), fecha, request.monto(), actual));
         entregaRepository.save(new VentaComisionEntrega(comision, fecha, request.monto(), notas, gasto, actual));
         return detalle(comision);
     }

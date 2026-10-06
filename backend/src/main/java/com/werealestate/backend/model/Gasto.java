@@ -14,9 +14,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * Un gasto registrado (ej. la comisión de un mes, la renta de oficina). ticketExtension solo se
- * llena cuando se sube un comprobante — obligatorio si TipoGasto.requiereTicket (ver
- * GastoService.crear). El archivo en sí no se referencia por URL pública: se sirve por un endpoint
+ * Un gasto registrado (ej. papelería, la renta de oficina, una comisión entregada). ticketExtension
+ * solo se llena cuando se sube un comprobante (siempre opcional). El archivo en sí no se referencia por URL pública: se sirve por un endpoint
  * autenticado (ver GastoController.verTicket), así que aquí solo se guarda su extensión.
  */
 @Entity
@@ -27,8 +26,17 @@ public class Gasto {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** Qué se compró o pagó (texto libre). */
+    @Column(nullable = false, length = 200)
+    private String concepto;
+
+    @jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private OrigenGasto origen = OrigenGasto.UNICO;
+
+    /** Solo lo usa el gasto automático de las comisiones; el resto de los gastos no lleva tipo. */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "tipo_gasto_id", nullable = false)
+    @JoinColumn(name = "tipo_gasto_id")
     private TipoGasto tipoGasto;
 
     @Column(nullable = false)
@@ -51,7 +59,15 @@ public class Gasto {
         // JPA
     }
 
-    public Gasto(TipoGasto tipoGasto, LocalDate fecha, BigDecimal monto, Usuario registradoPor) {
+    public Gasto(
+            String concepto,
+            OrigenGasto origen,
+            TipoGasto tipoGasto,
+            LocalDate fecha,
+            BigDecimal monto,
+            Usuario registradoPor) {
+        this.concepto = concepto;
+        this.origen = origen;
         this.tipoGasto = tipoGasto;
         this.fecha = fecha;
         this.monto = monto;
@@ -60,6 +76,14 @@ public class Gasto {
 
     public Long getId() {
         return id;
+    }
+
+    public String getConcepto() {
+        return concepto;
+    }
+
+    public OrigenGasto getOrigen() {
+        return origen;
     }
 
     public TipoGasto getTipoGasto() {
