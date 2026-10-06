@@ -69,6 +69,15 @@ public class Venta {
     @Column(precision = 14, scale = 2)
     private BigDecimal enganche;
 
+    /** Día del mes (1-31) en que paga la mensualidad; en un mes sin ese día se cobra el último. */
+    @Column(name = "dia_pago", nullable = false)
+    private int diaPago;
+
+    /** true: el mes de la venta cuenta como la primera mensualidad; false: la primera cae el mes
+     * siguiente. */
+    @Column(name = "primera_mensualidad_mes_venta", nullable = false)
+    private boolean primeraMensualidadMesVenta;
+
     @Column(length = 1000)
     private String notas;
 
@@ -89,6 +98,8 @@ public class Venta {
             Integer plazoMeses,
             String engancheLabel,
             BigDecimal enganche,
+            Integer diaPago,
+            boolean primeraMensualidadMesVenta,
             String notas) {
         this.cliente = cliente;
         this.usuarioAsesor = usuarioAsesor;
@@ -99,6 +110,8 @@ public class Venta {
         this.plazoMeses = plazoMeses;
         this.engancheLabel = engancheLabel;
         this.enganche = enganche;
+        this.diaPago = diaPago != null ? diaPago : fechaVenta.getDayOfMonth();
+        this.primeraMensualidadMesVenta = primeraMensualidadMesVenta;
         this.notas = notas;
     }
 
@@ -114,6 +127,8 @@ public class Venta {
             Integer plazoMeses,
             String engancheLabel,
             BigDecimal enganche,
+            Integer diaPago,
+            boolean primeraMensualidadMesVenta,
             String notas) {
         this.cliente = cliente;
         this.usuarioAsesor = usuarioAsesor;
@@ -124,7 +139,17 @@ public class Venta {
         this.plazoMeses = plazoMeses;
         this.engancheLabel = engancheLabel;
         this.enganche = enganche;
+        this.diaPago = diaPago != null ? diaPago : fechaVenta.getDayOfMonth();
+        this.primeraMensualidadMesVenta = primeraMensualidadMesVenta;
         this.notas = notas;
+    }
+
+    public int getDiaPago() {
+        return diaPago;
+    }
+
+    public boolean isPrimeraMensualidadMesVenta() {
+        return primeraMensualidadMesVenta;
     }
 
     public Long getId() {

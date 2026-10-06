@@ -46,6 +46,10 @@ export interface Venta {
    * ambos null cuando no aplica (Sin enganche / Contado). */
   engancheLabel: string | null;
   enganche: number | null;
+  /** Día del mes (1-31) en que paga la mensualidad (en un mes más corto se cobra el último día). */
+  diaPago: number;
+  /** true: el mes de la venta cuenta como la primera mensualidad; false: la primera cae el mes siguiente. */
+  primeraMensualidadMesVenta: boolean;
   notas: string | null;
   fechaCreacion: string;
   /** Se calculan a partir de sus lotes y sus pagos (ver PagoVenta), nunca se capturan a mano. */
@@ -71,6 +75,8 @@ export interface VentaCreateRequest {
   plazoMeses: number | null;
   engancheLabel: string | null;
   enganche: number | null;
+  diaPago: number;
+  primeraMensualidadMesVenta: boolean;
   notas: string | null;
   marcarLoteVendido: boolean;
   /** Solo con el tipo de pago "Con aportaciones"; el backend las valida (ver VentaService). */
@@ -90,6 +96,8 @@ export interface VentaUpdateRequest {
   plazoMeses: number | null;
   engancheLabel: string | null;
   enganche: number | null;
+  diaPago: number;
+  primeraMensualidadMesVenta: boolean;
   notas: string | null;
 }
 

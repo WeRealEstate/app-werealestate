@@ -85,6 +85,15 @@
             <p class="mt-1 text-sm font-medium text-ink">{{ v.plazoMeses }} meses</p>
           </div>
         }
+        @if (v.mensualidad) {
+          <div>
+            <p class="text-xs text-ink-muted">Día de pago</p>
+            <p class="mt-1 text-sm font-medium text-ink">Día {{ v.diaPago }} de cada mes</p>
+            <p class="text-xs text-ink-muted">
+              {{ v.primeraMensualidadMesVenta ? 'La primera mensualidad cuenta en el mes de la venta' : 'La primera mensualidad es el mes siguiente' }}
+            </p>
+          </div>
+        }
         @if (v.notas) {
           <div class="sm:col-span-2">
             <p class="text-xs text-ink-muted">Notas</p>
@@ -178,6 +187,33 @@
               class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface placeholder:text-ink-muted
                      focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
             />
+          </div>
+          <div>
+            <label for="ed-diaPago" class="block text-sm font-medium text-ink mb-1.5">Día de pago *</label>
+            <input
+              id="ed-diaPago" type="number" step="1" min="1" max="31" formControlName="diaPago"
+              class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            />
+          </div>
+          <div class="flex items-center gap-3">
+            <button
+              type="button"
+              role="switch"
+              [attr.aria-checked]="edicionPrimeraMensualidadMesVenta()"
+              (click)="edicionPrimeraMensualidadMesVenta.set(!edicionPrimeraMensualidadMesVenta())"
+              class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200
+                     focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50"
+              [class.bg-we-primary]="edicionPrimeraMensualidadMesVenta()"
+              [class.bg-border]="!(edicionPrimeraMensualidadMesVenta())"
+            >
+              <span
+                class="inline-block h-5 w-5 rounded-full bg-white shadow transition-transform duration-200"
+                [class.translate-x-5]="edicionPrimeraMensualidadMesVenta()"
+                [class.translate-x-0.5]="!(edicionPrimeraMensualidadMesVenta())"
+              ></span>
+            </button>
+            <p class="text-sm text-ink">El mes de la venta cuenta como primera mensualidad</p>
           </div>
           <div class="sm:col-span-2">
             <label for="ed-notas" class="block text-sm font-medium text-ink mb-1.5">Notas</label>

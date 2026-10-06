@@ -1,6 +1,8 @@
 package com.werealestate.backend.dto;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -28,6 +30,11 @@ public record VentaCreateRequest(
         // ambos null cuando no aplica (Sin enganche / Contado).
         String engancheLabel,
         @Positive BigDecimal enganche,
+        // Día del mes (1-31) en que paga la mensualidad; null = el día de la fecha de venta. Y si el
+        // mes de la venta cuenta como primera mensualidad (true) o esta cae el mes siguiente
+        // (false/null). Ver Venta.diaPago.
+        @Min(1) @Max(31) Integer diaPago,
+        Boolean primeraMensualidadMesVenta,
         @Size(max = 1000) String notas,
         // Si es true, además de registrar la venta se marca cada lote como VENDIDO (con su
         // historial normal, ver LoteService.marcarVendido). Ver VentaService.

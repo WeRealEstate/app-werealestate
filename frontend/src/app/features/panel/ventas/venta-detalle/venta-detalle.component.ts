@@ -62,8 +62,12 @@ export class VentaDetalleComponent implements OnInit {
     plazoMeses: this.fb.control<number | null>(null, { validators: [Validators.min(1)] }),
     engancheLabel: this.fb.control(''),
     enganche: this.fb.control<number | null>(null, { validators: [Validators.min(1)] }),
+    diaPago: this.fb.control<number | null>(null, {
+      validators: [Validators.required, Validators.min(1), Validators.max(31)],
+    }),
     notas: this.fb.control(''),
   });
+  readonly edicionPrimeraMensualidadMesVenta = signal(false);
 
   ngOnInit(): void {
     this.numeroEnUrl = Number(this.route.snapshot.paramMap.get('numero'));
@@ -161,8 +165,10 @@ export class VentaDetalleComponent implements OnInit {
       plazoMeses: v.plazoMeses,
       engancheLabel: v.engancheLabel ?? '',
       enganche: v.enganche,
+      diaPago: v.diaPago,
       notas: v.notas ?? '',
     });
+    this.edicionPrimeraMensualidadMesVenta.set(v.primeraMensualidadMesVenta);
     this.errorEdicion.set(null);
     this.editando.set(true);
   }
@@ -191,6 +197,8 @@ export class VentaDetalleComponent implements OnInit {
         plazoMeses: v.plazoMeses,
         engancheLabel: v.engancheLabel?.trim() || null,
         enganche: v.enganche,
+        diaPago: v.diaPago as number,
+        primeraMensualidadMesVenta: this.edicionPrimeraMensualidadMesVenta(),
         notas: v.notas?.trim() || null,
       });
       this.venta.set(actualizada);

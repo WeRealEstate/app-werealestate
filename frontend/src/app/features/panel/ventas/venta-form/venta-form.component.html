@@ -288,6 +288,55 @@
       </div>
     }
 
+    @if (mostrarPlazo()) {
+      <div class="rounded-xl border border-border p-4">
+        <p class="text-sm font-semibold text-ink">Cobro de mensualidades</p>
+        <div class="mt-3 grid gap-4 sm:grid-cols-[10rem_1fr] sm:items-start">
+          <div>
+            <label for="diaPago" class="block text-sm font-medium text-ink mb-1.5">Día de pago *</label>
+            <input
+              id="diaPago"
+              type="number"
+              step="1"
+              min="1"
+              max="31"
+              formControlName="diaPago"
+              class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            />
+            @if (form.controls.diaPago.invalid && form.controls.diaPago.touched) {
+              <p class="mt-1.5 text-xs text-red-600">Un día del 1 al 31.</p>
+            }
+            <p class="mt-1.5 text-xs text-ink-muted">En meses más cortos se cobra el último día.</p>
+          </div>
+          <div class="flex items-start gap-3">
+            <button
+              type="button"
+              role="switch"
+              [attr.aria-checked]="primeraMensualidadMesVenta()"
+              (click)="alternarPrimeraMensualidad()"
+              class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200
+                     focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50"
+              [class.bg-we-primary]="primeraMensualidadMesVenta()"
+              [class.bg-border]="!(primeraMensualidadMesVenta())"
+            >
+              <span
+                class="inline-block h-5 w-5 rounded-full bg-white shadow transition-transform duration-200"
+                [class.translate-x-5]="primeraMensualidadMesVenta()"
+                [class.translate-x-0.5]="!(primeraMensualidadMesVenta())"
+              ></span>
+            </button>
+            <div>
+              <p class="text-sm font-medium text-ink">El mes de la venta cuenta como primera mensualidad</p>
+              <p class="mt-0.5 text-xs text-ink-muted">
+                {{ primeraMensualidadMesVenta() ? 'La primera mensualidad se cobra este mismo mes.' : 'La primera mensualidad se cobra hasta el mes siguiente.' }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
     @if (esAportaciones()) {
       <div class="rounded-xl border border-we-primary/20 bg-we-primary/5 p-4 dark:border-we-primary/25 dark:bg-we-primary/10">
         <p class="text-sm font-semibold text-ink">Aportaciones</p>

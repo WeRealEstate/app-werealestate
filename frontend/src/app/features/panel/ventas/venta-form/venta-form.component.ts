@@ -142,6 +142,10 @@ export class VentaFormComponent {
   readonly mostrarEnganche = computed(() => this.engancheLabelActual() !== null);
   readonly mostrarPlazo = computed(() => this.tipoPago() !== 'cash');
 
+  /** true: el mes de la venta cuenta como primera mensualidad; false: la primera cae el mes siguiente. */
+  readonly primeraMensualidadMesVenta = signal(false);
+  private diaPagoEditado = false;
+
   readonly form = this.fb.group({
     desarrolloId: this.fb.control<number | null>(null, { validators: [Validators.required] }),
     cliente: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
@@ -151,6 +155,11 @@ export class VentaFormComponent {
     // Opcionales: una venta de contado no los necesita.
     mensualidad: this.fb.control<number | null>(null, { validators: [Validators.min(1)] }),
     plazoMeses: this.fb.control<number | null>(null, { validators: [Validators.min(1)] }),
+    // Día en que paga la mensualidad: arranca en el día de la fecha de venta y la sigue mientras no
+    // se edite a mano (ver diaPagoEditado).
+    diaPago: this.fb.control<number | null>(new Date().getDate(), {
+      validators: [Validators.required, Validators.min(1), Validators.max(31)],
+    }),
     notas: this.fb.control(''),
     marcarLoteVendido: this.fb.control(true, { nonNullable: true }),
   });
@@ -183,8 +192,17 @@ export class VentaFormComponent {
     // que queden fuera y avisa por onAportacionesChange).
     this.form.controls.fechaVenta.valueChanges.subscribe((fecha) => {
       this.fechaVentaIso.set(fecha);
+      if (!this.diaPagoEditado && fecha) this.form.controls.diaPago.setValue(Number(fecha.slice(8, 10)));
       this.actualizarMensualidad();
     });
+    this.form.controls.diaPago.valueChanges.subscribe(() => {
+      // Solo cuenta como edición a mano si ya no coincide con el día de la fecha de venta.
+      this.diaPagoEditado = this.form.controls.diaPago.value !== Number(this.fechaVentaIso().slice(8, 10));
+    });
+  }
+
+  alternarPrimeraMensualidad(): void {
+    this.primeraMensualidadMesVenta.update((v) => !v);
   }
 
   /** Igual que CotizadorComponent.selectPaymentType: cambiar de tipo limpia lo que ya no aplica
@@ -378,6 +396,8 @@ export class VentaFormComponent {
         plazoMeses: v.plazoMeses,
         engancheLabel: this.engancheLabelActual(),
         enganche: this.mostrarEnganche() ? this.montoEnganche() : null,
+        diaPago: v.diaPago as number,
+        primeraMensualidadMesVenta: this.primeraMensualidadMesVenta(),
         notas: v.notas?.trim() || null,
         marcarLoteVendido: v.marcarLoteVendido,
         aportaciones: this.esAportaciones()

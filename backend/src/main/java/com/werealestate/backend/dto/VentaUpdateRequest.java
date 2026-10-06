@@ -1,5 +1,7 @@
 package com.werealestate.backend.dto;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -21,5 +23,8 @@ public record VentaUpdateRequest(
         @Positive Integer plazoMeses,
         String engancheLabel,
         @Positive BigDecimal enganche,
+        // null = sin cambios (clientes viejos que no los mandan).
+        @Min(1) @Max(31) Integer diaPago,
+        Boolean primeraMensualidadMesVenta,
         @Size(max = 1000) String notas) {
 }

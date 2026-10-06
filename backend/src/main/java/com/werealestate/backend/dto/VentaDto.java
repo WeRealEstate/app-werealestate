@@ -22,6 +22,8 @@ public record VentaDto(
         Integer plazoMeses,
         String engancheLabel,
         BigDecimal enganche,
+        int diaPago,
+        boolean primeraMensualidadMesVenta,
         String notas,
         LocalDateTime fechaCreacion,
         // Se calculan a partir de sus lotes y sus pagos (ver VentaService), nunca se guardan directo.
@@ -49,6 +51,8 @@ public record VentaDto(
                 venta.getPlazoMeses(),
                 venta.getEngancheLabel(),
                 venta.getEnganche(),
+                venta.getDiaPago(),
+                venta.isPrimeraMensualidadMesVenta(),
                 venta.getNotas(),
                 venta.getFechaCreacion(),
                 precioVenta,

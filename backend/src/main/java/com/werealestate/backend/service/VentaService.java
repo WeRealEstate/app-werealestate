@@ -113,7 +113,8 @@ public class VentaService {
 
         Venta venta = new Venta(
                 cliente, asesor.usuario(), asesor.externo(), request.formaPago().trim(), request.fechaVenta(),
-                request.mensualidad(), request.plazoMeses(), engancheLabel, request.enganche(), notas);
+                request.mensualidad(), request.plazoMeses(), engancheLabel, request.enganche(),
+                request.diaPago(), Boolean.TRUE.equals(request.primeraMensualidadMesVenta()), notas);
         venta = ventaRepository.save(venta);
 
         for (VentaAportacionItemRequest item : aportaciones) {
@@ -210,6 +211,10 @@ public class VentaService {
                 request.plazoMeses(),
                 engancheLabel,
                 request.enganche(),
+                request.diaPago() != null ? request.diaPago() : venta.getDiaPago(),
+                request.primeraMensualidadMesVenta() != null
+                        ? request.primeraMensualidadMesVenta()
+                        : venta.isPrimeraMensualidadMesVenta(),
                 notas);
         // La fecha pudo cambiar: se reacomodan los números y se vuelve a leer con el nuevo.
         return toDto(renumerar(venta.getId()));
