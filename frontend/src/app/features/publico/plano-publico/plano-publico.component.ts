@@ -21,7 +21,7 @@ import { ToastContainerComponent } from '../../../shared/toast-container/toast-c
 type ProyectoPublico = 'samai' | 'nanuu';
 
 const NOTA_MAX_LENGTH = 500;
-const CLAVE_ASESOR = 'plano-publico-asesor';
+const CLAVE_ASESOR = 'plano-publico-asesor-';
 
 /** Mismos límites/pasos de zoom que /panel/plano (ver ese componente para el porqué de cada
  * valor); no se comparte el código porque esta vista no tiene nada de edición. */
@@ -45,18 +45,18 @@ const DURACION_ANIMACION_MS = 220;
 const CLAVE_AVISO_ROTAR = 'plano-publico-aviso-rotar';
 const DURACION_AVISO_ROTAR_MS = 9000;
 
-function leerAsesorGuardado(): string | null {
+function leerAsesorGuardado(proyecto: string): string | null {
   try {
-    return sessionStorage.getItem(CLAVE_ASESOR);
+    return sessionStorage.getItem(CLAVE_ASESOR + proyecto);
   } catch {
     return null;
   }
 }
 
-function guardarAsesor(nombre: string | null): void {
+function guardarAsesor(proyecto: string, nombre: string | null): void {
   try {
-    if (nombre) sessionStorage.setItem(CLAVE_ASESOR, nombre);
-    else sessionStorage.removeItem(CLAVE_ASESOR);
+    if (nombre) sessionStorage.setItem(CLAVE_ASESOR + proyecto, nombre);
+    else sessionStorage.removeItem(CLAVE_ASESOR + proyecto);
   } catch {
     // Sin almacenamiento: el acceso solo dura hasta recargar.
   }
@@ -127,7 +127,7 @@ export class PlanoPublicoComponent {
 
   // Candado: sin un asesor verificado no se muestran los botones de cotizar ni apartar. Se recuerda
   // solo mientras dure la pestaña (sessionStorage), nunca de forma permanente.
-  readonly asesorVerificado = signal<string | null>(leerAsesorGuardado());
+  readonly asesorVerificado = signal<string | null>(leerAsesorGuardado(this.proyecto));
   readonly mostrarAcceso = signal(false);
   readonly accesoNombre = signal('');
   readonly accesoError = signal<string | null>(null);
@@ -300,9 +300,9 @@ export class PlanoPublicoComponent {
     this.isVerificando.set(true);
     this.accesoError.set(null);
     try {
-      const registrado = await this.lotesService.verificarAsesorPublico(nombre);
+      const registrado = await this.lotesService.verificarAsesorPublico(nombre, this.proyecto);
       this.asesorVerificado.set(registrado);
-      guardarAsesor(registrado);
+      guardarAsesor(this.proyecto, registrado);
       this.mostrarAcceso.set(false);
       this.toast.success(`Bienvenido, ${registrado}.`);
     } catch (e) {
@@ -310,7 +310,9 @@ export class PlanoPublicoComponent {
       this.accesoError.set(
         estado === 404
           ? 'No encontramos un asesor con ese nombre.'
-          : estado === 429
+          : estado === 403 && typeof (e as HttpErrorResponse).error?.message === 'string'
+            ? (e as HttpErrorResponse).error.message
+            : estado === 429
             ? 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.'
             : 'No se pudo verificar. Intenta de nuevo.',
       );
@@ -321,7 +323,7 @@ export class PlanoPublicoComponent {
 
   cerrarSesionAsesor(): void {
     this.asesorVerificado.set(null);
-    guardarAsesor(null);
+    guardarAsesor(this.proyecto, null);
     this.mostrarApartar.set(false);
   }
 

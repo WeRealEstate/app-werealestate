@@ -62,10 +62,10 @@ export class LotesService {
   }
 
   /** Botón "Asesor" de /samai y /aldea-nanuu: devuelve el nombre registrado si existe un asesor
-   * activo con ese nombre; falla con 404 si no existe o 429 por demasiados intentos. */
-  async verificarAsesorPublico(nombre: string): Promise<string> {
+   * activo con ese nombre; falla con 404 si no existe, 403 si su contrato no está vigente o no tiene acceso a ese plano, o 429 por demasiados intentos. */
+  async verificarAsesorPublico(nombre: string, proyecto: 'samai' | 'nanuu'): Promise<string> {
     const r = await firstValueFrom(
-      this.http.post<{ nombre: string }>(`${this.baseUrl}/publico/verificar-asesor`, { nombre }),
+      this.http.post<{ nombre: string }>(`${this.baseUrl}/publico/verificar-asesor`, { nombre, proyecto }),
     );
     return r.nombre;
   }

@@ -8,12 +8,14 @@ import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.exception.ValidationException;
 import com.werealestate.backend.model.AsesorExterno;
+import com.werealestate.backend.model.EstadoContratoAsesor;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.TipoAsesorExterno;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.repository.AsesorExternoRepository;
 import com.werealestate.backend.repository.VentaRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
+import java.time.LocalDate;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,6 +57,13 @@ public class AsesorExternoService {
         exigirAdmin();
         AsesorExterno asesor = new AsesorExterno(
                 request.nombre().trim(), request.celular().trim(), normalizarOpcional(request.correo()));
+        aplicarContrato(
+                asesor,
+                request.contratoEstado() != null ? request.contratoEstado() : EstadoContratoAsesor.VIGENTE,
+                request.contratoFechaFirma(),
+                request.contratoFechaVencimiento());
+        if (request.accesoSamai() != null) asesor.setAccesoSamai(request.accesoSamai());
+        if (request.accesoNanuu() != null) asesor.setAccesoNanuu(request.accesoNanuu());
         return AsesorExternoDto.from(asesorExternoRepository.save(asesor));
     }
 
@@ -67,6 +76,12 @@ public class AsesorExternoService {
         asesor.setCorreo(normalizarOpcional(request.correo()));
         asesor.setActivo(request.activo());
         aplicarJerarquia(asesor, request.tipo(), request.liderDirectoId());
+        if (request.contratoEstado() != null) {
+            aplicarContrato(
+                    asesor, request.contratoEstado(), request.contratoFechaFirma(), request.contratoFechaVencimiento());
+        }
+        if (request.accesoSamai() != null) asesor.setAccesoSamai(request.accesoSamai());
+        if (request.accesoNanuu() != null) asesor.setAccesoNanuu(request.accesoNanuu());
         return AsesorExternoDto.from(asesorExternoRepository.save(asesor));
     }
 
@@ -90,6 +105,16 @@ public class AsesorExternoService {
         }
 
         asesorExternoRepository.delete(asesor);
+    }
+
+    private void aplicarContrato(
+            AsesorExterno asesor, EstadoContratoAsesor estado, LocalDate firma, LocalDate vencimiento) {
+        if (firma != null && vencimiento != null && vencimiento.isBefore(firma)) {
+            throw new ValidationException("La fecha de vencimiento no puede ser anterior a la de firma");
+        }
+        asesor.setContratoEstado(estado);
+        asesor.setContratoFechaFirma(firma);
+        asesor.setContratoFechaVencimiento(vencimiento);
     }
 
     /**

@@ -7,7 +7,6 @@ import jakarta.validation.Valid;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -40,14 +39,20 @@ public class AsesorPublicoController {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body(Map.of("message", "Demasiados intentos. Espera unos minutos e inténtalo de nuevo."));
         }
-        Optional<String> nombre = service.verificar(request.nombre());
-        if (nombre.isPresent()) {
+        AsesorPublicoService.Resultado resultado = service.verificar(request.nombre(), request.proyecto());
+        if (resultado.motivo() == AsesorPublicoService.Motivo.OK) {
             fallosPorIp.remove(ip);
-            return ResponseEntity.ok(Map.of("nombre", nombre.get()));
+            return ResponseEntity.ok(Map.of("nombre", resultado.nombre()));
         }
         registrarFallo(ip);
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(Map.of("message", "No encontramos un asesor con ese nombre"));
+        return switch (resultado.motivo()) {
+            case CONTRATO_NO_VIGENTE -> ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "Tu contrato no está vigente. Comunícate con administración."));
+            case SIN_ACCESO -> ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "No tienes acceso a este desarrollo."));
+            default -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "No encontramos un asesor con ese nombre"));
+        };
     }
 
     private static String ipDe(HttpServletRequest http) {

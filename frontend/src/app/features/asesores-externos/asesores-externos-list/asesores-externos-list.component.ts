@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { LucidePencil, LucideTrash2 } from '@lucide/angular';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
@@ -6,7 +6,16 @@ import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../core/services/toast.service';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { AsesoresExternosService } from '../../../core/services/asesores-externos.service';
-import { AsesorExterno, AsesorExternoUpdateRequest } from '../../../core/models/asesor-externo.model';
+import {
+  AsesorExterno,
+  AsesorExternoUpdateRequest,
+  ESTADO_CONTRATO_CLASES,
+  ESTADO_CONTRATO_LABELS,
+  ESTADOS_CONTRATO,
+  EstadoContratoAsesor,
+} from '../../../core/models/asesor-externo.model';
+
+type FiltroDesarrollo = '' | 'SAMAI' | 'NANUU' | 'AMBOS' | 'NINGUNO';
 
 const ordenarAsesoresPorNombre = (asesores: AsesorExterno[]): AsesorExterno[] =>
   [...asesores].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es-MX', { sensitivity: 'base' }));
@@ -36,7 +45,45 @@ export class AsesoresExternosListComponent {
   readonly isCreando = signal(false);
   readonly errorCreacion = signal<string | null>(null);
 
+  readonly nuevoContratoEstado = signal<EstadoContratoAsesor>('VIGENTE');
+  readonly nuevoFechaFirma = signal('');
+  readonly nuevoFechaVencimiento = signal('');
+  readonly nuevoAccesoSamai = signal(true);
+  readonly nuevoAccesoNanuu = signal(true);
+
+  readonly estadosContrato = ESTADOS_CONTRATO;
+  readonly contratoLabels = ESTADO_CONTRATO_LABELS;
+  readonly contratoClases = ESTADO_CONTRATO_CLASES;
+
+  // Filtros de la lista: por estado de contrato (efectivo) y por a qué planos tiene acceso.
+  readonly filtroContrato = signal<'' | EstadoContratoAsesor>('');
+  readonly filtroDesarrollo = signal<FiltroDesarrollo>('');
+  readonly asesoresFiltrados = computed(() => {
+    const contrato = this.filtroContrato();
+    const desarrollo = this.filtroDesarrollo();
+    return this.asesores().filter((a) => {
+      if (contrato && a.contratoEstadoEfectivo !== contrato) return false;
+      switch (desarrollo) {
+        case 'SAMAI':
+          return a.accesoSamai && !a.accesoNanuu;
+        case 'NANUU':
+          return a.accesoNanuu && !a.accesoSamai;
+        case 'AMBOS':
+          return a.accesoSamai && a.accesoNanuu;
+        case 'NINGUNO':
+          return !a.accesoSamai && !a.accesoNanuu;
+        default:
+          return true;
+      }
+    });
+  });
+
   readonly editandoId = signal<number | null>(null);
+  readonly contratoEnEdicion = signal<EstadoContratoAsesor>('VIGENTE');
+  readonly fechaFirmaEnEdicion = signal('');
+  readonly fechaVencimientoEnEdicion = signal('');
+  readonly accesoSamaiEnEdicion = signal(true);
+  readonly accesoNanuuEnEdicion = signal(true);
   readonly nombreEnEdicion = signal('');
   readonly celularEnEdicion = signal('');
   readonly correoEnEdicion = signal('');
@@ -61,6 +108,11 @@ export class AsesoresExternosListComponent {
     this.nuevoNombre.set('');
     this.nuevoCelular.set('');
     this.nuevoCorreo.set('');
+    this.nuevoContratoEstado.set('VIGENTE');
+    this.nuevoFechaFirma.set('');
+    this.nuevoFechaVencimiento.set('');
+    this.nuevoAccesoSamai.set(true);
+    this.nuevoAccesoNanuu.set(true);
     this.errorCreacion.set(null);
     this.mostrarModalCrear.set(true);
   }
@@ -78,10 +130,26 @@ export class AsesoresExternosListComponent {
       return;
     }
 
+    const firma = this.nuevoFechaFirma();
+    const vencimiento = this.nuevoFechaVencimiento();
+    if (firma && vencimiento && vencimiento < firma) {
+      this.errorCreacion.set('La fecha de vencimiento no puede ser anterior a la de firma.');
+      return;
+    }
+
     this.isCreando.set(true);
     this.errorCreacion.set(null);
     try {
-      const creado = await this.asesoresExternosService.crear({ nombre, celular, correo: correo || null });
+      const creado = await this.asesoresExternosService.crear({
+        nombre,
+        celular,
+        correo: correo || null,
+        contratoEstado: this.nuevoContratoEstado(),
+        contratoFechaFirma: firma || null,
+        contratoFechaVencimiento: vencimiento || null,
+        accesoSamai: this.nuevoAccesoSamai(),
+        accesoNanuu: this.nuevoAccesoNanuu(),
+      });
       this.asesores.update((lista) => ordenarAsesoresPorNombre([...lista, creado]));
       this.mostrarModalCrear.set(false);
       this.toast.success(`${creado.nombre} fue agregado.`);
@@ -112,6 +180,11 @@ export class AsesoresExternosListComponent {
     this.nombreEnEdicion.set(asesor.nombre);
     this.celularEnEdicion.set(asesor.celular ?? '');
     this.correoEnEdicion.set(asesor.correo ?? '');
+    this.contratoEnEdicion.set(asesor.contratoEstado);
+    this.fechaFirmaEnEdicion.set(asesor.contratoFechaFirma ?? '');
+    this.fechaVencimientoEnEdicion.set(asesor.contratoFechaVencimiento ?? '');
+    this.accesoSamaiEnEdicion.set(asesor.accesoSamai);
+    this.accesoNanuuEnEdicion.set(asesor.accesoNanuu);
   }
 
   cancelarEdicion(): void {
@@ -121,6 +194,12 @@ export class AsesoresExternosListComponent {
   async guardarEdicion(asesor: AsesorExterno): Promise<void> {
     const nombre = this.nombreEnEdicion().trim();
     if (!nombre) return;
+    const firma = this.fechaFirmaEnEdicion();
+    const vencimiento = this.fechaVencimientoEnEdicion();
+    if (firma && vencimiento && vencimiento < firma) {
+      this.toast.error('La fecha de vencimiento no puede ser anterior a la de firma.');
+      return;
+    }
     await this.guardar(asesor, {
       nombre,
       celular: this.celularEnEdicion().trim() || null,
@@ -128,6 +207,11 @@ export class AsesoresExternosListComponent {
       activo: asesor.activo,
       tipo: asesor.tipo,
       liderDirectoId: asesor.liderDirectoId,
+      contratoEstado: this.contratoEnEdicion(),
+      contratoFechaFirma: firma || null,
+      contratoFechaVencimiento: vencimiento || null,
+      accesoSamai: this.accesoSamaiEnEdicion(),
+      accesoNanuu: this.accesoNanuuEnEdicion(),
     });
     this.editandoId.set(null);
   }
@@ -142,6 +226,13 @@ export class AsesoresExternosListComponent {
     } finally {
       this.savingId.set(null);
     }
+  }
+
+  /** "2026-03-15" → "15/03/2026" sin pasar por Date (evita el corrimiento de zona horaria). */
+  fechaCorta(iso: string | null): string {
+    if (!iso) return '';
+    const [anio, mes, dia] = iso.split('-');
+    return `${dia}/${mes}/${anio}`;
   }
 
   /** Solo informativo (la jerarquía se maneja en /panel/teams): para que se entienda de un vistazo

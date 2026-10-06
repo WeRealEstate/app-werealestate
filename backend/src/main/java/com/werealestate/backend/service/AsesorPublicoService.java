@@ -1,6 +1,7 @@
 package com.werealestate.backend.service;
 
 import com.werealestate.backend.model.AsesorExterno;
+import com.werealestate.backend.model.EstadoContratoAsesor;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.repository.AsesorExternoRepository;
@@ -31,11 +32,22 @@ public class AsesorPublicoService {
         this.asesorExternoRepository = asesorExternoRepository;
     }
 
-    /** Devuelve el nombre tal como está registrado si coincide (sin importar mayúsculas, acentos
-     * ni espacios de más); vacío si no existe ningún asesor activo con ese nombre. */
-    public Optional<String> verificar(String nombre) {
+    public enum Motivo {
+        OK,
+        NO_ENCONTRADO,
+        CONTRATO_NO_VIGENTE,
+        SIN_ACCESO
+    }
+
+    public record Resultado(Motivo motivo, String nombre) {
+    }
+
+    /** Valida el nombre (sin importar mayúsculas, acentos ni espacios de más) y, para un asesor
+     * externo, que su contrato esté vigente y tenga acceso al plano pedido ("samai" / "nanuu";
+     * null = solo se revisa el contrato). Los usuarios internos entran a cualquier plano. */
+    public Resultado verificar(String nombre, String proyecto) {
         String buscado = normalizar(nombre);
-        if (buscado.isEmpty()) return Optional.empty();
+        if (buscado.isEmpty()) return new Resultado(Motivo.NO_ENCONTRADO, null);
 
         Optional<String> interno = usuarioRepository.findAll().stream()
                 .filter(u -> u.isActivo()
@@ -44,12 +56,27 @@ public class AsesorPublicoService {
                 .map(Usuario::getNombre)
                 .filter(n -> normalizar(n).equals(buscado))
                 .findFirst();
-        if (interno.isPresent()) return interno;
+        if (interno.isPresent()) return new Resultado(Motivo.OK, interno.get());
 
-        return asesorExternoRepository.findByActivoTrueOrderByNombreAsc().stream()
-                .map(AsesorExterno::getNombre)
-                .filter(n -> normalizar(n).equals(buscado))
-                .findFirst();
+        Resultado primerRechazo = new Resultado(Motivo.NO_ENCONTRADO, null);
+        boolean hayRechazo = false;
+        for (AsesorExterno a : asesorExternoRepository.findByActivoTrueOrderByNombreAsc()) {
+            if (!normalizar(a.getNombre()).equals(buscado)) continue;
+            Motivo motivo = motivoExterno(a, proyecto);
+            if (motivo == Motivo.OK) return new Resultado(Motivo.OK, a.getNombre());
+            if (!hayRechazo) {
+                primerRechazo = new Resultado(motivo, null);
+                hayRechazo = true;
+            }
+        }
+        return primerRechazo;
+    }
+
+    private static Motivo motivoExterno(AsesorExterno a, String proyecto) {
+        if (a.getContratoEstadoEfectivo() != EstadoContratoAsesor.VIGENTE) return Motivo.CONTRATO_NO_VIGENTE;
+        if ("samai".equals(proyecto) && !a.isAccesoSamai()) return Motivo.SIN_ACCESO;
+        if ("nanuu".equals(proyecto) && !a.isAccesoNanuu()) return Motivo.SIN_ACCESO;
+        return Motivo.OK;
     }
 
     private static String normalizar(String texto) {

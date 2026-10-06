@@ -11,6 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -56,6 +57,24 @@ public class AsesorExterno {
      * LINEA de línea 1 — nunca hay línea 3 (ver AsesorExternoService.resolverJerarquia). */
     @Column(name = "nivel_linea")
     private Integer nivelLinea;
+
+    // Contrato: las fechas son opcionales (firma y vencimiento no siempre aplican).
+    @Enumerated(EnumType.STRING)
+    @Column(name = "contrato_estado", nullable = false, length = 30)
+    private EstadoContratoAsesor contratoEstado = EstadoContratoAsesor.VIGENTE;
+
+    @Column(name = "contrato_fecha_firma")
+    private LocalDate contratoFechaFirma;
+
+    @Column(name = "contrato_fecha_vencimiento")
+    private LocalDate contratoFechaVencimiento;
+
+    // A qué planos públicos puede entrar (SAMAI / Aldea Nanuu).
+    @Column(name = "acceso_samai", nullable = false)
+    private boolean accesoSamai = true;
+
+    @Column(name = "acceso_nanuu", nullable = false)
+    private boolean accesoNanuu = true;
 
     @Column(name = "fecha_creacion", nullable = false)
     private LocalDateTime fechaCreacion = LocalDateTime.now();
@@ -132,5 +151,56 @@ public class AsesorExterno {
 
     public LocalDateTime getFechaCreacion() {
         return fechaCreacion;
+    }
+
+    public EstadoContratoAsesor getContratoEstado() {
+        return contratoEstado;
+    }
+
+    public void setContratoEstado(EstadoContratoAsesor contratoEstado) {
+        this.contratoEstado = contratoEstado;
+    }
+
+    public LocalDate getContratoFechaFirma() {
+        return contratoFechaFirma;
+    }
+
+    public void setContratoFechaFirma(LocalDate contratoFechaFirma) {
+        this.contratoFechaFirma = contratoFechaFirma;
+    }
+
+    public LocalDate getContratoFechaVencimiento() {
+        return contratoFechaVencimiento;
+    }
+
+    public void setContratoFechaVencimiento(LocalDate contratoFechaVencimiento) {
+        this.contratoFechaVencimiento = contratoFechaVencimiento;
+    }
+
+    public boolean isAccesoSamai() {
+        return accesoSamai;
+    }
+
+    public void setAccesoSamai(boolean accesoSamai) {
+        this.accesoSamai = accesoSamai;
+    }
+
+    public boolean isAccesoNanuu() {
+        return accesoNanuu;
+    }
+
+    public void setAccesoNanuu(boolean accesoNanuu) {
+        this.accesoNanuu = accesoNanuu;
+    }
+
+    /** Un contrato VIGENTE cuya fecha de vencimiento ya pasó cuenta como VENCIDO sin que un admin
+     * tenga que cambiarlo a mano; cualquier otro estado se respeta tal cual. */
+    public EstadoContratoAsesor getContratoEstadoEfectivo() {
+        if (contratoEstado == EstadoContratoAsesor.VIGENTE
+                && contratoFechaVencimiento != null
+                && contratoFechaVencimiento.isBefore(LocalDate.now())) {
+            return EstadoContratoAsesor.VENCIDO;
+        }
+        return contratoEstado;
     }
 }
