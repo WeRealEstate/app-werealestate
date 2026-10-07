@@ -148,7 +148,7 @@ public class UsuarioService {
             throw new ForbiddenOperationException("No puedes cambiar tu propio rol ni desactivar tu cuenta");
         }
 
-        usuario.setNombre(request.nombre());
+        usuario.setNombre(request.nombre().trim());
         usuario.setRol(request.rol());
         usuario.setActivo(request.activo());
         usuario.setModulos(modulosAGuardar(request.rol(), request.modulos()));

@@ -1,6 +1,6 @@
 import { FormsModule } from '@angular/forms';
 import { Component, computed, inject, signal } from '@angular/core';
-import { LucideKey, LucideTrash2 } from '@lucide/angular';
+import { LucideKey, LucidePencil, LucideTrash2 } from '@lucide/angular';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
@@ -15,7 +15,7 @@ const ROLES: Role[] = ['ASESOR', 'LIDER_AREA', 'EQUIPO_INTERNO', 'ADMIN'];
 @Component({
   selector: 'app-usuarios-list',
   standalone: true,
-  imports: [FormsModule, RouterLink, LucideKey, LucideTrash2, ModulosSelectorComponent],
+  imports: [FormsModule, RouterLink, LucideKey, LucidePencil, LucideTrash2, ModulosSelectorComponent],
   templateUrl: './usuarios-list.component.html',
 })
 export class UsuariosListComponent {
@@ -155,6 +155,55 @@ export class UsuariosListComponent {
   }
 
   // --- Nómina semanal: monto y desde cuándo, en un modal aparte ---
+  // Cambiar solo el nombre de un usuario.
+  readonly editandoNombreDe = signal<Usuario | null>(null);
+  readonly nombreNuevo = signal('');
+  readonly nombreError = signal<string | null>(null);
+
+  abrirNombre(usuario: Usuario): void {
+    this.editandoNombreDe.set(usuario);
+    this.nombreNuevo.set(usuario.nombre);
+    this.nombreError.set(null);
+  }
+
+  cerrarNombre(): void {
+    this.editandoNombreDe.set(null);
+  }
+
+  async guardarNombre(): Promise<void> {
+    const usuario = this.editandoNombreDe();
+    if (!usuario || this.savingId() !== null) return;
+    const nombre = this.nombreNuevo().trim().replace(/\s+/g, ' ');
+    if (!nombre) {
+      this.nombreError.set('Escribe el nombre.');
+      return;
+    }
+    if (nombre === usuario.nombre) {
+      this.editandoNombreDe.set(null);
+      return;
+    }
+    this.savingId.set(usuario.id);
+    this.nombreError.set(null);
+    try {
+      const actualizado = await this.usuariosService.actualizar(usuario.id, {
+        nombre,
+        rol: usuario.rol,
+        activo: usuario.activo,
+        modulos: usuario.rol === 'ADMIN' ? null : usuario.modulos,
+      });
+      this.usuarios.update((lista) => lista.map((u) => (u.id === actualizado.id ? actualizado : u)));
+      if (usuario.id === this.propioId()) void this.auth.refrescarPerfil();
+      this.editandoNombreDe.set(null);
+      this.toast.success('Nombre actualizado.');
+    } catch (e) {
+      this.nombreError.set(
+        e instanceof HttpErrorResponse && typeof e.error?.message === 'string' ? e.error.message : 'No se pudo actualizar el nombre.',
+      );
+    } finally {
+      this.savingId.set(null);
+    }
+  }
+
   readonly editandoNominaDe = signal<Usuario | null>(null);
   readonly nominaMonto = signal<number | null>(null);
   readonly nominaDesde = signal('');

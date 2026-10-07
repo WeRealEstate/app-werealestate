@@ -44,11 +44,20 @@
           @for (u of usuarios(); track u.id; let i = $index) {
             <tr class="stagger-item hover:bg-surface-2 transition-colors duration-150" [style.animation-delay.ms]="i < 8 ? i * 40 : 0">
               <td class="px-4 py-3">
-                <div class="font-medium text-ink">
-                  {{ u.nombre }}
+                <div class="flex items-center gap-1.5 font-medium text-ink">
+                  <span>{{ u.nombre }}</span>
                   @if (u.id === propioId()) {
-                    <span class="ml-1.5 text-xs font-normal text-ink-muted">(tú)</span>
+                    <span class="text-xs font-normal text-ink-muted">(tú)</span>
                   }
+                  <button
+                    type="button"
+                    (click)="abrirNombre(u)"
+                    [attr.aria-label]="'Editar nombre de ' + u.nombre"
+                    title="Editar nombre"
+                    class="flex h-7 w-7 items-center justify-center rounded-md text-ink-muted hover:bg-surface-2 hover:text-we-primary"
+                  >
+                    <svg lucidePencil [size]="14" aria-hidden="true"></svg>
+                  </button>
                 </div>
                 <div class="text-xs text-ink-muted">{{ u.email }}</div>
               </td>
@@ -216,6 +225,30 @@
           </button>
         </div>
       </div>
+    </div>
+  }
+
+  @if (editandoNombreDe(); as u) {
+    <button type="button" (click)="cerrarNombre()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="nombre-titulo">
+      <form (ngSubmit)="guardarNombre()" class="modal-panel-enter w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <h2 id="nombre-titulo" class="font-heading text-lg font-semibold text-ink">Editar nombre</h2>
+        <p class="mt-1 text-sm text-ink-muted">{{ u.email }}</p>
+        <input
+          id="nombre-nuevo" name="nombre" type="text" maxlength="200" autocomplete="off"
+          [ngModel]="nombreNuevo()" (ngModelChange)="nombreNuevo.set($event)"
+          class="mt-4 w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+        />
+        @if (nombreError(); as error) {
+          <p class="mt-2 text-xs text-red-600 dark:text-red-400" role="alert">{{ error }}</p>
+        }
+        <div class="mt-5 flex justify-end gap-2.5">
+          <button type="button" (click)="cerrarNombre()" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cancelar</button>
+          <button type="submit" [disabled]="savingId() === u.id" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
+            {{ savingId() === u.id ? 'Guardando…' : 'Guardar' }}
+          </button>
+        </div>
+      </form>
     </div>
   }
 
