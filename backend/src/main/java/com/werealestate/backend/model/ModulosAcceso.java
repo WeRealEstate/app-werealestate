@@ -30,6 +30,7 @@ public final class ModulosAcceso {
                     Modulo.LOTES,
                     Modulo.PLANO,
                     Modulo.VENTAS,
+                    Modulo.CLIENTES,
                     Modulo.FINANZAS,
                     Modulo.GASTOS,
                     Modulo.CALENDARIO,

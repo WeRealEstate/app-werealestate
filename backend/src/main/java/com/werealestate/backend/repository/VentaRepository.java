@@ -29,5 +29,7 @@ public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecific
 
     boolean existsByUsuarioAsesorId(Long usuarioId);
 
+    java.util.List<Venta> findByClienteRefId(Long clienteId);
+
     boolean existsByAsesorExternoId(Long asesorExternoId);
 }

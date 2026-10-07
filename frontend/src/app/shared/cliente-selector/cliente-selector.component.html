@@ -1,0 +1,54 @@
+@if (cliente(); as c) {
+  <div class="flex items-center justify-between gap-2 rounded-lg border border-border bg-surface px-3.5 py-2.5" data-testid="cliente-elegido">
+    <div class="min-w-0">
+      <p class="truncate text-sm font-medium text-ink">{{ c.nombreCompleto }}</p>
+      <p class="truncate text-xs text-ink-muted">
+        {{ c.telefono || 'Sin teléfono' }}
+        @if (c.compras > 0) { · {{ c.compras }} compra{{ c.compras === 1 ? '' : 's' }}@if (c.desarrollos.length > 0) { ({{ c.desarrollos.join(', ') }}) } }
+        @if (c.datosIncompletos) { · <span class="text-amber-600 dark:text-amber-400">datos incompletos</span> }
+      </p>
+    </div>
+    <button type="button" (click)="quitar()" aria-label="Cambiar cliente" title="Cambiar cliente" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2">
+      <svg lucideX [size]="16" aria-hidden="true"></svg>
+    </button>
+  </div>
+} @else {
+  <div class="relative">
+    <svg lucideSearch [size]="16" aria-hidden="true" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted"></svg>
+    <input
+      id="cliente" type="text" autocomplete="off" placeholder="Buscar por nombre, teléfono o CURP…"
+      [ngModel]="texto()" (ngModelChange)="escribir($event)" (focus)="abrir()" (blur)="cerrarLista()"
+      class="block w-full rounded-lg border border-border py-2.5 pl-9 pr-3.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+    />
+    @if (abierto()) {
+      <div class="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-border bg-surface shadow-lg">
+        @if (buscando() && resultados().length === 0) {
+          <p class="px-3.5 py-2.5 text-sm text-ink-muted">Buscando…</p>
+        }
+        @for (r of resultados(); track r.id) {
+          <button type="button" (mousedown)="elegir(r)" [disabled]="!r.activo" class="block w-full px-3.5 py-2 text-left hover:bg-surface-2 disabled:opacity-50">
+            <span class="block text-sm font-medium text-ink">{{ r.nombreCompleto }}@if (!r.activo) { (inactivo) }</span>
+            <span class="block text-xs text-ink-muted">
+              {{ r.telefono || 'Sin teléfono' }}
+              @if (r.compras > 0) { · {{ r.compras }} compra{{ r.compras === 1 ? '' : 's' }} ({{ r.desarrollos.join(', ') }}) }
+            </span>
+          </button>
+        }
+        @if (!buscando() && resultados().length === 0) {
+          <p class="px-3.5 py-2.5 text-sm text-ink-muted">Sin coincidencias.</p>
+        }
+        <button type="button" (mousedown)="registrarNuevo()" class="flex w-full items-center gap-2 border-t border-border px-3.5 py-2.5 text-left text-sm font-semibold text-we-primary hover:bg-we-primary/10">
+          <svg lucideUserPlus [size]="16" aria-hidden="true"></svg>
+          Registrar nuevo cliente
+        </button>
+      </div>
+    }
+  </div>
+  @if (invalido()) {
+    <p class="mt-1.5 text-xs text-red-600">Elige o registra al cliente.</p>
+  }
+}
+
+@if (registrando()) {
+  <app-cliente-form-modal [nombreInicial]="texto()" (guardado)="alGuardar($event)" (cerrado)="registrando.set(false)" (duplicado)="usarExistente($event)" />
+}

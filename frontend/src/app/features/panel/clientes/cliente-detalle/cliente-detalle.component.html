@@ -1,0 +1,135 @@
+<div class="page-enter max-w-4xl">
+  <a routerLink="/panel/clientes" class="text-sm text-we-blue-light hover:underline">&larr; Volver a clientes</a>
+
+  @if (cargando()) {
+    <p class="mt-6 text-sm text-ink-muted">Cargando…</p>
+  } @else if (error(); as e) {
+    <p class="mt-6 text-sm text-red-600">{{ e }}</p>
+  } @else if (cliente(); as c) {
+    <div class="mt-3 flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h1 class="font-heading text-2xl font-semibold text-ink">{{ c.nombreCompleto }}</h1>
+        <p class="mt-1 text-sm text-ink-muted">
+          Cliente desde {{ fecha(c.fechaCreacion) }}
+          @if (!c.activo) { · <strong>Inactivo</strong> }
+          @if (c.datosIncompletos) { · <span class="text-amber-600 dark:text-amber-400">Datos incompletos: falta completar su ficha</span> }
+        </p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button type="button" (click)="editando.set(true)" class="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink hover:border-we-primary">
+          <svg lucidePencil [size]="16" aria-hidden="true"></svg> Editar
+        </button>
+        @if (c.activo) {
+          <a [routerLink]="['/panel/ventas/nueva']" [queryParams]="{ clienteId: c.id }" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90">Nueva venta</a>
+        }
+      </div>
+    </div>
+
+    <div class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div class="rounded-xl border border-border bg-surface p-4">
+        <p class="text-xs text-ink-muted">Total comprado ({{ c.compras }} {{ c.compras === 1 ? 'compra' : 'compras' }})</p>
+        <p class="mt-1 text-lg font-semibold text-ink">${{ money(c.totalComprado) }}</p>
+      </div>
+      <div class="rounded-xl border border-border bg-surface p-4">
+        <p class="text-xs text-ink-muted">Abonado</p>
+        <p class="mt-1 text-lg font-semibold text-ink">${{ money(c.totalAbonado) }}</p>
+      </div>
+      <div class="rounded-xl border border-border bg-surface p-4">
+        <p class="text-xs text-ink-muted">Saldo pendiente</p>
+        <p class="mt-1 text-lg font-semibold text-ink">${{ money(c.saldoPendiente) }}</p>
+      </div>
+    </div>
+
+    <section class="mt-6 rounded-xl border border-border bg-surface p-5">
+      <h2 class="font-heading text-base font-semibold text-ink">Compras</h2>
+      @if (c.ventas.length === 0) {
+        <p class="mt-2 text-sm text-ink-muted">Todavía no tiene compras.</p>
+      } @else {
+        <div class="mt-3 overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="text-xs uppercase tracking-wide text-ink-muted">
+              <tr>
+                <th class="py-2 pr-3 font-semibold">Venta</th>
+                <th class="py-2 pr-3 font-semibold">Fecha</th>
+                <th class="py-2 pr-3 font-semibold">Desarrollo y lotes</th>
+                <th class="py-2 pr-3 text-right font-semibold">Precio</th>
+                <th class="py-2 pr-3 text-right font-semibold">Abonado</th>
+                <th class="py-2 text-right font-semibold">Saldo</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border">
+              @for (v of c.ventas; track v.ventaId) {
+                <tr>
+                  <td class="py-2 pr-3"><a [routerLink]="['/panel/ventas', v.numero]" class="font-medium text-we-primary hover:underline">#{{ v.numero }}</a></td>
+                  <td class="py-2 pr-3 text-ink-muted">{{ fecha(v.fechaVenta) }}</td>
+                  <td class="py-2 pr-3 text-ink">{{ v.desarrollos.join(', ') }} · {{ v.lotes.join(', ') }}</td>
+                  <td class="py-2 pr-3 text-right text-ink">${{ money(v.precio) }}</td>
+                  <td class="py-2 pr-3 text-right text-ink">${{ money(v.abonado) }}</td>
+                  <td class="py-2 text-right text-ink">${{ money(v.saldo) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+
+    <section class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div class="rounded-xl border border-border bg-surface p-5">
+        <h2 class="font-heading text-base font-semibold text-ink">Datos personales</h2>
+        <dl class="mt-3 space-y-2 text-sm">
+          <div><dt class="text-xs text-ink-muted">Nacimiento</dt><dd class="text-ink">{{ fecha(c.fechaNacimiento) }}@if (c.edad !== null) { ({{ c.edad }} años) }</dd></div>
+          <div><dt class="text-xs text-ink-muted">Lugar de nacimiento / nacionalidad</dt><dd class="text-ink">{{ c.lugarNacimiento || '—' }} / {{ c.nacionalidad || '—' }}</dd></div>
+          <div><dt class="text-xs text-ink-muted">Estado civil</dt><dd class="text-ink">{{ c.estadoCivil ? civilLabels[c.estadoCivil] : '—' }}</dd></div>
+          <div><dt class="text-xs text-ink-muted">Ocupación</dt><dd class="text-ink">{{ c.ocupacion || '—' }}</dd></div>
+          <div><dt class="text-xs text-ink-muted">CURP / RFC</dt><dd class="text-ink">{{ c.curp || '—' }} / {{ c.rfc || '—' }}</dd></div>
+        </dl>
+      </div>
+      <div class="rounded-xl border border-border bg-surface p-5">
+        <h2 class="font-heading text-base font-semibold text-ink">Contacto y domicilio</h2>
+        <dl class="mt-3 space-y-2 text-sm">
+          <div><dt class="text-xs text-ink-muted">Teléfonos</dt><dd class="text-ink">{{ c.telefono || '—' }}@if (c.telefono2) { · {{ c.telefono2 }} }</dd></div>
+          <div><dt class="text-xs text-ink-muted">Correo</dt><dd class="text-ink">{{ c.correo || '—' }}</dd></div>
+          <div><dt class="text-xs text-ink-muted">Domicilio</dt><dd class="text-ink">{{ domicilio(c) || '—' }}</dd></div>
+          <div><dt class="text-xs text-ink-muted">Beneficiario</dt><dd class="text-ink">{{ c.beneficiarioNombre || '—' }}@if (c.beneficiarioParentesco) { ({{ c.beneficiarioParentesco }}) }</dd></div>
+        </dl>
+      </div>
+      <div class="rounded-xl border border-border bg-surface p-5">
+        <h2 class="font-heading text-base font-semibold text-ink">Cómo nos conoció</h2>
+        <dl class="mt-3 space-y-2 text-sm">
+          <div><dt class="text-xs text-ink-muted">Fuente</dt><dd class="text-ink">{{ c.fuente ? fuenteLabels[c.fuente] : '—' }}@if (c.fuenteDetalle) { · {{ c.fuenteDetalle }} }</dd></div>
+          <div><dt class="text-xs text-ink-muted">Captado por</dt><dd class="text-ink">{{ c.captadoPorNombre || '—' }}</dd></div>
+        </dl>
+      </div>
+      <div class="rounded-xl border border-border bg-surface p-5">
+        <h2 class="font-heading text-base font-semibold text-ink">Expediente</h2>
+        <dl class="mt-3 space-y-2 text-sm">
+          <div><dt class="text-xs text-ink-muted">Ubicación</dt><dd class="text-ink">{{ c.expedienteUbicacion ? ubicacionLabels[c.expedienteUbicacion] : 'Sin definir' }}</dd></div>
+          <div>
+            <dt class="text-xs text-ink-muted">Carpeta de Drive</dt>
+            <dd>
+              @if (esUrl(c.expedienteDriveUrl)) {
+                <a [href]="c.expedienteDriveUrl" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-we-primary hover:underline">
+                  Abrir carpeta <svg lucideExternalLink [size]="14" aria-hidden="true"></svg>
+                </a>
+              } @else {
+                <span class="text-ink">{{ c.expedienteDriveUrl || '—' }}</span>
+              }
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+
+    @if (c.notas) {
+      <section class="mt-4 rounded-xl border border-border bg-surface p-5">
+        <h2 class="font-heading text-base font-semibold text-ink">Notas</h2>
+        <p class="mt-2 whitespace-pre-line text-sm text-ink">{{ c.notas }}</p>
+      </section>
+    }
+
+    @if (editando()) {
+      <app-cliente-form-modal [cliente]="c" (guardado)="alGuardar()" (cerrado)="editando.set(false)" (duplicado)="editando.set(false)" />
+    }
+  }
+</div>

@@ -13,7 +13,8 @@ import java.time.LocalDate;
  * venta ni sus precios, solo los datos capturados (cliente, fechas, términos de financiamiento).
  * Temporal: el botón que usa esto en el frontend se va a quitar más adelante. */
 public record VentaUpdateRequest(
-        @NotBlank String cliente,
+        // null = sin cambios; con valor, la venta pasa a ese cliente.
+        Long clienteId,
         // Exactamente uno de los dos (ver VentaCreateRequest / VentaService.resolverAsesor).
         Long usuarioAsesorId,
         Long asesorExternoId,

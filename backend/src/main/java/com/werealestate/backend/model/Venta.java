@@ -37,8 +37,15 @@ public class Venta {
     @Column(name = "numero", insertable = false, updatable = false)
     private Long numero;
 
+    /** Nombre del cliente tal como se vio al registrar la venta (se actualiza si se edita el nombre del
+     * cliente ligado); sirve para listas y búsquedas sin cargar la ficha. */
     @Column(nullable = false, length = 200)
     private String cliente;
+
+    /** El cliente ligado (ver Cliente); null solo mientras no se migra una venta anterior. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cliente_id")
+    private Cliente clienteRef;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_asesor_id")
@@ -158,6 +165,16 @@ public class Venta {
 
     public Long getNumero() {
         return numero;
+    }
+
+    public Cliente getClienteRef() {
+        return clienteRef;
+    }
+
+    /** Liga la venta a un cliente y deja su nombre como texto de la venta. */
+    public void ligarCliente(Cliente c) {
+        this.clienteRef = c;
+        this.cliente = c.nombreCompleto();
     }
 
     public String getCliente() {

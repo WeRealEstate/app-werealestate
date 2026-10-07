@@ -16,7 +16,8 @@ public record VentaCreateRequest(
         // Uno o más lotes: un cliente puede comprar varios en la misma operación, con una sola
         // mensualidad/plazo/saldo combinado (ver VentaLote y VentaService).
         @NotEmpty @Valid List<VentaLoteItemRequest> lotes,
-        @NotBlank String cliente,
+        // El cliente ya registrado (ver Cliente / ClienteService): se elige al crear la venta.
+        @NotNull Long clienteId,
         // Exactamente uno de los dos: el asesor interno (usuario real del sistema) o externo (ver
         // VentaService.resolverAsesor, que valida esto — no se puede expresar con anotaciones).
         Long usuarioAsesorId,

@@ -36,6 +36,8 @@ export interface Venta {
   /** Vacía si la venta no se pactó con aportaciones. */
   aportaciones: VentaAportacion[];
   cliente: string;
+  /** El cliente registrado al que está ligada (null solo en datos muy viejos). */
+  clienteId: number | null;
   asesor: VentaAsesor;
   formaPago: string;
   fechaVenta: string;
@@ -65,7 +67,7 @@ export interface VentaLoteItemRequest {
 
 export interface VentaCreateRequest {
   lotes: VentaLoteItemRequest[];
-  cliente: string;
+  clienteId: number;
   // Exactamente uno de los dos (ver backend VentaService.resolverAsesor).
   usuarioAsesorId: number | null;
   asesorExternoId: number | null;
@@ -87,7 +89,8 @@ export interface VentaCreateRequest {
  * venta, solo sus datos capturados. Temporal: el botón "Modificar venta" que usa esto se va a
  * quitar más adelante. */
 export interface VentaUpdateRequest {
-  cliente: string;
+  /** Opcional: si se manda, la venta se re-liga a ese cliente. */
+  clienteId?: number | null;
   usuarioAsesorId: number | null;
   asesorExternoId: number | null;
   formaPago: string;

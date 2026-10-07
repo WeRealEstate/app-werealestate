@@ -1,3 +1,5 @@
+import { ClienteLista } from '../../../../core/models/cliente.model';
+import { ClienteSelectorComponent } from '../../../../shared/cliente-selector/cliente-selector.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { LucidePencil, LucideTrash2 } from '@lucide/angular';
@@ -20,7 +22,7 @@ const SEGUNDOS_ESPERA_ELIMINAR = 10;
 @Component({
   selector: 'app-venta-detalle',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, LucidePencil, LucideTrash2],
+  imports: [ReactiveFormsModule, RouterLink, ClienteSelectorComponent, LucidePencil, LucideTrash2],
   templateUrl: './venta-detalle.component.html',
 })
 export class VentaDetalleComponent implements OnInit, OnDestroy {
@@ -59,7 +61,6 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
   readonly isSavingEdicion = signal(false);
   readonly errorEdicion = signal<string | null>(null);
   readonly edicionForm = this.fb.group({
-    cliente: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
     asesor: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
     fechaVenta: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
     formaPago: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
@@ -214,12 +215,15 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
   }
 
   // --- Modificar venta (temporal) ---
+  readonly clienteEdicion = signal<ClienteLista | null>(null);
 
   abrirEdicion(): void {
     const v = this.venta();
     if (!v) return;
+    this.clienteEdicion.set(
+      v.clienteId === null ? null : { id: v.clienteId, nombreCompleto: v.cliente, telefono: null, correo: null, activo: true, datosIncompletos: false, compras: 0, desarrollos: [], saldoPendiente: 0 },
+    );
     this.edicionForm.reset({
-      cliente: v.cliente,
       asesor: asesorSeleccionDe(v.asesor),
       fechaVenta: v.fechaVenta,
       formaPago: v.formaPago,
@@ -251,7 +255,7 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
 
     try {
       const actualizada = await this.ventasService.actualizar(this.ventaId!, {
-        cliente: v.cliente,
+        clienteId: this.clienteEdicion()?.id ?? null,
         ...parseAsesorSeleccion(v.asesor),
         fechaVenta: v.fechaVenta,
         formaPago: v.formaPago,

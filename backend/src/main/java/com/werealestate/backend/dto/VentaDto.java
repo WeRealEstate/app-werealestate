@@ -15,6 +15,8 @@ public record VentaDto(
         // Aportaciones programadas de la venta (ver VentaAportacion); vacía si no las tiene.
         List<VentaAportacionDto> aportaciones,
         String cliente,
+        // El cliente ligado (null solo en una venta anterior que aún no se migra).
+        Long clienteId,
         VentaAsesorDto asesor,
         String formaPago,
         LocalDate fechaVenta,
@@ -44,6 +46,7 @@ public record VentaDto(
                 lotes,
                 aportaciones,
                 venta.getCliente(),
+                venta.getClienteRef() != null ? venta.getClienteRef().getId() : null,
                 VentaAsesorDto.from(venta),
                 venta.getFormaPago(),
                 venta.getFechaVenta(),

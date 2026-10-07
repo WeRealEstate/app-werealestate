@@ -1,0 +1,80 @@
+<div class="page-enter">
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="font-heading text-2xl font-semibold text-ink">Clientes</h1>
+      <p class="mt-1 text-sm text-ink-muted">Todo cliente se registra aquí antes de venderle. Un mismo cliente puede comprar en varios desarrollos.</p>
+    </div>
+    <button
+      type="button" (click)="registrando.set(true)"
+      class="inline-flex items-center justify-center gap-2 rounded-lg bg-we-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150 min-h-[44px]"
+    >
+      + Registrar cliente
+    </button>
+  </div>
+
+  <div class="mt-6 flex flex-wrap items-center gap-3">
+    <input
+      type="search" [ngModel]="busqueda()" (ngModelChange)="busqueda.set($event)" placeholder="Buscar por nombre, teléfono o correo…"
+      class="w-full max-w-sm rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+    />
+    <select [ngModel]="filtroEstado()" (ngModelChange)="filtroEstado.set($event)" aria-label="Estado" class="rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink">
+      <option value="ACTIVOS">Activos</option>
+      <option value="TODOS">Todos</option>
+      <option value="INACTIVOS">Inactivos</option>
+      <option value="INCOMPLETOS">Datos incompletos</option>
+      <option value="CON_SALDO">Con saldo pendiente</option>
+    </select>
+    <select [ngModel]="filtroDesarrollo()" (ngModelChange)="filtroDesarrollo.set($event)" aria-label="Desarrollo" class="rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink">
+      <option value="">Todos los desarrollos</option>
+      @for (d of desarrollos(); track d) {
+        <option [value]="d">{{ d }}</option>
+      }
+    </select>
+    <span class="text-xs text-ink-muted">{{ filtrados().length }} de {{ clientes().length }}</span>
+  </div>
+
+  @if (cargando()) {
+    <p class="mt-8 text-sm text-ink-muted">Cargando clientes…</p>
+  } @else if (error(); as e) {
+    <div class="mt-8 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-300">{{ e }}</div>
+  } @else if (filtrados().length === 0) {
+    <p class="mt-8 text-sm text-ink-muted">No hay clientes con esos filtros.</p>
+  } @else {
+    <div class="mt-4 overflow-x-auto rounded-xl border border-border bg-surface">
+      <table class="w-full text-left text-sm">
+        <thead class="border-b border-border bg-surface-2 text-xs uppercase tracking-wide text-ink-muted">
+          <tr>
+            <th class="px-4 py-3 font-semibold">Cliente</th>
+            <th class="px-4 py-3 font-semibold">Teléfono</th>
+            <th class="px-4 py-3 font-semibold">Compras</th>
+            <th class="px-4 py-3 font-semibold">Desarrollos</th>
+            <th class="px-4 py-3 text-right font-semibold">Saldo pendiente</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border">
+          @for (c of filtrados(); track c.id) {
+            <tr class="hover:bg-surface-2">
+              <td class="px-4 py-3">
+                <a [routerLink]="['/panel/clientes', c.id]" class="font-medium text-ink hover:underline">{{ c.nombreCompleto }}</a>
+                @if (c.datosIncompletos) {
+                  <span class="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">Datos incompletos</span>
+                }
+                @if (!c.activo) {
+                  <span class="ml-2 rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-ink-muted">Inactivo</span>
+                }
+              </td>
+              <td class="px-4 py-3 text-ink-muted">{{ c.telefono || '—' }}</td>
+              <td class="px-4 py-3 text-ink">{{ c.compras }}</td>
+              <td class="px-4 py-3 text-ink-muted">{{ c.desarrollos.length ? c.desarrollos.join(', ') : '—' }}</td>
+              <td class="px-4 py-3 text-right text-ink">{{ c.saldoPendiente > 0 ? '$' + money(c.saldoPendiente) : '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  @if (registrando()) {
+    <app-cliente-form-modal (guardado)="alGuardar($event)" (cerrado)="registrando.set(false)" (duplicado)="irAExistente($event)" />
+  }
+</div>

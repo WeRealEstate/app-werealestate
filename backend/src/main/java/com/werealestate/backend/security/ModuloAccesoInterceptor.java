@@ -38,6 +38,9 @@ public class ModuloAccesoInterceptor implements HandlerInterceptor {
         MODULOS_POR_PREFIJO.put("/api/cotizaciones", EnumSet.of(Modulo.COTIZADOR));
         MODULOS_POR_PREFIJO.put("/api/lotes", EnumSet.of(Modulo.LOTES, Modulo.PLANO, Modulo.VENTAS, Modulo.COTIZADOR));
         MODULOS_POR_PREFIJO.put("/api/ventas", EnumSet.of(Modulo.VENTAS));
+        // Más específico primero: el selector de cliente de la venta también lo usa Ventas.
+        MODULOS_POR_PREFIJO.put("/api/clientes/buscar", EnumSet.of(Modulo.CLIENTES, Modulo.VENTAS));
+        MODULOS_POR_PREFIJO.put("/api/clientes", EnumSet.of(Modulo.CLIENTES));
         MODULOS_POR_PREFIJO.put("/api/finanzas", EnumSet.of(Modulo.FINANZAS));
         MODULOS_POR_PREFIJO.put("/api/gastos", EnumSet.of(Modulo.GASTOS));
         MODULOS_POR_PREFIJO.put("/api/tipos-gasto", EnumSet.of(Modulo.GASTOS));

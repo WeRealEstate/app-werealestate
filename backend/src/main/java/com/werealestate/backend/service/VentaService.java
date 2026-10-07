@@ -17,6 +17,7 @@ import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.exception.ValidationException;
 import com.werealestate.backend.model.AsesorExterno;
+import com.werealestate.backend.model.Cliente;
 import com.werealestate.backend.model.Lote;
 import com.werealestate.backend.model.PagoVenta;
 import com.werealestate.backend.model.Role;
@@ -67,6 +68,7 @@ public class VentaService {
     private final LoteService loteService;
     private final PagoVentaRepository pagoVentaRepository;
     private final ComisionService comisionService;
+    private final ClienteService clienteService;
     private final PasswordEncoder passwordEncoder;
     private final UsuarioRepository usuarioRepository;
     private final AsesorExternoRepository asesorExternoRepository;
@@ -80,6 +82,7 @@ public class VentaService {
             LoteService loteService,
             PagoVentaRepository pagoVentaRepository,
             ComisionService comisionService,
+            ClienteService clienteService,
             PasswordEncoder passwordEncoder,
             UsuarioRepository usuarioRepository,
             AsesorExternoRepository asesorExternoRepository,
@@ -91,6 +94,7 @@ public class VentaService {
         this.loteService = loteService;
         this.pagoVentaRepository = pagoVentaRepository;
         this.comisionService = comisionService;
+        this.clienteService = clienteService;
         this.passwordEncoder = passwordEncoder;
         this.usuarioRepository = usuarioRepository;
         this.asesorExternoRepository = asesorExternoRepository;
@@ -112,7 +116,11 @@ public class VentaService {
                 request.aportaciones() == null ? List.of() : request.aportaciones();
         validarAportaciones(aportaciones, request);
 
-        String cliente = request.cliente().trim();
+        Cliente clienteRef = clienteService.obtenerEntidad(request.clienteId());
+        if (!clienteRef.isActivo()) {
+            throw new ValidationException("Ese cliente está inactivo: actívalo para registrarle una venta");
+        }
+        String cliente = clienteRef.nombreCompleto();
         String notas = request.notas() == null || request.notas().isBlank() ? null : request.notas().trim();
 
         String engancheLabel = request.engancheLabel() == null || request.engancheLabel().isBlank()
@@ -123,6 +131,7 @@ public class VentaService {
                 cliente, asesor.usuario(), asesor.externo(), request.formaPago().trim(), request.fechaVenta(),
                 request.mensualidad(), request.plazoMeses(), engancheLabel, request.enganche(),
                 request.diaPago(), Boolean.TRUE.equals(request.primeraMensualidadMesVenta()), notas);
+        venta.ligarCliente(clienteRef);
         venta = ventaRepository.save(venta);
 
         for (VentaAportacionItemRequest item : aportaciones) {
@@ -211,7 +220,7 @@ public class VentaService {
         String notas = request.notas() == null || request.notas().isBlank() ? null : request.notas().trim();
 
         venta.actualizar(
-                request.cliente().trim(),
+                venta.getCliente(),
                 asesor.usuario(),
                 asesor.externo(),
                 request.formaPago().trim(),
@@ -225,6 +234,10 @@ public class VentaService {
                         ? request.primeraMensualidadMesVenta()
                         : venta.isPrimeraMensualidadMesVenta(),
                 notas);
+        if (request.clienteId() != null) {
+            Cliente nuevo = clienteService.obtenerEntidad(request.clienteId());
+            venta.ligarCliente(nuevo);
+        }
         comisionService.sincronizar(venta);
         // La fecha pudo cambiar: se reacomodan los números y se vuelve a leer con el nuevo.
         return toDto(renumerar(venta.getId()));

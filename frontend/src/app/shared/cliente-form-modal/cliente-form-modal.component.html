@@ -1,0 +1,253 @@
+<button type="button" (click)="cerrado.emit()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="cliente-form-titulo">
+  <div class="modal-panel-enter flex max-h-[92vh] w-full max-w-2xl flex-col rounded-2xl border border-border bg-surface shadow-xl">
+    <div class="flex items-start justify-between border-b border-border px-5 py-4">
+      <div>
+        <h2 id="cliente-form-titulo" class="font-heading text-lg font-semibold text-ink">{{ esEdicion() ? 'Editar cliente' : 'Registrar cliente' }}</h2>
+        <p class="text-xs text-ink-muted">Obligatorios: nombre, apellido paterno, fecha de nacimiento y teléfono. Lo demás se puede ir llenando.</p>
+      </div>
+      <button type="button" (click)="cerrado.emit()" aria-label="Cerrar" class="-mr-1 -mt-1 flex h-9 w-9 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2">
+        <svg lucideX [size]="18" aria-hidden="true"></svg>
+      </button>
+    </div>
+
+    <form [formGroup]="form" (submit)="$event.preventDefault(); guardar()" class="flex min-h-0 flex-1 flex-col">
+      <div class="space-y-3 overflow-y-auto px-5 py-4">
+        <h3 class="pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Datos personales</h3>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label for="c-nombre" class="mb-1 block text-xs font-medium text-ink-muted">Nombre(s) *</label>
+            <input id="c-nombre" type="text" formControlName="nombre"  class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+            @if (form.controls.nombre.invalid && form.controls.nombre.touched) {
+              <p class="mt-1 text-xs text-red-600 dark:text-red-400">Campo obligatorio.</p>
+            }
+          </div>
+          <div>
+            <label for="c-paterno" class="mb-1 block text-xs font-medium text-ink-muted">Apellido paterno *</label>
+            <input id="c-paterno" type="text" formControlName="apellidoPaterno"  class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+            @if (form.controls.apellidoPaterno.invalid && form.controls.apellidoPaterno.touched) {
+              <p class="mt-1 text-xs text-red-600 dark:text-red-400">Campo obligatorio.</p>
+            }
+          </div>
+          <div>
+            <label for="c-materno" class="mb-1 block text-xs font-medium text-ink-muted">Apellido materno</label>
+            <input id="c-materno" type="text" formControlName="apellidoMaterno"  class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+            @if (form.controls.apellidoMaterno.invalid && form.controls.apellidoMaterno.touched) {
+              <p class="mt-1 text-xs text-red-600 dark:text-red-400">Valor no válido.</p>
+            }
+          </div>
+          <div>
+            <label for="c-nac" class="mb-1 block text-xs font-medium text-ink-muted">Fecha de nacimiento *</label>
+            <input id="c-nac" type="date" formControlName="fechaNacimiento" [max]="hoy" class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+            @if (form.controls.fechaNacimiento.invalid && form.controls.fechaNacimiento.touched) {
+              <p class="mt-1 text-xs text-red-600 dark:text-red-400">Campo obligatorio.</p>
+            }
+          </div>
+          <div>
+            <label for="c-lugar" class="mb-1 block text-xs font-medium text-ink-muted">Lugar de nacimiento</label>
+            <input id="c-lugar" type="text" formControlName="lugarNacimiento"  class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+            @if (form.controls.lugarNacimiento.invalid && form.controls.lugarNacimiento.touched) {
+              <p class="mt-1 text-xs text-red-600 dark:text-red-400">Valor no válido.</p>
+            }
+          </div>
+          <div>
+            <label for="c-nacionalidad" class="mb-1 block text-xs font-medium text-ink-muted">Nacionalidad</label>
+            <input id="c-nacionalidad" type="text" formControlName="nacionalidad"  class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+            @if (form.controls.nacionalidad.invalid && form.controls.nacionalidad.touched) {
+              <p class="mt-1 text-xs text-red-600 dark:text-red-400">Valor no válido.</p>
+            }
+          </div>
+          <div>
+            <label for="c-civil" class="mb-1 block text-xs font-medium text-ink-muted">Estado civil</label>
+            <select id="c-civil" formControlName="estadoCivil" class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50">
+              <option value="">Sin definir</option>
+              @for (e of estados; track e) {<option [value]="e">{{ estadoLabels[e] }}</option>}
+            </select>
+          </div>
+          <div>
+            <label for="c-ocupacion" class="mb-1 block text-xs font-medium text-ink-muted">Ocupación</label>
+            <input id="c-ocupacion" type="text" formControlName="ocupacion"  class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+            @if (form.controls.ocupacion.invalid && form.controls.ocupacion.touched) {
+              <p class="mt-1 text-xs text-red-600 dark:text-red-400">Valor no válido.</p>
+            }
+          </div>
+          <div>
+            <label for="c-curp" class="mb-1 block text-xs font-medium text-ink-muted">CURP</label>
+            <input id="c-curp" type="text" formControlName="curp" maxlength="18" class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+            @if (form.controls.curp.invalid && form.controls.curp.touched) {
+              <p class="mt-1 text-xs text-red-600 dark:text-red-400">Valor no válido.</p>
+            }
+          </div>
+          <div>
+            <label for="c-rfc" class="mb-1 block text-xs font-medium text-ink-muted">RFC</label>
+            <input id="c-rfc" type="text" formControlName="rfc" maxlength="13" class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+            @if (form.controls.rfc.invalid && form.controls.rfc.touched) {
+              <p class="mt-1 text-xs text-red-600 dark:text-red-400">Valor no válido.</p>
+            }
+          </div>
+        </div>
+
+        <h3 class="pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Contacto</h3>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label for="c-tel" class="mb-1 block text-xs font-medium text-ink-muted">Teléfono *</label>
+            <input id="c-tel" type="tel" formControlName="telefono"  class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+            @if (form.controls.telefono.invalid && form.controls.telefono.touched) {
+              <p class="mt-1 text-xs text-red-600 dark:text-red-400">Campo obligatorio.</p>
+            }
+          </div>
+          <div>
+            <label for="c-tel2" class="mb-1 block text-xs font-medium text-ink-muted">Teléfono 2</label>
+            <input id="c-tel2" type="tel" formControlName="telefono2"  class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+            @if (form.controls.telefono2.invalid && form.controls.telefono2.touched) {
+              <p class="mt-1 text-xs text-red-600 dark:text-red-400">Valor no válido.</p>
+            }
+          </div>
+          <div class="sm:col-span-2"><div>
+            <label for="c-correo" class="mb-1 block text-xs font-medium text-ink-muted">Correo</label>
+            <input id="c-correo" type="email" formControlName="correo"  class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+            @if (form.controls.correo.invalid && form.controls.correo.touched) {
+              <p class="mt-1 text-xs text-red-600 dark:text-red-400">Valor no válido.</p>
+            }
+          </div></div>
+        </div>
+
+        <h3 class="pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Domicilio</h3>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div class="sm:col-span-2"><div>
+            <label for="c-calle" class="mb-1 block text-xs font-medium text-ink-muted">Calle y número</label>
+            <input id="c-calle" type="text" formControlName="calle"  class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+            @if (form.controls.calle.invalid && form.controls.calle.touched) {
+              <p class="mt-1 text-xs text-red-600 dark:text-red-400">Valor no válido.</p>
+            }
+          </div></div>
+          <div>
+            <label for="c-colonia" class="mb-1 block text-xs font-medium text-ink-muted">Colonia</label>
+            <input id="c-colonia" type="text" formControlName="colonia"  class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+            @if (form.controls.colonia.invalid && form.controls.colonia.touched) {
+              <p class="mt-1 text-xs text-red-600 dark:text-red-400">Valor no válido.</p>
+            }
+          </div>
+          <div>
+            <label for="c-municipio" class="mb-1 block text-xs font-medium text-ink-muted">Municipio</label>
+            <input id="c-municipio" type="text" formControlName="municipio"  class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+            @if (form.controls.municipio.invalid && form.controls.municipio.touched) {
+              <p class="mt-1 text-xs text-red-600 dark:text-red-400">Valor no válido.</p>
+            }
+          </div>
+          <div>
+            <label for="c-estado" class="mb-1 block text-xs font-medium text-ink-muted">Estado</label>
+            <input id="c-estado" type="text" formControlName="estado"  class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+            @if (form.controls.estado.invalid && form.controls.estado.touched) {
+              <p class="mt-1 text-xs text-red-600 dark:text-red-400">Valor no válido.</p>
+            }
+          </div>
+          <div>
+            <label for="c-cp" class="mb-1 block text-xs font-medium text-ink-muted">Código postal</label>
+            <input id="c-cp" type="text" formControlName="codigoPostal"  class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+            @if (form.controls.codigoPostal.invalid && form.controls.codigoPostal.touched) {
+              <p class="mt-1 text-xs text-red-600 dark:text-red-400">Valor no válido.</p>
+            }
+          </div>
+        </div>
+
+        <h3 class="pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Beneficiario</h3>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label for="c-ben" class="mb-1 block text-xs font-medium text-ink-muted">Nombre del beneficiario</label>
+            <input id="c-ben" type="text" formControlName="beneficiarioNombre"  class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+            @if (form.controls.beneficiarioNombre.invalid && form.controls.beneficiarioNombre.touched) {
+              <p class="mt-1 text-xs text-red-600 dark:text-red-400">Valor no válido.</p>
+            }
+          </div>
+          <div>
+            <label for="c-parentesco" class="mb-1 block text-xs font-medium text-ink-muted">Parentesco</label>
+            <input id="c-parentesco" type="text" formControlName="beneficiarioParentesco"  class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+            @if (form.controls.beneficiarioParentesco.invalid && form.controls.beneficiarioParentesco.touched) {
+              <p class="mt-1 text-xs text-red-600 dark:text-red-400">Valor no válido.</p>
+            }
+          </div>
+        </div>
+
+        <h3 class="pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Cómo nos conoció</h3>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label for="c-fuente" class="mb-1 block text-xs font-medium text-ink-muted">Fuente</label>
+            <select id="c-fuente" formControlName="fuente" class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50">
+              <option value="">Sin definir</option>
+              @for (e of fuentes; track e) {<option [value]="e">{{ fuenteLabels[e] }}</option>}
+            </select>
+          </div>
+          <div>
+            <label for="c-fuente-det" class="mb-1 block text-xs font-medium text-ink-muted">Detalle (campaña, evento…)</label>
+            <input id="c-fuente-det" type="text" formControlName="fuenteDetalle"  class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+            @if (form.controls.fuenteDetalle.invalid && form.controls.fuenteDetalle.touched) {
+              <p class="mt-1 text-xs text-red-600 dark:text-red-400">Valor no válido.</p>
+            }
+          </div>
+          <div class="sm:col-span-2">
+            <label for="c-captado" class="mb-1 block text-xs font-medium text-ink-muted">Captado por</label>
+            <select id="c-captado" formControlName="captadoPor" class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50">
+              <option value="">Sin definir</option>
+              @if (usuarios().length > 0) {
+                <optgroup label="Usuarios del sistema">
+                  @for (u of usuarios(); track u.id) { <option [value]="'U-' + u.id">{{ u.nombre }}</option> }
+                </optgroup>
+              }
+              @if (asesores().length > 0) {
+                <optgroup label="Asesores externos">
+                  @for (a of asesores(); track a.id) { <option [value]="'A-' + a.id">{{ a.nombre }}</option> }
+                </optgroup>
+              }
+            </select>
+          </div>
+        </div>
+
+        <h3 class="pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Expediente</h3>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label for="c-exp-ubic" class="mb-1 block text-xs font-medium text-ink-muted">¿Dónde está el expediente?</label>
+            <select id="c-exp-ubic" formControlName="expedienteUbicacion" class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50">
+              <option value="">Sin definir</option>
+              @for (u of ubicaciones; track u) {<option [value]="u">{{ ubicacionLabels[u] }}</option>}
+            </select>
+          </div>
+          <div>
+            <label for="c-exp-url" class="mb-1 block text-xs font-medium text-ink-muted">Link de la carpeta de Drive</label>
+            <input id="c-exp-url" type="url" formControlName="expedienteDriveUrl" placeholder="https://drive.google.com/…" class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+            @if (form.controls.expedienteDriveUrl.invalid && form.controls.expedienteDriveUrl.touched) {
+              <p class="mt-1 text-xs text-red-600 dark:text-red-400">Valor no válido.</p>
+            }
+          </div>
+        </div>
+
+        <div>
+          <label for="c-notas" class="mb-1 block text-xs font-medium text-ink-muted">Notas</label>
+          <textarea id="c-notas" rows="3" maxlength="1000" formControlName="notas" class="w-full resize-none rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"></textarea>
+        </div>
+
+        @if (esEdicion()) {
+          <label class="flex items-center gap-2 text-sm text-ink">
+            <input type="checkbox" formControlName="activo" class="h-4 w-4 accent-we-primary" />
+            Cliente activo (los inactivos no se pueden elegir al registrar una venta)
+          </label>
+        }
+      </div>
+
+      <div class="border-t border-border px-5 py-3">
+        @if (error(); as e) {
+          <p class="mb-2 text-xs text-red-600 dark:text-red-400" role="alert">{{ e }}</p>
+          @if (duplicadoId() !== null) {
+            <button type="button" (click)="usarExistente()" class="mb-2 rounded-lg border border-we-primary px-3 py-1.5 text-xs font-semibold text-we-primary hover:bg-we-primary/10">Usar el cliente existente</button>
+          }
+        }
+        <div class="flex justify-end gap-2.5">
+          <button type="button" (click)="cerrado.emit()" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cancelar</button>
+          <button type="submit" [disabled]="guardando()" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
+            {{ guardando() ? 'Guardando…' : 'Guardar' }}
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>

@@ -4,6 +4,7 @@ import {
   LucideCalendar,
   LucideHandCoins,
   LucideChartLine,
+  LucideContactRound,
   LucideHouse,
   LucideKanban,
   LucideLandPlot,
@@ -28,7 +29,7 @@ interface NavItem {
   modulo?: Modulo;
   /** Alternativa: el item también se muestra a quien tenga este otro módulo (Finanzas incluye la pestaña Gastos). */
   tambienConModulo?: Modulo;
-  icon: 'home' | 'leads' | 'usuarios' | 'calendario' | 'pipeline' | 'cotizador' | 'lotes' | 'plano' | 'ventas' | 'finanzas' | 'gastos';
+  icon: 'home' | 'leads' | 'usuarios' | 'calendario' | 'pipeline' | 'cotizador' | 'lotes' | 'plano' | 'ventas' | 'clientes' | 'finanzas' | 'gastos';
 }
 
 const ASESORES_EXTERNOS_NAV_ITEM: NavItem = {
@@ -74,6 +75,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
         { label: 'Lotes', route: '/panel/lotes', modulo: 'LOTES', icon: 'lotes' },
         { label: 'Plano', route: '/panel/plano', modulo: 'PLANO', icon: 'plano' },
         { label: 'Ventas', route: '/panel/ventas', modulo: 'VENTAS', icon: 'ventas' },
+        { label: 'Clientes', route: '/panel/clientes', modulo: 'CLIENTES', icon: 'clientes' },
         { label: 'Finanzas', route: '/panel/finanzas', modulo: 'FINANZAS', tambienConModulo: 'GASTOS', icon: 'finanzas' },
       ],
     },
@@ -106,6 +108,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
         { label: 'Lotes', route: '/panel/lotes', modulo: 'LOTES', icon: 'lotes' },
         { label: 'Plano', route: '/panel/plano', modulo: 'PLANO', icon: 'plano' },
         { label: 'Ventas', route: '/panel/ventas', modulo: 'VENTAS', icon: 'ventas' },
+        { label: 'Clientes', route: '/panel/clientes', modulo: 'CLIENTES', icon: 'clientes' },
         { label: 'Finanzas', route: '/panel/finanzas', modulo: 'FINANZAS', tambienConModulo: 'GASTOS', icon: 'finanzas' },
       ],
     },
@@ -141,6 +144,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
     LucideLandPlot,
     LucideMap,
     LucideChartLine,
+    LucideContactRound,
     LucideUser,
     LucideMenu,
     LucideWallet,

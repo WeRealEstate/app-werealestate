@@ -34,6 +34,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", ex.getMessage()));
     }
 
+    @ExceptionHandler(ClienteDuplicadoException.class)
+    public ResponseEntity<Map<String, Object>> handleClienteDuplicado(ClienteDuplicadoException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("message", ex.getMessage(), "clienteId", ex.getClienteId()));
+    }
+
     @ExceptionHandler(ForbiddenOperationException.class)
     public ResponseEntity<Map<String, String>> handleForbidden(ForbiddenOperationException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", ex.getMessage()));

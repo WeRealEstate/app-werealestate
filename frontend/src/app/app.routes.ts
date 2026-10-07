@@ -216,6 +216,20 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'clientes',
+        canActivate: [roleGuard(['ADMIN', 'LIDER_AREA']), moduloGuard(['CLIENTES'])],
+        loadComponent: () =>
+          import('./features/panel/clientes/clientes-list/clientes-list.component').then((m) => m.ClientesListComponent),
+      },
+      {
+        path: 'clientes/:id',
+        canActivate: [roleGuard(['ADMIN', 'LIDER_AREA']), moduloGuard(['CLIENTES'])],
+        loadComponent: () =>
+          import('./features/panel/clientes/cliente-detalle/cliente-detalle.component').then(
+            (m) => m.ClienteDetalleComponent,
+          ),
+      },
+      {
         path: 'usuarios/nuevo',
         canActivate: [roleGuard(['ADMIN'])],
         loadComponent: () =>
