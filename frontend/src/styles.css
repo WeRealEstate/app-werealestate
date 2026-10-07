@@ -49,6 +49,38 @@
   --ink-muted: #94a3b8;
 }
 
+/* ---- Barra lateral del panel: se adapta al tema (tokens usados con text-[var(--sb-…)]) ---- */
+:root {
+  --sb-bg: #f7f9ff;
+  --sb-border: #e2e8f0;
+  --sb-fg: #0b132b;
+  --sb-fg-dim: #475569;
+  --sb-muted: #64748b;
+  --sb-hover: #eef3ff;
+  --sb-active: #e3eaff;
+  --sb-active-fg: #243fb8;
+  --sb-ring: rgba(36, 63, 184, 0.4);
+  --sb-chip: #eef3ff;
+  --sb-chip-border: #c7d4f5;
+  --sb-line: #cbd5e1;
+  --sb-line-hover: #243fb8;
+}
+.dark {
+  --sb-bg: rgba(255, 255, 255, 0.1);
+  --sb-border: rgba(255, 255, 255, 0.15);
+  --sb-fg: #ffffff;
+  --sb-fg-dim: rgba(255, 255, 255, 0.65);
+  --sb-muted: rgba(255, 255, 255, 0.6);
+  --sb-hover: rgba(255, 255, 255, 0.1);
+  --sb-active: rgba(255, 255, 255, 0.15);
+  --sb-active-fg: #ffffff;
+  --sb-ring: rgba(255, 255, 255, 0.4);
+  --sb-chip: rgba(255, 255, 255, 0.15);
+  --sb-chip-border: rgba(255, 255, 255, 0.25);
+  --sb-line: rgba(255, 255, 255, 0.2);
+  --sb-line-hover: rgba(255, 255, 255, 0.4);
+}
+
 html {
   color-scheme: light;
 }

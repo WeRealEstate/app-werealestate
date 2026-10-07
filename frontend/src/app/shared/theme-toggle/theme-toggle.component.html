@@ -4,9 +4,9 @@
   [attr.aria-label]="themeService.theme() === 'dark' ? 'Modo oscuro activado, cambiar a modo claro' : 'Modo claro activado, cambiar a modo oscuro'"
   [attr.title]="themeService.theme() === 'dark' ? 'Modo oscuro — cambiar a claro' : 'Modo claro — cambiar a oscuro'"
   (click)="toggle()"
-  class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/20 text-white/70
-         hover:border-white/40 hover:text-white transition-[color,border-color,transform] duration-150 active:scale-90
-         focus:outline-none focus:ring-2 focus:ring-white/40"
+  class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[var(--sb-line)] text-[var(--sb-fg-dim)]
+         hover:border-[var(--sb-line-hover)] hover:text-[var(--sb-fg)] transition-[color,border-color,transform] duration-150 active:scale-90
+         focus:outline-none focus:ring-2 focus:ring-[var(--sb-ring)]"
 >
   @if (themeService.theme() === 'dark') {
     <!-- Luna: modo oscuro activo -->

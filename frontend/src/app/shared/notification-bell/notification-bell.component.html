@@ -2,8 +2,8 @@
   <button
     type="button"
     (click)="toggle()"
-    class="relative flex h-9 w-9 items-center justify-center rounded-lg text-white/80 hover:bg-white/10
-           transition-transform duration-150 active:scale-90 focus:outline-none focus:ring-2 focus:ring-white/40"
+    class="relative flex h-9 w-9 items-center justify-center rounded-lg text-[var(--sb-fg-dim)] hover:bg-[var(--sb-hover)]
+           transition-transform duration-150 active:scale-90 focus:outline-none focus:ring-2 focus:ring-[var(--sb-ring)]"
     [attr.aria-label]="total() > 0 ? total() + ' notificaciones pendientes' : 'Sin notificaciones'"
   >
     <svg lucideBell [size]="18" aria-hidden="true"></svg>

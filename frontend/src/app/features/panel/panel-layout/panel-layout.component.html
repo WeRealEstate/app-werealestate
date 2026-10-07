@@ -19,34 +19,34 @@
 
   <!-- Sidebar -->
   <aside
-    class="fixed inset-y-0 left-0 z-30 flex w-64 flex-col pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] border-r border-white/15 bg-white/10 backdrop-blur-xl
+    class="fixed inset-y-0 left-0 z-30 flex w-64 flex-col pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] border-r border-[var(--sb-border)] bg-[var(--sb-bg)] backdrop-blur-xl
            transition-transform duration-300 ease-out lg:translate-x-0"
     [class.translate-x-0]="sidebarOpen()"
     [class.-translate-x-full]="!sidebarOpen()"
   >
-    <div class="flex items-center gap-2.5 px-6 py-5">
-      <img src="/images/we-logo.png" alt="We Real Estate" class="h-8 w-auto drop-shadow-[0_1px_6px_rgba(133,180,240,0.35)]" width="75" height="32" />
-      <span class="flex-1"></span>
-      <app-notification-bell />
+    <div class="relative flex items-center justify-center px-6 py-5">
+      <img src="/images/we-logo-color.png" alt="We Real Estate" class="h-10 w-auto dark:hidden" width="93" height="40" />
+      <img src="/images/we-logo.png" alt="" aria-hidden="true" class="hidden h-10 w-auto drop-shadow-[0_1px_6px_rgba(133,180,240,0.35)] dark:block" width="93" height="40" />
+      <div class="absolute right-3 top-1/2 -translate-y-1/2"><app-notification-bell /></div>
     </div>
 
     <nav class="mt-2 flex-1 space-y-4 px-3 overflow-y-auto">
       @for (section of navSections(); track section.label ?? '_inicio') {
         <div class="space-y-1">
           @if (section.label) {
-            <p class="px-3.5 pt-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-white/60">
+            <p class="px-3.5 pt-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--sb-muted)]">
               {{ section.label }}
             </p>
           }
           @for (item of section.items; track item.route) {
             <a
               [routerLink]="item.route"
-              routerLinkActive="bg-white/15 text-white"
+              routerLinkActive="bg-[var(--sb-active)] text-[var(--sb-active-fg)]"
               [routerLinkActiveOptions]="{ exact: item.route === '/panel/leads' ? false : true }"
               (click)="closeSidebar()"
-              class="flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-medium text-white/65
-                     hover:bg-white/10 hover:text-white transition-[color,background-color,transform] duration-150 active:scale-[0.98]
-                     focus:outline-none focus:ring-2 focus:ring-white/40"
+              class="flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-medium text-[var(--sb-fg-dim)]
+                     hover:bg-[var(--sb-hover)] hover:text-[var(--sb-fg)] transition-[color,background-color,transform] duration-150 active:scale-[0.98]
+                     focus:outline-none focus:ring-2 focus:ring-[var(--sb-ring)]"
             >
               @if (item.icon === 'home') {
                 <svg lucideHouse [size]="18" aria-hidden="true"></svg>
@@ -81,27 +81,27 @@
     </nav>
 
     @if (user(); as u) {
-      <div class="border-t border-white/15 px-4 py-4">
+      <div class="border-t border-[var(--sb-border)] px-4 py-4">
         <div class="flex items-center gap-3 px-1.5">
           <div
-            class="h-9 w-9 shrink-0 rounded-full bg-white/15 border border-white/25 flex items-center justify-center
-                   font-heading font-semibold text-white text-sm"
+            class="h-9 w-9 shrink-0 rounded-full bg-[var(--sb-chip)] border border-[var(--sb-chip-border)] flex items-center justify-center
+                   font-heading font-semibold text-[var(--sb-fg)] text-sm"
             aria-hidden="true"
           >
             {{ u.nombre.charAt(0) }}
           </div>
           <div class="min-w-0 leading-tight flex-1">
-            <p class="truncate text-sm font-medium text-white">{{ u.nombre }}</p>
-            <p class="truncate text-xs text-white/55">{{ roleLabel() }}</p>
+            <p class="truncate text-sm font-medium text-[var(--sb-fg)]">{{ u.nombre }}</p>
+            <p class="truncate text-xs text-[var(--sb-muted)]">{{ roleLabel() }}</p>
           </div>
           <app-theme-toggle />
         </div>
         <button
           type="button"
           (click)="logout()"
-          class="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-xs
-                 font-medium text-white/70 hover:border-white/40 hover:text-white transition-[color,border-color,transform] duration-150 active:scale-[0.97]
-                 focus:outline-none focus:ring-2 focus:ring-white/40 min-h-[36px]"
+          class="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--sb-line)] px-3 py-2 text-xs
+                 font-medium text-[var(--sb-fg-dim)] hover:border-[var(--sb-line-hover)] hover:text-[var(--sb-fg)] transition-[color,border-color,transform] duration-150 active:scale-[0.97]
+                 focus:outline-none focus:ring-2 focus:ring-[var(--sb-ring)] min-h-[36px]"
         >
           Cerrar sesión
         </button>
@@ -110,18 +110,19 @@
   </aside>
 
   <!-- Top bar móvil -->
-  <div class="sticky top-0 z-10 flex items-center gap-3 border-b border-white/15 bg-we-dark/50 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-xl lg:hidden">
+  <div class="sticky top-0 z-10 flex items-center gap-3 border-b border-[var(--sb-border)] bg-[var(--sb-bg)] px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-xl lg:hidden">
     <button
       type="button"
       (click)="toggleSidebar()"
-      class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-white/80 hover:bg-white/10
+      class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[var(--sb-fg-dim)] hover:bg-[var(--sb-hover)]
              transition-transform duration-150 active:scale-[0.92]
-             focus:outline-none focus:ring-2 focus:ring-white/40"
+             focus:outline-none focus:ring-2 focus:ring-[var(--sb-ring)]"
       aria-label="Abrir menú"
     >
       <svg lucideMenu [size]="20" aria-hidden="true"></svg>
     </button>
-    <img src="/images/we-logo.png" alt="We Real Estate" class="h-7 w-auto" width="65" height="28" />
+    <img src="/images/we-logo-color.png" alt="We Real Estate" class="h-7 w-auto dark:hidden" width="65" height="28" />
+    <img src="/images/we-logo.png" alt="" aria-hidden="true" class="hidden h-7 w-auto dark:block" width="65" height="28" />
   </div>
 
   <!-- Contenido: superficie propia del tema (claro/oscuro), separada del sidebar con un borde limpio -->
