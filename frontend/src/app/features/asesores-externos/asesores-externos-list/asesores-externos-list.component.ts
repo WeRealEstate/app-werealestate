@@ -50,6 +50,8 @@ export class AsesoresExternosListComponent {
   readonly mostrarModalCrear = signal(false);
   readonly nuevoNombre = signal('');
   readonly nuevoCelular = signal('');
+  readonly nuevoPin = signal('');
+  readonly pinEnEdicion = signal('');
   readonly nuevoCorreo = signal('');
   readonly isCreando = signal(false);
   readonly errorCreacion = signal<string | null>(null);
@@ -146,6 +148,7 @@ export class AsesoresExternosListComponent {
   abrirModalCrear(): void {
     this.nuevoNombre.set('');
     this.nuevoCelular.set('');
+    this.nuevoPin.set('');
     this.nuevoCorreo.set('');
     this.nuevoContratoEstado.set('VIGENTE');
     this.nuevoFechaFirma.set('');
@@ -188,6 +191,7 @@ export class AsesoresExternosListComponent {
         contratoFechaVencimiento: vencimiento || null,
         accesoSamai: this.nuevoAccesoSamai(),
         accesoNanuu: this.nuevoAccesoNanuu(),
+        pin: this.nuevoPin().trim() || null,
       });
       this.asesores.update((lista) => ordenarAsesoresPorNombre([...lista, creado]));
       this.mostrarModalCrear.set(false);
@@ -299,6 +303,7 @@ export class AsesoresExternosListComponent {
     this.editandoId.set(asesor.id);
     this.nombreEnEdicion.set(asesor.nombre);
     this.celularEnEdicion.set(asesor.celular ?? '');
+    this.pinEnEdicion.set(asesor.pin ?? '');
     this.correoEnEdicion.set(asesor.correo ?? '');
     this.contratoEnEdicion.set(asesor.contratoEstado);
     this.fechaFirmaEnEdicion.set(asesor.contratoFechaFirma ?? '');
@@ -332,6 +337,7 @@ export class AsesoresExternosListComponent {
       contratoFechaVencimiento: vencimiento || null,
       accesoSamai: this.accesoSamaiEnEdicion(),
       accesoNanuu: this.accesoNanuuEnEdicion(),
+      pin: this.pinEnEdicion().trim(),
     });
     this.editandoId.set(null);
   }
@@ -341,8 +347,12 @@ export class AsesoresExternosListComponent {
     try {
       const actualizado = await this.asesoresExternosService.actualizar(asesor.id, cambios);
       this.asesores.update((lista) => ordenarAsesoresPorNombre(lista.map((a) => (a.id === actualizado.id ? actualizado : a))));
-    } catch {
-      this.toast.error('No se pudo actualizar el asesor externo.');
+    } catch (error) {
+      this.toast.error(
+        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+          ? error.error.message
+          : 'No se pudo actualizar el asesor externo.',
+      );
     } finally {
       this.savingId.set(null);
     }

@@ -30,5 +30,7 @@ public record AsesorExternoUpdateRequest(
         LocalDate contratoFechaFirma,
         LocalDate contratoFechaVencimiento,
         Boolean accesoSamai,
-        Boolean accesoNanuu) {
+        Boolean accesoNanuu,
+        // null = sin cambios; "" = quitar el PIN; 4 letras/números = asignarlo.
+        String pin) {
 }

@@ -38,6 +38,10 @@ public class AsesorExterno {
     @Column(length = 150)
     private String correo;
 
+    // PIN de 4 letras/números (mayúsculas) para el botón "Asesor" de los planos públicos; null = sin PIN.
+    @Column(length = 4)
+    private String pin;
+
     @Column(nullable = false)
     private boolean activo = true;
 
@@ -217,6 +221,14 @@ public class AsesorExterno {
 
     public boolean isAccesoSamai() {
         return accesoSamai;
+    }
+
+    public String getPin() {
+        return pin;
+    }
+
+    public void setPin(String pin) {
+        this.pin = pin;
     }
 
     public void setAccesoSamai(boolean accesoSamai) {

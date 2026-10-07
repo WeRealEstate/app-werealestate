@@ -72,7 +72,25 @@ public class AsesorExternoService {
                 request.contratoFechaVencimiento());
         if (request.accesoSamai() != null) asesor.setAccesoSamai(request.accesoSamai());
         if (request.accesoNanuu() != null) asesor.setAccesoNanuu(request.accesoNanuu());
+        asignarPin(asesor, request.pin());
         return AsesorExternoDto.from(asesorExternoRepository.save(asesor));
+    }
+
+    /** null = sin cambios; vacío = quitar; si no, 4 letras/números únicos (sin importar mayúsculas). */
+    private void asignarPin(AsesorExterno asesor, String pin) {
+        if (pin == null) return;
+        String limpio = pin.trim().toUpperCase(java.util.Locale.ROOT);
+        if (limpio.isEmpty()) {
+            asesor.setPin(null);
+            return;
+        }
+        if (!limpio.matches("[A-Z0-9]{4}")) {
+            throw new ValidationException("El PIN debe tener exactamente 4 letras o números");
+        }
+        asesorExternoRepository.findByPin(limpio).filter(o -> !o.getId().equals(asesor.getId())).ifPresent(o -> {
+            throw new ConflictException("Ese PIN ya lo tiene " + o.getNombre());
+        });
+        asesor.setPin(limpio);
     }
 
     public AsesorExternoDto actualizar(Long id, AsesorExternoUpdateRequest request) {
@@ -90,6 +108,7 @@ public class AsesorExternoService {
         }
         if (request.accesoSamai() != null) asesor.setAccesoSamai(request.accesoSamai());
         if (request.accesoNanuu() != null) asesor.setAccesoNanuu(request.accesoNanuu());
+        asignarPin(asesor, request.pin());
         return AsesorExternoDto.from(asesorExternoRepository.save(asesor));
     }
 

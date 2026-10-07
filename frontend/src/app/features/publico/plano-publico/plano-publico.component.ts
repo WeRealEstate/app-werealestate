@@ -324,7 +324,7 @@ export class PlanoPublicoComponent {
       const estado = e instanceof HttpErrorResponse ? e.status : 0;
       this.accesoError.set(
         estado === 404
-          ? 'No encontramos un asesor con ese nombre.'
+          ? 'PIN incorrecto.'
           : estado === 403 && typeof (e as HttpErrorResponse).error?.message === 'string'
             ? (e as HttpErrorResponse).error.message
             : estado === 429

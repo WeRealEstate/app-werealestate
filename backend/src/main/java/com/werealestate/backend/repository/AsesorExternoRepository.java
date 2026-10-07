@@ -8,6 +8,8 @@ public interface AsesorExternoRepository extends JpaRepository<AsesorExterno, Lo
 
     List<AsesorExterno> findByActivoTrueOrderByNombreAsc();
 
+    java.util.Optional<AsesorExterno> findByPin(String pin);
+
     List<AsesorExterno> findAllByOrderByNombreAsc();
 
     /** Para bloquear borrado/cambio de tipo mientras tenga gente reportándole (ver

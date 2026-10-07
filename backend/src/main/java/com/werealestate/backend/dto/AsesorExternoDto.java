@@ -23,7 +23,8 @@ public record AsesorExternoDto(
         LocalDate contratoFechaFirma,
         LocalDate contratoFechaVencimiento,
         boolean accesoSamai,
-        boolean accesoNanuu) {
+        boolean accesoNanuu,
+        String pin) {
 
     public static AsesorExternoDto from(AsesorExterno asesor) {
         return new AsesorExternoDto(
@@ -41,6 +42,7 @@ public record AsesorExternoDto(
                 asesor.getContratoFechaFirma(),
                 asesor.getContratoFechaVencimiento(),
                 asesor.isAccesoSamai(),
-                asesor.isAccesoNanuu());
+                asesor.isAccesoNanuu(),
+                asesor.getPin());
     }
 }

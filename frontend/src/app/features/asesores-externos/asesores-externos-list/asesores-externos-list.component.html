@@ -80,6 +80,7 @@
             <th class="px-4 py-3">Nombre</th>
             <th class="px-4 py-3">Celular</th>
             <th class="px-4 py-3">Correo</th>
+            <th class="px-4 py-3">PIN</th>
             <th class="px-4 py-3">Equipo</th>
             <th class="px-4 py-3">Contrato</th>
             <th class="px-4 py-3">Desarrollos</th>
@@ -127,6 +128,21 @@
                     name="correoEnEdicion"
                     placeholder="Correo"
                     class="w-full rounded-lg border border-border px-3 py-1.5 text-sm text-ink
+                           focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+                  />
+                </td>
+                <td class="px-4 py-3">
+                  <input
+                    type="text"
+                    maxlength="4"
+                    [ngModel]="pinEnEdicion()"
+                    (ngModelChange)="pinEnEdicion.set($event.toUpperCase())"
+                    (keydown.enter)="guardarEdicion(a)"
+                    (keydown.escape)="cancelarEdicion()"
+                    name="pinEnEdicion"
+                    placeholder="PIN"
+                    autocomplete="off"
+                    class="w-20 rounded-lg border border-border px-3 py-1.5 font-mono text-sm uppercase text-ink
                            focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
                   />
                 </td>
@@ -210,6 +226,7 @@
                 <td class="px-4 py-3 font-medium text-ink">{{ a.nombre }}</td>
                 <td class="px-4 py-3 text-ink-muted">{{ a.celular || '—' }}</td>
                 <td class="px-4 py-3 text-ink-muted">{{ a.correo || '—' }}</td>
+                <td class="px-4 py-3 font-mono text-ink-muted">{{ a.pin || '—' }}</td>
                 <td class="px-4 py-3 text-ink-muted">{{ equipoLabel(a) }}</td>
                 <td class="px-4 py-3">
                   <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" [class]="contratoClases[a.contratoEstadoEfectivo]">
@@ -351,6 +368,21 @@
               name="nuevoCorreo"
               placeholder="correo@ejemplo.com"
               class="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            />
+          </div>
+          <div>
+            <label for="crear-pin" class="block text-xs font-medium text-ink-muted mb-1">PIN de acceso al plano público (4 letras o números)</label>
+            <input
+              id="crear-pin"
+              type="text"
+              maxlength="4"
+              autocomplete="off"
+              [ngModel]="nuevoPin()"
+              (ngModelChange)="nuevoPin.set($event.toUpperCase())"
+              name="nuevoPin"
+              placeholder="Ej. A7K2"
+              class="w-32 rounded-lg border border-border px-3.5 py-2.5 font-mono text-sm uppercase text-ink
                      focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
             />
           </div>

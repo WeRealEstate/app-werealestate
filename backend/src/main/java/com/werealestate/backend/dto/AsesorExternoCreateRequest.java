@@ -14,5 +14,7 @@ public record AsesorExternoCreateRequest(
         LocalDate contratoFechaFirma,
         LocalDate contratoFechaVencimiento,
         Boolean accesoSamai,
-        Boolean accesoNanuu) {
+        Boolean accesoNanuu,
+        // 4 letras/números; opcional (sin PIN no puede entrar al botón Asesor de los planos públicos).
+        String pin) {
 }

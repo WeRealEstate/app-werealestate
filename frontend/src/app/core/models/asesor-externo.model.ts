@@ -45,6 +45,8 @@ export interface AsesorExterno {
   contratoFechaVencimiento: string | null;
   accesoSamai: boolean;
   accesoNanuu: boolean;
+  /** PIN de 4 letras/números del botón "Asesor" de los planos públicos; null = sin PIN. */
+  pin: string | null;
 }
 
 export interface AsesorExternoCreateRequest {
@@ -56,6 +58,7 @@ export interface AsesorExternoCreateRequest {
   contratoFechaVencimiento?: string | null;
   accesoSamai?: boolean;
   accesoNanuu?: boolean;
+  pin?: string | null;
 }
 
 /** celular/correo no son obligatorios aquí: un asesor externo registrado antes de que existieran
@@ -75,6 +78,8 @@ export interface AsesorExternoUpdateRequest {
   contratoFechaVencimiento?: string | null;
   accesoSamai?: boolean;
   accesoNanuu?: boolean;
+  /** Omitido = sin cambios; '' = quitar el PIN. */
+  pin?: string;
 }
 
 // ---- Ficha del asesor externo: datos secundarios, todos opcionales (null = sin definir) ----

@@ -39,7 +39,7 @@ public class AsesorPublicoController {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body(Map.of("message", "Demasiados intentos. Espera unos minutos e inténtalo de nuevo."));
         }
-        AsesorPublicoService.Resultado resultado = service.verificar(request.nombre(), request.proyecto());
+        AsesorPublicoService.Resultado resultado = service.verificar(request.pin(), request.proyecto());
         if (resultado.motivo() == AsesorPublicoService.Motivo.OK) {
             fallosPorIp.remove(ip);
             return ResponseEntity.ok(Map.of("nombre", resultado.nombre()));
@@ -51,7 +51,7 @@ public class AsesorPublicoController {
             case SIN_ACCESO -> ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("message", "No tienes acceso a este desarrollo."));
             default -> ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("message", "No encontramos un asesor con ese nombre"));
+                    .body(Map.of("message", "PIN incorrecto"));
         };
     }
 
