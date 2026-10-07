@@ -67,6 +67,12 @@ export class VentasService {
     return firstValueFrom(this.http.put<Venta>(`${this.baseUrl}/${id}`, request));
   }
 
+  /** Elimina la venta por completo (solo admin): exige su contraseña. liberarLotes: los lotes que sigan
+   * VENDIDO vuelven a DISPONIBLE. La comisión de la venta se queda en el historial de Finanzas. */
+  eliminar(id: number, password: string, liberarLotes: boolean): Promise<void> {
+    return firstValueFrom(this.http.post<void>(`${this.baseUrl}/${id}/eliminar`, { password, liberarLotes }));
+  }
+
   listarPagos(ventaId: number): Promise<PagoVenta[]> {
     return firstValueFrom(this.http.get<PagoVenta[]>(`${this.baseUrl}/${ventaId}/pagos`));
   }

@@ -464,6 +464,15 @@ public class LoteService {
         return limpiados;
     }
 
+    /** Devuelve a DISPONIBLE un lote que quedó VENDIDO por una venta que se eliminó, con su historial
+     * de movimientos; si ya no está VENDIDO (alguien lo cambió a mano) se deja como está. */
+    public void liberarPorVentaEliminada(Long id) {
+        Lote lote = obtenerEntidad(id);
+        if (lote.getEstado() != EstadoLote.VENDIDO) return;
+        Usuario actual = currentUserProvider.getUsuarioActual();
+        cambiarEstadoConHistorial(lote, EstadoLote.DISPONIBLE, actual, null, null, null, "Venta eliminada");
+    }
+
     /** Marca el lote como VENDIDO a raíz de un registro de {@code Venta} (ver VentaService), con el
      * mismo mecanismo de historial que cualquier otro cambio de estado. No repite el chequeo de rol
      * de {@link #cambiarEstado}: VentaService ya exige admin/líder de área para registrar una venta. */

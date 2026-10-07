@@ -96,6 +96,12 @@ public class VentaComision {
         return venta;
     }
 
+    /** La venta se eliminó: la comisión se queda en el historial con el número y cliente que tenía. */
+    public void desvincularVenta(Long numeroDeLaVenta) {
+        this.ventaNumero = numeroDeLaVenta;
+        this.venta = null;
+    }
+
     public Long getVentaNumero() {
         return ventaNumero;
     }

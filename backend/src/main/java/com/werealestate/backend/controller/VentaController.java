@@ -5,11 +5,13 @@ import com.werealestate.backend.dto.PaginaDto;
 import com.werealestate.backend.dto.PagoVentaCreateRequest;
 import com.werealestate.backend.dto.PagoVentaDto;
 import com.werealestate.backend.dto.VentaCreateRequest;
+import com.werealestate.backend.dto.VentaEliminarRequest;
 import com.werealestate.backend.dto.VentaDto;
 import com.werealestate.backend.dto.VentaUpdateRequest;
 import com.werealestate.backend.service.VentaService;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -65,6 +67,14 @@ public class VentaController {
     }
 
     /** Temporal: modifica los datos capturados de una venta (cliente, fechas, términos). */
+    /** Elimina la venta por completo (solo admin, con su contraseña). POST y no DELETE porque lleva
+     * cuerpo (la contraseña). */
+    @PostMapping("/{id}/eliminar")
+    public ResponseEntity<Void> eliminar(@PathVariable Long id, @Valid @RequestBody VentaEliminarRequest request) {
+        ventaService.eliminar(id, request);
+        return ResponseEntity.noContent().build();
+    }
+
     @PutMapping("/{id}")
     public VentaDto actualizar(@PathVariable Long id, @Valid @RequestBody VentaUpdateRequest request) {
         return ventaService.actualizar(id, request);

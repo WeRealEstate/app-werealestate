@@ -136,6 +136,13 @@ public class ComisionService {
         }
     }
 
+    /** La venta se va a eliminar: su comisión se queda en el historial ("Venta eliminada"), con el
+     * número de venta que tenía. Lo ya ganado sigue pudiéndose entregar; deja de acumular. */
+    public void desvincularVenta(Venta venta) {
+        comisionRepository.findByVentaId(venta.getId()).ifPresent(c -> c.desvincularVenta(venta.getNumero()));
+        comisionRepository.flush();
+    }
+
     /** Comisiones de las ventas que ya existían antes de este módulo (o que quedaron sin una). */
     @EventListener(ApplicationReadyEvent.class)
     public void generarFaltantes() {

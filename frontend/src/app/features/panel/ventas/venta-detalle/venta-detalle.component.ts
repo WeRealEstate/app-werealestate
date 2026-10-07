@@ -1,10 +1,11 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, inject, signal } from '@angular/core';
-import { LucidePencil } from '@lucide/angular';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { LucidePencil, LucideTrash2 } from '@lucide/angular';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Location } from '@angular/common';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MESES_NOMBRE } from '../../../../core/utils/aportaciones';
+import { AuthService } from '../../../../core/services/auth.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { VentasService } from '../../../../core/services/ventas.service';
 import { UsuariosService } from '../../../../core/services/usuarios.service';
@@ -14,19 +15,23 @@ import { UsuarioResumen } from '../../../../core/models/lead.model';
 import { AsesorExterno } from '../../../../core/models/asesor-externo.model';
 import { asesorSeleccionDe, parseAsesorSeleccion } from '../venta-form/venta-form.component';
 
+const SEGUNDOS_ESPERA_ELIMINAR = 10;
+
 @Component({
   selector: 'app-venta-detalle',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, LucidePencil],
+  imports: [ReactiveFormsModule, RouterLink, LucidePencil, LucideTrash2],
   templateUrl: './venta-detalle.component.html',
 })
-export class VentaDetalleComponent implements OnInit {
+export class VentaDetalleComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly location = inject(Location);
   private readonly ventasService = inject(VentasService);
   private readonly usuariosService = inject(UsuariosService);
   private readonly asesoresExternosService = inject(AsesoresExternosService);
   private readonly toast = inject(ToastService);
+  private readonly router = inject(Router);
+  private readonly auth = inject(AuthService);
   private readonly fb = inject(FormBuilder);
 
   readonly venta = signal<Venta | null>(null);
@@ -68,6 +73,63 @@ export class VentaDetalleComponent implements OnInit {
     notas: this.fb.control(''),
   });
   readonly edicionPrimeraMensualidadMesVenta = signal(false);
+
+  // --- Eliminar venta: solo admin. Estilo "permiso peligroso" de Android: el botón de confirmar se
+  // habilita hasta que termina una cuenta regresiva de 10 s, y además pide la contraseña (que valida
+  // el servidor). ---
+  readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
+  readonly mostrarEliminar = signal(false);
+  readonly segundosEliminar = signal(0);
+  readonly passwordEliminar = signal('');
+  readonly liberarLotes = signal(true);
+  readonly eliminando = signal(false);
+  readonly errorEliminar = signal<string | null>(null);
+  readonly cuentaTerminada = computed(() => this.segundosEliminar() <= 0);
+  private temporizadorEliminar: ReturnType<typeof setInterval> | undefined;
+
+  abrirEliminar(): void {
+    this.passwordEliminar.set('');
+    this.liberarLotes.set(true);
+    this.errorEliminar.set(null);
+    this.segundosEliminar.set(SEGUNDOS_ESPERA_ELIMINAR);
+    this.mostrarEliminar.set(true);
+    clearInterval(this.temporizadorEliminar);
+    this.temporizadorEliminar = setInterval(() => {
+      this.segundosEliminar.update((s) => Math.max(0, s - 1));
+      if (this.segundosEliminar() <= 0) clearInterval(this.temporizadorEliminar);
+    }, 1000);
+  }
+
+  cerrarEliminar(): void {
+    if (this.eliminando()) return;
+    clearInterval(this.temporizadorEliminar);
+    this.mostrarEliminar.set(false);
+  }
+
+  async confirmarEliminar(): Promise<void> {
+    if (!this.ventaId || !this.cuentaTerminada() || !this.passwordEliminar() || this.eliminando()) return;
+    this.eliminando.set(true);
+    this.errorEliminar.set(null);
+    try {
+      await this.ventasService.eliminar(this.ventaId, this.passwordEliminar(), this.liberarLotes());
+      clearInterval(this.temporizadorEliminar);
+      this.mostrarEliminar.set(false);
+      this.toast.success('Venta eliminada.');
+      await this.router.navigate(['/panel/ventas']);
+    } catch (error) {
+      this.errorEliminar.set(
+        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+          ? error.error.message
+          : 'No se pudo eliminar la venta. Intenta de nuevo.',
+      );
+    } finally {
+      this.eliminando.set(false);
+    }
+  }
+
+  ngOnDestroy(): void {
+    clearInterval(this.temporizadorEliminar);
+  }
 
   ngOnInit(): void {
     this.numeroEnUrl = Number(this.route.snapshot.paramMap.get('numero'));

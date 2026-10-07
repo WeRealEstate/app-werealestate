@@ -11,6 +11,7 @@ import com.werealestate.backend.dto.VentaAportacionItemRequest;
 import com.werealestate.backend.dto.VentaLoteDto;
 import com.werealestate.backend.dto.VentaLoteItemRequest;
 import com.werealestate.backend.dto.VentaUpdateRequest;
+import com.werealestate.backend.dto.VentaEliminarRequest;
 import com.werealestate.backend.exception.ConflictException;
 import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
@@ -42,6 +43,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -65,6 +67,7 @@ public class VentaService {
     private final LoteService loteService;
     private final PagoVentaRepository pagoVentaRepository;
     private final ComisionService comisionService;
+    private final PasswordEncoder passwordEncoder;
     private final UsuarioRepository usuarioRepository;
     private final AsesorExternoRepository asesorExternoRepository;
     private final CurrentUserProvider currentUserProvider;
@@ -77,6 +80,7 @@ public class VentaService {
             LoteService loteService,
             PagoVentaRepository pagoVentaRepository,
             ComisionService comisionService,
+            PasswordEncoder passwordEncoder,
             UsuarioRepository usuarioRepository,
             AsesorExternoRepository asesorExternoRepository,
             CurrentUserProvider currentUserProvider) {
@@ -87,6 +91,7 @@ public class VentaService {
         this.loteService = loteService;
         this.pagoVentaRepository = pagoVentaRepository;
         this.comisionService = comisionService;
+        this.passwordEncoder = passwordEncoder;
         this.usuarioRepository = usuarioRepository;
         this.asesorExternoRepository = asesorExternoRepository;
         this.currentUserProvider = currentUserProvider;
@@ -223,6 +228,46 @@ public class VentaService {
         comisionService.sincronizar(venta);
         // La fecha pudo cambiar: se reacomodan los números y se vuelve a leer con el nuevo.
         return toDto(renumerar(venta.getId()));
+    }
+
+    /**
+     * Elimina una venta por completo. Es destructivo, así que es exclusivo de admin y exige su
+     * contraseña. Se borran la venta, sus lotes (la relación, no los lotes), sus abonos y sus
+     * aportaciones; los lotes que sigan VENDIDO vuelven a DISPONIBLE si se pide; la comisión se queda
+     * en el historial como "venta eliminada" (y lo ya ganado sigue pudiéndose entregar); y se
+     * reacomodan los números de las demás ventas.
+     */
+    public void eliminar(Long id, VentaEliminarRequest request) {
+        Usuario actual = currentUserProvider.getUsuarioActual();
+        if (actual.getRol() != Role.ADMIN) {
+            throw new ForbiddenOperationException("Solo un administrador puede eliminar una venta");
+        }
+        if (!passwordEncoder.matches(request.password(), actual.getPassword())) {
+            throw new ForbiddenOperationException("Contraseña incorrecta");
+        }
+        Venta venta = obtenerEntidad(id);
+        ventaRepository.bloquearNumeracion();
+
+        comisionService.desvincularVenta(venta);
+
+        List<VentaLote> lotes = ventaLoteRepository.findByVentaId(id);
+        List<Long> loteIds = lotes.stream().map(vl -> vl.getLote().getId()).toList();
+        pagoVentaRepository.deleteAll(pagoVentaRepository.findByVentaIdOrderByFechaDesc(id));
+        ventaAportacionRepository.deleteAll(ventaAportacionRepository.findByVentaIdOrderByAnioAscMesAsc(id));
+        ventaLoteRepository.deleteAll(lotes);
+        ventaRepository.flush();
+        ventaRepository.delete(venta);
+        ventaRepository.flush();
+
+        if (request.liberarLotes()) {
+            for (Long loteId : loteIds) {
+                // Si otra venta todavía incluye ese lote, sigue vendido.
+                if (!ventaLoteRepository.existsByLoteId(loteId)) {
+                    loteService.liberarPorVentaEliminada(loteId);
+                }
+            }
+        }
+        ventaRepository.renumerar();
     }
 
     /** Para el ícono de "ver información de venta" en /panel/lotes: qué venta vendió este lote, si
