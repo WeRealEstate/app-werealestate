@@ -3,6 +3,8 @@ package com.werealestate.backend.service;
 import com.werealestate.backend.dto.AsesorExternoCreateRequest;
 import com.werealestate.backend.dto.AsesorExternoDto;
 import com.werealestate.backend.dto.AsesorExternoUpdateRequest;
+import com.werealestate.backend.dto.AsesorFichaDto;
+import com.werealestate.backend.dto.AsesorFichaRequest;
 import com.werealestate.backend.exception.ConflictException;
 import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
@@ -11,8 +13,10 @@ import com.werealestate.backend.model.AsesorExterno;
 import com.werealestate.backend.model.EstadoContratoAsesor;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.TipoAsesorExterno;
+import com.werealestate.backend.model.UbicacionDocumento;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.repository.AsesorExternoRepository;
+import com.werealestate.backend.repository.UsuarioRepository;
 import com.werealestate.backend.repository.VentaRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
 import java.time.LocalDate;
@@ -33,14 +37,17 @@ public class AsesorExternoService {
 
     private final AsesorExternoRepository asesorExternoRepository;
     private final VentaRepository ventaRepository;
+    private final UsuarioRepository usuarioRepository;
     private final CurrentUserProvider currentUserProvider;
 
     public AsesorExternoService(
             AsesorExternoRepository asesorExternoRepository,
             VentaRepository ventaRepository,
+            UsuarioRepository usuarioRepository,
             CurrentUserProvider currentUserProvider) {
         this.asesorExternoRepository = asesorExternoRepository;
         this.ventaRepository = ventaRepository;
+        this.usuarioRepository = usuarioRepository;
         this.currentUserProvider = currentUserProvider;
     }
 
@@ -105,7 +112,85 @@ public class AsesorExternoService {
                             + ": tiene gente reportándole en Teams. Reasígnalos o quítalos del equipo primero.");
         }
 
+        if (asesorExternoRepository.existsByTraidoPorAsesorId(id)) {
+            throw new ConflictException(
+                    "No se puede eliminar a " + asesor.getNombre()
+                            + ": figura como quien trajo a otros asesores. Desactívalo o cámbialo en la ficha de ellos primero.");
+        }
+
         asesorExternoRepository.delete(asesor);
+    }
+
+    // ---------------------------------------------------------------- ficha
+
+    public AsesorFichaDto ficha(Long id) {
+        exigirAdminOLider();
+        return AsesorFichaDto.from(obtener(id));
+    }
+
+    /** Guarda los datos secundarios del asesor (todo opcional). Reglas: a lo más una persona que lo
+     * trajo; el expediente solo lleva ubicación si aplica, y el link de Drive solo si está en Drive. */
+    public AsesorFichaDto actualizarFicha(Long id, AsesorFichaRequest r) {
+        exigirAdminOLider();
+        AsesorExterno asesor = obtener(id);
+
+        int quienes = (r.traidoPorUsuarioId() != null ? 1 : 0)
+                + (r.traidoPorAsesorId() != null ? 1 : 0)
+                + (normalizarOpcional(r.traidoPorOtro()) != null ? 1 : 0);
+        if (quienes > 1) {
+            throw new ValidationException("Indica una sola persona que trajo al asesor");
+        }
+        if (id.equals(r.traidoPorAsesorId())) {
+            throw new ValidationException("Un asesor no puede haberse traído a sí mismo");
+        }
+        Usuario traidoPorUsuario = r.traidoPorUsuarioId() == null
+                ? null
+                : usuarioRepository.findById(r.traidoPorUsuarioId())
+                        .orElseThrow(() -> new ResourceNotFoundException("El usuario que lo trajo no existe"));
+        AsesorExterno traidoPorAsesor = r.traidoPorAsesorId() == null
+                ? null
+                : asesorExternoRepository.findById(r.traidoPorAsesorId())
+                        .orElseThrow(() -> new ResourceNotFoundException("El asesor que lo trajo no existe"));
+
+        UbicacionDocumento contrato = r.contratoCopia();
+        String contratoUrl = urlDrive(r.contratoDriveUrl(), contrato);
+
+        Boolean aplica = r.expedienteAplica();
+        UbicacionDocumento expediente = Boolean.TRUE.equals(aplica) ? r.expedienteUbicacion() : null;
+        if (expediente == UbicacionDocumento.NO_TIENE) {
+            throw new ValidationException("Si el expediente aplica, indica si está en físico, en Drive o en ambos");
+        }
+        String expedienteUrl = urlDrive(r.expedienteDriveUrl(), expediente);
+
+        asesor.actualizarFicha(
+                r.experiencia(),
+                contrato,
+                contratoUrl,
+                aplica,
+                expediente,
+                expedienteUrl,
+                traidoPorUsuario,
+                traidoPorAsesor,
+                normalizarOpcional(r.traidoPorOtro()),
+                normalizarOpcional(r.notas()));
+        return AsesorFichaDto.from(asesorExternoRepository.save(asesor));
+    }
+
+    /** El link de Drive solo se conserva si el documento está en Drive (o en ambos); debe ser http(s). */
+    private String urlDrive(String url, UbicacionDocumento ubicacion) {
+        String limpia = normalizarOpcional(url);
+        if (limpia == null || (ubicacion != UbicacionDocumento.DRIVE && ubicacion != UbicacionDocumento.AMBOS)) {
+            return null;
+        }
+        if (!limpia.startsWith("https://") && !limpia.startsWith("http://")) {
+            throw new ValidationException("El link de Drive debe empezar con https://");
+        }
+        return limpia;
+    }
+
+    private AsesorExterno obtener(Long id) {
+        return asesorExternoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Asesor externo no encontrado"));
     }
 
     private void aplicarContrato(

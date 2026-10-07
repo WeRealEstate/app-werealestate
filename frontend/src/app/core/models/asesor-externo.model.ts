@@ -76,3 +76,53 @@ export interface AsesorExternoUpdateRequest {
   accesoSamai?: boolean;
   accesoNanuu?: boolean;
 }
+
+// ---- Ficha del asesor externo: datos secundarios, todos opcionales (null = sin definir) ----
+
+export type ExperienciaAsesor = 'CON_EXPERIENCIA' | 'EN_PRUEBA' | 'SIN_EXPERIENCIA';
+export const EXPERIENCIAS_ASESOR: ExperienciaAsesor[] = ['CON_EXPERIENCIA', 'EN_PRUEBA', 'SIN_EXPERIENCIA'];
+export const EXPERIENCIA_ASESOR_LABELS: Record<ExperienciaAsesor, string> = {
+  CON_EXPERIENCIA: 'Con experiencia',
+  EN_PRUEBA: 'Probando al principio',
+  SIN_EXPERIENCIA: 'Sin experiencia',
+};
+
+/** Dónde está la copia de un documento (contrato o expediente). */
+export type UbicacionDocumento = 'FISICO' | 'DRIVE' | 'AMBOS' | 'NO_TIENE';
+export const UBICACION_DOCUMENTO_LABELS: Record<UbicacionDocumento, string> = {
+  FISICO: 'En físico',
+  DRIVE: 'En Drive',
+  AMBOS: 'Físico y Drive',
+  NO_TIENE: 'No lo tiene',
+};
+
+export interface AsesorFicha {
+  id: number;
+  nombre: string;
+  fechaCreacion: string;
+  experiencia: ExperienciaAsesor | null;
+  contratoCopia: UbicacionDocumento | null;
+  contratoDriveUrl: string | null;
+  /** null = sin definir; false = no aplica. */
+  expedienteAplica: boolean | null;
+  expedienteUbicacion: UbicacionDocumento | null;
+  expedienteDriveUrl: string | null;
+  /** Quién trajo al asesor: USUARIO / ASESOR (externo) / OTRO (un nombre o "captado en un evento"). */
+  traidoPorTipo: 'USUARIO' | 'ASESOR' | 'OTRO' | null;
+  traidoPorId: number | null;
+  traidoPorNombre: string | null;
+  notas: string | null;
+}
+
+export interface AsesorFichaRequest {
+  experiencia: ExperienciaAsesor | null;
+  contratoCopia: UbicacionDocumento | null;
+  contratoDriveUrl: string | null;
+  expedienteAplica: boolean | null;
+  expedienteUbicacion: UbicacionDocumento | null;
+  expedienteDriveUrl: string | null;
+  traidoPorUsuarioId: number | null;
+  traidoPorAsesorId: number | null;
+  traidoPorOtro: string | null;
+  notas: string | null;
+}

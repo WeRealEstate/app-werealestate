@@ -13,4 +13,9 @@ public interface AsesorExternoRepository extends JpaRepository<AsesorExterno, Lo
     /** Para bloquear borrado/cambio de tipo mientras tenga gente reportándole (ver
      * AsesorExternoService). */
     boolean existsByLiderDirectoId(Long liderDirectoId);
+
+    /** Para no borrar a quien figura como "quien trajo" a otro asesor (ver la ficha). */
+    boolean existsByTraidoPorAsesorId(Long asesorId);
+
+    boolean existsByTraidoPorUsuarioId(Long usuarioId);
 }

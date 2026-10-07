@@ -2,7 +2,13 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AsesorExterno, AsesorExternoCreateRequest, AsesorExternoUpdateRequest } from '../models/asesor-externo.model';
+import {
+  AsesorExterno,
+  AsesorExternoCreateRequest,
+  AsesorExternoUpdateRequest,
+  AsesorFicha,
+  AsesorFichaRequest,
+} from '../models/asesor-externo.model';
 
 @Injectable({ providedIn: 'root' })
 export class AsesoresExternosService {
@@ -24,6 +30,15 @@ export class AsesoresExternosService {
 
   actualizar(id: number, request: AsesorExternoUpdateRequest): Promise<AsesorExterno> {
     return firstValueFrom(this.http.put<AsesorExterno>(`${this.baseUrl}/${id}`, request));
+  }
+
+  /** Datos secundarios del asesor: experiencia, dónde están contrato y expediente, quién lo trajo, notas. */
+  ficha(id: number): Promise<AsesorFicha> {
+    return firstValueFrom(this.http.get<AsesorFicha>(`${this.baseUrl}/${id}/ficha`));
+  }
+
+  actualizarFicha(id: number, request: AsesorFichaRequest): Promise<AsesorFicha> {
+    return firstValueFrom(this.http.put<AsesorFicha>(`${this.baseUrl}/${id}/ficha`, request));
   }
 
   eliminar(id: number): Promise<void> {

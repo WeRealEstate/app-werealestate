@@ -76,6 +76,44 @@ public class AsesorExterno {
     @Column(name = "acceso_nanuu", nullable = false)
     private boolean accesoNanuu = true;
 
+    // Ficha: datos secundarios, todos opcionales (null = sin definir).
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private ExperienciaAsesor experiencia;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "contrato_copia", length = 20)
+    private UbicacionDocumento contratoCopia;
+
+    @Column(name = "contrato_drive_url", length = 500)
+    private String contratoDriveUrl;
+
+    @Column(name = "expediente_aplica")
+    private Boolean expedienteAplica;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "expediente_ubicacion", length = 20)
+    private UbicacionDocumento expedienteUbicacion;
+
+    @Column(name = "expediente_drive_url", length = 500)
+    private String expedienteDriveUrl;
+
+    /** Quién trajo al asesor: un usuario del sistema, otro asesor externo, o "otro" (un nombre o
+     * "captado en un evento"). A lo más uno de los tres. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "traido_por_usuario_id")
+    private Usuario traidoPorUsuario;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "traido_por_asesor_id")
+    private AsesorExterno traidoPorAsesor;
+
+    @Column(name = "traido_por_otro", length = 200)
+    private String traidoPorOtro;
+
+    @Column(length = 1000)
+    private String notas;
+
     @Column(name = "fecha_creacion", nullable = false)
     private LocalDateTime fechaCreacion = LocalDateTime.now();
 
@@ -202,5 +240,68 @@ public class AsesorExterno {
             return EstadoContratoAsesor.VENCIDO;
         }
         return contratoEstado;
+    }
+
+    public ExperienciaAsesor getExperiencia() {
+        return experiencia;
+    }
+
+    public UbicacionDocumento getContratoCopia() {
+        return contratoCopia;
+    }
+
+    public String getContratoDriveUrl() {
+        return contratoDriveUrl;
+    }
+
+    public Boolean getExpedienteAplica() {
+        return expedienteAplica;
+    }
+
+    public UbicacionDocumento getExpedienteUbicacion() {
+        return expedienteUbicacion;
+    }
+
+    public String getExpedienteDriveUrl() {
+        return expedienteDriveUrl;
+    }
+
+    public Usuario getTraidoPorUsuario() {
+        return traidoPorUsuario;
+    }
+
+    public AsesorExterno getTraidoPorAsesor() {
+        return traidoPorAsesor;
+    }
+
+    public String getTraidoPorOtro() {
+        return traidoPorOtro;
+    }
+
+    public String getNotas() {
+        return notas;
+    }
+
+    public void actualizarFicha(
+            ExperienciaAsesor experiencia,
+            UbicacionDocumento contratoCopia,
+            String contratoDriveUrl,
+            Boolean expedienteAplica,
+            UbicacionDocumento expedienteUbicacion,
+            String expedienteDriveUrl,
+            Usuario traidoPorUsuario,
+            AsesorExterno traidoPorAsesor,
+            String traidoPorOtro,
+            String notas) {
+        this.experiencia = experiencia;
+        this.contratoCopia = contratoCopia;
+        this.contratoDriveUrl = contratoDriveUrl;
+        this.expedienteAplica = expedienteAplica;
+        this.expedienteUbicacion = expedienteUbicacion;
+        this.expedienteDriveUrl = expedienteDriveUrl;
+        this.traidoPorUsuario = traidoPorUsuario;
+        this.traidoPorAsesor = traidoPorAsesor;
+        this.traidoPorOtro = traidoPorOtro;
+        this.notas = notas;
     }
 }

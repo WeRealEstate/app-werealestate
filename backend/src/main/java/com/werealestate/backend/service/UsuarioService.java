@@ -15,6 +15,7 @@ import com.werealestate.backend.model.Modulo;
 import com.werealestate.backend.model.ModulosAcceso;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Usuario;
+import com.werealestate.backend.repository.AsesorExternoRepository;
 import com.werealestate.backend.repository.ComisionRepository;
 import com.werealestate.backend.repository.CotizacionRepository;
 import com.werealestate.backend.repository.EtiquetaRepository;
@@ -49,6 +50,7 @@ public class UsuarioService {
     private final SeguimientoRepository seguimientoRepository;
     private final EtiquetaRepository etiquetaRepository;
     private final VentaRepository ventaRepository;
+    private final AsesorExternoRepository asesorExternoRepository;
     private final CurrentUserProvider currentUserProvider;
     private final PasswordEncoder passwordEncoder;
     private final GastoRecurrenteService gastoRecurrenteService;
@@ -63,6 +65,7 @@ public class UsuarioService {
             SeguimientoRepository seguimientoRepository,
             EtiquetaRepository etiquetaRepository,
             VentaRepository ventaRepository,
+            AsesorExternoRepository asesorExternoRepository,
             CurrentUserProvider currentUserProvider,
             PasswordEncoder passwordEncoder,
             GastoRecurrenteService gastoRecurrenteService) {
@@ -75,6 +78,7 @@ public class UsuarioService {
         this.seguimientoRepository = seguimientoRepository;
         this.etiquetaRepository = etiquetaRepository;
         this.ventaRepository = ventaRepository;
+        this.asesorExternoRepository = asesorExternoRepository;
         this.currentUserProvider = currentUserProvider;
         this.passwordEncoder = passwordEncoder;
         this.gastoRecurrenteService = gastoRecurrenteService;
@@ -198,7 +202,8 @@ public class UsuarioService {
                 || cotizacionRepository.existsByAsesorId(id)
                 || seguimientoRepository.existsByAsesorId(id)
                 || ventaRepository.existsByUsuarioAsesorId(id)
-                || gastoRecurrenteService.tieneNominaPagada(id);
+                || gastoRecurrenteService.tieneNominaPagada(id)
+                || asesorExternoRepository.existsByTraidoPorUsuarioId(id);
         if (tieneActividad) {
             throw new ConflictException("No se puede eliminar a " + usuario.getNombre()
                     + ": tiene actividad registrada (leads, tareas, comisiones, cotizaciones, seguimientos o ventas). "

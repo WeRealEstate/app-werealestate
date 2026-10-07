@@ -265,6 +265,16 @@
                   <div class="flex items-center justify-end gap-1.5">
                     <button
                       type="button"
+                      (click)="abrirFicha(a)"
+                      aria-label="Ver ficha"
+                      title="Ver ficha"
+                      class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2 hover:text-we-blue-light
+                             transition-colors duration-150 active:scale-90"
+                    >
+                      <svg lucideEye [size]="15" aria-hidden="true"></svg>
+                    </button>
+                    <button
+                      type="button"
                       (click)="abrirEdicion(a)"
                       aria-label="Editar"
                       class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2 hover:text-we-blue-light
@@ -423,6 +433,238 @@
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  }
+
+  <!-- FICHA DEL ASESOR: datos secundarios (experiencia, contrato, expediente, quién lo trajo) -->
+  @if (fichaDe(); as asesorFicha) {
+    <button type="button" (click)="cerrarFicha()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="ficha-titulo">
+      <div class="modal-panel-enter w-full max-w-lg max-h-[88vh] overflow-y-auto rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h2 id="ficha-titulo" class="font-heading text-lg font-semibold text-ink">{{ asesorFicha.nombre }}</h2>
+            <p class="text-xs text-ink-muted">
+              Ficha del asesor
+              @if (ficha(); as f) {
+                · registrado el {{ fechaCorta(f.fechaCreacion.slice(0, 10)) }}
+              }
+            </p>
+          </div>
+          <button type="button" (click)="cerrarFicha()" aria-label="Cerrar" class="-mr-1 -mt-1 flex h-9 w-9 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2">
+            <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        @if (errorFicha() && !editandoFicha()) {
+          <p class="mt-4 text-sm text-red-600 dark:text-red-400">{{ errorFicha() }}</p>
+        }
+
+        @if (cargandoFicha()) {
+          <p class="mt-6 text-sm text-ink-muted">Cargando ficha…</p>
+        } @else if (ficha(); as f) {
+          @if (!editandoFicha()) {
+            <!-- Lectura -->
+            <dl class="mt-5 space-y-5 text-sm">
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Experiencia</dt>
+                <dd class="mt-1 text-ink">
+                  @if (f.experiencia) {
+                    {{ experienciaLabels[f.experiencia] }}
+                  } @else {
+                    <span class="text-ink-muted">Sin definir</span>
+                  }
+                </dd>
+              </div>
+
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Contrato firmado</dt>
+                <dd class="mt-1 text-ink">
+                  @if (f.contratoCopia) {
+                    {{ ubicacionLabels[f.contratoCopia] }}
+                    @if (f.contratoDriveUrl) {
+                      <a [href]="f.contratoDriveUrl" target="_blank" rel="noopener noreferrer" class="ml-2 inline-flex items-center gap-1 text-we-primary hover:underline">
+                        Abrir en Drive <svg lucideExternalLink [size]="13" aria-hidden="true"></svg>
+                      </a>
+                    }
+                  } @else {
+                    <span class="text-ink-muted">Sin definir</span>
+                  }
+                </dd>
+              </div>
+
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Expediente</dt>
+                <dd class="mt-1 text-ink">
+                  @if (f.expedienteAplica === null) {
+                    <span class="text-ink-muted">Sin definir</span>
+                  } @else if (!f.expedienteAplica) {
+                    No aplica
+                  } @else {
+                    Aplica ·
+                    @if (f.expedienteUbicacion) {
+                      {{ ubicacionLabels[f.expedienteUbicacion] }}
+                      @if (f.expedienteDriveUrl) {
+                        <a [href]="f.expedienteDriveUrl" target="_blank" rel="noopener noreferrer" class="ml-2 inline-flex items-center gap-1 text-we-primary hover:underline">
+                          Abrir en Drive <svg lucideExternalLink [size]="13" aria-hidden="true"></svg>
+                        </a>
+                      }
+                    } @else {
+                      <span class="text-ink-muted">ubicación sin definir</span>
+                    }
+                  }
+                </dd>
+              </div>
+
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Quién lo trajo</dt>
+                <dd class="mt-1 text-ink">
+                  @if (f.traidoPorTipo) {
+                    {{ f.traidoPorNombre }}
+                    <span class="text-xs text-ink-muted">
+                      {{ f.traidoPorTipo === 'USUARIO' ? '(usuario del sistema)' : f.traidoPorTipo === 'ASESOR' ? '(asesor externo)' : '(otro)' }}
+                    </span>
+                  } @else {
+                    <span class="text-ink-muted">Sin definir</span>
+                  }
+                </dd>
+              </div>
+
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Notas</dt>
+                <dd class="mt-1 whitespace-pre-line text-ink">
+                  @if (f.notas) {
+                    {{ f.notas }}
+                  } @else {
+                    <span class="text-ink-muted">Sin notas</span>
+                  }
+                </dd>
+              </div>
+            </dl>
+
+            <div class="mt-6 flex justify-end gap-2.5">
+              <button type="button" (click)="cerrarFicha()" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cerrar</button>
+              <button type="button" (click)="editarFicha()" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90">
+                Editar datos adicionales
+              </button>
+            </div>
+          } @else {
+            <!-- Edición -->
+            <form (ngSubmit)="guardarFicha()" class="mt-5 space-y-4">
+              <div>
+                <label for="f-experiencia" class="mb-1 block text-xs font-medium text-ink-muted">Experiencia</label>
+                <select
+                  id="f-experiencia" name="experiencia" [ngModel]="fExperiencia()" (ngModelChange)="fExperiencia.set($event)"
+                  class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+                >
+                  <option value="">Sin definir</option>
+                  @for (e of experiencias; track e) {
+                    <option [value]="e">{{ experienciaLabels[e] }}</option>
+                  }
+                </select>
+              </div>
+
+              <div>
+                <label for="f-contrato" class="mb-1 block text-xs font-medium text-ink-muted">Contrato firmado</label>
+                <select
+                  id="f-contrato" name="contrato" [ngModel]="fContrato()" (ngModelChange)="fContrato.set($event)"
+                  class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+                >
+                  <option value="">Sin definir</option>
+                  @for (u of ubicacionesContrato; track u) {
+                    <option [value]="u">{{ ubicacionLabels[u] }}</option>
+                  }
+                </select>
+                @if (fContrato() === 'DRIVE' || fContrato() === 'AMBOS') {
+                  <input
+                    type="url" name="contratoUrl" placeholder="Link de Drive (https://…)" [ngModel]="fContratoUrl()" (ngModelChange)="fContratoUrl.set($event)"
+                    class="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+                  />
+                }
+              </div>
+
+              <div>
+                <label for="f-expediente" class="mb-1 block text-xs font-medium text-ink-muted">Expediente</label>
+                <select
+                  id="f-expediente" name="expediente" [ngModel]="fExpedienteAplica()" (ngModelChange)="fExpedienteAplica.set($event)"
+                  class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+                >
+                  <option value="">Sin definir</option>
+                  <option value="SI">Aplica</option>
+                  <option value="NO">No aplica</option>
+                </select>
+                @if (fExpedienteAplica() === 'SI') {
+                  <select
+                    name="expedienteUbicacion" [ngModel]="fExpedienteUbicacion()" (ngModelChange)="fExpedienteUbicacion.set($event)" aria-label="Dónde está el expediente"
+                    class="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+                  >
+                    <option value="">¿Dónde está? (sin definir)</option>
+                    @for (u of ubicacionesExpediente; track u) {
+                      <option [value]="u">{{ ubicacionLabels[u] }}</option>
+                    }
+                  </select>
+                  @if (fExpedienteUbicacion() === 'DRIVE' || fExpedienteUbicacion() === 'AMBOS') {
+                    <input
+                      type="url" name="expedienteUrl" placeholder="Link de Drive (https://…)" [ngModel]="fExpedienteUrl()" (ngModelChange)="fExpedienteUrl.set($event)"
+                      class="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+                    />
+                  }
+                }
+              </div>
+
+              <div>
+                <label for="f-traido" class="mb-1 block text-xs font-medium text-ink-muted">Quién lo trajo</label>
+                <select
+                  id="f-traido" name="traido" [ngModel]="fTraidoPor()" (ngModelChange)="fTraidoPor.set($event)"
+                  class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+                >
+                  <option value="">Sin definir</option>
+                  @if (usuariosParaFicha().length > 0) {
+                    <optgroup label="Usuarios del sistema">
+                      @for (u of usuariosParaFicha(); track u.id) {
+                        <option [value]="'U-' + u.id">{{ u.nombre }}</option>
+                      }
+                    </optgroup>
+                  }
+                  @if (otrosAsesores().length > 0) {
+                    <optgroup label="Asesores externos">
+                      @for (a of otrosAsesores(); track a.id) {
+                        <option [value]="'A-' + a.id">{{ a.nombre }}</option>
+                      }
+                    </optgroup>
+                  }
+                  <option value="OTRO">Otro…</option>
+                </select>
+                @if (fTraidoPor() === 'OTRO') {
+                  <input
+                    type="text" name="traidoOtro" maxlength="200" placeholder="Un nombre, o ej. «Captado en evento Expo 2026»"
+                    [ngModel]="fTraidoPorOtro()" (ngModelChange)="fTraidoPorOtro.set($event)"
+                    class="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+                  />
+                }
+              </div>
+
+              <div>
+                <label for="f-notas" class="mb-1 block text-xs font-medium text-ink-muted">Notas</label>
+                <textarea
+                  id="f-notas" name="notas" rows="3" maxlength="1000" [ngModel]="fNotas()" (ngModelChange)="fNotas.set($event)"
+                  class="w-full resize-none rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+                ></textarea>
+              </div>
+
+              @if (errorFicha(); as error) {
+                <p class="text-xs text-red-600 dark:text-red-400" role="alert">{{ error }}</p>
+              }
+              <div class="flex justify-end gap-2.5 pt-1">
+                <button type="button" (click)="editandoFicha.set(false)" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cancelar</button>
+                <button type="submit" [disabled]="guardandoFicha()" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
+                  {{ guardandoFicha() ? 'Guardando…' : 'Guardar' }}
+                </button>
+              </div>
+            </form>
+          }
+        }
       </div>
     </div>
   }

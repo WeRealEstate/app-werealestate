@@ -1,14 +1,22 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { LucidePencil, LucideTrash2 } from '@lucide/angular';
+import { LucideEye, LucideExternalLink, LucidePencil, LucideTrash2 } from '@lucide/angular';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../core/services/toast.service';
 import { ConfirmService } from '../../../core/services/confirm.service';
+import { UsuariosService } from '../../../core/services/usuarios.service';
+import { UsuarioResumen } from '../../../core/models/lead.model';
 import { AsesoresExternosService } from '../../../core/services/asesores-externos.service';
 import {
   AsesorExterno,
   AsesorExternoUpdateRequest,
+  AsesorFicha,
+  EXPERIENCIAS_ASESOR,
+  EXPERIENCIA_ASESOR_LABELS,
+  ExperienciaAsesor,
+  UBICACION_DOCUMENTO_LABELS,
+  UbicacionDocumento,
   ESTADO_CONTRATO_CLASES,
   ESTADO_CONTRATO_LABELS,
   ESTADOS_CONTRATO,
@@ -23,11 +31,12 @@ const ordenarAsesoresPorNombre = (asesores: AsesorExterno[]): AsesorExterno[] =>
 @Component({
   selector: 'app-asesores-externos-list',
   standalone: true,
-  imports: [FormsModule, RouterLink, LucidePencil, LucideTrash2],
+  imports: [FormsModule, RouterLink, LucideEye, LucideExternalLink, LucidePencil, LucideTrash2],
   templateUrl: './asesores-externos-list.component.html',
 })
 export class AsesoresExternosListComponent {
   private readonly asesoresExternosService = inject(AsesoresExternosService);
+  private readonly usuariosService = inject(UsuariosService);
   private readonly toast = inject(ToastService);
   private readonly confirmService = inject(ConfirmService);
 
@@ -50,6 +59,36 @@ export class AsesoresExternosListComponent {
   readonly nuevoFechaVencimiento = signal('');
   readonly nuevoAccesoSamai = signal(true);
   readonly nuevoAccesoNanuu = signal(true);
+
+  readonly experiencias = EXPERIENCIAS_ASESOR;
+  readonly experienciaLabels = EXPERIENCIA_ASESOR_LABELS;
+  readonly ubicacionLabels = UBICACION_DOCUMENTO_LABELS;
+  readonly ubicacionesContrato: UbicacionDocumento[] = ['FISICO', 'DRIVE', 'AMBOS', 'NO_TIENE'];
+  readonly ubicacionesExpediente: UbicacionDocumento[] = ['FISICO', 'DRIVE', 'AMBOS'];
+
+  // --- Ficha del asesor (ojo): datos secundarios, en un modal de lectura que se puede editar ---
+  readonly fichaDe = signal<AsesorExterno | null>(null);
+  readonly ficha = signal<AsesorFicha | null>(null);
+  readonly cargandoFicha = signal(false);
+  readonly editandoFicha = signal(false);
+  readonly guardandoFicha = signal(false);
+  readonly errorFicha = signal<string | null>(null);
+  readonly usuariosParaFicha = signal<UsuarioResumen[]>([]);
+
+  readonly fExperiencia = signal<ExperienciaAsesor | ''>('');
+  readonly fContrato = signal<UbicacionDocumento | ''>('');
+  readonly fContratoUrl = signal('');
+  /** '' = sin definir, 'SI' = aplica, 'NO' = no aplica. */
+  readonly fExpedienteAplica = signal<'' | 'SI' | 'NO'>('');
+  readonly fExpedienteUbicacion = signal<UbicacionDocumento | ''>('');
+  readonly fExpedienteUrl = signal('');
+  /** '' = sin definir, 'U-id' usuario, 'A-id' asesor externo, 'OTRO' = escribir un nombre / evento. */
+  readonly fTraidoPor = signal('');
+  readonly fTraidoPorOtro = signal('');
+  readonly fNotas = signal('');
+
+  /** Los demás asesores externos, para elegir quién trajo a este. */
+  readonly otrosAsesores = computed(() => this.asesores().filter((a) => a.id !== this.fichaDe()?.id));
 
   readonly estadosContrato = ESTADOS_CONTRATO;
   readonly contratoLabels = ESTADO_CONTRATO_LABELS;
@@ -161,6 +200,87 @@ export class AsesoresExternosListComponent {
       );
     } finally {
       this.isCreando.set(false);
+    }
+  }
+
+  async abrirFicha(asesor: AsesorExterno): Promise<void> {
+    this.fichaDe.set(asesor);
+    this.ficha.set(null);
+    this.editandoFicha.set(false);
+    this.errorFicha.set(null);
+    this.cargandoFicha.set(true);
+    try {
+      this.ficha.set(await this.asesoresExternosService.ficha(asesor.id));
+    } catch {
+      this.errorFicha.set('No se pudo cargar la ficha. Intenta de nuevo.');
+    } finally {
+      this.cargandoFicha.set(false);
+    }
+  }
+
+  cerrarFicha(): void {
+    this.fichaDe.set(null);
+    this.editandoFicha.set(false);
+  }
+
+  async editarFicha(): Promise<void> {
+    const f = this.ficha();
+    if (!f) return;
+    if (this.usuariosParaFicha().length === 0) {
+      this.usuariosService.paraVenta().then((u) => this.usuariosParaFicha.set(u)).catch(() => undefined);
+    }
+    this.fExperiencia.set(f.experiencia ?? '');
+    this.fContrato.set(f.contratoCopia ?? '');
+    this.fContratoUrl.set(f.contratoDriveUrl ?? '');
+    this.fExpedienteAplica.set(f.expedienteAplica === null ? '' : f.expedienteAplica ? 'SI' : 'NO');
+    this.fExpedienteUbicacion.set(f.expedienteUbicacion ?? '');
+    this.fExpedienteUrl.set(f.expedienteDriveUrl ?? '');
+    this.fTraidoPor.set(
+      f.traidoPorTipo === 'USUARIO' ? `U-${f.traidoPorId}` : f.traidoPorTipo === 'ASESOR' ? `A-${f.traidoPorId}` : f.traidoPorTipo === 'OTRO' ? 'OTRO' : '',
+    );
+    this.fTraidoPorOtro.set(f.traidoPorTipo === 'OTRO' ? (f.traidoPorNombre ?? '') : '');
+    this.fNotas.set(f.notas ?? '');
+    this.errorFicha.set(null);
+    this.editandoFicha.set(true);
+  }
+
+  async guardarFicha(): Promise<void> {
+    const asesor = this.fichaDe();
+    if (!asesor || this.guardandoFicha()) return;
+    const quien = this.fTraidoPor();
+    const otro = this.fTraidoPorOtro().trim();
+    if (quien === 'OTRO' && !otro) {
+      this.errorFicha.set('Escribe quién lo trajo o dónde se captó (por ejemplo, "Captado en evento Expo").');
+      return;
+    }
+    const contrato = this.fContrato() || null;
+    const aplica = this.fExpedienteAplica();
+    this.guardandoFicha.set(true);
+    this.errorFicha.set(null);
+    try {
+      const guardada = await this.asesoresExternosService.actualizarFicha(asesor.id, {
+        experiencia: this.fExperiencia() || null,
+        contratoCopia: contrato,
+        contratoDriveUrl: this.fContratoUrl().trim() || null,
+        expedienteAplica: aplica === '' ? null : aplica === 'SI',
+        expedienteUbicacion: aplica === 'SI' ? this.fExpedienteUbicacion() || null : null,
+        expedienteDriveUrl: this.fExpedienteUrl().trim() || null,
+        traidoPorUsuarioId: quien.startsWith('U-') ? Number(quien.slice(2)) : null,
+        traidoPorAsesorId: quien.startsWith('A-') ? Number(quien.slice(2)) : null,
+        traidoPorOtro: quien === 'OTRO' ? otro : null,
+        notas: this.fNotas().trim() || null,
+      });
+      this.ficha.set(guardada);
+      this.editandoFicha.set(false);
+      this.toast.success('Ficha guardada.');
+    } catch (error) {
+      this.errorFicha.set(
+        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+          ? error.error.message
+          : 'No se pudo guardar la ficha.',
+      );
+    } finally {
+      this.guardandoFicha.set(false);
     }
   }
 

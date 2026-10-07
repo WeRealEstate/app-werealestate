@@ -3,6 +3,8 @@ package com.werealestate.backend.controller;
 import com.werealestate.backend.dto.AsesorExternoCreateRequest;
 import com.werealestate.backend.dto.AsesorExternoDto;
 import com.werealestate.backend.dto.AsesorExternoUpdateRequest;
+import com.werealestate.backend.dto.AsesorFichaDto;
+import com.werealestate.backend.dto.AsesorFichaRequest;
 import com.werealestate.backend.service.AsesorExternoService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -44,6 +46,17 @@ public class AsesorExternoController {
     @PutMapping("/{id}")
     public AsesorExternoDto actualizar(@PathVariable Long id, @Valid @RequestBody AsesorExternoUpdateRequest request) {
         return asesorExternoService.actualizar(id, request);
+    }
+
+    /** Datos secundarios del asesor (experiencia, dónde están contrato y expediente, quién lo trajo). */
+    @GetMapping("/{id}/ficha")
+    public AsesorFichaDto ficha(@PathVariable Long id) {
+        return asesorExternoService.ficha(id);
+    }
+
+    @PutMapping("/{id}/ficha")
+    public AsesorFichaDto actualizarFicha(@PathVariable Long id, @Valid @RequestBody AsesorFichaRequest request) {
+        return asesorExternoService.actualizarFicha(id, request);
     }
 
     @DeleteMapping("/{id}")
