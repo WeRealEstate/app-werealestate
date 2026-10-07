@@ -31,5 +31,7 @@ public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecific
 
     java.util.List<Venta> findByClienteRefId(Long clienteId);
 
+    java.util.List<Venta> findByFechaVentaBetween(java.time.LocalDate desde, java.time.LocalDate hasta);
+
     boolean existsByAsesorExternoId(Long asesorExternoId);
 }

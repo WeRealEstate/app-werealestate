@@ -13,6 +13,8 @@ import com.werealestate.backend.model.Lead;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Seguimiento;
 import com.werealestate.backend.model.Usuario;
+import com.werealestate.backend.model.Venta;
+import com.werealestate.backend.repository.VentaRepository;
 import com.werealestate.backend.repository.CotizacionRepository;
 import com.werealestate.backend.repository.LeadRepository;
 import com.werealestate.backend.repository.SeguimientoRepository;
@@ -51,6 +53,7 @@ public class ReporteService {
     private final LeadRepository leadRepository;
     private final SeguimientoRepository seguimientoRepository;
     private final CotizacionRepository cotizacionRepository;
+    private final VentaRepository ventaRepository;
     private final CurrentUserProvider currentUserProvider;
     private final int diasFrio;
     private final int diasSinContactarNuevo;
@@ -59,12 +62,14 @@ public class ReporteService {
             LeadRepository leadRepository,
             SeguimientoRepository seguimientoRepository,
             CotizacionRepository cotizacionRepository,
+            VentaRepository ventaRepository,
             CurrentUserProvider currentUserProvider,
             @Value("${app.lead.dias-frio}") int diasFrio,
             @Value("${app.lead.dias-sin-contactar-nuevo}") int diasSinContactarNuevo) {
         this.leadRepository = leadRepository;
         this.seguimientoRepository = seguimientoRepository;
         this.cotizacionRepository = cotizacionRepository;
+        this.ventaRepository = ventaRepository;
         this.currentUserProvider = currentUserProvider;
         this.diasFrio = diasFrio;
         this.diasSinContactarNuevo = diasSinContactarNuevo;
@@ -83,8 +88,12 @@ public class ReporteService {
         List<Lead> leadsCerrados = leadRepository.findByEstadoInAndFechaUltimoContactoBetween(CERRADOS, desdeDt, hastaDt);
 
         long totalLeadsCreados = leadsCreados.size();
-        long ventasCerradas = leadsCerrados.stream().filter(l -> l.getEstado() == EstadoLead.CERRADO_GANADO).count();
-        long perdidosCerrados = leadsCerrados.size() - ventasCerradas;
+        // Las ventas son las registradas en el módulo Ventas (por su fecha de venta): el estado de un
+        // lead es solo informativo y no cuenta como venta. "Ganados"/"perdidos" siguen siendo de leads.
+        List<Venta> ventas = ventaRepository.findByFechaVentaBetween(
+                desde != null ? desde : LocalDate.of(2000, 1, 1), hasta != null ? hasta : LocalDate.now().plusDays(1));
+        long ventasCerradas = ventas.size();
+        long perdidosCerrados = leadsCerrados.stream().filter(l -> l.getEstado() == EstadoLead.CERRADO_PERDIDO).count();
 
         long ganadosDelCohorte = leadsCreados.stream().filter(l -> l.getEstado() == EstadoLead.CERRADO_GANADO).count();
         double tasaConversion = totalLeadsCreados == 0 ? 0 : (ganadosDelCohorte * 100.0) / totalLeadsCreados;
@@ -97,21 +106,20 @@ public class ReporteService {
                 tasaConversion,
                 ventasCerradas,
                 perdidosCerrados,
-                calcularAsesorEstrella(leadsCerrados),
+                calcularAsesorEstrella(ventas),
                 agrupar(leadsCreados, l -> l.getEstado().name()),
                 agrupar(leadsCreados, l -> l.getDesarrollo().getNombre()),
                 agrupar(leadsCreados, l -> l.getAsesor().getNombre()),
                 agrupar(seguimientos, s -> s.getAsesor().getNombre()),
-                calcularTendencia(leadsCreados, leadsCerrados, desdeDt, hastaDt),
+                calcularTendencia(leadsCreados, ventas, desdeDt, hastaDt),
                 calcularRiesgo(),
                 calcularCotizaciones(cotizaciones));
     }
 
-    private ReporteAsesorEstrellaDto calcularAsesorEstrella(List<Lead> leadsCerrados) {
+    private ReporteAsesorEstrellaDto calcularAsesorEstrella(List<Venta> ventas) {
         Map<String, Long> conteo = new LinkedHashMap<>();
-        for (Lead lead : leadsCerrados) {
-            if (lead.getEstado() != EstadoLead.CERRADO_GANADO) continue;
-            conteo.merge(lead.getAsesor().getNombre(), 1L, Long::sum);
+        for (Venta venta : ventas) {
+            conteo.merge(venta.getAsesorNombre(), 1L, Long::sum);
         }
         return conteo.entrySet().stream()
                 .max(Map.Entry.comparingByValue())
@@ -154,13 +162,13 @@ public class ReporteService {
      * es más largo (por ejemplo, al elegir "Todo" con varios años de historial). Genera también
      * los sub-periodos sin actividad (en 0), para que la línea no tenga huecos. */
     private List<ReporteTendenciaPuntoDto> calcularTendencia(
-            List<Lead> leadsCreados, List<Lead> leadsCerrados, LocalDateTime desdeDt, LocalDateTime hastaDt) {
+            List<Lead> leadsCreados, List<Venta> ventas, LocalDateTime desdeDt, LocalDateTime hastaDt) {
         LocalDateTime ahora = LocalDateTime.now();
         LocalDateTime finReal = hastaDt.isAfter(ahora) ? ahora : hastaDt;
 
         LocalDateTime inicioReal = Stream.concat(
                         leadsCreados.stream().map(Lead::getFechaCreacion),
-                        leadsCerrados.stream().map(Lead::getFechaUltimoContacto))
+                        ventas.stream().map(v -> v.getFechaVenta().atStartOfDay()))
                 .min(LocalDateTime::compareTo)
                 .orElse(finReal.minusWeeks(1));
         if (inicioReal.isBefore(desdeDt)) {
@@ -186,9 +194,8 @@ public class ReporteService {
         for (Lead lead : leadsCreados) {
             incrementarBucket(buckets, lead.getFechaCreacion(), porMes, formato, 0);
         }
-        for (Lead lead : leadsCerrados) {
-            if (lead.getEstado() != EstadoLead.CERRADO_GANADO) continue;
-            incrementarBucket(buckets, lead.getFechaUltimoContacto(), porMes, formato, 1);
+        for (Venta venta : ventas) {
+            incrementarBucket(buckets, venta.getFechaVenta().atStartOfDay(), porMes, formato, 1);
         }
 
         return buckets.entrySet().stream()
