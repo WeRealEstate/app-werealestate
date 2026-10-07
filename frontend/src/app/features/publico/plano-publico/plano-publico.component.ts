@@ -144,7 +144,9 @@ export class PlanoPublicoComponent {
   // solo mientras dure la pestaña (sessionStorage), nunca de forma permanente.
   readonly asesorVerificado = signal<string | null>(leerAsesorGuardado(this.proyecto));
   readonly mostrarAcceso = signal(false);
-  readonly accesoNombre = signal('');
+  /** PIN del botón Asesor: un carácter por casilla. */
+  readonly pinCasillas = signal<string[]>(['', '', '', '']);
+  readonly accesoNombre = computed(() => this.pinCasillas().join(''));
   readonly accesoError = signal<string | null>(null);
   readonly isVerificando = signal(false);
   readonly nombreAsesorInput = signal('');
@@ -300,9 +302,45 @@ export class PlanoPublicoComponent {
   }
 
   abrirAcceso(): void {
-    this.accesoNombre.set('');
+    this.pinCasillas.set(['', '', '', '']);
     this.accesoError.set(null);
     this.mostrarAcceso.set(true);
+  }
+
+  /** Escribe en una casilla (acepta pegar el PIN completo) y pasa a la siguiente. */
+  escribirPin(indice: number, valor: string, evento: Event): void {
+    const limpio = valor.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const casillas = [...this.pinCasillas()];
+    if (!limpio) {
+      casillas[indice] = '';
+      this.pinCasillas.set(casillas);
+      (evento.target as HTMLInputElement).value = '';
+      return;
+    }
+    for (let i = 0; i < limpio.length && indice + i < 4; i++) casillas[indice + i] = limpio[i];
+    this.pinCasillas.set(casillas);
+    this.accesoError.set(null);
+    const host = (evento.target as HTMLInputElement).closest('[data-pin]') as HTMLElement;
+    const inputs = Array.from(host.querySelectorAll('input'));
+    inputs.forEach((el, i) => (el.value = casillas[i]));
+    inputs[Math.min(indice + limpio.length, 3)]?.focus();
+  }
+
+  teclaPin(indice: number, evento: KeyboardEvent): void {
+    const input = evento.target as HTMLInputElement;
+    if (evento.key === 'Backspace' && !input.value && indice > 0) {
+      const inputs = Array.from((input.closest('[data-pin]') as HTMLElement).querySelectorAll('input'));
+      const casillas = [...this.pinCasillas()];
+      casillas[indice - 1] = '';
+      this.pinCasillas.set(casillas);
+      inputs[indice - 1].value = '';
+      inputs[indice - 1].focus();
+      evento.preventDefault();
+    } else if (evento.key === 'ArrowLeft' && indice > 0) {
+      (input.previousElementSibling as HTMLInputElement | null)?.focus();
+    } else if (evento.key === 'ArrowRight' && indice < 3) {
+      (input.nextElementSibling as HTMLInputElement | null)?.focus();
+    }
   }
 
   cerrarAcceso(): void {

@@ -352,18 +352,26 @@
       <form (ngSubmit)="confirmarAcceso()" class="modal-panel-enter w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
         <h2 id="acceso-asesor-titulo" class="font-heading text-lg font-semibold text-ink">Acceso de asesor</h2>
         <p class="mt-2 text-sm text-ink-muted">Escribe tu PIN de 4 caracteres para cotizar y apartar lotes.</p>
-        <input
-          type="text"
-          name="nombreAsesorAcceso"
-          [ngModel]="accesoNombre()"
-          (ngModelChange)="accesoNombre.set($event.toUpperCase()); accesoError.set(null)"
-          placeholder="PIN"
-          maxlength="4"
-          autocomplete="off"
-          autocapitalize="characters"
-          class="mt-4 w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-center font-mono text-lg tracking-[0.4em] uppercase text-ink outline-none transition-all
-                 focus:border-we-primary focus:ring-2 focus:ring-we-primary/50"
-        />
+        <div data-pin class="mt-4 flex justify-center gap-3">
+          @for (i of [0, 1, 2, 3]; track i) {
+            <input
+              type="text"
+              [name]="'pin' + i"
+              [attr.aria-label]="'Carácter ' + (i + 1) + ' del PIN'"
+              [value]="pinCasillas()[i]"
+              (input)="escribirPin(i, $any($event.target).value, $event)"
+              (keydown)="teclaPin(i, $event)"
+              (focus)="$any($event.target).select()"
+              placeholder="*"
+              maxlength="4"
+              autocomplete="off"
+              autocapitalize="characters"
+              [attr.autofocus]="i === 0 ? '' : null"
+              class="h-14 w-14 rounded-lg border border-border bg-surface text-center font-mono text-2xl uppercase text-ink outline-none transition-all
+                     placeholder:text-ink-muted focus:border-we-primary focus:ring-2 focus:ring-we-primary/50"
+            />
+          }
+        </div>
         @if (accesoError(); as error) {
           <p class="mt-2 text-xs text-red-600 dark:text-red-400" role="alert">{{ error }}</p>
         }
