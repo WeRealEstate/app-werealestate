@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { CargaInicialService } from './core/services/carga-inicial.service';
 import { AccesibilidadTecladoService } from './core/services/accesibilidad-teclado.service';
 
 @Component({
@@ -10,5 +11,6 @@ import { AccesibilidadTecladoService } from './core/services/accesibilidad-tecla
 export class App {
   constructor() {
     inject(AccesibilidadTecladoService).iniciar();
+    inject(CargaInicialService);
   }
 }

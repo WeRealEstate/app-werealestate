@@ -7,13 +7,14 @@ import { Component, computed, input } from '@angular/core';
  */
 @Component({
   selector: 'app-we-loader',
+  host: { class: 'block' },
   templateUrl: './we-loader.component.html',
 })
 export class WeLoaderComponent {
   readonly modo = input<'pantalla' | 'bloque' | 'compacto'>('bloque');
   readonly texto = input('Cargando…');
 
-  readonly ancho = computed(() => (this.modo() === 'pantalla' ? 200 : this.modo() === 'bloque' ? 110 : 64));
+  readonly ancho = computed(() => (this.modo() === 'pantalla' ? 230 : this.modo() === 'bloque' ? 110 : 64));
   readonly clases = computed(() =>
     this.modo() === 'pantalla'
       ? 'we-loader-pantalla flex h-full min-h-dvh w-full flex-col items-center justify-center gap-8'
