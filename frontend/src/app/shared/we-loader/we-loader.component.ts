@@ -19,7 +19,7 @@ export class WeLoaderComponent {
     this.modo() === 'pantalla'
       ? 'we-loader-pantalla flex h-full min-h-dvh w-full flex-col items-center justify-center gap-8'
       : this.modo() === 'bloque'
-        ? 'flex flex-col items-center justify-center gap-6 py-16'
+        ? 'flex min-h-[60dvh] flex-col items-center justify-center gap-6 py-10'
         : 'flex flex-col items-center justify-center gap-3 py-6',
   );
 }
