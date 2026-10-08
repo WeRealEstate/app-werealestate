@@ -112,8 +112,8 @@
     }
   </aside>
 
-  <!-- Top bar móvil -->
-  <div class="sticky top-0 z-10 flex items-center gap-3 border-b border-[var(--sb-border)] bg-[var(--sb-bg)] pb-3 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-xl lg:hidden">
+  <!-- Top bar móvil: azul marino sólido (igual al theme-color) para que la barra de estado del teléfono se funda con ella -->
+  <div class="sb-oscuro sticky top-0 z-10 flex items-center gap-3 border-b border-white/10 bg-we-dark pb-3 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(0.75rem,env(safe-area-inset-top))] lg:hidden">
     <button
       type="button"
       (click)="toggleSidebar()"
@@ -125,8 +125,7 @@
       <svg lucideMenu [size]="20" aria-hidden="true"></svg>
     </button>
     <div class="flex flex-1 items-center justify-center">
-      <img src="/images/we-logo-color.png" alt="We Real Estate" class="h-8 w-auto dark:hidden" width="74" height="32" />
-      <img src="/images/we-logo.png" alt="" aria-hidden="true" class="hidden h-8 w-auto dark:block" width="74" height="32" />
+      <img src="/images/we-logo.png" alt="We Real Estate" class="h-8 w-auto" width="74" height="32" />
     </div>
     @if (!esEscritorio()) {
       <div class="flex h-11 w-11 shrink-0 items-center justify-center"><app-notification-bell /></div>

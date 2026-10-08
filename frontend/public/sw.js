@@ -1,11 +1,27 @@
 /* Service worker de We Real Estate: hace la app instalable y recibe las notificaciones push.
-   No guarda copias de la API ni de las páginas: siempre va a la red (los datos deben ser los de hoy). */
+   No guarda copias de la API ni de las páginas (los datos deben ser los de hoy); solo la pantalla sin conexión. */
 
-self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
+const CACHE = 'we-offline-v1';
+const ARCHIVOS_OFFLINE = ['/offline.html', '/images/we-logo.png'];
 
-// Necesario para que el navegador ofrezca instalar la app; pasa todo directo a la red.
-self.addEventListener('fetch', () => {});
+self.addEventListener('install', (event) => {
+  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(ARCHIVOS_OFFLINE)).then(() => self.skipWaiting()));
+});
+self.addEventListener('activate', (event) =>
+  event.waitUntil(
+    caches
+      .keys()
+      .then((claves) => Promise.all(claves.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim()),
+  ),
+);
+
+// Siempre red; solo si no hay conexión al abrir una página se muestra la pantalla "Sin conexión".
+// Un fetch real (no vacío) también es lo que Chrome espera para instalar la app como WebAPK.
+self.addEventListener('fetch', (event) => {
+  if (event.request.mode !== 'navigate') return;
+  event.respondWith(fetch(event.request).catch(() => caches.match('/offline.html')));
+});
 
 self.addEventListener('push', (event) => {
   let datos = {};

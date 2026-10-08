@@ -81,6 +81,15 @@
   --sb-line-hover: rgba(255, 255, 255, 0.4);
 }
 
+/* Barra superior del móvil: siempre azul marino (en ambos temas) para que la barra de estado del teléfono se funda con ella. */
+.sb-oscuro {
+  --sb-fg: #ffffff;
+  --sb-fg-dim: rgba(255, 255, 255, 0.8);
+  --sb-muted: rgba(255, 255, 255, 0.6);
+  --sb-hover: rgba(255, 255, 255, 0.12);
+  --sb-ring: rgba(255, 255, 255, 0.4);
+}
+
 html {
   color-scheme: light;
 }
