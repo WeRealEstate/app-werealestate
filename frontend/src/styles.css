@@ -576,3 +576,4 @@ select.rounded-full:not([multiple]):not([size]) {
   .plano-ui-in, .plano-fade-in { animation-duration: 0.01s; animation-delay: 0s; }
   .plano-barra { animation: none; }
 }
+.we-dot-claro { background: #85b4f0 !important; }

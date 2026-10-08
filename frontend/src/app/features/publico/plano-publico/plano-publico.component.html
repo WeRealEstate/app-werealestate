@@ -421,9 +421,18 @@
         [class.plano-barra]="!imagenLista()"
         [class.plano-barra-fin]="imagenLista()"
       ></div>
-      <div class="flex h-full flex-col items-center justify-center gap-[18px]">
-        <div class="we-e-grande" aria-hidden="true"><img src="/images/we-logo.png" alt="" /></div>
-        <p class="text-sm tracking-[0.02em] text-[#8e9bb3]">Cargando plano</p>
+      <div class="flex h-full flex-col items-center justify-center gap-8">
+        <!-- Logo completo de We (W blanca) con la "e" girando, igual que en el resto de la app -->
+        <div class="relative w-[min(230px,58vw)]" style="aspect-ratio: 600 / 259" aria-hidden="true">
+          <img src="/images/we-logo.png" alt="" class="we-logo-base" />
+          <img src="/images/we-logo.png" alt="" class="we-logo-e" />
+        </div>
+        <div class="flex gap-2" aria-hidden="true">
+          <span class="we-dot we-dot-claro"></span>
+          <span class="we-dot we-dot-claro" style="animation-delay: 0.2s"></span>
+          <span class="we-dot we-dot-claro" style="animation-delay: 0.4s"></span>
+        </div>
+        <p class="-mt-3 text-sm tracking-[0.02em] text-[#8e9bb3]">Cargando plano</p>
       </div>
     </div>
   }
