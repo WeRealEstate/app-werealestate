@@ -100,6 +100,7 @@ function bars(entradas: { etiqueta: string; total: number }[], clases: readonly 
   selector: 'app-desempeno-general',
   standalone: true,
   imports: [SkeletonKpisComponent, DecimalPipe, LucideUsers, LucideStar, LucideCalendar, LucideChevronDown, LucideUserCheck, LucideCheck, LucideX],
+  host: { class: 'block' },
   templateUrl: './desempeno-general.component.html',
 })
 export class DesempenoGeneralComponent {
