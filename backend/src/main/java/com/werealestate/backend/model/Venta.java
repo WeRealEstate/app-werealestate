@@ -91,6 +91,11 @@ public class Venta {
     @Column(name = "fecha_creacion", nullable = false)
     private LocalDateTime fechaCreacion = LocalDateTime.now();
 
+    /** Quién la registró (null en ventas anteriores a este dato). Ver NotificacionService. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "registrada_por_id")
+    private Usuario registradaPor;
+
     protected Venta() {
         // JPA
     }
@@ -157,6 +162,14 @@ public class Venta {
 
     public boolean isPrimeraMensualidadMesVenta() {
         return primeraMensualidadMesVenta;
+    }
+
+    public Usuario getRegistradaPor() {
+        return registradaPor;
+    }
+
+    public void setRegistradaPor(Usuario registradaPor) {
+        this.registradaPor = registradaPor;
     }
 
     public Long getId() {

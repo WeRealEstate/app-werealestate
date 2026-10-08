@@ -132,6 +132,7 @@ public class VentaService {
                 request.mensualidad(), request.plazoMeses(), engancheLabel, request.enganche(),
                 request.diaPago(), Boolean.TRUE.equals(request.primeraMensualidadMesVenta()), notas);
         venta.ligarCliente(clienteRef);
+        venta.setRegistradaPor(currentUserProvider.getUsuarioActual());
         venta = ventaRepository.save(venta);
 
         for (VentaAportacionItemRequest item : aportaciones) {

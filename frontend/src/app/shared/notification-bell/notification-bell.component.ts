@@ -81,6 +81,7 @@ export class NotificationBellComponent {
     if (n.leadId !== null) return ['/panel/leads', String(n.leadId)];
     if (n.eventoId !== null) return ['/panel/calendario'];
     if (n.movimientoId !== null) return ['/panel/lotes'];
+    if (n.ventaId !== null) return ['/panel/ventas'];
     return ['/panel/equipo'];
   }
 
@@ -103,7 +104,7 @@ export class NotificationBellComponent {
     this.notificaciones.update((lista) => lista.filter((_, i) => i !== index));
     if (!n) return;
 
-    const entidadId = n.leadId ?? n.tareaId ?? n.eventoId ?? n.movimientoId;
+    const entidadId = n.leadId ?? n.tareaId ?? n.eventoId ?? n.movimientoId ?? n.ventaId;
     if (entidadId === null) return;
 
     this.notificacionesService.marcarLeida(n.tipo, entidadId, n.firma).catch(() => {

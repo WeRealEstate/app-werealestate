@@ -179,7 +179,7 @@ public class PushService {
     }
 
     private static String claveDe(NotificacionDto n) {
-        Long id = n.leadId() != null ? n.leadId() : n.tareaId() != null ? n.tareaId() : n.eventoId() != null ? n.eventoId() : n.movimientoId();
+        Long id = n.leadId() != null ? n.leadId() : n.tareaId() != null ? n.tareaId() : n.eventoId() != null ? n.eventoId() : n.movimientoId() != null ? n.movimientoId() : n.ventaId();
         return NotificacionService.clave(n.tipo(), id, n.firma());
     }
 
@@ -190,6 +190,8 @@ public class PushService {
             case "EVENTO_PENDIENTE" -> "Recordatorio de calendario";
             case "LOTE_APARTADO" -> "Lote apartado";
             case "LOTE_DESAPARTADO" -> "Lote liberado";
+            case "LOTE_ESTADO" -> "Cambio de estado de un lote";
+            case "VENTA_NUEVA" -> "Nueva venta";
             default -> "We Real Estate";
         };
     }
@@ -198,7 +200,8 @@ public class PushService {
         return switch (n.tipo()) {
             case "SEGUIMIENTO_PENDIENTE" -> "/panel/leads";
             case "EVENTO_PENDIENTE" -> "/panel/calendario";
-            case "LOTE_APARTADO", "LOTE_DESAPARTADO" -> "/panel/lotes";
+            case "LOTE_APARTADO", "LOTE_DESAPARTADO", "LOTE_ESTADO" -> "/panel/lotes";
+            case "VENTA_NUEVA" -> "/panel/ventas";
             default -> "/panel";
         };
     }

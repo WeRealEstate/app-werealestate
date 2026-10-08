@@ -7,11 +7,17 @@ import com.werealestate.backend.model.EventoCalendario;
 import com.werealestate.backend.model.EstadoLote;
 import com.werealestate.backend.model.Lead;
 import com.werealestate.backend.model.MovimientoLote;
+import com.werealestate.backend.model.Modulo;
+import com.werealestate.backend.model.ModulosAcceso;
 import com.werealestate.backend.model.NotificacionLeida;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Seguimiento;
 import com.werealestate.backend.model.Tarea;
 import com.werealestate.backend.model.Usuario;
+import com.werealestate.backend.model.Venta;
+import com.werealestate.backend.model.VentaLote;
+import com.werealestate.backend.repository.VentaLoteRepository;
+import com.werealestate.backend.repository.VentaRepository;
 import com.werealestate.backend.repository.EventoCalendarioRepository;
 import com.werealestate.backend.repository.LeadRepository;
 import com.werealestate.backend.repository.MovimientoLoteRepository;
@@ -52,6 +58,8 @@ public class NotificacionService {
     private final NotificacionLeidaRepository notificacionLeidaRepository;
     private final CurrentUserProvider currentUserProvider;
     private final MovimientoLoteRepository movimientoLoteRepository;
+    private final VentaRepository ventaRepository;
+    private final VentaLoteRepository ventaLoteRepository;
 
     public NotificacionService(
             LeadRepository leadRepository,
@@ -60,7 +68,9 @@ public class NotificacionService {
             EventoCalendarioRepository eventoCalendarioRepository,
             NotificacionLeidaRepository notificacionLeidaRepository,
             CurrentUserProvider currentUserProvider,
-            MovimientoLoteRepository movimientoLoteRepository) {
+            MovimientoLoteRepository movimientoLoteRepository,
+            VentaRepository ventaRepository,
+            VentaLoteRepository ventaLoteRepository) {
         this.leadRepository = leadRepository;
         this.seguimientoRepository = seguimientoRepository;
         this.tareaRepository = tareaRepository;
@@ -68,6 +78,8 @@ public class NotificacionService {
         this.notificacionLeidaRepository = notificacionLeidaRepository;
         this.currentUserProvider = currentUserProvider;
         this.movimientoLoteRepository = movimientoLoteRepository;
+        this.ventaRepository = ventaRepository;
+        this.ventaLoteRepository = ventaLoteRepository;
     }
 
     public List<NotificacionDto> listar() {
@@ -157,6 +169,7 @@ public class NotificacionService {
 
         if (actual.getRol() == Role.ADMIN || actual.getRol() == Role.LIDER_AREA) {
             agregarAvisosDeLotes(actual, leidas, notificaciones);
+            agregarAvisosDeVentas(actual, leidas, notificaciones);
         }
 
         return notificaciones;
@@ -172,9 +185,12 @@ public class NotificacionService {
         for (MovimientoLote m : movimientoLoteRepository.recientesDeOtros(desde, actual.getId())) {
             boolean apartado = m.getEstadoAnterior() == EstadoLote.DISPONIBLE && ESTADOS_APARTADO.contains(m.getEstadoNuevo());
             boolean desapartado = ESTADOS_APARTADO.contains(m.getEstadoAnterior()) && m.getEstadoNuevo() == EstadoLote.DISPONIBLE;
-            if (!apartado && !desapartado) continue;
+            if (m.getEstadoAnterior() == m.getEstadoNuevo()) continue;
+            boolean otroCambio = !apartado && !desapartado;
+            // Los cambios "de otro tipo" son avisos nuevos: solo el último día, para no soltar de golpe el historial.
+            if (otroCambio && m.getFecha().isBefore(LocalDateTime.now().minusDays(1))) continue;
 
-            String tipo = apartado ? "LOTE_APARTADO" : "LOTE_DESAPARTADO";
+            String tipo = apartado ? "LOTE_APARTADO" : desapartado ? "LOTE_DESAPARTADO" : "LOTE_ESTADO";
             String firma = m.getFecha().toString();
             if (leidas.contains(clave(tipo, m.getId(), firma))) continue;
 
@@ -183,7 +199,13 @@ public class NotificacionService {
             String autor = m.getUsuario() != null && m.getNombreAsesor() == null
                     ? m.getUsuario().getNombre()
                     : m.getNombreAsesor() != null ? m.getNombreAsesor() + " (cotizador público)" : null;
-            if (apartado) {
+            if (otroCambio) {
+                notificaciones.add(NotificacionDto.loteEstado(
+                        lote + " pasó de " + etiqueta(m.getEstadoAnterior()) + " a " + etiqueta(m.getEstadoNuevo())
+                                + (autor != null ? " por " + autor : "") + ".",
+                        m.getId(),
+                        firma));
+            } else if (apartado) {
                 String conCliente = m.getNombreCliente() != null ? " para " + m.getNombreCliente() : "";
                 String conMonto = m.getMonto() != null ? " con $" + m.getMonto().toPlainString() : "";
                 notificaciones.add(NotificacionDto.loteApartado(
@@ -196,6 +218,44 @@ public class NotificacionService {
                         m.getId(),
                         firma));
             }
+        }
+    }
+
+    private static String etiqueta(EstadoLote estado) {
+        return switch (estado) {
+            case DISPONIBLE -> "Disponible";
+            case APARTADO -> "Apartado";
+            case APARTADO_A_PLAZO -> "Apartado a plazo";
+            case APARTADO_CON_DINERO -> "Apartado con dinero";
+            case EN_PROCESO_DE_FIRMA -> "En proceso de firma";
+            case VENDIDO -> "Vendido";
+        };
+    }
+
+    /** Aviso de cada venta registrada en los últimos días por alguien más (solo admin y líder de
+     * área con el módulo Ventas). La firma es el momento en que se registró. */
+    private void agregarAvisosDeVentas(Usuario actual, Set<String> leidas, List<NotificacionDto> notificaciones) {
+        if (actual.getRol() != Role.ADMIN
+                && !ModulosAcceso.efectivos(actual).contains(Modulo.VENTAS)) {
+            return;
+        }
+        LocalDateTime desde = LocalDateTime.now().minusDays(DIAS_AVISOS_LOTES);
+        for (Venta v : ventaRepository.recientesDeOtros(desde, actual.getId())) {
+            String firma = v.getFechaCreacion().toString();
+            if (leidas.contains(clave("VENTA_NUEVA", v.getId(), firma))) continue;
+
+            List<VentaLote> lotes = ventaLoteRepository.findByVentaId(v.getId());
+            String detalle = lotes.stream()
+                    .map(vl -> "Mz " + vl.getLote().getManzana() + " Lote " + vl.getLote().getNumeroLote() + " ("
+                            + vl.getLote().getDesarrollo().getNombre() + ")")
+                    .collect(java.util.stream.Collectors.joining(", "));
+            java.math.BigDecimal total = lotes.stream().map(VentaLote::getPrecio).reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+            String por = v.getRegistradaPor() != null ? " Registrada por " + v.getRegistradaPor().getNombre() + "." : "";
+            notificaciones.add(NotificacionDto.ventaNueva(
+                    "Nueva venta #" + v.getNumero() + ": " + v.getCliente() + " · " + detalle + " · $"
+                            + String.format("%,.2f", total) + " · asesor " + v.getAsesorNombre() + "." + por,
+                    v.getId(),
+                    firma));
         }
     }
 

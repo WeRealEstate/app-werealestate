@@ -34,4 +34,14 @@ public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecific
     java.util.List<Venta> findByFechaVentaBetween(java.time.LocalDate desde, java.time.LocalDate hasta);
 
     boolean existsByAsesorExternoId(Long asesorExternoId);
+
+    /** Ventas registradas desde "desde" por otra persona (las anteriores a que se guardara quién las registró no avisan). */
+    @Query("""
+            select v from Venta v left join fetch v.registradaPor r
+            where v.fechaCreacion >= :desde and (r is not null and r.id <> :usuarioId)
+            order by v.fechaCreacion desc
+            """)
+    java.util.List<Venta> recientesDeOtros(
+            @org.springframework.data.repository.query.Param("desde") java.time.LocalDateTime desde,
+            @org.springframework.data.repository.query.Param("usuarioId") Long usuarioId);
 }
