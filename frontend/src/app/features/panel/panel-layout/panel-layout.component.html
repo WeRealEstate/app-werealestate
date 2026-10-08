@@ -24,10 +24,12 @@
     [class.translate-x-0]="sidebarOpen()"
     [class.-translate-x-full]="!sidebarOpen()"
   >
-    <div class="relative flex items-center justify-center px-6 py-5">
+    <div class="relative flex items-center justify-center px-6 pb-5 pt-[max(1.25rem,env(safe-area-inset-top))]">
       <img src="/images/we-logo-color.png" alt="We Real Estate" class="h-10 w-auto dark:hidden" width="93" height="40" />
       <img src="/images/we-logo.png" alt="" aria-hidden="true" class="hidden h-10 w-auto drop-shadow-[0_1px_6px_rgba(133,180,240,0.35)] dark:block" width="93" height="40" />
-      <div class="absolute right-3 top-1/2 -translate-y-1/2"><app-notification-bell /></div>
+      @if (esEscritorio()) {
+        <div class="absolute right-3 top-1/2 -translate-y-1/2"><app-notification-bell /></div>
+      }
     </div>
 
     <nav class="mt-2 flex-1 space-y-4 px-3 overflow-y-auto">
@@ -110,7 +112,7 @@
   </aside>
 
   <!-- Top bar móvil -->
-  <div class="sticky top-0 z-10 flex items-center gap-3 border-b border-[var(--sb-border)] bg-[var(--sb-bg)] px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-xl lg:hidden">
+  <div class="sticky top-0 z-10 flex items-center gap-3 border-b border-[var(--sb-border)] bg-[var(--sb-bg)] pb-3 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-xl lg:hidden">
     <button
       type="button"
       (click)="toggleSidebar()"
@@ -121,13 +123,20 @@
     >
       <svg lucideMenu [size]="20" aria-hidden="true"></svg>
     </button>
-    <img src="/images/we-logo-color.png" alt="We Real Estate" class="h-7 w-auto dark:hidden" width="65" height="28" />
-    <img src="/images/we-logo.png" alt="" aria-hidden="true" class="hidden h-7 w-auto dark:block" width="65" height="28" />
+    <div class="flex flex-1 items-center justify-center">
+      <img src="/images/we-logo-color.png" alt="We Real Estate" class="h-8 w-auto dark:hidden" width="74" height="32" />
+      <img src="/images/we-logo.png" alt="" aria-hidden="true" class="hidden h-8 w-auto dark:block" width="74" height="32" />
+    </div>
+    @if (!esEscritorio()) {
+      <div class="flex h-11 w-11 shrink-0 items-center justify-center"><app-notification-bell /></div>
+    } @else {
+      <span class="w-11 shrink-0"></span>
+    }
   </div>
 
   <!-- Contenido: superficie propia del tema (claro/oscuro), separada del sidebar con un borde limpio -->
   <div class="relative z-0 min-h-dvh bg-canvas pb-[env(safe-area-inset-bottom)] has-[[role=dialog]]:z-40 lg:ml-64 lg:border-l lg:border-border">
-    <main class="p-4 sm:p-6 lg:p-10">
+    <main class="pb-6 pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))] pt-5 sm:p-6 lg:p-10">
       <div class="mx-auto max-w-6xl">
         <router-outlet />
       </div>

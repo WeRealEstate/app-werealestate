@@ -182,6 +182,8 @@ export class PanelLayoutComponent {
   });
 
   readonly sidebarOpen = signal(false);
+  /** Pantalla ancha (sidebar fijo): ahí la campana va en el sidebar; en el teléfono, en la barra superior. */
+  readonly esEscritorio = signal(typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches);
 
   constructor() {
     // Sin fondo de página propio a propósito: en Android la barra de navegación del sistema toma el
@@ -190,6 +192,10 @@ export class PanelLayoutComponent {
     // Los módulos pueden haber cambiado desde el último login (un admin se los quitó o dio): se
     // vuelven a pedir al abrir el panel para que el menú y las rutas reflejen lo de hoy.
     void this.auth.refrescarPerfil();
+    if (typeof window !== 'undefined') {
+      const consulta = window.matchMedia('(min-width: 1024px)');
+      consulta.addEventListener('change', (e) => this.esEscritorio.set(e.matches));
+    }
   }
 
   toggleSidebar(): void {
