@@ -6,9 +6,9 @@
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
-  <script>try{if(localStorage.getItem("we_theme")==="dark")document.documentElement.classList.add("dark")}catch(e){}</script>
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#0b132b">
+  <script>try{var d=localStorage.getItem("we_theme")==="dark";if(d)document.documentElement.classList.add("dark");var m=document.querySelector('meta[name="theme-color"]');if(m&&matchMedia("(min-width:1024px)").matches)m.content=d?"#0f172a":"#f7f9ff"}catch(e){}</script>
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="We">

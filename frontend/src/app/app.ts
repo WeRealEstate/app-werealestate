@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { ThemeService } from './core/services/theme.service';
 import { CargaInicialService } from './core/services/carga-inicial.service';
 import { AccesibilidadTecladoService } from './core/services/accesibilidad-teclado.service';
 
@@ -12,5 +13,6 @@ export class App {
   constructor() {
     inject(AccesibilidadTecladoService).iniciar();
     inject(CargaInicialService);
+    inject(ThemeService);
   }
 }
