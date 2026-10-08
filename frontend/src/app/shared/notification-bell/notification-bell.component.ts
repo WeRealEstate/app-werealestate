@@ -4,6 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { filter } from 'rxjs';
 import { NotificacionesService } from '../../core/services/notificaciones.service';
+import { PushService } from '../../core/services/push.service';
 import { ToastService } from '../../core/services/toast.service';
 import { Notificacion } from '../../core/models/notificacion.model';
 
@@ -23,6 +24,7 @@ export class NotificationBellComponent {
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  readonly push = inject(PushService);
 
   readonly notificaciones = signal<Notificacion[]>([]);
   readonly isOpen = signal(false);
@@ -33,6 +35,7 @@ export class NotificationBellComponent {
     // layout del panel y Angular no lo destruye/reconstruye al navegar entre rutas hijas, así que
     // sin esto el contador quedaría congelado desde el primer login hasta un refresh manual.
     this.cargar(true);
+    void this.push.sincronizar();
 
     this.router.events
       .pipe(

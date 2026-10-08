@@ -60,6 +60,36 @@
           }
         }
       </div>
+
+      <!-- Avisos en el teléfono / instalar la app -->
+      <div class="space-y-2 border-t border-border px-4 py-3 text-xs">
+        @if (push.puedeInstalar() && !push.instalada) {
+          <button type="button" (click)="push.instalar()" class="w-full rounded-lg border border-we-primary px-3 py-2 font-semibold text-we-primary hover:bg-we-primary/10">
+            Instalar la app en este dispositivo
+          </button>
+        }
+        @if (push.iosSinInstalar()) {
+          <p class="text-ink-muted">
+            Para recibir avisos en el iPhone: toca <strong>Compartir</strong> en Safari → <strong>Añadir a pantalla de inicio</strong> y abre la app desde su ícono.
+          </p>
+        } @else if (!push.soportado) {
+          <p class="text-ink-muted">Este navegador no permite avisos en el teléfono.</p>
+        } @else if (push.permiso() === 'denied') {
+          <p class="text-ink-muted">Bloqueaste los avisos. Actívalos en los ajustes de notificaciones del navegador o de la app.</p>
+        } @else if (push.suscrito()) {
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-ink-muted">Avisos activados en este dispositivo.</span>
+            <button type="button" (click)="push.desactivar()" [disabled]="push.trabajando()" class="shrink-0 font-medium text-ink-muted underline hover:text-ink disabled:opacity-60">Desactivar</button>
+          </div>
+        } @else {
+          <button type="button" (click)="push.activar()" [disabled]="push.trabajando()" class="w-full rounded-lg bg-we-primary px-3 py-2 font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
+            {{ push.trabajando() ? 'Activando…' : 'Activar avisos en este dispositivo' }}
+          </button>
+        }
+        @if (push.error(); as e) {
+          <p class="text-red-600 dark:text-red-400" role="alert">{{ e }}</p>
+        }
+      </div>
     </div>
   }
 </div>

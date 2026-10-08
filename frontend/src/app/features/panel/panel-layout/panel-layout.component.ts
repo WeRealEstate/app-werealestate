@@ -15,6 +15,7 @@ import {
   LucideUsers,
   LucideWallet,
 } from '@lucide/angular';
+import { PushService } from '../../../core/services/push.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Modulo, ROLE_LABELS, Role } from '../../../core/models/user.model';
 import { NotificationBellComponent } from '../../../shared/notification-bell/notification-bell.component';
@@ -153,6 +154,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
 })
 export class PanelLayoutComponent {
   private readonly auth = inject(AuthService);
+  private readonly push = inject(PushService);
 
   readonly user = this.auth.currentUser;
   readonly roleLabel = computed(() => {
@@ -203,7 +205,9 @@ export class PanelLayoutComponent {
     if (this.sidebarOpen()) this.closeSidebar();
   }
 
-  logout(): void {
+  async logout(): Promise<void> {
+    // Este dispositivo deja de recibir los avisos push de este usuario.
+    await this.push.alCerrarSesion();
     this.auth.logout();
   }
 }

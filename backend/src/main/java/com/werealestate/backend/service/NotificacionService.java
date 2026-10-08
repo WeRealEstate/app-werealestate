@@ -71,7 +71,11 @@ public class NotificacionService {
     }
 
     public List<NotificacionDto> listar() {
-        Usuario actual = currentUserProvider.getUsuarioActual();
+        return listarPara(currentUserProvider.getUsuarioActual());
+    }
+
+    /** Las notificaciones pendientes de un usuario concreto (también las usa el envío push, sin sesión). */
+    public List<NotificacionDto> listarPara(Usuario actual) {
 
         Set<String> leidas = new HashSet<>();
         for (NotificacionLeida l : notificacionLeidaRepository.findByUsuarioId(actual.getId())) {
@@ -205,7 +209,7 @@ public class NotificacionService {
                 new NotificacionLeida(actual, request.tipo(), request.entidadId(), request.firma()));
     }
 
-    private static String clave(String tipo, Long entidadId, String firma) {
+    public static String clave(String tipo, Long entidadId, String firma) {
         return tipo + "|" + entidadId + "|" + firma;
     }
 }
