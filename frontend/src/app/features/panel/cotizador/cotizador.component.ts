@@ -216,7 +216,7 @@ export class CotizadorComponent implements OnInit {
     // El precio de un lote real se determina siempre por su superficie, sin importar qué precio
     // por m² hubiera quedado seleccionado antes a mano.
     this.pricePerM2 =
-      this.selectedProject === 'nanuu' ? 3700 : lote.superficie > SUPERFICIE_MACROLOTE_M2 ? 170 : 800;
+      lote.precioM2Propio ?? (this.selectedProject === 'nanuu' ? 3700 : lote.superficie > SUPERFICIE_MACROLOTE_M2 ? 170 : 800);
     this.loteBloqueado = true;
     this.revisarPromocionCompatible();
   }

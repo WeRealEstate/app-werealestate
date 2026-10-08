@@ -109,9 +109,55 @@ export class LotesListComponent {
     this.cargar();
   }
 
-  /** El precio ya no se captura a mano: siempre es el precio por m² del desarrollo × la superficie. */
+  /** El precio sale del lote (precio por m² propio, o el del desarrollo si no tiene) × su superficie. */
+  // ---- Precio por m² de una manzana completa (ej. hectáreas) ----
+  readonly mostrarPrecioManzana = signal(false);
+  readonly pmDesarrolloId = signal<number | null>(null);
+  readonly pmManzana = signal('');
+  readonly pmPrecio = signal<number | null>(null);
+  readonly pmError = signal<string | null>(null);
+  readonly pmGuardando = signal(false);
+
+  abrirPrecioManzana(): void {
+    this.pmDesarrolloId.set(this.filtroDesarrolloId() ?? this.desarrollos()[0]?.id ?? null);
+    this.pmManzana.set(this.filtroManzana());
+    this.pmPrecio.set(null);
+    this.pmError.set(null);
+    this.mostrarPrecioManzana.set(true);
+  }
+
+  async guardarPrecioManzana(quitar = false): Promise<void> {
+    const desarrolloId = this.pmDesarrolloId();
+    const manzana = this.pmManzana().trim();
+    const precio = quitar ? null : this.pmPrecio();
+    if (desarrolloId === null || !manzana) {
+      this.pmError.set('Elige el desarrollo y escribe la manzana.');
+      return;
+    }
+    if (!quitar && (precio === null || precio <= 0)) {
+      this.pmError.set('Escribe el precio por m² o usa "Quitar precio propio".');
+      return;
+    }
+    this.pmGuardando.set(true);
+    this.pmError.set(null);
+    try {
+      const r = await this.lotesService.actualizarPrecioManzana(desarrolloId, manzana, precio);
+      this.mostrarPrecioManzana.set(false);
+      this.toast.success(
+        quitar
+          ? `${r.actualizados} lote(s) de la manzana ${manzana} vuelven al precio del desarrollo.`
+          : `Precio actualizado en ${r.actualizados} lote(s) de la manzana ${manzana}.`,
+      );
+      this.cargar();
+    } catch (error) {
+      this.pmError.set(this.mensajeError(error, 'No se pudo actualizar el precio.'));
+    } finally {
+      this.pmGuardando.set(false);
+    }
+  }
+
   precioEstimado(lote: Lote): number {
-    return lote.desarrollo.precioM2 * lote.superficie;
+    return lote.precio;
   }
 
   /** Un admin y un líder de área tienen control total sobre el estado de cualquier lote; un

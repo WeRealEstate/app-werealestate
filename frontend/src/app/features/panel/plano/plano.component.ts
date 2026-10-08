@@ -540,7 +540,7 @@ export class PlanoComponent {
 
   /** El precio ya no se captura a mano: siempre es el precio por m² del desarrollo × la superficie. */
   precioEstimado(lote: Lote): number {
-    return lote.desarrollo.precioM2 * lote.superficie;
+    return lote.precio;
   }
 
   /** Proyecto que entiende el Cotizador para este lote; null si su desarrollo no es SAMAI ni Nanuu. */

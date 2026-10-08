@@ -73,6 +73,10 @@ export interface Lote {
   manzana: string;
   numeroLote: string;
   superficie: number;
+  /** Precio por m² que aplica (el propio del lote o el del desarrollo), el propio (null si no tiene) y el total. */
+  precioM2: number;
+  precioM2Propio: number | null;
+  precio: number;
   estado: EstadoLote;
   fechaCambioEstado: string;
   cambiadoPor: UsuarioResumen | null;
@@ -102,12 +106,15 @@ export interface LoteCreateRequest {
   manzana: string;
   numeroLote: string;
   superficie: number;
+  /** Opcional: precio por m² propio del lote (null = el del desarrollo). */
+  precioM2?: number | null;
 }
 
 export interface LoteUpdateRequest {
   manzana: string;
   numeroLote: string;
   superficie: number;
+  precioM2?: number | null;
 }
 
 export interface LoteImportRequest {

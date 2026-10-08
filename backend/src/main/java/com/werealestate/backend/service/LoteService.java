@@ -331,6 +331,7 @@ public class LoteService {
         validarUnico(request.desarrolloId(), request.manzana(), request.numeroLote(), null);
 
         Lote lote = new Lote(desarrollo, request.manzana().trim(), request.numeroLote().trim(), request.superficie());
+        lote.setPrecioM2(request.precioM2());
         return LoteDto.from(loteRepository.save(lote));
     }
 
@@ -342,7 +343,21 @@ public class LoteService {
         lote.setManzana(request.manzana().trim());
         lote.setNumeroLote(request.numeroLote().trim());
         lote.setSuperficie(request.superficie());
+        lote.setPrecioM2(request.precioM2());
         return LoteDto.from(lote);
+    }
+
+    /** Pone (o quita, con null) el precio por m² propio de todos los lotes de una manzana, p. ej. las
+     * hectáreas. Devuelve cuántos lotes se actualizaron. */
+    public int actualizarPrecioManzana(Long desarrolloId, String manzana, java.math.BigDecimal precioM2) {
+        exigirAdmin("cambiar precios");
+        java.util.List<Lote> lotes = loteRepository.findAll().stream()
+                .filter(l -> l.getDesarrollo().getId().equals(desarrolloId)
+                        && l.getManzana().trim().equalsIgnoreCase(manzana.trim()))
+                .toList();
+        if (lotes.isEmpty()) throw new ResourceNotFoundException("No hay lotes en esa manzana");
+        lotes.forEach(l -> l.setPrecioM2(precioM2));
+        return lotes.size();
     }
 
     public void eliminar(Long id) {
@@ -520,6 +535,7 @@ public class LoteService {
                 validarUnico(item.desarrolloId(), item.manzana(), item.numeroLote(), null);
 
                 Lote lote = new Lote(desarrollo, item.manzana().trim(), item.numeroLote().trim(), item.superficie());
+                lote.setPrecioM2(item.precioM2());
                 loteRepository.save(lote);
                 creados++;
             } catch (Exception e) {

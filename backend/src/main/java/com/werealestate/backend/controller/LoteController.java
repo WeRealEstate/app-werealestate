@@ -114,6 +114,14 @@ public class LoteController {
         return loteService.importar(request);
     }
 
+    @PutMapping("/precio-manzana")
+    public java.util.Map<String, Integer> precioManzana(
+            @Valid @RequestBody com.werealestate.backend.dto.PrecioManzanaRequest request) {
+        return java.util.Map.of(
+                "actualizados",
+                loteService.actualizarPrecioManzana(request.desarrolloId(), request.manzana(), request.precioM2()));
+    }
+
     @PutMapping("/{id}")
     public LoteDto actualizar(@PathVariable Long id, @Valid @RequestBody LoteUpdateRequest request) {
         return loteService.actualizar(id, request);

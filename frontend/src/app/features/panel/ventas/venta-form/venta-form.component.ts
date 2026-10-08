@@ -348,7 +348,7 @@ export class VentaFormComponent {
     const loteId = valor === '' ? null : Number(valor);
     this.loteParaAgregarId.set(loteId);
     const lote = loteId == null ? null : this.lotesDelDesarrollo().find((l) => l.id === loteId);
-    this.precioParaAgregar.set(lote ? Math.round(lote.desarrollo.precioM2 * lote.superficie) : null);
+    this.precioParaAgregar.set(lote ? Math.round(lote.precio) : null);
   }
 
   agregarLote(): void {

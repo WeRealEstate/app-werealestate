@@ -32,6 +32,7 @@ export class LoteFormComponent implements OnInit {
     manzana: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
     numeroLote: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
     superficie: this.fb.control<number | null>(null, { validators: [Validators.required, Validators.min(1)] }),
+    precioM2: this.fb.control<number | null>(null, { validators: [Validators.min(0.01)] }),
   });
 
   async ngOnInit(): Promise<void> {
@@ -55,6 +56,7 @@ export class LoteFormComponent implements OnInit {
         manzana: lote.manzana,
         numeroLote: lote.numeroLote,
         superficie: lote.superficie,
+        precioM2: lote.precioM2Propio,
       });
       this.form.controls.desarrolloId.disable();
     } catch {
@@ -81,6 +83,7 @@ export class LoteFormComponent implements OnInit {
           manzana: v.manzana,
           numeroLote: v.numeroLote,
           superficie: v.superficie!,
+          precioM2: v.precioM2 || null,
         });
       } else {
         await this.lotesService.crear({
@@ -88,6 +91,7 @@ export class LoteFormComponent implements OnInit {
           manzana: v.manzana,
           numeroLote: v.numeroLote,
           superficie: v.superficie!,
+          precioM2: v.precioM2 || null,
         });
       }
       await this.router.navigate(['/panel/lotes']);

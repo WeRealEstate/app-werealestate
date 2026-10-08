@@ -18,7 +18,11 @@ public record LoteDto(
         List<PuntoMapaDto> mapaPoligono,
         LocalDateTime fechaExpiraApartado,
         BigDecimal montoApartado,
-        boolean sinVentaRegistrada) {
+        boolean sinVentaRegistrada,
+        // Precio por m² que aplica (el propio del lote o el del desarrollo), el propio (null si no tiene) y el total.
+        BigDecimal precioM2,
+        BigDecimal precioM2Propio,
+        BigDecimal precio) {
 
     public static LoteDto from(Lote lote) {
         return new LoteDto(
@@ -33,7 +37,10 @@ public record LoteDto(
                 PoligonoMapaJson.deserializar(lote.getMapaPoligonoJson()),
                 lote.getFechaExpiraApartado(),
                 lote.getMontoApartado(),
-                false);
+                false,
+                lote.getPrecioM2Efectivo(),
+                lote.getPrecioM2(),
+                lote.getPrecioM2Efectivo().multiply(lote.getSuperficie()).setScale(2, java.math.RoundingMode.HALF_UP));
     }
 
     /** Para /panel/lotes: marca un lote VENDIDO que no tiene ningún VentaLote asociado, así el
@@ -43,6 +50,6 @@ public record LoteDto(
     public LoteDto conSinVentaRegistrada(boolean sinVentaRegistrada) {
         return new LoteDto(
                 id, desarrollo, manzana, numeroLote, superficie, estado, fechaCambioEstado, cambiadoPor,
-                mapaPoligono, fechaExpiraApartado, montoApartado, sinVentaRegistrada);
+                mapaPoligono, fechaExpiraApartado, montoApartado, sinVentaRegistrada, precioM2, precioM2Propio, precio);
     }
 }

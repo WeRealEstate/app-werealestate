@@ -8,5 +8,6 @@ public record LoteImportRequest(
         @NotNull Long desarrolloId,
         @NotBlank String manzana,
         @NotBlank String numeroLote,
-        @NotNull BigDecimal superficie) {
+        @NotNull BigDecimal superficie,
+        @jakarta.validation.constraints.DecimalMin(value = "0.01") BigDecimal precioM2) {
 }

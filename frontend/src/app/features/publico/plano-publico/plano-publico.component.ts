@@ -282,9 +282,9 @@ export class PlanoPublicoComponent {
     return puntos.map((p) => `${p.x},${p.y}`).join(' ');
   }
 
-  /** El precio siempre es el precio por m² del desarrollo × la superficie, igual que en el panel. */
+  /** El precio lo calcula el servidor con el precio por m² del lote (propio, o el del desarrollo). */
   precioEstimado(lote: Lote): number {
-    return lote.desarrollo.precioM2 * lote.superficie;
+    return lote.precio;
   }
 
   /** Igual que LotesPublicoComponent.puedeCambiarEstado combinado con el filtro de la fila

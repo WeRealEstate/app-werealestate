@@ -73,7 +73,22 @@
         @if (form.controls.superficie.invalid && form.controls.superficie.touched) {
           <p class="mt-1.5 text-xs text-red-600">Ingresa una superficie válida.</p>
         }
-        <p class="mt-1.5 text-xs text-ink-muted">El precio se calcula automático con el precio por m² del desarrollo.</p>
+        <p class="mt-1.5 text-xs text-ink-muted">Sin precio propio, se usa el precio por m² del desarrollo.</p>
+      </div>
+
+      <div>
+        <label for="precioM2" class="block text-sm font-medium text-ink mb-1.5">Precio por m² propio (opcional)</label>
+        <input
+          id="precioM2"
+          type="number"
+          step="0.01"
+          min="0.01"
+          formControlName="precioM2"
+          placeholder="Ej. 170 (hectáreas)"
+          class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
+                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+        />
+        <p class="mt-1.5 text-xs text-ink-muted">Solo si este lote se vende a otro precio por m² (por ejemplo las hectáreas). Déjalo vacío para usar el del desarrollo.</p>
       </div>
 
       @if (errorMessage()) {

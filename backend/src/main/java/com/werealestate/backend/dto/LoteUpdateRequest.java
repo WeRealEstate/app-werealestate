@@ -8,5 +8,7 @@ import java.math.BigDecimal;
 public record LoteUpdateRequest(
         @NotBlank String manzana,
         @NotBlank String numeroLote,
-        @NotNull @DecimalMin(value = "1") BigDecimal superficie) {
+        @NotNull @DecimalMin(value = "1") BigDecimal superficie,
+        // Opcional: precio por m² propio de este lote (null = el del desarrollo).
+        @DecimalMin(value = "0.01") BigDecimal precioM2) {
 }

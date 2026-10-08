@@ -145,6 +145,13 @@ export class LotesService {
     return firstValueFrom(this.http.delete<void>(`${this.baseUrl}/${id}`));
   }
 
+  /** Pone (o quita, con null) el precio por m² propio de todos los lotes de una manzana (ej. las hectáreas). */
+  actualizarPrecioManzana(desarrolloId: number, manzana: string, precioM2: number | null): Promise<{ actualizados: number }> {
+    return firstValueFrom(
+      this.http.put<{ actualizados: number }>(`${this.baseUrl}/precio-manzana`, { desarrolloId, manzana, precioM2 }),
+    );
+  }
+
   importar(request: LoteImportBatchRequest): Promise<LoteImportResultado> {
     return firstValueFrom(this.http.post<LoteImportResultado>(`${this.baseUrl}/importar`, request));
   }

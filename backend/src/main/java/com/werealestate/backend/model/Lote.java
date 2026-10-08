@@ -65,6 +65,10 @@ public class Lote {
     @Column(name = "monto_apartado", precision = 14, scale = 2)
     private BigDecimal montoApartado;
 
+    /** Precio por m² de este lote en particular (ej. hectáreas); null = el precio por m² del desarrollo. */
+    @Column(name = "precio_m2", precision = 12, scale = 2)
+    private BigDecimal precioM2;
+
     protected Lote() {
         // JPA
     }
@@ -98,6 +102,19 @@ public class Lote {
 
     public void setNumeroLote(String numeroLote) {
         this.numeroLote = numeroLote;
+    }
+
+    public BigDecimal getPrecioM2() {
+        return precioM2;
+    }
+
+    public void setPrecioM2(BigDecimal precioM2) {
+        this.precioM2 = precioM2;
+    }
+
+    /** Precio por m² que aplica: el propio del lote o, si no tiene, el del desarrollo. */
+    public BigDecimal getPrecioM2Efectivo() {
+        return precioM2 != null ? precioM2 : desarrollo.getPrecioM2();
     }
 
     public BigDecimal getSuperficie() {
