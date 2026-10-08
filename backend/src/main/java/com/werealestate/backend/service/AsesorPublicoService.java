@@ -2,7 +2,9 @@ package com.werealestate.backend.service;
 
 import com.werealestate.backend.model.AsesorExterno;
 import com.werealestate.backend.model.EstadoContratoAsesor;
+import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.repository.AsesorExternoRepository;
+import com.werealestate.backend.repository.UsuarioRepository;
 import java.util.Locale;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
@@ -18,10 +20,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class AsesorPublicoService {
 
-    private final AsesorExternoRepository asesorExternoRepository;
+    private static final String EMAIL_USUARIO_PUBLICO = "cotizador-publico@weinversiones.com";
 
-    public AsesorPublicoService(AsesorExternoRepository asesorExternoRepository) {
+    private final AsesorExternoRepository asesorExternoRepository;
+    private final UsuarioRepository usuarioRepository;
+
+    public AsesorPublicoService(AsesorExternoRepository asesorExternoRepository, UsuarioRepository usuarioRepository) {
         this.asesorExternoRepository = asesorExternoRepository;
+        this.usuarioRepository = usuarioRepository;
     }
 
     public enum Motivo {
@@ -34,12 +40,17 @@ public class AsesorPublicoService {
     public record Resultado(Motivo motivo, String nombre) {
     }
 
-    /** Valida el PIN (4 letras/números, sin importar mayúsculas) de un asesor externo activo, que su
+    /** Valida el PIN (4 letras/números, sin importar mayúsculas): de un asesor interno activo (entra a cualquier plano) o de un asesor externo activo, que su
      * contrato esté vigente y que tenga acceso al plano pedido ("samai" / "nanuu"; null = solo se
      * revisa el contrato). Los asesores sin PIN asignado no pueden entrar. */
     public Resultado verificar(String pin, String proyecto) {
         String buscado = pin == null ? "" : pin.trim().toUpperCase(Locale.ROOT);
         if (!buscado.matches("[A-Z0-9]{4}")) return new Resultado(Motivo.NO_ENCONTRADO, null);
+
+        // Asesores internos (usuarios del sistema) con PIN: entran a cualquier plano.
+        Optional<Usuario> interno = usuarioRepository.findByPin(buscado)
+                .filter(u -> u.isActivo() && !EMAIL_USUARIO_PUBLICO.equalsIgnoreCase(u.getEmail()));
+        if (interno.isPresent()) return new Resultado(Motivo.OK, interno.get().getNombre());
 
         Optional<AsesorExterno> asesor = asesorExternoRepository.findByPin(buscado).filter(AsesorExterno::isActivo);
         if (asesor.isEmpty()) return new Resultado(Motivo.NO_ENCONTRADO, null);

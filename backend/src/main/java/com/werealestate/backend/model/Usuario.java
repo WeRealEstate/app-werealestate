@@ -68,6 +68,18 @@ public class Usuario {
         return id;
     }
 
+    /** PIN de 4 letras/números (mayúsculas) para el plano público; null = sin PIN. */
+    @Column(length = 4)
+    private String pin;
+
+    public String getPin() {
+        return pin;
+    }
+
+    public void setPin(String pin) {
+        this.pin = pin;
+    }
+
     public String getNombre() {
         return nombre;
     }

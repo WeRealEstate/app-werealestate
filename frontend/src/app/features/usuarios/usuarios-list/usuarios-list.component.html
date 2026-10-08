@@ -35,6 +35,7 @@
             <th class="px-4 py-3">Nombre</th>
             <th class="px-4 py-3">Rol</th>
             <th class="px-4 py-3">Módulos</th>
+            <th class="px-4 py-3">PIN</th>
             <th class="px-4 py-3">Nómina</th>
             <th class="px-4 py-3">Estado</th>
             <th class="px-4 py-3"></th>
@@ -86,6 +87,7 @@
                   {{ resumenModulos(u) }}
                 </button>
               </td>
+              <td class="px-4 py-3 font-mono text-ink-muted">{{ u.pin || '—' }}</td>
               <td class="px-4 py-3">
                 <button
                   type="button"
@@ -232,13 +234,20 @@
     <button type="button" (click)="cerrarNombre()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
     <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="nombre-titulo">
       <form (ngSubmit)="guardarNombre()" class="modal-panel-enter w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
-        <h2 id="nombre-titulo" class="font-heading text-lg font-semibold text-ink">Editar nombre</h2>
+        <h2 id="nombre-titulo" class="font-heading text-lg font-semibold text-ink">Editar usuario</h2>
         <p class="mt-1 text-sm text-ink-muted">{{ u.email }}</p>
         <input
           id="nombre-nuevo" name="nombre" type="text" maxlength="200" autocomplete="off"
           [ngModel]="nombreNuevo()" (ngModelChange)="nombreNuevo.set($event)"
           class="mt-4 w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
         />
+        <label for="pin-nuevo" class="mt-4 mb-1 block text-xs font-medium text-ink-muted">PIN del plano público (4 letras o números, opcional)</label>
+        <input
+          id="pin-nuevo" name="pin" type="text" maxlength="4" autocomplete="off" placeholder="Ej. A7K2"
+          [ngModel]="pinNuevo()" (ngModelChange)="pinNuevo.set($event.toUpperCase())"
+          class="w-32 rounded-lg border border-border bg-surface px-3 py-2.5 font-mono text-sm uppercase text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+        />
+        <p class="mt-1 text-xs text-ink-muted">Con este PIN puede cotizar y apartar lotes desde los planos públicos.</p>
         @if (nombreError(); as error) {
           <p class="mt-2 text-xs text-red-600 dark:text-red-400" role="alert">{{ error }}</p>
         }

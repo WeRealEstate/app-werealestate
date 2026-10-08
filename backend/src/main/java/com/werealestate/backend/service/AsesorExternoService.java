@@ -90,6 +90,9 @@ public class AsesorExternoService {
         asesorExternoRepository.findByPin(limpio).filter(o -> !o.getId().equals(asesor.getId())).ifPresent(o -> {
             throw new ConflictException("Ese PIN ya lo tiene " + o.getNombre());
         });
+        usuarioRepository.findByPin(limpio).ifPresent(o -> {
+            throw new ConflictException("Ese PIN ya lo tiene " + o.getNombre());
+        });
         asesor.setPin(limpio);
     }
 

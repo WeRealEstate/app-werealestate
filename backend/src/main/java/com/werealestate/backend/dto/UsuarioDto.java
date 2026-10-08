@@ -20,17 +20,19 @@ public record UsuarioDto(
         boolean activo,
         List<Modulo> modulos,
         BigDecimal nominaSemanal,
-        LocalDate nominaDesde) {
+        LocalDate nominaDesde,
+        // Solo en las respuestas de administración de usuarios (ver conNomina).
+        String pin) {
 
     public static UsuarioDto from(Usuario usuario) {
-        return construir(usuario, null, null);
+        return construir(usuario, null, null, null);
     }
 
     public static UsuarioDto conNomina(Usuario usuario) {
-        return construir(usuario, usuario.getNominaSemanal(), usuario.getNominaDesde());
+        return construir(usuario, usuario.getNominaSemanal(), usuario.getNominaDesde(), usuario.getPin());
     }
 
-    private static UsuarioDto construir(Usuario usuario, BigDecimal nomina, LocalDate desde) {
+    private static UsuarioDto construir(Usuario usuario, BigDecimal nomina, LocalDate desde, String pin) {
         return new UsuarioDto(
                 usuario.getId(),
                 usuario.getNombre(),
@@ -40,6 +42,7 @@ public record UsuarioDto(
                 usuario.isActivo(),
                 ModulosAcceso.ordenados(ModulosAcceso.efectivos(usuario)),
                 nomina,
-                desde);
+                desde,
+                pin);
     }
 }

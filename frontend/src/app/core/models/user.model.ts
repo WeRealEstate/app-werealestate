@@ -51,6 +51,8 @@ export interface Usuario {
   /** Sueldo semanal (null = sin nómina) y desde cuándo; solo lo trae la administración de usuarios. */
   nominaSemanal: number | null;
   nominaDesde: string | null;
+  /** PIN de 4 letras/números para cotizar y apartar desde el plano público (null = sin PIN). */
+  pin: string | null;
 }
 
 /** nominaSemanal null o 0 = quitar la nómina; nominaDesde null = el próximo sábado. */
@@ -74,4 +76,6 @@ export interface UsuarioUpdateRequest {
   activo: boolean;
   /** null = restablecer a los de su rol por defecto (al cambiarle el rol); para conservarlos, mandarlos. */
   modulos: Modulo[] | null;
+  /** Omitido = sin cambios; '' = quitar el PIN del plano público. */
+  pin?: string;
 }

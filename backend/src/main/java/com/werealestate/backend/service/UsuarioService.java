@@ -152,10 +152,31 @@ public class UsuarioService {
         usuario.setRol(request.rol());
         usuario.setActivo(request.activo());
         usuario.setModulos(modulosAGuardar(request.rol(), request.modulos()));
+        asignarPin(usuario, request.pin());
         usuario = usuarioRepository.save(usuario);
         // Un usuario inactivo deja de generar nómina; uno reactivado la retoma.
         gastoRecurrenteService.sincronizarNomina(usuario);
         return UsuarioDto.conNomina(usuario);
+    }
+
+    /** null = sin cambios; vacío = quitar; si no, 4 letras/números únicos entre usuarios y asesores externos. */
+    private void asignarPin(Usuario usuario, String pin) {
+        if (pin == null) return;
+        String limpio = pin.trim().toUpperCase(java.util.Locale.ROOT);
+        if (limpio.isEmpty()) {
+            usuario.setPin(null);
+            return;
+        }
+        if (!limpio.matches("[A-Z0-9]{4}")) {
+            throw new ValidationException("El PIN debe tener exactamente 4 letras o números");
+        }
+        usuarioRepository.findByPin(limpio).filter(o -> !o.getId().equals(usuario.getId())).ifPresent(o -> {
+            throw new com.werealestate.backend.exception.ConflictException("Ese PIN ya lo tiene " + o.getNombre());
+        });
+        asesorExternoRepository.findByPin(limpio).ifPresent(o -> {
+            throw new com.werealestate.backend.exception.ConflictException("Ese PIN ya lo tiene " + o.getNombre());
+        });
+        usuario.setPin(limpio);
     }
 
     /** Configura (o quita) la nómina semanal de un usuario: monto y desde cuándo. Solo admin. */

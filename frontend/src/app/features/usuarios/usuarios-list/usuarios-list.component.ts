@@ -159,11 +159,13 @@ export class UsuariosListComponent {
   // Cambiar solo el nombre de un usuario.
   readonly editandoNombreDe = signal<Usuario | null>(null);
   readonly nombreNuevo = signal('');
+  readonly pinNuevo = signal('');
   readonly nombreError = signal<string | null>(null);
 
   abrirNombre(usuario: Usuario): void {
     this.editandoNombreDe.set(usuario);
     this.nombreNuevo.set(usuario.nombre);
+    this.pinNuevo.set(usuario.pin ?? '');
     this.nombreError.set(null);
   }
 
@@ -179,7 +181,8 @@ export class UsuariosListComponent {
       this.nombreError.set('Escribe el nombre.');
       return;
     }
-    if (nombre === usuario.nombre) {
+    const pin = this.pinNuevo().trim();
+    if (nombre === usuario.nombre && pin === (usuario.pin ?? '')) {
       this.editandoNombreDe.set(null);
       return;
     }
@@ -191,14 +194,15 @@ export class UsuariosListComponent {
         rol: usuario.rol,
         activo: usuario.activo,
         modulos: usuario.rol === 'ADMIN' ? null : usuario.modulos,
+        pin,
       });
       this.usuarios.update((lista) => lista.map((u) => (u.id === actualizado.id ? actualizado : u)));
       if (usuario.id === this.propioId()) void this.auth.refrescarPerfil();
       this.editandoNombreDe.set(null);
-      this.toast.success('Nombre actualizado.');
+      this.toast.success('Datos actualizados.');
     } catch (e) {
       this.nombreError.set(
-        e instanceof HttpErrorResponse && typeof e.error?.message === 'string' ? e.error.message : 'No se pudo actualizar el nombre.',
+        e instanceof HttpErrorResponse && typeof e.error?.message === 'string' ? e.error.message : 'No se pudo actualizar el usuario.',
       );
     } finally {
       this.savingId.set(null);
