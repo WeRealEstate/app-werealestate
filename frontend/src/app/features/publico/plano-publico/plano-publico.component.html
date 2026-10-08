@@ -1,8 +1,6 @@
 <div class="fixed inset-x-0 top-0 h-dvh bg-surface-2 overflow-hidden">
   @if (isLoading()) {
-    <div class="flex h-full items-center justify-center">
-      <app-we-loader modo="pantalla" texto="Cargando plano…" />
-    </div>
+    <div class="h-full bg-black"></div>
   } @else if (errorMessage()) {
     <div class="flex h-full items-center justify-center p-6 text-center">
       <p class="text-sm text-red-600 dark:text-red-400">{{ errorMessage() }}</p>
@@ -35,12 +33,16 @@
           draggable="false"
           decoding="async"
           fetchpriority="high"
+          [class.opacity-0]="!imagenLista()"
+          [class.plano-revelar]="imagenLista() && !revelado()"
           (load)="onImagenCargada($event)"
+          (error)="onImagenError()"
         />
 
         <!-- Polígonos: relleno según estado, clic para ver los datos del lote. -->
         <svg
-          class="pointer-events-none absolute inset-0 h-full w-full"
+          class="plano-ui pointer-events-none absolute inset-0 h-full w-full"
+          [class.plano-fade-in]="imagenLista()"
           viewBox="0 0 100 100"
           preserveAspectRatio="none"
           [style.--sw-lote]="0.6 / zoomTrazo()"
@@ -63,7 +65,9 @@
 
       <!-- Leyenda de estados: se puede plegar con la flechita para que no tape el plano. -->
       <div
-        class="absolute left-[max(0.75rem,env(safe-area-inset-left))] top-[max(0.75rem,env(safe-area-inset-top))] rounded-lg border border-border bg-surface/95 shadow-lg"
+        class="plano-ui absolute left-[max(0.75rem,env(safe-area-inset-left))] top-[max(0.75rem,env(safe-area-inset-top))] rounded-lg border border-border bg-surface/95 shadow-lg"
+        [class.plano-ui-in]="imagenLista()"
+        style="--d: 1.3s"
         (click)="$event.stopPropagation()"
         (pointerdown)="$event.stopPropagation()"
       >
@@ -113,7 +117,9 @@
 
       <!-- Controles de zoom del plano (no del navegador): esquina inferior derecha, estilo mapa. -->
       <div
-        class="absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] flex items-center gap-1 rounded-lg border border-border bg-surface/95 p-1 shadow-lg"
+        class="plano-ui absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] flex items-center gap-1 rounded-lg border border-border bg-surface/95 p-1 shadow-lg"
+        [class.plano-ui-in]="imagenLista()"
+        style="--d: 1.5s"
         (click)="$event.stopPropagation()"
         (pointerdown)="$event.stopPropagation()"
       >
@@ -324,7 +330,11 @@
   <!-- Candado discreto: el botón "Asesor" pide el nombre de un asesor registrado para mostrar los
        botones de cotizar y apartar. Ya verificado, muestra el nombre y permite salir. -->
   @if (!isLoading() && !errorMessage() && planoUrl()) {
-    <div class="absolute right-[max(0.75rem,env(safe-area-inset-right))] top-[max(0.75rem,env(safe-area-inset-top))] z-20">
+    <div
+      class="plano-ui absolute right-[max(0.75rem,env(safe-area-inset-right))] top-[max(0.75rem,env(safe-area-inset-top))] z-20"
+      [class.plano-ui-in]="imagenLista()"
+      style="--d: 1.4s"
+    >
       @if (asesorVerificado(); as asesor) {
         <button
           type="button"
@@ -396,4 +406,25 @@
   }
 
   <app-toast-container />
+
+  <!-- Pantalla de carga: barra de progreso arriba, la "e" girando y el texto; se funde al llegar el plano -->
+  @if (mostrarCarga()) {
+    <div
+      class="absolute inset-0 z-30 bg-black transition-opacity duration-500"
+      [class.opacity-0]="imagenLista()"
+      [class.pointer-events-none]="imagenLista()"
+      role="status"
+      aria-live="polite"
+    >
+      <div
+        class="absolute inset-x-0 top-0 h-0.5 origin-left bg-gradient-to-r from-[#2740B8] to-[#85B4F0]"
+        [class.plano-barra]="!imagenLista()"
+        [class.plano-barra-fin]="imagenLista()"
+      ></div>
+      <div class="flex h-full flex-col items-center justify-center gap-[18px]">
+        <div class="we-e-grande" aria-hidden="true"><img src="/images/we-logo.png" alt="" /></div>
+        <p class="text-sm tracking-[0.02em] text-[#8e9bb3]">Cargando plano</p>
+      </div>
+    </div>
+  }
 </div>

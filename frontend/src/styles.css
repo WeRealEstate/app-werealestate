@@ -538,3 +538,41 @@ select.rounded-full:not([multiple]):not([size]) {
   .we-skeleton { animation: none; }
   .we-dot { animation-duration: 3.6s; }
 }
+
+/* ---- Carga del plano público: barra, "e" girando, y revelado del plano desde la parte baja ---- */
+@property --r {
+  syntax: '<length-percentage>';
+  inherits: false;
+  initial-value: 0%;
+}
+@keyframes plano-barra { 0% { transform: scaleX(0); } 100% { transform: scaleX(0.92); } }
+@keyframes plano-revelar {
+  0% { --r: 0%; filter: grayscale(1) brightness(0.7); }
+  62% { --r: 140%; filter: grayscale(1) brightness(0.7); }
+  100% { --r: 140%; filter: grayscale(0) brightness(1); }
+}
+@keyframes plano-ui-in {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes plano-fade-in { 0% { opacity: 0; } 100% { opacity: 1; } }
+.plano-barra { transform: scaleX(0); animation: plano-barra 12s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+.plano-barra-fin { transform: scaleX(1); transition: transform 0.35s ease-out; }
+.we-e-grande {
+  position: relative; flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%; overflow: hidden;
+  animation: we-spinE 1.8s cubic-bezier(0.7, 0, 0.3, 1) infinite;
+}
+.we-e-grande img { position: absolute; width: 99.3px; max-width: none; left: -55.1px; top: 0; }
+.plano-revelar {
+  -webkit-mask-image: radial-gradient(circle at 44% 93%, #000 var(--r), transparent calc(var(--r) + 14%));
+  mask-image: radial-gradient(circle at 44% 93%, #000 var(--r), transparent calc(var(--r) + 14%));
+  animation: plano-revelar 2.4s cubic-bezier(0.45, 0, 0.25, 1) forwards;
+}
+.plano-ui { opacity: 0; pointer-events: none; }
+.plano-ui-in { pointer-events: auto; animation: plano-ui-in 0.6s ease-out var(--d, 1.3s) forwards; }
+.plano-fade-in { animation: plano-fade-in 0.8s ease-out 1.5s forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .plano-revelar { animation: none; -webkit-mask-image: none; mask-image: none; }
+  .plano-ui-in, .plano-fade-in { animation-duration: 0.01s; animation-delay: 0s; }
+  .plano-barra { animation: none; }
+}

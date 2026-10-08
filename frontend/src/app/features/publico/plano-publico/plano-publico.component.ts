@@ -17,7 +17,6 @@ import { colorDeBarra, fondoDePagina } from '../../../core/utils/pagina';
 import { DetectorDeRueda } from '../../../core/utils/rueda';
 import { ToastService } from '../../../core/services/toast.service';
 import { ToastContainerComponent } from '../../../shared/toast-container/toast-container.component';
-import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 
 type ProyectoPublico = 'samai' | 'nanuu';
 
@@ -78,7 +77,7 @@ function guardarAsesor(proyecto: string, nombre: string | null): void {
 @Component({
   selector: 'app-plano-publico',
   standalone: true,
-  imports: [WeLoaderComponent, FormsModule, DecimalPipe, RouterLink, ToastContainerComponent],
+  imports: [FormsModule, DecimalPipe, RouterLink, ToastContainerComponent],
   templateUrl: './plano-publico.component.html',
 })
 export class PlanoPublicoComponent {
@@ -101,6 +100,13 @@ export class PlanoPublicoComponent {
 
   readonly lotes = signal<Lote[]>([]);
   readonly isLoading = signal(true);
+  /** Carga del plano (ver CSS .plano-*): la imagen ya llegó; la pantalla de carga sale y el plano se revela. */
+  readonly imagenLista = signal(false);
+  readonly cargaTerminada = signal(false);
+  readonly revelado = signal(false);
+  readonly mostrarCarga = computed(
+    () => this.isLoading() || (!this.errorMessage() && !!this.planoUrl() && !this.cargaTerminada()),
+  );
   readonly errorMessage = signal<string | null>(null);
 
   /** El plano/nombre del desarrollo vienen anidados en cualquiera de sus lotes (todos comparten el
@@ -451,6 +457,19 @@ export class PlanoPublicoComponent {
     this.naturalWidth = img.naturalWidth;
     this.naturalHeight = img.naturalHeight;
     this.ajustarZoomParaVerCompleto();
+    this.terminarCarga(true);
+  }
+
+  /** Si la imagen no carga, igual se quita la pantalla de carga (el visor queda vacío y negro). */
+  onImagenError(): void {
+    this.terminarCarga(false);
+  }
+
+  private terminarCarga(conAnimacion: boolean): void {
+    if (this.imagenLista()) return;
+    this.imagenLista.set(true);
+    setTimeout(() => this.cargaTerminada.set(true), 600);
+    setTimeout(() => this.revelado.set(true), conAnimacion ? 2600 : 0);
   }
 
   @HostListener('window:resize')
