@@ -15,6 +15,8 @@ import {
   LucideUsers,
   LucideWallet,
 } from '@lucide/angular';
+import { version } from '../../../../../package.json';
+import { FECHA_COMPILACION } from '../../../build-info';
 import { PushService } from '../../../core/services/push.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Modulo, ROLE_LABELS, Role } from '../../../core/models/user.model';
@@ -182,6 +184,8 @@ export class PanelLayoutComponent {
   });
 
   readonly sidebarOpen = signal(false);
+  /** Versión de la app (package.json) y fecha en que se compiló. */
+  readonly versionApp = `v${version} · ${FECHA_COMPILACION.split('-').reverse().join('/')}`;
   /** Pantalla ancha (sidebar fijo): ahí la campana va en el sidebar; en el teléfono, en la barra superior. */
   readonly esEscritorio = signal(typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches);
 
