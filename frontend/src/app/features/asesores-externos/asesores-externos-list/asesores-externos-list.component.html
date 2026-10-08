@@ -34,7 +34,7 @@
   }
 
   @if (isLoading()) {
-    <p class="mt-8 text-sm text-ink-muted">Cargando asesores externos…</p>
+    <app-we-loader texto="Cargando asesores externos…" />
   } @else if (asesores().length === 0) {
     <div class="mt-8 rounded-xl border border-dashed border-border p-10 text-center">
       <p class="text-sm text-ink-muted">Todavía no hay asesores externos registrados.</p>
@@ -494,7 +494,7 @@
         }
 
         @if (cargandoFicha()) {
-          <p class="mt-6 text-sm text-ink-muted">Cargando ficha…</p>
+          <app-we-loader modo="compacto" texto="Cargando ficha…" />
         } @else if (ficha(); as f) {
           @if (!editandoFicha()) {
             <!-- Lectura -->

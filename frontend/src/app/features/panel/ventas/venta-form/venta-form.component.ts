@@ -17,6 +17,7 @@ import { UsuariosService } from '../../../../core/services/usuarios.service';
 import { VentasService } from '../../../../core/services/ventas.service';
 import { MonedaInputDirective } from '../../../../shared/moneda-input/moneda-input.directive';
 import { AportacionesSelectorComponent } from '../../../../shared/aportaciones-selector/aportaciones-selector.component';
+import { WeLoaderComponent } from '../../../../shared/we-loader/we-loader.component';
 import {
   Aportacion,
   aportacionesValidas,
@@ -80,7 +81,7 @@ const ENGANCHE_LABEL_POR_TIPO: Record<TipoPago, string | null> = {
 @Component({
   selector: 'app-venta-form',
   standalone: true,
-  imports: [ReactiveFormsModule, FormsModule, RouterLink, LucideX, MonedaInputDirective, AportacionesSelectorComponent, ClienteSelectorComponent],
+  imports: [WeLoaderComponent, ReactiveFormsModule, FormsModule, RouterLink, LucideX, MonedaInputDirective, AportacionesSelectorComponent, ClienteSelectorComponent],
   templateUrl: './venta-form.component.html',
 })
 export class VentaFormComponent {

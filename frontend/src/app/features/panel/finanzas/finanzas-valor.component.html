@@ -5,7 +5,7 @@
 }
 
 @if (isLoading()) {
-  <p class="text-sm text-ink-muted">Cargando valor vendido…</p>
+  <app-skeleton-kpis />
 } @else if (datos(); as d) {
   <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
     <div class="rounded-xl border border-border bg-surface p-4">

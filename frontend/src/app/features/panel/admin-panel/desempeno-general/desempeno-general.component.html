@@ -1,7 +1,5 @@
 @if (isLoading()) {
-  <div class="rounded-2xl border border-border bg-surface p-5">
-    <p class="text-sm text-ink-muted">Cargando desempeño…</p>
-  </div>
+  <app-skeleton-kpis />
 } @else {
   <div class="relative isolate overflow-hidden rounded-3xl p-4 sm:p-5">
     <div class="pointer-events-none absolute -top-24 -left-16 -z-10 h-72 w-72 rounded-full bg-we-primary/10 blur-3xl dark:bg-we-primary/25" aria-hidden="true"></div>

@@ -12,6 +12,7 @@ import { LoteCambioEstadoModalComponent } from '../../../shared/lote-cambio-esta
 import { LoteInfoModalComponent } from '../../../shared/lote-info-modal/lote-info-modal.component';
 import { ToastService } from '../../../core/services/toast.service';
 import { Desarrollo } from '../../../core/models/lead.model';
+import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 import {
   ESTADO_LOTE_BADGE_CLASSES,
   ESTADO_LOTE_LABELS,
@@ -39,7 +40,7 @@ const ESTADOS_TODOS: EstadoLote[] = [
 @Component({
   selector: 'app-lotes-list',
   standalone: true,
-  imports: [
+  imports: [WeLoaderComponent, 
     FormsModule,
     RouterLink,
     DecimalPipe,

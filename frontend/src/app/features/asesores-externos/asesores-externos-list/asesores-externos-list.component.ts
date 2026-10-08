@@ -8,6 +8,7 @@ import { ConfirmService } from '../../../core/services/confirm.service';
 import { UsuariosService } from '../../../core/services/usuarios.service';
 import { UsuarioResumen } from '../../../core/models/lead.model';
 import { AsesoresExternosService } from '../../../core/services/asesores-externos.service';
+import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 import {
   AsesorExterno,
   AsesorExternoUpdateRequest,
@@ -31,7 +32,7 @@ const ordenarAsesoresPorNombre = (asesores: AsesorExterno[]): AsesorExterno[] =>
 @Component({
   selector: 'app-asesores-externos-list',
   standalone: true,
-  imports: [FormsModule, RouterLink, LucideEye, LucideExternalLink, LucidePencil, LucideTrash2],
+  imports: [WeLoaderComponent, FormsModule, RouterLink, LucideEye, LucideExternalLink, LucidePencil, LucideTrash2],
   templateUrl: './asesores-externos-list.component.html',
 })
 export class AsesoresExternosListComponent {

@@ -11,6 +11,7 @@ import { UsuariosService } from '../../../core/services/usuarios.service';
 import { ColumnasService } from '../../../core/services/columnas.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { ConfirmService } from '../../../core/services/confirm.service';
+import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 import {
   ColumnaPersonalizada,
   Desarrollo,
@@ -64,7 +65,7 @@ type Destino = { tipo: 'tarjeta'; id: number; nombre: string } | { tipo: 'sin-as
 @Component({
   selector: 'app-pipeline',
   standalone: true,
-  imports: [
+  imports: [WeLoaderComponent, 
     RouterLink,
     DragDropModule,
     ReactiveFormsModule,

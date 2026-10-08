@@ -5,6 +5,7 @@ import { inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { VentasService } from '../../../../core/services/ventas.service';
 import { Venta } from '../../../../core/models/venta.model';
+import { WeLoaderComponent } from '../../../../shared/we-loader/we-loader.component';
 
 /** Cuántas ventas se cargan por lote. Al llegar al final, "Cargar más" trae el siguiente. */
 const TAMANO_PAGINA = 10;
@@ -15,7 +16,7 @@ const DEBOUNCE_BUSQUEDA_MS = 350;
 @Component({
   selector: 'app-ventas-list',
   standalone: true,
-  imports: [DatePipe, RouterLink, LucideEye, LucideArrowUp, LucideArrowDown],
+  imports: [WeLoaderComponent, DatePipe, RouterLink, LucideEye, LucideArrowUp, LucideArrowDown],
   templateUrl: './ventas-list.component.html',
 })
 export class VentasListComponent {

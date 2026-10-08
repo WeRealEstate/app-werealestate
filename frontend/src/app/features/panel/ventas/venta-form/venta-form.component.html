@@ -60,7 +60,7 @@
         <div class="flex-1">
           <label for="loteParaAgregar" class="block text-xs font-medium text-ink-muted mb-1.5">Lote</label>
           @if (isCargandoLotes()) {
-            <p class="text-sm text-ink-muted">Cargando…</p>
+            <app-we-loader modo="compacto" texto="Cargando…" />
           } @else {
             <select
               id="loteParaAgregar"

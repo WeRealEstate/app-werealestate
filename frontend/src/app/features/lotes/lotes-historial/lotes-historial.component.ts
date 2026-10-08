@@ -9,6 +9,7 @@ import { LotesService } from '../../../core/services/lotes.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { Desarrollo } from '../../../core/models/lead.model';
 import { ESTADO_LOTE_BADGE_CLASSES, ESTADO_LOTE_LABELS, MovimientoLote } from '../../../core/models/lote.model';
+import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 
 const TAMANO_PAGINA = 20;
 
@@ -17,7 +18,7 @@ const TAMANO_PAGINA = 20;
 @Component({
   selector: 'app-lotes-historial',
   standalone: true,
-  imports: [RouterLink, DatePipe, LucideEye, LucideTrash2],
+  imports: [WeLoaderComponent, RouterLink, DatePipe, LucideEye, LucideTrash2],
   templateUrl: './lotes-historial.component.html',
 })
 export class LotesHistorialComponent {

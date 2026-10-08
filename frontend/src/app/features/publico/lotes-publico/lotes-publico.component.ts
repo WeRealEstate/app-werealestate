@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../core/services/toast.service';
 import { LotesService } from '../../../core/services/lotes.service';
+import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 import {
   ESTADO_LOTE_BADGE_CLASSES,
   ESTADO_LOTE_LABELS,
@@ -24,7 +25,7 @@ const NOTA_MAX_LENGTH = 500;
 @Component({
   selector: 'app-lotes-publico',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [WeLoaderComponent, FormsModule, RouterLink],
   templateUrl: './lotes-publico.component.html',
 })
 export class LotesPublicoComponent {

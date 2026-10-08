@@ -6,7 +6,7 @@
   }
 
   @if (isLoading()) {
-    <p class="text-sm text-ink-muted">Cargando gastos…</p>
+    <app-skeleton-kpis />
   } @else {
     <!-- Resumen del mes -->
     <div class="flex flex-wrap items-end justify-between gap-3">

@@ -17,6 +17,7 @@ import { colorDeBarra, fondoDePagina } from '../../../core/utils/pagina';
 import { DetectorDeRueda } from '../../../core/utils/rueda';
 import { ToastService } from '../../../core/services/toast.service';
 import { ToastContainerComponent } from '../../../shared/toast-container/toast-container.component';
+import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 
 type ProyectoPublico = 'samai' | 'nanuu';
 
@@ -77,7 +78,7 @@ function guardarAsesor(proyecto: string, nombre: string | null): void {
 @Component({
   selector: 'app-plano-publico',
   standalone: true,
-  imports: [FormsModule, DecimalPipe, RouterLink, ToastContainerComponent],
+  imports: [WeLoaderComponent, FormsModule, DecimalPipe, RouterLink, ToastContainerComponent],
   templateUrl: './plano-publico.component.html',
 })
 export class PlanoPublicoComponent {

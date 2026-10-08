@@ -6,6 +6,7 @@
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <script>try{if(localStorage.getItem("we_theme")==="dark")document.documentElement.classList.add("dark")}catch(e){}</script>
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#0b132b">
   <meta name="mobile-web-app-capable" content="yes">
@@ -20,6 +21,30 @@
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 <body>
-  <app-root></app-root>
+  <app-root>
+    <!-- Pantalla de carga inicial (se reemplaza cuando arranca la app) -->
+    <style>
+      .we-splash{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:32px;background:radial-gradient(90% 80% at 50% 40%,#fff 0%,#eef2f8 75%)}
+      html.dark .we-splash{background:radial-gradient(90% 80% at 50% 40%,#1f2c47 0%,#111a2c 72%)}
+      .we-splash .l{position:relative;width:200px;aspect-ratio:600/259}
+      .we-splash .l div{position:absolute;inset:0}
+      .we-splash img{position:absolute;inset:0;width:100%;height:100%}
+      .we-splash .b{-webkit-mask-image:radial-gradient(ellipse 22.4% 50.5% at 77.5% 50%,transparent 99%,#000 100%);mask-image:radial-gradient(ellipse 22.4% 50.5% at 77.5% 50%,transparent 99%,#000 100%)}
+      .we-splash .e{clip-path:ellipse(22.4% 50.5% at 77.5% 50%);transform-origin:77.5% 50%;animation:ws 1.8s cubic-bezier(.7,0,.3,1) infinite}
+      .we-splash .d{display:flex;gap:8px}.we-splash .d i{width:7px;height:7px;border-radius:50%;background:#2740b8;animation:wd 1.8s ease-in-out infinite}
+      html.dark .we-splash .d i{background:#85b4f0}
+      .we-splash .d i:nth-child(2){animation-delay:.2s}.we-splash .d i:nth-child(3){animation-delay:.4s}
+      .we-splash .dk{display:none}html.dark .we-splash .dk{display:block}html.dark .we-splash .lt{display:none}
+      @keyframes ws{0%{transform:rotate(0)}65%,100%{transform:rotate(360deg)}}
+      @keyframes wd{0%,40%,100%{transform:translateY(0);opacity:.35}20%{transform:translateY(-6px);opacity:1}}
+    </style>
+    <div class="we-splash" role="status" aria-label="Cargando">
+      <div class="l">
+        <div class="lt"><img class="b" src="/images/we-logo-color.png" alt=""><img class="e" src="/images/we-logo-color.png" alt=""></div>
+        <div class="dk"><img class="b" src="/images/we-logo.png" alt=""><img class="e" src="/images/we-logo.png" alt=""></div>
+      </div>
+      <div class="d"><i></i><i></i><i></i></div>
+    </div>
+  </app-root>
 </body>
 </html>

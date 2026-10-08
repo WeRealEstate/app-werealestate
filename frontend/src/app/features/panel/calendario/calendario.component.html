@@ -3,7 +3,7 @@
   <p class="mt-1 text-sm text-ink-muted">Tus eventos son privados — solo tú los ves.</p>
 
   @if (isLoading()) {
-    <p class="mt-8 text-sm text-ink-muted">Cargando calendario…</p>
+    <app-we-loader texto="Cargando calendario…" />
   } @else {
     <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-1.5">

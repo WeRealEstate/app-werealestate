@@ -5,11 +5,12 @@ import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { ToastService } from '../../core/services/toast.service';
 import { AsesoresExternosService } from '../../core/services/asesores-externos.service';
 import { AsesorExterno, TipoAsesorExterno } from '../../core/models/asesor-externo.model';
+import { WeLoaderComponent } from '../../shared/we-loader/we-loader.component';
 
 @Component({
   selector: 'app-teams',
   standalone: true,
-  imports: [DragDropModule, RouterLink],
+  imports: [WeLoaderComponent, DragDropModule, RouterLink],
   templateUrl: './teams.component.html',
 })
 export class TeamsComponent {

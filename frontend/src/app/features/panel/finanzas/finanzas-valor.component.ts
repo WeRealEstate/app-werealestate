@@ -4,12 +4,13 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { FinanzasValor } from '../../../core/models/finanzas.model';
 import { FinanzasService } from '../../../core/services/finanzas.service';
+import { SkeletonKpisComponent } from '../../../shared/skeleton-kpis/skeleton-kpis.component';
 
 /** Pestaña "Valor vendido": cuánto dinero hay en lotes vendidos (por desarrollo y por lote). */
 @Component({
   selector: 'app-finanzas-valor',
   standalone: true,
-  imports: [DecimalPipe, FormsModule, RouterLink],
+  imports: [SkeletonKpisComponent, DecimalPipe, FormsModule, RouterLink],
   templateUrl: './finanzas-valor.component.html',
 })
 export class FinanzasValorComponent {

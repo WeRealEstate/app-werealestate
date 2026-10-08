@@ -7,6 +7,7 @@ import { UsuariosService } from '../../../core/services/usuarios.service';
 import { descargarCsv } from '../../../core/utils/csv';
 import { descargarExcel } from '../../../core/utils/excel';
 import { generarPlantillaLeads } from '../../../core/utils/plantilla-leads';
+import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 import {
   ESTADO_LEAD_LABELS,
   EstadoLead,
@@ -37,7 +38,7 @@ const DEBOUNCE_BUSQUEDA_MS = 350;
 @Component({
   selector: 'app-leads-list',
   standalone: true,
-  imports: [RouterLink, LucideArchive, LucideEye],
+  imports: [WeLoaderComponent, RouterLink, LucideArchive, LucideEye],
   templateUrl: './leads-list.component.html',
 })
 export class LeadsListComponent {

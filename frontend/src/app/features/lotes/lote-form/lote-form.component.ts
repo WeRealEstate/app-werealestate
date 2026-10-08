@@ -5,11 +5,12 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Desarrollo } from '../../../core/models/lead.model';
 import { LeadsService } from '../../../core/services/leads.service';
 import { LotesService } from '../../../core/services/lotes.service';
+import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 
 @Component({
   selector: 'app-lote-form',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [WeLoaderComponent, ReactiveFormsModule, RouterLink],
   templateUrl: './lote-form.component.html',
 })
 export class LoteFormComponent implements OnInit {

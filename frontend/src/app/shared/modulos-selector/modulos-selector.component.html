@@ -3,7 +3,7 @@
     Un administrador siempre tiene acceso a todos los módulos.
   </p>
 } @else if (cargando()) {
-  <p class="text-sm text-ink-muted">Cargando módulos…</p>
+  <app-we-loader modo="compacto" texto="Cargando módulos…" />
 } @else if (error()) {
   <p class="text-sm text-red-600 dark:text-red-400">No se pudieron cargar los módulos. Recarga la página.</p>
 } @else {

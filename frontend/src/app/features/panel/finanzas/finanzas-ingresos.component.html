@@ -68,7 +68,7 @@
 </div>
 
 @if (isLoading()) {
-  <p class="mt-6 text-sm text-ink-muted">Cargando ingresos…</p>
+  <app-skeleton-kpis />
 } @else if (datos(); as d) {
   @if (d.meses.length === 0) {
     <div class="mt-4 rounded-xl border border-dashed border-border p-8 text-center text-sm text-ink-muted">
@@ -155,7 +155,7 @@
                       </div>
                     </div>
                   } @else {
-                    <p class="text-sm text-ink-muted">Cargando detalle…</p>
+                    <app-we-loader modo="compacto" texto="Cargando detalle…" />
                   }
                 </td>
               </tr>

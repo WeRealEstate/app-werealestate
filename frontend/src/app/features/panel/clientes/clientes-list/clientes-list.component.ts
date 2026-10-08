@@ -5,12 +5,13 @@ import { ClienteLista } from '../../../../core/models/cliente.model';
 import { Cliente } from '../../../../core/models/cliente.model';
 import { ClientesService } from '../../../../core/services/clientes.service';
 import { ClienteFormModalComponent } from '../../../../shared/cliente-form-modal/cliente-form-modal.component';
+import { WeLoaderComponent } from '../../../../shared/we-loader/we-loader.component';
 
 type FiltroEstado = 'TODOS' | 'ACTIVOS' | 'INACTIVOS' | 'INCOMPLETOS' | 'CON_SALDO';
 
 @Component({
   selector: 'app-clientes-list',
-  imports: [FormsModule, RouterLink, ClienteFormModalComponent],
+  imports: [WeLoaderComponent, FormsModule, RouterLink, ClienteFormModalComponent],
   templateUrl: './clientes-list.component.html',
 })
 export class ClientesListComponent {

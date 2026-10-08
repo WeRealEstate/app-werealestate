@@ -483,3 +483,58 @@ select.rounded-full:not([multiple]):not([size]) {
 .poligono-lote.poligono-activo {
   stroke-width: var(--sw-activo, 1.2);
 }
+
+/* ---- Animaciones de carga de We: la "e" del logo gira, puntos que rebotan y esqueletos con brillo ---- */
+@keyframes we-spinE {
+  0% { transform: rotate(0); }
+  65%, 100% { transform: rotate(360deg); }
+}
+@keyframes we-dotSync {
+  0%, 40%, 100% { transform: translateY(0); opacity: 0.35; }
+  20% { transform: translateY(-6px); opacity: 1; }
+}
+@keyframes we-shim {
+  0% { background-position: 150% 0; }
+  100% { background-position: -50% 0; }
+}
+.we-logo-base {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  -webkit-mask-image: radial-gradient(ellipse 22.4% 50.5% at 77.5% 50%, transparent 99%, #000 100%);
+  mask-image: radial-gradient(ellipse 22.4% 50.5% at 77.5% 50%, transparent 99%, #000 100%);
+}
+.we-logo-e {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  clip-path: ellipse(22.4% 50.5% at 77.5% 50%);
+  transform-origin: 77.5% 50%;
+  animation: we-spinE 1.8s cubic-bezier(0.7, 0, 0.3, 1) infinite;
+}
+.we-dot {
+  display: block; width: 7px; height: 7px; border-radius: 50%;
+  background: #2740b8;
+  animation: we-dotSync 1.8s ease-in-out infinite;
+}
+.dark .we-dot { background: #85b4f0; }
+.we-loader-pantalla {
+  background: radial-gradient(90% 80% at 50% 40%, #ffffff 0%, #eef2f8 75%);
+}
+.dark .we-loader-pantalla {
+  background: radial-gradient(90% 80% at 50% 40%, #1f2c47 0%, #111a2c 72%);
+}
+.we-skeleton {
+  background: linear-gradient(90deg, #edf1f7 25%, #f7f9fc 50%, #edf1f7 75%);
+  background-size: 200% 100%;
+  animation: we-shim 1.8s linear infinite;
+}
+.dark .we-skeleton {
+  background: linear-gradient(90deg, rgba(133, 180, 240, 0.07) 25%, rgba(133, 180, 240, 0.18) 50%, rgba(133, 180, 240, 0.07) 75%);
+  background-size: 200% 100%;
+}
+.we-e-mini {
+  position: relative; flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; overflow: hidden;
+  animation: we-spinE 1.8s cubic-bezier(0.7, 0, 0.3, 1) infinite;
+}
+.we-e-mini img { position: absolute; width: 45.5px; max-width: none; left: -25.3px; top: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .we-skeleton { animation: none; }
+  .we-dot { animation-duration: 3.6s; }
+}

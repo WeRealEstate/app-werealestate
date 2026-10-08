@@ -5,6 +5,7 @@ import { CotizacionesService } from '../../../core/services/cotizaciones.service
 import { CotizacionAsesor, CotizacionHistorial } from '../../../core/models/cotizacion.model';
 import { descargarCsv } from '../../../core/utils/csv';
 import { descargarExcel } from '../../../core/utils/excel';
+import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 
 /** Cuántas cotizaciones se cargan por lote. Al llegar al final, "Cargar más" trae el siguiente. */
 const TAMANO_PAGINA = 10;
@@ -19,7 +20,7 @@ const DEBOUNCE_BUSQUEDA_MS = 350;
 @Component({
   selector: 'app-historial-cotizaciones',
   standalone: true,
-  imports: [DatePipe, RouterLink],
+  imports: [WeLoaderComponent, DatePipe, RouterLink],
   templateUrl: './historial-cotizaciones.component.html',
 })
 export class HistorialCotizacionesComponent {

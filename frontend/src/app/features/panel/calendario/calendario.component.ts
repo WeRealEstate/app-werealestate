@@ -10,6 +10,7 @@ import { ConfirmService } from '../../../core/services/confirm.service';
 import { EventoCalendario } from '../../../core/models/evento-calendario.model';
 import { TIPO_SEGUIMIENTO_LABELS } from '../../../core/models/lead.model';
 import { etiquetaDuracion } from '../../../core/utils/fecha-hora';
+import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 
 type ItemTipo = 'PERSONAL' | 'TAREA' | 'SEGUIMIENTO';
 
@@ -62,7 +63,7 @@ function parseIsoDateOnly(value: string): Date {
 @Component({
   selector: 'app-calendario',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, LucideChevronLeft, LucideChevronRight, LucidePencil, LucideTrash2],
+  imports: [WeLoaderComponent, ReactiveFormsModule, RouterLink, LucideChevronLeft, LucideChevronRight, LucidePencil, LucideTrash2],
   templateUrl: './calendario.component.html',
 })
 export class CalendarioComponent {

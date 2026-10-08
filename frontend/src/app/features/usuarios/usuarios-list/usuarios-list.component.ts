@@ -9,13 +9,14 @@ import { ConfirmService } from '../../../core/services/confirm.service';
 import { UsuariosService } from '../../../core/services/usuarios.service';
 import { ModulosSelectorComponent } from '../../../shared/modulos-selector/modulos-selector.component';
 import { Modulo, ROLE_LABELS, Role, Usuario } from '../../../core/models/user.model';
+import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 
 const ROLES: Role[] = ['ASESOR', 'LIDER_AREA', 'EQUIPO_INTERNO', 'ADMIN'];
 
 @Component({
   selector: 'app-usuarios-list',
   standalone: true,
-  imports: [FormsModule, RouterLink, LucideKey, LucidePencil, LucideTrash2, ModulosSelectorComponent],
+  imports: [WeLoaderComponent, FormsModule, RouterLink, LucideKey, LucidePencil, LucideTrash2, ModulosSelectorComponent],
   templateUrl: './usuarios-list.component.html',
 })
 export class UsuariosListComponent {

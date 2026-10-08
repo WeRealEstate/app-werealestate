@@ -2,7 +2,7 @@
   <a routerLink="/panel/clientes" class="text-sm text-we-blue-light hover:underline">&larr; Volver a clientes</a>
 
   @if (cargando()) {
-    <p class="mt-6 text-sm text-ink-muted">Cargando…</p>
+    <app-we-loader texto="Cargando…" />
   } @else if (error(); as e) {
     <p class="mt-6 text-sm text-red-600">{{ e }}</p>
   } @else if (cliente(); as c) {

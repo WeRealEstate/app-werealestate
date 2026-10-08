@@ -39,7 +39,7 @@
   }
 
   @if (isLoading()) {
-    <p class="mt-8 text-sm text-ink-muted">Cargando finanzas…</p>
+    <app-skeleton-kpis />
   } @else {
     <!-- Resumen -->
     @if (resumen(); as r) {
@@ -320,7 +320,7 @@
                           </div>
                         </div>
                       } @else {
-                        <p class="text-sm text-ink-muted">Cargando detalle…</p>
+                        <app-we-loader modo="compacto" texto="Cargando detalle…" />
                       }
                     </td>
                   </tr>

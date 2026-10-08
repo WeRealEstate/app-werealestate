@@ -27,6 +27,7 @@ import {
   UsuarioResumen,
 } from '../../../core/models/lead.model';
 import { Usuario } from '../../../core/models/user.model';
+import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 import {
   DURACION_OPCIONES,
   DURACION_POR_DEFECTO,
@@ -44,7 +45,7 @@ const ROLES_ASIGNABLES = new Set(['ASESOR', 'LIDER_AREA', 'ADMIN']);
 @Component({
   selector: 'app-lead-detail',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, DatePipe, DecimalPipe, LucidePencil, LucideArchive, LucideTrash2, LucideCheck],
+  imports: [WeLoaderComponent, ReactiveFormsModule, RouterLink, DatePipe, DecimalPipe, LucidePencil, LucideArchive, LucideTrash2, LucideCheck],
   templateUrl: './lead-detail.component.html',
 })
 export class LeadDetailComponent implements OnInit {

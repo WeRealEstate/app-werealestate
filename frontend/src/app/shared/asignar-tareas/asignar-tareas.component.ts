@@ -8,6 +8,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { UsuariosService } from '../../core/services/usuarios.service';
 import { Tarea } from '../../core/models/tarea.model';
 import { UsuarioResumen } from '../../core/models/lead.model';
+import { WeLoaderComponent } from '../we-loader/we-loader.component';
 
 /**
  * Widget de tareas completo — lo usan los 4 roles por igual (ver Role.rango en el backend): "Mis
@@ -19,7 +20,7 @@ import { UsuarioResumen } from '../../core/models/lead.model';
 @Component({
   selector: 'app-asignar-tareas',
   standalone: true,
-  imports: [ReactiveFormsModule, DatePipe, LucideCheck],
+  imports: [WeLoaderComponent, ReactiveFormsModule, DatePipe, LucideCheck],
   templateUrl: './asignar-tareas.component.html',
 })
 export class AsignarTareasComponent {

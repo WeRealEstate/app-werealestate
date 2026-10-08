@@ -34,7 +34,7 @@
   </div>
 
   @if (cargando()) {
-    <p class="mt-8 text-sm text-ink-muted">Cargando clientes…</p>
+    <app-we-loader texto="Cargando clientes…" />
   } @else if (error(); as e) {
     <div class="mt-8 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-300">{{ e }}</div>
   } @else if (filtrados().length === 0) {

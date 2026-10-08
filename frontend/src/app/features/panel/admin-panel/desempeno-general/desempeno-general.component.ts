@@ -4,6 +4,7 @@ import { LucideCalendar, LucideCheck, LucideChevronDown, LucideStar, LucideUserC
 import { ReportesService } from '../../../../core/services/reportes.service';
 import { ReporteDesempeno } from '../../../../core/models/reporte.model';
 import { ESTADO_LEAD_LABELS, EstadoLead } from '../../../../core/models/lead.model';
+import { SkeletonKpisComponent } from '../../../../shared/skeleton-kpis/skeleton-kpis.component';
 
 type Periodo = 'mes' | '90d' | 'todo';
 
@@ -98,7 +99,7 @@ function bars(entradas: { etiqueta: string; total: number }[], clases: readonly 
 @Component({
   selector: 'app-desempeno-general',
   standalone: true,
-  imports: [DecimalPipe, LucideUsers, LucideStar, LucideCalendar, LucideChevronDown, LucideUserCheck, LucideCheck, LucideX],
+  imports: [SkeletonKpisComponent, DecimalPipe, LucideUsers, LucideStar, LucideCalendar, LucideChevronDown, LucideUserCheck, LucideCheck, LucideX],
   templateUrl: './desempeno-general.component.html',
 })
 export class DesempenoGeneralComponent {

@@ -1,6 +1,7 @@
 import { Component, computed, effect, inject, input, model, signal, untracked } from '@angular/core';
 import { Modulo, ModuloCatalogo, Role } from '../../core/models/user.model';
 import { UsuariosService } from '../../core/services/usuarios.service';
+import { WeLoaderComponent } from '../we-loader/we-loader.component';
 
 /** Casillas de qué módulos puede usar un usuario, según su rol: solo muestra los que ese rol puede
  * llegar a tener (el catálogo viene del backend, ver ModulosAcceso). Un admin siempre tiene todo.
@@ -11,6 +12,7 @@ import { UsuariosService } from '../../core/services/usuarios.service';
 @Component({
   selector: 'app-modulos-selector',
   standalone: true,
+  imports: [WeLoaderComponent],
   templateUrl: './modulos-selector.component.html',
 })
 export class ModulosSelectorComponent {

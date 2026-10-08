@@ -6,6 +6,8 @@ import { FinanzasIngresos, IngresoDetalle, IngresoMes } from '../../../core/mode
 import { FinanzasService } from '../../../core/services/finanzas.service';
 import { LeadsService } from '../../../core/services/leads.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
+import { SkeletonKpisComponent } from '../../../shared/skeleton-kpis/skeleton-kpis.component';
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
@@ -14,7 +16,7 @@ const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', '
 @Component({
   selector: 'app-finanzas-ingresos',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [WeLoaderComponent, SkeletonKpisComponent, FormsModule, RouterLink],
   templateUrl: './finanzas-ingresos.component.html',
 })
 export class FinanzasIngresosComponent {

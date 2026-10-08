@@ -21,6 +21,8 @@ import { ToastService } from '../../../core/services/toast.service';
 import { GastosListComponent } from '../gastos/gastos-list/gastos-list.component';
 import { FinanzasIngresosComponent } from './finanzas-ingresos.component';
 import { FinanzasValorComponent } from './finanzas-valor.component';
+import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
+import { SkeletonKpisComponent } from '../../../shared/skeleton-kpis/skeleton-kpis.component';
 
 type Pestana = 'comisiones' | 'ingresos' | 'valor' | 'gastos';
 
@@ -31,7 +33,7 @@ const ESTADOS: EstadoComision[] = ['PENDIENTE', 'ACUMULANDO', 'PARCIAL', 'PAGADA
 @Component({
   selector: 'app-finanzas',
   standalone: true,
-  imports: [FormsModule, RouterLink, FinanzasIngresosComponent, FinanzasValorComponent, GastosListComponent],
+  imports: [WeLoaderComponent, SkeletonKpisComponent, FormsModule, RouterLink, FinanzasIngresosComponent, FinanzasValorComponent, GastosListComponent],
   templateUrl: './finanzas.component.html',
 })
 export class FinanzasComponent {

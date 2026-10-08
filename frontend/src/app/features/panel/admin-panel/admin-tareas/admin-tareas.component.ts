@@ -8,6 +8,7 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { ConfirmService } from '../../../../core/services/confirm.service';
 import { Tarea } from '../../../../core/models/tarea.model';
 import { UsuarioResumen } from '../../../../core/models/lead.model';
+import { WeLoaderComponent } from '../../../../shared/we-loader/we-loader.component';
 
 /**
  * Vista de administrador: TODAS las tareas del equipo (de cualquier líder de área o del propio
@@ -18,7 +19,7 @@ import { UsuarioResumen } from '../../../../core/models/lead.model';
 @Component({
   selector: 'app-admin-tareas',
   standalone: true,
-  imports: [DatePipe, LucideTrash2],
+  imports: [WeLoaderComponent, DatePipe, LucideTrash2],
   templateUrl: './admin-tareas.component.html',
 })
 export class AdminTareasComponent {

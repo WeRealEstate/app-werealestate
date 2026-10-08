@@ -24,6 +24,7 @@ import { DetectorDeRueda } from '../../../core/utils/rueda';
 import { ToastService } from '../../../core/services/toast.service';
 import { LoteCambioEstadoModalComponent } from '../../../shared/lote-cambio-estado-modal/lote-cambio-estado-modal.component';
 import { LoteInfoModalComponent } from '../../../shared/lote-info-modal/lote-info-modal.component';
+import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 
 /** Qué tan cerca (en % del ancho/alto de la imagen) hay que hacer clic del primer vértice para
  * cerrar el polígono que se está dibujando. */
@@ -75,7 +76,7 @@ const NOMBRE_DESARROLLO_A_PROYECTO: Record<string, 'samai' | 'nanuu'> = {
 @Component({
   selector: 'app-plano',
   standalone: true,
-  imports: [FormsModule, DecimalPipe, DatePipe, LoteCambioEstadoModalComponent, LoteInfoModalComponent],
+  imports: [WeLoaderComponent, FormsModule, DecimalPipe, DatePipe, LoteCambioEstadoModalComponent, LoteInfoModalComponent],
   templateUrl: './plano.component.html',
 })
 export class PlanoComponent {

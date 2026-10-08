@@ -10,7 +10,7 @@
   </p>
 
   @if (isCargandoLead()) {
-    <p class="mt-8 text-sm text-ink-muted">Cargando…</p>
+    <app-we-loader texto="Cargando…" />
   } @else {
   <form class="mt-8 space-y-5" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
     <div>

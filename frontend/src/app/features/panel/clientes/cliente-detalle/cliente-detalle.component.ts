@@ -5,10 +5,11 @@ import { UBICACION_DOCUMENTO_LABELS } from '../../../../core/models/asesor-exter
 import { Cliente, ESTADO_CIVIL_LABELS, FUENTE_CLIENTE_LABELS } from '../../../../core/models/cliente.model';
 import { ClientesService } from '../../../../core/services/clientes.service';
 import { ClienteFormModalComponent } from '../../../../shared/cliente-form-modal/cliente-form-modal.component';
+import { WeLoaderComponent } from '../../../../shared/we-loader/we-loader.component';
 
 @Component({
   selector: 'app-cliente-detalle',
-  imports: [RouterLink, ClienteFormModalComponent, LucideExternalLink, LucidePencil],
+  imports: [WeLoaderComponent, RouterLink, ClienteFormModalComponent, LucideExternalLink, LucidePencil],
   templateUrl: './cliente-detalle.component.html',
 })
 export class ClienteDetalleComponent {

@@ -16,13 +16,14 @@ import { PagoVenta, Venta } from '../../../../core/models/venta.model';
 import { UsuarioResumen } from '../../../../core/models/lead.model';
 import { AsesorExterno } from '../../../../core/models/asesor-externo.model';
 import { asesorSeleccionDe, parseAsesorSeleccion } from '../venta-form/venta-form.component';
+import { WeLoaderComponent } from '../../../../shared/we-loader/we-loader.component';
 
 const SEGUNDOS_ESPERA_ELIMINAR = 10;
 
 @Component({
   selector: 'app-venta-detalle',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, ClienteSelectorComponent, LucidePencil, LucideTrash2],
+  imports: [WeLoaderComponent, ReactiveFormsModule, RouterLink, ClienteSelectorComponent, LucidePencil, LucideTrash2],
   templateUrl: './venta-detalle.component.html',
 })
 export class VentaDetalleComponent implements OnInit, OnDestroy {

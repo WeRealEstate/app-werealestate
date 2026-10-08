@@ -8,6 +8,7 @@ import { Promocion, ProyectoPromocion, TipoPrecioPromocion } from '../../../core
 import { ToastService } from '../../../core/services/toast.service';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { PROJECTS_CONFIG } from '../../../core/data/proyectos-cotizador.config';
+import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 import {
   HORAS_OPCIONES,
   HORA_POR_DEFECTO,
@@ -21,7 +22,7 @@ const PLAZO_PREVIEW_OPCIONES = [12, 24, 36, 48, 60] as const;
 @Component({
   selector: 'app-promociones',
   standalone: true,
-  imports: [RouterLink, DatePipe, LucidePencil, LucideTrash2],
+  imports: [WeLoaderComponent, RouterLink, DatePipe, LucidePencil, LucideTrash2],
   templateUrl: './promociones.component.html',
 })
 export class PromocionesComponent {

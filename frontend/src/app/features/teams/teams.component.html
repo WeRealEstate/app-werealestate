@@ -24,7 +24,7 @@
   }
 
   @if (isLoading()) {
-    <p class="mt-8 text-sm text-ink-muted">Cargando equipos…</p>
+    <app-we-loader texto="Cargando equipos…" />
   } @else {
     <div cdkDropListGroup>
       <!-- EQUIPOS: mapa mental, un árbol por líder -->
