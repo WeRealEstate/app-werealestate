@@ -14,6 +14,11 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '7.3.10', fecha: '2026-10-09', cambios: [
+    "Comunidades We ahora es un lienzo tipo draw.io: zoom con la rueda o los botones, mover el lienzo arrastrando el fondo, mover cada tarjeta a donde quieras (la posicion se recuerda en tu navegador), ajustar a pantalla, reordenar y pantalla completa.",
+    "Las lineas entre lider, linea 1 y linea 2 ya no se cortan: se dibujan de tarjeta a tarjeta y siguen a la tarjeta mientras la mueves.",
+    "Soltar una tarjeta sobre un lider o sobre alguien de linea 1 la reasigna; soltarla en Independientes la saca del equipo. Cada equipo se puede ocultar o mostrar.",
+  ] },
   { version: '7.3.9', fecha: '2026-10-09', cambios: [
     "Copropiedad en ventas: una venta puede tener hasta 5 clientes (el principal y 4 copropietarios), asesores internos se pueden ver en comunidades WE asi como cotizador publico queda actualizado el plano ya se puede ver desde ahí",
   ] },
