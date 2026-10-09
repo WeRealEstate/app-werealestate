@@ -158,6 +158,11 @@ export const routes: Routes = [
         children: [],
       },
       {
+        path: 'versiones',
+        loadComponent: () =>
+          import('./features/panel/versiones/versiones.component').then((m) => m.VersionesComponent),
+      },
+      {
         path: 'asesor',
         canActivate: [roleGuard(['ASESOR'])],
         loadComponent: () =>

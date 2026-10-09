@@ -24,7 +24,6 @@ import { NotificationBellComponent } from '../../../shared/notification-bell/not
 import { ThemeToggleComponent } from '../../../shared/theme-toggle/theme-toggle.component';
 import { ToastContainerComponent } from '../../../shared/toast-container/toast-container.component';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
-
 interface NavItem {
   label: string;
   route: string;
@@ -136,8 +135,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
     RouterLinkActive,
     ThemeToggleComponent,
     ToastContainerComponent,
-    ConfirmDialogComponent,
-    NotificationBellComponent,
+    ConfirmDialogComponent,    NotificationBellComponent,
     LucideHouse,
     LucideUsers,
     LucideCalendar,
@@ -185,7 +183,7 @@ export class PanelLayoutComponent {
 
   readonly sidebarOpen = signal(false);
   /** Versión de la app (package.json) y fecha en que se compiló. */
-  readonly versionApp = `v${version} · ${FECHA_COMPILACION.split('-').reverse().join('/')}`;
+  readonly versionApp =`v${version} · ${FECHA_COMPILACION.split('-').reverse().join('/')}`;
   /** Pantalla ancha (sidebar fijo): ahí la campana va en el sidebar; en el teléfono, en la barra superior. */
   readonly esEscritorio = signal(typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches);
 
