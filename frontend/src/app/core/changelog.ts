@@ -15,18 +15,18 @@ export interface EntradaVersion {
 
 export const CHANGELOG: EntradaVersion[] = [
   { version: '7.3.9', fecha: '2026-10-09', cambios: [
-    "Copropiedad en ventas: una venta puede tener hasta 5 clientes (el principal y 4 copropietarios).",
+    "Copropiedad en ventas: una venta puede tener hasta 5 clientes (el principal y 4 copropietarios), asesores internos se pueden ver en comunidades WE asi como cotizador publico queda actualizado el plano ya se puede ver desde ahí",
   ] },
-  { version: '7.3.7', fecha: '2026-10-09', cambios: [
+  { version: '7.3.7', fecha: '2026-10-08', cambios: [
     "Plano publico: los asesores internos tambien pueden cotizar y apartar con su PIN.",
   ] },
-  { version: '7.3.6', fecha: '2026-10-09', cambios: [
+  { version: '7.3.6', fecha: '2026-10-08', cambios: [
     "Lotes: precio por m2 propio de cada lote (hectareas y precio por manzana).",
   ] },
-  { version: '7.3.5', fecha: '2026-10-09', cambios: [
-    "App de escritorio: la barra de titulo cambia de color con el tema.",
+  { version: '7.3.5', fecha: '2026-10-08', cambios: [
+    "App de escritorio: La app de escritorio fue creada con Éxito y adaptada a todos los dispositivos",
   ] },
   { version: '7.3.8', fecha: '2026-10-09', cambios: [
-    "Se agrega la opcion de ver cambios en la WeApp para cada version.",
+    "Se agrega la opcion de ver cambios en la WeApp para cada version",
   ] },
 ];
