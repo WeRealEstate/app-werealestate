@@ -9,6 +9,7 @@ public record PagoVentaDto(
         Long id,
         LocalDate fecha,
         BigDecimal monto,
+        String folio,
         String notas,
         UsuarioResumenDto registradoPor,
         LocalDateTime fechaCreacion) {
@@ -18,6 +19,7 @@ public record PagoVentaDto(
                 pago.getId(),
                 pago.getFecha(),
                 pago.getMonto(),
+                pago.getFolio(),
                 pago.getNotas(),
                 UsuarioResumenDto.from(pago.getRegistradoPor()),
                 pago.getFechaCreacion());

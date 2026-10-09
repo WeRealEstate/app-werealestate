@@ -372,8 +372,13 @@ public class VentaService {
                     "El abono ($" + request.monto() + ") excede el saldo pendiente ($" + saldoPendiente + ")");
         }
 
+        String folio = request.folio().trim();
+        if (pagoVentaRepository.existsByFolioIgnoreCase(folio)) {
+            throw new ConflictException("Ya existe un abono con el folio " + folio);
+        }
+
         String notas = request.notas() == null || request.notas().isBlank() ? null : request.notas().trim();
-        PagoVenta pago = new PagoVenta(venta, request.fecha(), request.monto(), notas, actual);
+        PagoVenta pago = new PagoVenta(venta, request.fecha(), request.monto(), folio, notas, actual);
         PagoVentaDto guardado = PagoVentaDto.from(pagoVentaRepository.save(pago));
         comisionService.sincronizar(venta);
         return guardado;

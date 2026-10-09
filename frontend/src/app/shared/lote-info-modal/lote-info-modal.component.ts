@@ -48,6 +48,7 @@ export class LoteInfoModalComponent implements OnInit {
   readonly pagosInfoLote = signal<PagoVenta[]>([]);
   readonly fechaPagoInfoLote = signal(new Date().toISOString().slice(0, 10));
   readonly montoPagoInfoLote = signal<number | null>(null);
+  readonly folioPagoInfoLote = signal('');
   readonly notasPagoInfoLote = signal('');
   readonly guardandoPagoInfoLote = signal(false);
   readonly errorPagoInfoLote = signal<string | null>(null);
@@ -98,6 +99,7 @@ export class LoteInfoModalComponent implements OnInit {
   private reiniciarFormularioAbonoInfoLote(): void {
     this.fechaPagoInfoLote.set(new Date().toISOString().slice(0, 10));
     this.montoPagoInfoLote.set(null);
+    this.folioPagoInfoLote.set('');
     this.notasPagoInfoLote.set('');
     this.errorPagoInfoLote.set(null);
   }
@@ -113,6 +115,10 @@ export class LoteInfoModalComponent implements OnInit {
       this.errorPagoInfoLote.set('Ingresa una fecha y un monto válido.');
       return;
     }
+    if (!this.folioPagoInfoLote().trim()) {
+      this.errorPagoInfoLote.set('Ingresa el folio del abono.');
+      return;
+    }
 
     this.guardandoPagoInfoLote.set(true);
     this.errorPagoInfoLote.set(null);
@@ -120,6 +126,7 @@ export class LoteInfoModalComponent implements OnInit {
       await this.ventasService.registrarPago(venta.id, {
         fecha: this.fechaPagoInfoLote(),
         monto,
+        folio: this.folioPagoInfoLote().trim(),
         notas: this.notasPagoInfoLote().trim() || null,
       });
       const [ventaActualizada, pagos] = await Promise.all([

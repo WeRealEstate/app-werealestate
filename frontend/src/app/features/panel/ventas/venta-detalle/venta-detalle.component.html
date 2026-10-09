@@ -315,7 +315,7 @@
     <!-- REGISTRAR ABONO -->
     <div class="mt-6 rounded-2xl border border-border bg-surface p-5">
       <h2 class="font-heading text-base font-semibold text-ink">Registrar abono</h2>
-      <form [formGroup]="pagoForm" (ngSubmit)="registrarPago()" class="mt-4 grid gap-4 sm:grid-cols-3" novalidate>
+      <form [formGroup]="pagoForm" (ngSubmit)="registrarPago()" class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" novalidate>
         <div>
           <label for="fecha" class="block text-sm font-medium text-ink mb-1.5">Fecha *</label>
           <input
@@ -343,6 +343,21 @@
           }
         </div>
         <div>
+          <label for="folio" class="block text-sm font-medium text-ink mb-1.5">Folio *</label>
+          <input
+            id="folio"
+            type="text"
+            maxlength="50"
+            formControlName="folio"
+            placeholder="Ej. A-0123"
+            class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          />
+          @if (pagoForm.controls.folio.invalid && pagoForm.controls.folio.touched) {
+            <p class="mt-1.5 text-xs text-red-600">Ingresa el folio del abono.</p>
+          }
+        </div>
+        <div>
           <label for="notasPago" class="block text-sm font-medium text-ink mb-1.5">Notas</label>
           <input
             id="notasPago"
@@ -355,12 +370,12 @@
         </div>
 
         @if (pagoError()) {
-          <div class="sm:col-span-3 rounded-lg bg-red-50 border border-red-200 px-3.5 py-2.5 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
+          <div class="sm:col-span-2 lg:col-span-4 rounded-lg bg-red-50 border border-red-200 px-3.5 py-2.5 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
             {{ pagoError() }}
           </div>
         }
 
-        <div class="sm:col-span-3">
+        <div class="sm:col-span-2 lg:col-span-4">
           <button
             type="submit"
             [disabled]="isSavingPago()"
@@ -388,6 +403,7 @@
             <thead class="bg-surface-2">
               <tr class="text-left text-xs font-medium uppercase tracking-wide text-ink-muted">
                 <th class="px-4 py-3">Fecha</th>
+                <th class="px-4 py-3">Folio</th>
                 <th class="px-4 py-3">Monto</th>
                 <th class="px-4 py-3">Notas</th>
                 <th class="px-4 py-3">Registrado por</th>
@@ -397,6 +413,7 @@
               @for (p of pagos(); track p.id) {
                 <tr>
                   <td class="px-4 py-3 text-ink-muted">{{ p.fecha }}</td>
+                  <td class="px-4 py-3 text-ink-muted">{{ p.folio || '—' }}</td>
                   <td class="px-4 py-3 font-medium text-ink">${{ money(p.monto) }}</td>
                   <td class="px-4 py-3 text-ink-muted">{{ p.notas || '—' }}</td>
                   <td class="px-4 py-3 text-ink-muted">{{ p.registradoPor.nombre }}</td>

@@ -115,6 +115,8 @@ export interface PagoVenta {
   id: number;
   fecha: string;
   monto: number;
+  /** null en los abonos anteriores a que se pidiera el folio. */
+  folio: string | null;
   notas: string | null;
   registradoPor: UsuarioResumen;
   fechaCreacion: string;
@@ -123,5 +125,6 @@ export interface PagoVenta {
 export interface PagoVentaCreateRequest {
   fecha: string;
   monto: number;
+  folio: string;
   notas: string | null;
 }

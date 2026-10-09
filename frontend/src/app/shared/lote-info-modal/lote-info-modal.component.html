@@ -110,6 +110,18 @@
                 />
               </div>
             </div>
+            <label for="folio-abono-info" class="block text-xs text-ink-muted mb-1 mt-2.5">Folio *</label>
+            <input
+              id="folio-abono-info"
+              type="text"
+              maxlength="50"
+              [ngModel]="folioPagoInfoLote()"
+              [ngModelOptions]="{ standalone: true }"
+              (ngModelChange)="folioPagoInfoLote.set($event)"
+              placeholder="Ej. A-0123"
+              class="w-full rounded-lg border border-border px-3 py-2 text-sm text-ink placeholder:text-ink-muted
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            />
             <label for="notas-abono-info" class="block text-xs text-ink-muted mb-1 mt-2.5">Notas</label>
             <input
               id="notas-abono-info"
@@ -144,7 +156,7 @@
               @for (p of pagosInfoLote(); track p.id) {
                 <div class="flex items-center justify-between gap-2 rounded-lg bg-surface-2 px-3.5 py-2 text-sm">
                   <span class="text-ink-muted">{{ p.fecha }}</span>
-                  <span class="text-ink-muted truncate">{{ p.notas }}</span>
+                  <span class="text-ink-muted truncate">{{ p.folio ? p.folio + ' · ' : '' }}{{ p.notas }}</span>
                   <span class="font-medium text-ink">${{ money(p.monto) }}</span>
                 </div>
               }
