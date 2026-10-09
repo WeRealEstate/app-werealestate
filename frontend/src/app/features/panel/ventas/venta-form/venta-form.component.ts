@@ -129,6 +129,9 @@ export class VentaFormComponent {
    * pago mensual que reducir: ahí el depósito siempre se registra como abono). null mientras no se
    * ha elegido — se pide explícito, no hay default silencioso para una decisión financiera. */
   readonly aplicarDepositoA = signal<AplicarDepositoA | null>(null);
+  /** Folio del recibo del depósito de apartado; se pide cuando ese dinero se registra como abono. */
+  readonly folioDeposito = signal('');
+  readonly registraDepositoComoAbono = computed(() => this.depositoTotal() > 0 && this.aplicarDepositoA() !== 'mensualidad');
   readonly requiereElegirDeposito = computed(() => this.depositoTotal() > 0 && this.mostrarPlazo());
 
   readonly tipoPagoOpciones = TIPO_PAGO_OPCIONES;
@@ -413,6 +416,7 @@ export class VentaFormComponent {
     this.clienteFaltante.set(this.clienteElegido() === null);
     const faltaMontoEnganche = this.mostrarEnganche() && !this.montoEnganche();
     const faltaElegirDeposito = this.requiereElegirDeposito() && !this.aplicarDepositoA();
+    const faltaFolioDeposito = !faltaElegirDeposito && this.registraDepositoComoAbono() && !this.folioDeposito().trim();
     const errorAportaciones = this.errorAportaciones();
     if (
       this.clienteElegido() === null ||
@@ -421,6 +425,7 @@ export class VentaFormComponent {
       this.lotesAgregados().length === 0 ||
       faltaMontoEnganche ||
       faltaElegirDeposito ||
+      faltaFolioDeposito ||
       errorAportaciones !== null ||
       this.isLoading()
     ) {
@@ -431,6 +436,8 @@ export class VentaFormComponent {
         this.errorMessage.set(`Ingresa el monto de ${this.engancheLabelActual()!.toLowerCase()}.`);
       } else if (faltaElegirDeposito) {
         this.errorMessage.set('Indica si el dinero ya apartado baja la mensualidad o el saldo.');
+      } else if (faltaFolioDeposito) {
+        this.errorMessage.set('Ingresa el folio del dinero recibido al apartar el lote.');
       } else if (errorAportaciones !== null) {
         this.errorMessage.set(errorAportaciones);
       }
@@ -441,7 +448,7 @@ export class VentaFormComponent {
     this.errorMessage.set(null);
     const v = this.form.getRawValue();
     // Contado no tiene mensualidad que reducir: si había depósito, siempre se registra como abono.
-    const registrarDepositoComoAbono = this.depositoTotal() > 0 && this.aplicarDepositoA() !== 'mensualidad';
+    const registrarDepositoComoAbono = this.registraDepositoComoAbono();
 
     try {
       const venta = await this.ventasService.crear({
@@ -469,6 +476,7 @@ export class VentaFormComponent {
           await this.ventasService.registrarPago(venta.id, {
             fecha: v.fechaVenta,
             monto: this.depositoTotal(),
+            folio: this.folioDeposito().trim(),
             notas: 'Dinero recibido al apartar el lote',
           });
         } catch {

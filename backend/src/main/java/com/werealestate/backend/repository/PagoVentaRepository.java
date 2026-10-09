@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PagoVentaRepository extends JpaRepository<PagoVenta, Long> {
 
+    boolean existsByFolioIgnoreCase(String folio);
+
     List<PagoVenta> findByVentaIdOrderByFechaDesc(Long ventaId);
 
     List<PagoVenta> findByVentaIdOrderByFechaAscIdAsc(Long ventaId);

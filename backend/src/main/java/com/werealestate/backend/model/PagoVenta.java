@@ -36,6 +36,10 @@ public class PagoVenta {
     @Column(nullable = false, precision = 14, scale = 2)
     private BigDecimal monto;
 
+    /** Capturado a mano; obligatorio y único en los abonos nuevos (los anteriores no tienen). */
+    @Column(length = 50)
+    private String folio;
+
     @Column(length = 500)
     private String notas;
 
@@ -50,10 +54,11 @@ public class PagoVenta {
         // JPA
     }
 
-    public PagoVenta(Venta venta, LocalDate fecha, BigDecimal monto, String notas, Usuario registradoPor) {
+    public PagoVenta(Venta venta, LocalDate fecha, BigDecimal monto, String folio, String notas, Usuario registradoPor) {
         this.venta = venta;
         this.fecha = fecha;
         this.monto = monto;
+        this.folio = folio;
         this.notas = notas;
         this.registradoPor = registradoPor;
     }
@@ -72,6 +77,10 @@ public class PagoVenta {
 
     public BigDecimal getMonto() {
         return monto;
+    }
+
+    public String getFolio() {
+        return folio;
     }
 
     public String getNotas() {

@@ -56,6 +56,7 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
   readonly pagoForm = this.fb.group({
     fecha: this.fb.control(new Date().toISOString().slice(0, 10), { nonNullable: true, validators: [Validators.required] }),
     monto: this.fb.control<number | null>(null, { validators: [Validators.required, Validators.min(1)] }),
+    folio: this.fb.control('', { nonNullable: true, validators: [Validators.required, Validators.pattern(/\S/), Validators.maxLength(50)] }),
     notas: this.fb.control(''),
   });
 
@@ -187,12 +188,13 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
       await this.ventasService.registrarPago(this.ventaId!, {
         fecha: v.fecha,
         monto: v.monto!,
+        folio: v.folio.trim(),
         notas: v.notas?.trim() || null,
       });
       // El saldo pendiente se recalcula en el servidor; volvemos a cargar todo para que quede
       // consistente en vez de intentar restar a mano aquí.
       await this.cargar();
-      this.pagoForm.reset({ fecha: new Date().toISOString().slice(0, 10), monto: null, notas: '' });
+      this.pagoForm.reset({ fecha: new Date().toISOString().slice(0, 10), monto: null, folio: '', notas: '' });
       this.toast.success('Abono registrado.');
     } catch (error) {
       const mensaje =
