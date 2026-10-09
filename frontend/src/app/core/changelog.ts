@@ -15,7 +15,7 @@ export interface EntradaVersion {
 
 export const CHANGELOG: EntradaVersion[] = [
   { version: '7.3.11', fecha: '2026-10-09', cambios: [
-    "Comunidades We: la pantalla completa ahora cubre todo (tambien el menu lateral) para ver los equipos con todo el espacio; se sale con el boton Salir o con Esc.",
+    "Pantalla completa totalmente disponible, bug arreglado",
   ] },
   { version: '7.3.10', fecha: '2026-10-09', cambios: [
     "Comunidades We ahora es un lienzo, zoom disponible, mover el lienzo arrastrando, mover cada tarjeta a donde quieras, reordenar arrastrando al equipo y pantalla completa ya disponible.",
