@@ -83,7 +83,7 @@
     </nav>
 
     @if (user(); as u) {
-      <div class="border-t border-[var(--sb-border)] px-4 py-4">
+      <div class="border-t border-[var(--sb-border)] px-4 py-3.5">
         <div class="flex items-center gap-3 px-1.5">
           <div
             class="h-9 w-9 shrink-0 rounded-full bg-[var(--sb-chip)] border border-[var(--sb-chip-border)] flex items-center justify-center
@@ -107,7 +107,9 @@
         >
           Cerrar sesión
         </button>
-        <p class="mt-2 text-center text-[11px] text-[var(--sb-muted)]">{{ versionApp }}</p>
+        <div class="flex mb-0 items-center justify-center gap-1.5 mt-2">
+          <a href="#" class="text-center text-[11px] text-[var(--sb-muted)]">{{ versionApp }}</a>
+        </div>
       </div>
     }
   </aside>
