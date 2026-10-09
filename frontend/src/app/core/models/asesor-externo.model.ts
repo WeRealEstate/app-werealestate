@@ -47,6 +47,8 @@ export interface AsesorExterno {
   accesoNanuu: boolean;
   /** PIN de 4 letras/números del botón "Asesor" de los planos públicos; null = sin PIN. */
   pin: string | null;
+  /** Distinto de null = ficha de comunidad de un usuario interno con rol Asesor: solo se ve en Comunidades We. */
+  usuarioId: number | null;
 }
 
 export interface AsesorExternoCreateRequest {

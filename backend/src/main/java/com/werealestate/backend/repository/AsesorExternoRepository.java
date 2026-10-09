@@ -8,6 +8,11 @@ public interface AsesorExternoRepository extends JpaRepository<AsesorExterno, Lo
 
     List<AsesorExterno> findByActivoTrueOrderByNombreAsc();
 
+    /** Solo asesores externos de verdad (sin las fichas de comunidad de usuarios internos). */
+    List<AsesorExterno> findByActivoTrueAndUsuarioIdIsNullOrderByNombreAsc();
+
+    java.util.Optional<AsesorExterno> findByUsuarioId(Long usuarioId);
+
     java.util.Optional<AsesorExterno> findByPin(String pin);
 
     List<AsesorExterno> findAllByOrderByNombreAsc();

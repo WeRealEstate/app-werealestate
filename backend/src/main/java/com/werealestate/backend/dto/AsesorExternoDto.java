@@ -24,7 +24,9 @@ public record AsesorExternoDto(
         LocalDate contratoFechaVencimiento,
         boolean accesoSamai,
         boolean accesoNanuu,
-        String pin) {
+        String pin,
+        // Distinto de null = ficha de comunidad de un usuario interno (solo se ve en Comunidades We).
+        Long usuarioId) {
 
     public static AsesorExternoDto from(AsesorExterno asesor) {
         return new AsesorExternoDto(
@@ -43,6 +45,7 @@ public record AsesorExternoDto(
                 asesor.getContratoFechaVencimiento(),
                 asesor.isAccesoSamai(),
                 asesor.isAccesoNanuu(),
-                asesor.getPin());
+                asesor.getPin(),
+                asesor.getUsuarioId());
     }
 }

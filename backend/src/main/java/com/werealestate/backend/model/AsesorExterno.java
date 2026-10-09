@@ -45,6 +45,12 @@ public class AsesorExterno {
     @Column(nullable = false)
     private boolean activo = true;
 
+    /** Solo para la ficha de comunidad de un usuario interno con rol ASESOR (ver
+     * ComunidadInternosService): lo enlaza a su usuario para que aparezca en el árbol de Comunidades
+     * We. null = asesor externo de verdad. */
+    @Column(name = "usuario_id", unique = true)
+    private Long usuarioId;
+
     // Teams: INDEPENDIENTE (default, trabaja solo) / LIDER (encabeza un equipo) / LINEA (reporta a
     // liderDirecto). Ver TipoAsesorExterno y AsesorExternoService.resolverJerarquia.
     @Enumerated(EnumType.STRING)
@@ -161,6 +167,14 @@ public class AsesorExterno {
 
     public boolean isActivo() {
         return activo;
+    }
+
+    public Long getUsuarioId() {
+        return usuarioId;
+    }
+
+    public void setUsuarioId(Long usuarioId) {
+        this.usuarioId = usuarioId;
     }
 
     public void setActivo(boolean activo) {

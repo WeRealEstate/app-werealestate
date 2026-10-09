@@ -54,6 +54,7 @@ public class UsuarioService {
     private final CurrentUserProvider currentUserProvider;
     private final PasswordEncoder passwordEncoder;
     private final GastoRecurrenteService gastoRecurrenteService;
+    private final ComunidadInternosService comunidadInternosService;
 
     public UsuarioService(
             UsuarioRepository usuarioRepository,
@@ -68,7 +69,8 @@ public class UsuarioService {
             AsesorExternoRepository asesorExternoRepository,
             CurrentUserProvider currentUserProvider,
             PasswordEncoder passwordEncoder,
-            GastoRecurrenteService gastoRecurrenteService) {
+            GastoRecurrenteService gastoRecurrenteService,
+            ComunidadInternosService comunidadInternosService) {
         this.usuarioRepository = usuarioRepository;
         this.leadRepository = leadRepository;
         this.tareaRepository = tareaRepository;
@@ -82,6 +84,7 @@ public class UsuarioService {
         this.currentUserProvider = currentUserProvider;
         this.passwordEncoder = passwordEncoder;
         this.gastoRecurrenteService = gastoRecurrenteService;
+        this.comunidadInternosService = comunidadInternosService;
     }
 
     public List<UsuarioDto> listar() {
@@ -135,7 +138,9 @@ public class UsuarioService {
         Usuario usuario = new Usuario(
                 request.nombre(), request.email(), passwordEncoder.encode(request.password()), request.rol(), null);
         usuario.setModulos(modulosAGuardar(request.rol(), request.modulos()));
-        return UsuarioDto.conNomina(usuarioRepository.save(usuario));
+        usuario = usuarioRepository.save(usuario);
+        comunidadInternosService.sincronizar(usuario);
+        return UsuarioDto.conNomina(usuario);
     }
 
     public UsuarioDto actualizar(Long id, UsuarioUpdateRequest request) {
@@ -156,6 +161,7 @@ public class UsuarioService {
         usuario = usuarioRepository.save(usuario);
         // Un usuario inactivo deja de generar nómina; uno reactivado la retoma.
         gastoRecurrenteService.sincronizarNomina(usuario);
+        comunidadInternosService.sincronizar(usuario);
         return UsuarioDto.conNomina(usuario);
     }
 
@@ -231,6 +237,7 @@ public class UsuarioService {
                     + "Desactívalo para quitarle el acceso sin perder ese historial.");
         }
 
+        comunidadInternosService.eliminarDe(usuario);
         gastoRecurrenteService.eliminarNomina(id);
         eventoCalendarioRepository.deleteByUsuarioId(id);
         etiquetaRepository.deleteByAsesorId(id);

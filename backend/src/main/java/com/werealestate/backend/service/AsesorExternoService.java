@@ -58,7 +58,7 @@ public class AsesorExternoService {
 
     public List<AsesorExternoDto> listarActivos() {
         exigirAdminOLider();
-        return asesorExternoRepository.findByActivoTrueOrderByNombreAsc().stream().map(AsesorExternoDto::from).toList();
+        return asesorExternoRepository.findByActivoTrueAndUsuarioIdIsNullOrderByNombreAsc().stream().map(AsesorExternoDto::from).toList();
     }
 
     public AsesorExternoDto crear(AsesorExternoCreateRequest request) {

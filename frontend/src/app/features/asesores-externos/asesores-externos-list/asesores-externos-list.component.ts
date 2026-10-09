@@ -138,7 +138,7 @@ export class AsesoresExternosListComponent {
     this.isLoading.set(true);
     this.errorMessage.set(null);
     try {
-      this.asesores.set(ordenarAsesoresPorNombre(await this.asesoresExternosService.listar()));
+      this.asesores.set(ordenarAsesoresPorNombre((await this.asesoresExternosService.listar()).filter((a) => a.usuarioId === null)));
     } catch {
       this.errorMessage.set('No se pudieron cargar los asesores externos. Intenta de nuevo.');
     } finally {
