@@ -16,6 +16,7 @@ import {
   MINUTO_POR_DEFECTO,
   combinarFechaHora,
 } from '../../core/utils/fecha-hora';
+import { MonedaInputDirective } from '../moneda-input/moneda-input.directive';
 
 /** Al mover un lote a cualquiera de estos estados el nombre del cliente es obligatorio: son los
  * estados donde alguien real está comprometido con el lote, y sin esto ese dato solo quedaba
@@ -36,7 +37,7 @@ const ESTADOS_REQUIEREN_CLIENTE: EstadoLote[] = [
 @Component({
   selector: 'app-lote-cambio-estado-modal',
   standalone: true,
-  imports: [FormsModule],
+  imports: [MonedaInputDirective, FormsModule],
   templateUrl: './lote-cambio-estado-modal.component.html',
 })
 export class LoteCambioEstadoModalComponent {

@@ -98,6 +98,9 @@
           <div>
             <p class="text-xs text-ink-muted">{{ v.engancheLabel }}</p>
             <p class="mt-1 text-sm font-medium text-ink">${{ money(v.enganche) }}</p>
+            @if (pctEnganche(v); as pct) {
+              <p class="text-xs text-ink-muted">{{ pct }}% del precio</p>
+            }
           </div>
         }
         @if (v.mensualidad) {
@@ -110,6 +113,9 @@
           <div>
             <p class="text-xs text-ink-muted">Plazo</p>
             <p class="mt-1 text-sm font-medium text-ink">{{ v.plazoMeses }} meses</p>
+            @if (v.mensualidad && terminaEn(v); as fin) {
+              <p class="text-xs text-ink-muted">Última mensualidad: {{ fin }}</p>
+            }
           </div>
         }
         @if (v.mensualidad) {
@@ -193,7 +199,7 @@
           <div>
             <label for="ed-enganche" class="block text-sm font-medium text-ink mb-1.5">Monto de enganche</label>
             <input
-              id="ed-enganche" type="number" step="0.01" min="1" formControlName="enganche" placeholder="Opcional"
+              id="ed-enganche" appMoneda min="1" formControlName="enganche" placeholder="Opcional"
               class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface placeholder:text-ink-muted
                      focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
             />
@@ -201,7 +207,7 @@
           <div>
             <label for="ed-mensualidad" class="block text-sm font-medium text-ink mb-1.5">Mensualidad</label>
             <input
-              id="ed-mensualidad" type="number" step="0.01" min="1" formControlName="mensualidad" placeholder="Opcional"
+              id="ed-mensualidad" appMoneda min="1" formControlName="mensualidad" placeholder="Opcional"
               class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface placeholder:text-ink-muted
                      focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
             />
@@ -209,7 +215,7 @@
           <div>
             <label for="ed-plazo" class="block text-sm font-medium text-ink mb-1.5">Plazo (meses)</label>
             <input
-              id="ed-plazo" type="number" step="1" min="1" formControlName="plazoMeses" placeholder="Opcional"
+              id="ed-plazo" appMoneda decimales="0" min="1" formControlName="plazoMeses" placeholder="Opcional"
               class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface placeholder:text-ink-muted
                      focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
             />
@@ -217,7 +223,7 @@
           <div>
             <label for="ed-diaPago" class="block text-sm font-medium text-ink mb-1.5">Día de pago *</label>
             <input
-              id="ed-diaPago" type="number" step="1" min="1" max="31" formControlName="diaPago"
+              id="ed-diaPago" appMoneda decimales="0" min="1" max="31" formControlName="diaPago"
               class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
                      focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
             />
@@ -330,8 +336,7 @@
           <label for="monto" class="block text-sm font-medium text-ink mb-1.5">Monto *</label>
           <input
             id="monto"
-            type="number"
-            step="0.01"
+            appMoneda
             min="1"
             formControlName="monto"
             placeholder="Ej. 5000"

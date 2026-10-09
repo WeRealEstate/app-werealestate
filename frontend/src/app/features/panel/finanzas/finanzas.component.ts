@@ -23,6 +23,7 @@ import { FinanzasIngresosComponent } from './finanzas-ingresos.component';
 import { FinanzasValorComponent } from './finanzas-valor.component';
 import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 import { SkeletonKpisComponent } from '../../../shared/skeleton-kpis/skeleton-kpis.component';
+import { MonedaInputDirective } from '../../../shared/moneda-input/moneda-input.directive';
 
 type Pestana = 'comisiones' | 'ingresos' | 'valor' | 'gastos';
 
@@ -33,7 +34,7 @@ const ESTADOS: EstadoComision[] = ['PENDIENTE', 'ACUMULANDO', 'PARCIAL', 'PAGADA
 @Component({
   selector: 'app-finanzas',
   standalone: true,
-  imports: [WeLoaderComponent, SkeletonKpisComponent, FormsModule, RouterLink, FinanzasIngresosComponent, FinanzasValorComponent, GastosListComponent],
+  imports: [MonedaInputDirective, WeLoaderComponent, SkeletonKpisComponent, FormsModule, RouterLink, FinanzasIngresosComponent, FinanzasValorComponent, GastosListComponent],
   templateUrl: './finanzas.component.html',
 })
 export class FinanzasComponent {

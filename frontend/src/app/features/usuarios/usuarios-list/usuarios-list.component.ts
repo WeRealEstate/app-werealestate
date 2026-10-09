@@ -10,13 +10,14 @@ import { UsuariosService } from '../../../core/services/usuarios.service';
 import { ModulosSelectorComponent } from '../../../shared/modulos-selector/modulos-selector.component';
 import { Modulo, ROLE_LABELS, Role, Usuario } from '../../../core/models/user.model';
 import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
+import { MonedaInputDirective } from '../../../shared/moneda-input/moneda-input.directive';
 
 const ROLES: Role[] = ['ASESOR', 'LIDER_AREA', 'EQUIPO_INTERNO', 'ADMIN'];
 
 @Component({
   selector: 'app-usuarios-list',
   standalone: true,
-  imports: [WeLoaderComponent, FormsModule, RouterLink, LucideKey, LucidePencil, LucideTrash2, ModulosSelectorComponent],
+  imports: [MonedaInputDirective, WeLoaderComponent, FormsModule, RouterLink, LucideKey, LucidePencil, LucideTrash2, ModulosSelectorComponent],
   templateUrl: './usuarios-list.component.html',
 })
 export class UsuariosListComponent {

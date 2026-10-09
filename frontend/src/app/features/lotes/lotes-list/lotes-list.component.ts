@@ -21,6 +21,7 @@ import {
   EstadoLote,
   Lote,
 } from '../../../core/models/lote.model';
+import { MonedaInputDirective } from '../../../shared/moneda-input/moneda-input.directive';
 
 const TAMANO_PAGINA = 20;
 
@@ -40,7 +41,7 @@ const ESTADOS_TODOS: EstadoLote[] = [
 @Component({
   selector: 'app-lotes-list',
   standalone: true,
-  imports: [WeLoaderComponent, 
+  imports: [MonedaInputDirective, WeLoaderComponent, 
     FormsModule,
     RouterLink,
     DecimalPipe,
@@ -188,7 +189,8 @@ export class LotesListComponent {
   }
 
   onSuperficieInput(campo: 'min' | 'max', valor: string): void {
-    const numero = valor.trim() === '' ? null : Number(valor);
+    const limpio = valor.replace(/,/g, '').trim();
+    const numero = limpio === '' ? null : Number(limpio);
     if (campo === 'min') this.superficieMin.set(numero);
     else this.superficieMax.set(numero);
     clearTimeout(this.debounceHandle);

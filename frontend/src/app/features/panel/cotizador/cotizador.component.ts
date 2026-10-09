@@ -27,6 +27,7 @@ import { PROJECTS_CONFIG } from '../../../core/data/proyectos-cotizador.config';
 import { FadeInDirective } from '../../../shared/motion/fade-in.directive';
 import { PressDirective } from '../../../shared/motion/press.directive';
 import { ValuePulseDirective } from '../../../shared/motion/value-pulse.directive';
+import { MonedaInputDirective, formatearNumero, limpiarNumero, numeroDeTexto } from '../../../shared/moneda-input/moneda-input.directive';
 
 export type ProjectId = 'samai' | 'nanuu';
 export type PaymentType = 'msi' | 'downpayment' | 'annualities' | 'aportaciones' | 'cash' | 'initial' | 'promocion';
@@ -57,7 +58,7 @@ function compararNatural(a: string, b: string): number {
 @Component({
   selector: 'app-cotizador',
   standalone: true,
-  imports: [
+  imports: [MonedaInputDirective, 
     DatePipe,
     FormsModule,
     RouterLink,
@@ -485,17 +486,11 @@ export class CotizadorComponent implements OnInit {
   onInitialPaymentInput(event: Event): void {
     const input = event.target as HTMLInputElement;
 
-    const rawValue = input.value.replace(/\D/g, '');
+    const limpio = limpiarNumero(input.value, 2);
 
-    if (!rawValue) {
-      this.initialPayment = 0;
-      this.initialPaymentDisplay = '';
-      return;
-    }
-
-    this.initialPayment = Number(rawValue);
-
-    this.initialPaymentDisplay = this.initialPayment.toLocaleString('en-US');
+    this.initialPayment = numeroDeTexto(limpio);
+    this.initialPaymentDisplay = formatearNumero(limpio, 2);
+    input.value = this.initialPaymentDisplay;
   }
 
   get initialPaymentInvalid(): boolean {
@@ -513,17 +508,11 @@ export class CotizadorComponent implements OnInit {
   onDownPaymentAmountInput(event: Event): void {
     const input = event.target as HTMLInputElement;
 
-    const rawValue = input.value.replace(/\D/g, '');
+    const limpio = limpiarNumero(input.value, 2);
 
-    if (!rawValue) {
-      this.downPaymentAmount = 0;
-      this.downPaymentAmountDisplay = '';
-      return;
-    }
-
-    this.downPaymentAmount = Number(rawValue);
-
-    this.downPaymentAmountDisplay = this.downPaymentAmount.toLocaleString('en-US');
+    this.downPaymentAmount = numeroDeTexto(limpio);
+    this.downPaymentAmountDisplay = formatearNumero(limpio, 2);
+    input.value = this.downPaymentAmountDisplay;
   }
 
   get downPaymentAmountInvalid(): boolean {
@@ -1497,17 +1486,11 @@ export class CotizadorComponent implements OnInit {
   onAnnualContributionInput(event: Event): void {
     const input = event.target as HTMLInputElement;
 
-    const rawValue = input.value.replace(/\D/g, '');
+    const limpio = limpiarNumero(input.value, 2);
 
-    if (!rawValue) {
-      this.annualContribution = 0;
-      this.annualContributionDisplay = '';
-      return;
-    }
-
-    this.annualContribution = Number(rawValue);
-
-    this.annualContributionDisplay = this.annualContribution.toLocaleString('en-US');
+    this.annualContribution = numeroDeTexto(limpio);
+    this.annualContributionDisplay = formatearNumero(limpio, 2);
+    input.value = this.annualContributionDisplay;
   }
 
   get annualContributionsTotal(): number {

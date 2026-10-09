@@ -16,6 +16,7 @@ import {
   MINUTO_POR_DEFECTO,
   combinarFechaHora,
 } from '../../../core/utils/fecha-hora';
+import { formatearNumero, limpiarNumero, numeroDeTexto } from '../../../shared/moneda-input/moneda-input.directive';
 
 const PLAZO_PREVIEW_OPCIONES = [12, 24, 36, 48, 60] as const;
 
@@ -114,14 +115,11 @@ export class PromocionesComponent {
   }
 
   onMensualidadInput(event: Event): void {
-    const rawValue = (event.target as HTMLInputElement).value.replace(/\D/g, '');
-    if (!rawValue) {
-      this.mensualidadFija.set(0);
-      this.mensualidadDisplay.set('');
-      return;
-    }
-    this.mensualidadFija.set(Number(rawValue));
-    this.mensualidadDisplay.set(Number(rawValue).toLocaleString('en-US'));
+    const input = event.target as HTMLInputElement;
+    const limpio = limpiarNumero(input.value, 2);
+    this.mensualidadFija.set(numeroDeTexto(limpio));
+    this.mensualidadDisplay.set(formatearNumero(limpio, 2));
+    input.value = this.mensualidadDisplay();
   }
 
   editar(promo: Promocion): void {
@@ -130,7 +128,7 @@ export class PromocionesComponent {
     this.proyecto.set(promo.proyecto);
     this.tipoPrecio.set(promo.tipoPrecio);
     this.mensualidadFija.set(promo.mensualidadFija);
-    this.mensualidadDisplay.set(promo.mensualidadFija.toLocaleString('en-US'));
+    this.mensualidadDisplay.set(formatearNumero(String(promo.mensualidadFija), 2));
     this.descripcion.set(promo.descripcion ?? '');
 
     if (promo.fechaFin) {

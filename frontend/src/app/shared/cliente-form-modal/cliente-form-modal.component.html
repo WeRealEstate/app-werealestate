@@ -42,6 +42,13 @@
             @if (form.controls.fechaNacimiento.invalid && form.controls.fechaNacimiento.touched) {
               <p class="mt-1 text-xs text-red-600 dark:text-red-400">Campo obligatorio.</p>
             }
+            @if (edad() !== null) {
+              @if (edad()! < 18) {
+                <p class="mt-1 text-xs text-red-600 dark:text-red-400" data-testid="edad-cliente">{{ edad() }} años: el cliente debe ser mayor de edad.</p>
+              } @else {
+                <p class="mt-1 text-xs text-ink-muted" data-testid="edad-cliente">{{ edad() }} años</p>
+              }
+            }
           </div>
           <div>
             <label for="c-lugar" class="mb-1 block text-xs font-medium text-ink-muted">Lugar de nacimiento</label>
@@ -73,16 +80,22 @@
           </div>
           <div>
             <label for="c-curp" class="mb-1 block text-xs font-medium text-ink-muted">CURP</label>
-            <input id="c-curp" type="text" formControlName="curp" maxlength="18" class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
-            @if (form.controls.curp.invalid && form.controls.curp.touched) {
-              <p class="mt-1 text-xs text-red-600 dark:text-red-400">Valor no válido.</p>
+            <input id="c-curp" type="text" formControlName="curp" maxlength="18" autocapitalize="characters" (input)="onCurpInput($event)" (blur)="curpTocada.set(true)" class="w-full uppercase rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+            @if (curpInvalida()) {
+              <p class="mt-1 text-xs text-red-600 dark:text-red-400" data-testid="curp-invalida">El formato de la CURP no es válido (18 caracteres).</p>
+            }
+            @if (autocompletado().length > 0) {
+              <p class="mt-1 text-xs text-green-700 dark:text-green-400" data-testid="curp-autocompleto">Se completó {{ autocompletado().join(' y ') }} desde la CURP.</p>
+            }
+            @if (curpNoCoincide(); as fechaCurp) {
+              <p class="mt-1 text-xs text-amber-700 dark:text-amber-400" data-testid="curp-no-coincide">La CURP indica nacimiento el {{ fechaCurp }}, distinto a la fecha capturada.</p>
             }
           </div>
           <div>
             <label for="c-rfc" class="mb-1 block text-xs font-medium text-ink-muted">RFC</label>
-            <input id="c-rfc" type="text" formControlName="rfc" maxlength="13" class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
-            @if (form.controls.rfc.invalid && form.controls.rfc.touched) {
-              <p class="mt-1 text-xs text-red-600 dark:text-red-400">Valor no válido.</p>
+            <input id="c-rfc" type="text" formControlName="rfc" maxlength="13" autocapitalize="characters" (input)="onRfcInput($event)" (blur)="rfcTocado.set(true)" class="w-full uppercase rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+            @if (rfcInvalido()) {
+              <p class="mt-1 text-xs text-red-600 dark:text-red-400" data-testid="rfc-invalido">El formato del RFC no es válido.</p>
             }
           </div>
         </div>

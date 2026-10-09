@@ -10,6 +10,8 @@ import { ToastService } from '../../../core/services/toast.service';
 import { Desarrollo, ESTADOS_REPUBLICA, Lead, PAIS_LABELS, Pais } from '../../../core/models/lead.model';
 import { Usuario } from '../../../core/models/user.model';
 import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
+import { MonedaInputDirective } from '../../../shared/moneda-input/moneda-input.directive';
+import { CorreoInputDirective } from '../../../shared/correo-input/correo-input.directive';
 
 /** Roles que pueden recibir la asignación de un lead: quienes trabajan leads, más el admin,
  * que también tiene su propia bolsa de leads. */
@@ -18,7 +20,7 @@ const ROLES_ASIGNABLES = new Set(['ASESOR', 'LIDER_AREA', 'ADMIN']);
 @Component({
   selector: 'app-lead-form',
   standalone: true,
-  imports: [WeLoaderComponent, ReactiveFormsModule, RouterLink],
+  imports: [CorreoInputDirective, MonedaInputDirective, WeLoaderComponent, ReactiveFormsModule, RouterLink],
   templateUrl: './lead-form.component.html',
 })
 export class LeadFormComponent implements OnInit {

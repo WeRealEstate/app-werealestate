@@ -55,8 +55,7 @@
         <label for="monto-cambio-estado" class="mb-1.5 mt-4 block text-sm font-medium text-ink">¿Con cuánto dinero se apartó? *</label>
         <input
           id="monto-cambio-estado"
-          type="number"
-          step="0.01"
+          appMoneda
           min="0.01"
           [ngModel]="montoApartadoCambioEstado()"
           [ngModelOptions]="{ standalone: true }"

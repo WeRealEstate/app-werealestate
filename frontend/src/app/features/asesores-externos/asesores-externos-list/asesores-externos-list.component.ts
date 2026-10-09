@@ -23,6 +23,7 @@ import {
   ESTADOS_CONTRATO,
   EstadoContratoAsesor,
 } from '../../../core/models/asesor-externo.model';
+import { CorreoInputDirective } from '../../../shared/correo-input/correo-input.directive';
 
 type FiltroDesarrollo = '' | 'SAMAI' | 'NANUU' | 'AMBOS' | 'NINGUNO';
 
@@ -32,7 +33,7 @@ const ordenarAsesoresPorNombre = (asesores: AsesorExterno[]): AsesorExterno[] =>
 @Component({
   selector: 'app-asesores-externos-list',
   standalone: true,
-  imports: [WeLoaderComponent, FormsModule, RouterLink, LucideEye, LucideExternalLink, LucidePencil, LucideTrash2],
+  imports: [CorreoInputDirective, WeLoaderComponent, FormsModule, RouterLink, LucideEye, LucideExternalLink, LucidePencil, LucideTrash2],
   templateUrl: './asesores-externos-list.component.html',
 })
 export class AsesoresExternosListComponent {

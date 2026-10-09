@@ -14,6 +14,7 @@ import { LotesService } from '../../core/services/lotes.service';
 import { ToastService } from '../../core/services/toast.service';
 import { VentasService } from '../../core/services/ventas.service';
 import { WeLoaderComponent } from '../we-loader/we-loader.component';
+import { MonedaInputDirective } from '../moneda-input/moneda-input.directive';
 
 /** "Información del lote" de un lote comprometido (apartado, en firma o vendido) — solo para admin
  * y líder de área (mismo permiso que el módulo de Ventas). Un Vendido muestra su Venta si existe en
@@ -23,7 +24,7 @@ import { WeLoaderComponent } from '../we-loader/we-loader.component';
 @Component({
   selector: 'app-lote-info-modal',
   standalone: true,
-  imports: [WeLoaderComponent, FormsModule, RouterLink, DatePipe],
+  imports: [MonedaInputDirective, WeLoaderComponent, FormsModule, RouterLink, DatePipe],
   templateUrl: './lote-info-modal.component.html',
 })
 export class LoteInfoModalComponent implements OnInit {

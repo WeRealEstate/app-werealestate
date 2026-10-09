@@ -19,6 +19,7 @@ import { VentasService } from '../../../../core/services/ventas.service';
 import { MonedaInputDirective } from '../../../../shared/moneda-input/moneda-input.directive';
 import { AportacionesSelectorComponent } from '../../../../shared/aportaciones-selector/aportaciones-selector.component';
 import { WeLoaderComponent } from '../../../../shared/we-loader/we-loader.component';
+import { fechaLarga, porcentajeDe, ultimaMensualidad } from '../../../../core/utils/financiamiento';
 import {
   Aportacion,
   aportacionesValidas,
@@ -145,6 +146,26 @@ export class VentaFormComponent {
     return new Date(anio, (mes || 1) - 1, 1);
   });
   readonly montoEnganche = signal<number | null>(null);
+  readonly diaPagoValor = signal<number | null>(new Date().getDate());
+
+  /** Enganche como % del precio total (se deduce del monto; también se puede capturar al revés). */
+  readonly enganchePct = computed(() => porcentajeDe(this.montoEnganche(), this.precioTotal()));
+
+  /** Lo que se ve de un vistazo al armar el financiamiento: saldo y cuándo termina. */
+  readonly resumenFinanciamiento = computed(() => {
+    const precio = this.precioTotal();
+    if (precio <= 0 || this.tipoPago() === 'cash') return null;
+    const enganche = this.mostrarEnganche() ? (this.montoEnganche() ?? 0) : 0;
+    const deposito = this.depositoTotal();
+    const saldo = Math.max(0, Math.round((precio - enganche - deposito) * 100) / 100);
+    const ultima = ultimaMensualidad(
+      this.fechaVentaIso(),
+      this.plazoActual(),
+      this.diaPagoValor(),
+      this.primeraMensualidadMesVenta(),
+    );
+    return { saldo, enganche, deposito, termina: ultima ? fechaLarga(ultima) : null };
+  });
 
   /** Sin enganche/Con enganche usan "MSI" (meses sin intereses); pago inicial/anualidades usan
    * "meses" a secas — mismo texto que ya arma CotizadorComponent.paymentMethodLabel. */
@@ -218,7 +239,8 @@ export class VentaFormComponent {
       if (!this.diaPagoEditado && fecha) this.form.controls.diaPago.setValue(Number(fecha.slice(8, 10)));
       this.actualizarMensualidad();
     });
-    this.form.controls.diaPago.valueChanges.subscribe(() => {
+    this.form.controls.diaPago.valueChanges.subscribe((dia) => {
+      this.diaPagoValor.set(dia);
       // Solo cuenta como edición a mano si ya no coincide con el día de la fecha de venta.
       this.diaPagoEditado = this.form.controls.diaPago.value !== Number(this.fechaVentaIso().slice(8, 10));
     });
@@ -245,6 +267,16 @@ export class VentaFormComponent {
     }
     this.actualizarFormaPago();
     this.actualizarMensualidad();
+  }
+
+  /** El enganche también se puede capturar como % del precio; el monto se calcula solo. */
+  onEnganchePctChange(pct: number | null): void {
+    const precio = this.precioTotal();
+    if (pct === null || precio <= 0) {
+      this.onMontoEngancheChange(null);
+      return;
+    }
+    this.onMontoEngancheChange(Math.round(((precio * pct) / 100) * 100) / 100);
   }
 
   /** Se llama cada vez que cambia el monto de enganche/pago inicial/aportación a mano. */

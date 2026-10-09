@@ -1,4 +1,6 @@
 import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { startWith } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LucideX } from '@lucide/angular';
@@ -16,11 +18,13 @@ import { AsesorExterno } from '../../core/models/asesor-externo.model';
 import { AsesoresExternosService } from '../../core/services/asesores-externos.service';
 import { ClientesService } from '../../core/services/clientes.service';
 import { UsuariosService } from '../../core/services/usuarios.service';
+import { CorreoInputDirective } from '../correo-input/correo-input.directive';
+import { curpFormatoValido, datosDeCurp, edadDe, fechaCorta, rfcFormatoValido } from '../../core/utils/identidad';
 
 /** Alta y edición de un cliente (ficha completa). Se usa en /panel/clientes, en su ficha y en el selector de la venta. */
 @Component({
   selector: 'app-cliente-form-modal',
-  imports: [ReactiveFormsModule, LucideX],
+  imports: [CorreoInputDirective, ReactiveFormsModule, LucideX],
   templateUrl: './cliente-form-modal.component.html',
 })
 export class ClienteFormModalComponent implements OnInit {
@@ -82,6 +86,68 @@ export class ClienteFormModalComponent implements OnInit {
     expedienteDriveUrl: this.fb.control('', { nonNullable: true }),
     activo: this.fb.control(true, { nonNullable: true }),
   });
+
+  // --- Automatismos: edad en vivo y datos que salen de la CURP (solo completan campos vacíos) ---
+
+  private readonly fechaNacimientoValor = toSignal(
+    this.form.controls.fechaNacimiento.valueChanges.pipe(startWith(this.form.controls.fechaNacimiento.value)),
+    { initialValue: '' },
+  );
+  readonly edad = computed(() => edadDe(this.fechaNacimientoValor()));
+
+  readonly curpValor = signal('');
+  readonly curpTocada = signal(false);
+  readonly rfcValor = signal('');
+  readonly rfcTocado = signal(false);
+  /** Qué se llenó solo desde la CURP, para avisarlo (ej. "fecha de nacimiento y lugar de nacimiento"). */
+  readonly autocompletado = signal<string[]>([]);
+
+  private readonly datosCurp = computed(() => datosDeCurp(this.curpValor()));
+  readonly curpNoCoincide = computed(() => {
+    const datos = this.datosCurp();
+    const fecha = this.fechaNacimientoValor();
+    return datos && fecha && fecha !== datos.fechaNacimiento ? fechaCorta(datos.fechaNacimiento) : null;
+  });
+  readonly curpInvalida = computed(() => {
+    const v = this.curpValor();
+    return v.length > 0 && (v.length >= 18 || this.curpTocada()) && !curpFormatoValido(v);
+  });
+  readonly rfcInvalido = computed(() => {
+    const v = this.rfcValor();
+    return v.length > 0 && (v.length >= 12 || this.rfcTocado()) && !rfcFormatoValido(v);
+  });
+
+  /** Mayúsculas al escribir sin mover el cursor. */
+  private aMayusculas(campo: HTMLInputElement, control: { setValue: (v: string) => void }): string {
+    const posicion = campo.selectionStart;
+    const mayusculas = campo.value.toUpperCase();
+    if (mayusculas !== campo.value) {
+      control.setValue(mayusculas);
+      if (posicion !== null) campo.setSelectionRange(posicion, posicion);
+    }
+    return mayusculas;
+  }
+
+  onCurpInput(evento: Event): void {
+    const curp = this.aMayusculas(evento.target as HTMLInputElement, this.form.controls.curp);
+    this.curpValor.set(curp);
+    const datos = datosDeCurp(curp);
+    if (!datos) return;
+    const llenados: string[] = [];
+    if (!this.form.controls.fechaNacimiento.value) {
+      this.form.controls.fechaNacimiento.setValue(datos.fechaNacimiento);
+      llenados.push('fecha de nacimiento');
+    }
+    if (!this.form.controls.lugarNacimiento.value && datos.entidad) {
+      this.form.controls.lugarNacimiento.setValue(datos.entidad);
+      llenados.push('lugar de nacimiento');
+    }
+    this.autocompletado.set(llenados);
+  }
+
+  onRfcInput(evento: Event): void {
+    this.rfcValor.set(this.aMayusculas(evento.target as HTMLInputElement, this.form.controls.rfc));
+  }
 
   ngOnInit(): void {
     const c = this.cliente();

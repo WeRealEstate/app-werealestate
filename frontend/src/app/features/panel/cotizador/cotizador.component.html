@@ -361,7 +361,7 @@
               <input
                 id="customArea"
                 type="text"
-                inputmode="numeric"
+                inputmode="decimal"
                 [value]="customAreaDisplay"
                 (input)="onCustomAreaInput($event)"
                 [disabled]="loteBloqueado"
@@ -586,7 +586,7 @@
                   <label class="mb-2 block text-sm font-medium text-ink">Número de aportaciones</label>
 
                   <input
-                    type="number"
+                    appMoneda decimales="0"
                     min="0"
                     [max]="annualContributionsCountMax"
                     [(ngModel)]="annualContributionsCount"
@@ -737,7 +737,7 @@
                     <span class="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted">$</span>
                     <input
                       type="text"
-                      inputmode="numeric"
+                      inputmode="decimal"
                       [value]="downPaymentAmountDisplay"
                       (input)="onDownPaymentAmountInput($event)"
                       placeholder="Ej. 80,000"
@@ -790,7 +790,7 @@
                   <span class="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted">$</span>
                   <input
                     type="text"
-                    inputmode="numeric"
+                    inputmode="decimal"
                     [value]="annualContributionDisplay"
                     (input)="onAnnualContributionInput($event)"
                     placeholder="Ej. 15,000"
@@ -838,7 +838,7 @@
                 <label class="mb-2 block text-sm font-medium text-ink">Número de aportaciones</label>
 
                 <input
-                  type="number"
+                  appMoneda decimales="0"
                   min="0"
                   [max]="annualContributionsCountMax"
                   [(ngModel)]="annualContributionsCount"
@@ -957,7 +957,7 @@
                   <span class="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted">$</span>
                   <input
                     type="text"
-                    inputmode="numeric"
+                    inputmode="decimal"
                     [value]="initialPaymentDisplay"
                     (input)="onInitialPaymentInput($event)"
                     placeholder="Ej. 40,000"

@@ -82,8 +82,7 @@
     </select>
     <div class="flex items-center gap-1.5">
       <input
-        type="number"
-        step="1"
+        appMoneda decimales="4"
         min="0"
         (input)="onSuperficieInput('min', $any($event.target).value)"
         placeholder="m² mín."
@@ -92,8 +91,7 @@
       />
       <span class="text-ink-muted">–</span>
       <input
-        type="number"
-        step="1"
+        appMoneda decimales="4"
         min="0"
         (input)="onSuperficieInput('max', $any($event.target).value)"
         placeholder="m² máx."
@@ -263,7 +261,7 @@
           </div>
           <div>
             <label for="pm-precio" class="mb-1 block text-xs font-medium text-ink-muted">Precio por m² ($)</label>
-            <input id="pm-precio" name="pmPrecio" type="number" step="0.01" min="0.01" placeholder="Ej. 170" [ngModel]="pmPrecio()" (ngModelChange)="pmPrecio.set($event)"
+            <input id="pm-precio" name="pmPrecio" appMoneda min="0.01" placeholder="Ej. 170" [ngModel]="pmPrecio()" (ngModelChange)="pmPrecio.set($event)"
               class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
           </div>
         </div>

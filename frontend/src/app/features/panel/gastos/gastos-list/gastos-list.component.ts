@@ -18,6 +18,7 @@ import { ConfirmService } from '../../../../core/services/confirm.service';
 import { GastosService } from '../../../../core/services/gastos.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { SkeletonKpisComponent } from '../../../../shared/skeleton-kpis/skeleton-kpis.component';
+import { MonedaInputDirective } from '../../../../shared/moneda-input/moneda-input.directive';
 
 /** Pestaña "Gastos" de Finanzas: resumen del mes, próximos pagos de los gastos recurrentes (renta,
  * luz, nómina...), el catálogo de recurrentes y el historial de todo lo gastado. "Registrar gasto"
@@ -25,7 +26,7 @@ import { SkeletonKpisComponent } from '../../../../shared/skeleton-kpis/skeleton
 @Component({
   selector: 'app-gastos-list',
   standalone: true,
-  imports: [SkeletonKpisComponent, FormsModule, LucideFileText, LucideTrash2],
+  imports: [MonedaInputDirective, SkeletonKpisComponent, FormsModule, LucideFileText, LucideTrash2],
   templateUrl: './gastos-list.component.html',
 })
 export class GastosListComponent {

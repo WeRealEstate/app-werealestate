@@ -1,16 +1,19 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { map, startWith } from 'rxjs';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Desarrollo } from '../../../core/models/lead.model';
 import { LeadsService } from '../../../core/services/leads.service';
 import { LotesService } from '../../../core/services/lotes.service';
 import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
+import { MonedaInputDirective } from '../../../shared/moneda-input/moneda-input.directive';
 
 @Component({
   selector: 'app-lote-form',
   standalone: true,
-  imports: [WeLoaderComponent, ReactiveFormsModule, RouterLink],
+  imports: [MonedaInputDirective, WeLoaderComponent, ReactiveFormsModule, RouterLink],
   templateUrl: './lote-form.component.html',
 })
 export class LoteFormComponent implements OnInit {
@@ -34,6 +37,28 @@ export class LoteFormComponent implements OnInit {
     superficie: this.fb.control<number | null>(null, { validators: [Validators.required, Validators.min(1)] }),
     precioM2: this.fb.control<number | null>(null, { validators: [Validators.min(0.01)] }),
   });
+
+  private readonly valores = toSignal(
+    this.form.valueChanges.pipe(
+      startWith(null),
+      map(() => this.form.getRawValue()),
+    ),
+    { initialValue: this.form.getRawValue() },
+  );
+
+  /** Precio total del lote en vivo: superficie × precio por m² (el propio, o el del desarrollo). */
+  readonly precioEstimado = computed(() => {
+    const v = this.valores();
+    if (!v.superficie || v.superficie <= 0) return null;
+    const desarrollo = this.desarrollos().find((d) => d.id === v.desarrolloId);
+    const m2 = v.precioM2 || desarrollo?.precioM2;
+    if (!m2) return null;
+    return { total: Math.round(v.superficie * m2 * 100) / 100, m2, propio: !!v.precioM2 };
+  });
+
+  money(valor: number): string {
+    return valor.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
 
   async ngOnInit(): Promise<void> {
     this.desarrollos.set(await this.leadsService.listarDesarrollosGestionables());

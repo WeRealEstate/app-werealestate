@@ -18,13 +18,15 @@ import { UsuarioResumen } from '../../../../core/models/lead.model';
 import { AsesorExterno } from '../../../../core/models/asesor-externo.model';
 import { asesorSeleccionDe, parseAsesorSeleccion } from '../venta-form/venta-form.component';
 import { WeLoaderComponent } from '../../../../shared/we-loader/we-loader.component';
+import { MonedaInputDirective } from '../../../../shared/moneda-input/moneda-input.directive';
+import { fechaLarga, porcentajeDe, ultimaMensualidad } from '../../../../core/utils/financiamiento';
 
 const SEGUNDOS_ESPERA_ELIMINAR = 10;
 
 @Component({
   selector: 'app-venta-detalle',
   standalone: true,
-  imports: [WeLoaderComponent, ReactiveFormsModule, RouterLink, ClienteSelectorComponent, CopropietariosEditorComponent, LucidePencil, LucideTrash2],
+  imports: [MonedaInputDirective, WeLoaderComponent, ReactiveFormsModule, RouterLink, ClienteSelectorComponent, CopropietariosEditorComponent, LucidePencil, LucideTrash2],
   templateUrl: './venta-detalle.component.html',
 })
 export class VentaDetalleComponent implements OnInit, OnDestroy {
@@ -210,6 +212,17 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
 
   nombreMes(mes: number): string {
     return MESES_NOMBRE[mes - 1];
+  }
+
+  /** Enganche como % del precio de la venta (solo lectura). */
+  pctEnganche(v: Venta): number | null {
+    return porcentajeDe(v.enganche, v.precioVenta);
+  }
+
+  /** Fecha de la última mensualidad según plazo, día de pago y mes de la primera. */
+  terminaEn(v: Venta): string | null {
+    const f = ultimaMensualidad(v.fechaVenta, v.plazoMeses, v.diaPago, v.primeraMensualidadMesVenta);
+    return f ? fechaLarga(f) : null;
   }
 
   money(valor: number): string {

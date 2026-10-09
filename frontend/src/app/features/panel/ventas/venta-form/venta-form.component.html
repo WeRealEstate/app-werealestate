@@ -190,20 +190,38 @@
     </div>
 
     @if (mostrarEnganche()) {
-      <div>
-        <label for="montoEnganche" class="block text-sm font-medium text-ink mb-1.5">
-          Monto de {{ engancheLabelActual()!.toLowerCase() }} *
-        </label>
-        <input
-          id="montoEnganche"
-          appMoneda
-          [ngModel]="montoEnganche()"
-          [ngModelOptions]="{ standalone: true }"
-          (ngModelChange)="onMontoEngancheChange($event)"
-          placeholder="Ej. 20000"
-          class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
-                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
-        />
+      <div class="grid grid-cols-[1fr_7.5rem] gap-4">
+        <div>
+          <label for="montoEnganche" class="block text-sm font-medium text-ink mb-1.5">
+            Monto de {{ engancheLabelActual()!.toLowerCase() }} *
+          </label>
+          <input
+            id="montoEnganche"
+            appMoneda
+            [ngModel]="montoEnganche()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="onMontoEngancheChange($event)"
+            placeholder="Ej. 20000"
+            class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          />
+        </div>
+        <div>
+          <label for="pctEnganche" class="block text-sm font-medium text-ink mb-1.5">% del precio</label>
+          <input
+            id="pctEnganche"
+            appMoneda
+            max="100"
+            [disabled]="precioTotal() <= 0"
+            [ngModel]="enganchePct()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="onEnganchePctChange($event)"
+            placeholder="Ej. 20"
+            data-testid="pct-enganche"
+            class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink disabled:opacity-60
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          />
+        </div>
       </div>
     }
 
@@ -250,8 +268,7 @@
           <label for="plazoMeses" class="block text-sm font-medium text-ink mb-1.5">Plazo ({{ unidadPlazo() }})</label>
           <input
             id="plazoMeses"
-            type="number"
-            step="1"
+            appMoneda decimales="0"
             min="1"
             formControlName="plazoMeses"
             placeholder="Opcional"
@@ -288,8 +305,7 @@
             <label for="diaPago" class="block text-sm font-medium text-ink mb-1.5">Día de pago *</label>
             <input
               id="diaPago"
-              type="number"
-              step="1"
+              appMoneda decimales="0"
               min="1"
               max="31"
               formControlName="diaPago"
@@ -326,6 +342,36 @@
             </div>
           </div>
         </div>
+      </div>
+    }
+
+    @if (resumenFinanciamiento(); as r) {
+      <div class="rounded-xl border border-we-primary/30 bg-we-primary/5 p-4" data-testid="resumen-financiamiento">
+        <p class="text-sm font-semibold text-ink">Resumen del financiamiento</p>
+        <dl class="mt-2 grid grid-cols-1 gap-y-1.5 text-sm">
+          <div class="flex justify-between gap-3">
+            <dt class="text-ink-muted">Saldo a financiar</dt>
+            <dd class="font-semibold text-ink" data-testid="saldo-financiar">${{ money(r.saldo) }}</dd>
+          </div>
+          @if (mostrarEnganche() && enganchePct() !== null) {
+            <div class="flex justify-between gap-3">
+              <dt class="text-ink-muted">Enganche</dt>
+              <dd class="font-medium text-ink">{{ enganchePct() }}% del precio</dd>
+            </div>
+          }
+          @if (r.deposito > 0) {
+            <div class="flex justify-between gap-3">
+              <dt class="text-ink-muted">Ya apartado</dt>
+              <dd class="font-medium text-ink">${{ money(r.deposito) }}</dd>
+            </div>
+          }
+          @if (r.termina) {
+            <div class="flex justify-between gap-3">
+              <dt class="text-ink-muted">Última mensualidad</dt>
+              <dd class="font-medium text-ink" data-testid="termina">{{ r.termina }}</dd>
+            </div>
+          }
+        </dl>
       </div>
     }
 

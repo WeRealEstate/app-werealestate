@@ -98,8 +98,7 @@
                 <label for="monto-abono-info" class="block text-xs text-ink-muted mb-1">Monto *</label>
                 <input
                   id="monto-abono-info"
-                  type="number"
-                  step="0.01"
+                  appMoneda
                   min="1"
                   [ngModel]="montoPagoInfoLote()"
                   [ngModelOptions]="{ standalone: true }"
