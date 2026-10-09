@@ -108,7 +108,13 @@
           Cerrar sesión
         </button>
         <div class="flex mb-0 items-center justify-center gap-1.5 mt-2">
-          <a href="#" class="text-center text-[11px] text-[var(--sb-muted)]">{{ versionApp }}</a>
+          <a
+            routerLink="/panel/versiones"
+            (click)="closeSidebar()"
+            class="text-center text-[11px] text-[var(--sb-muted)] underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-[var(--sb-ring)] rounded"
+          >
+            {{ versionApp }}
+          </a>
         </div>
       </div>
     }
@@ -146,5 +152,4 @@
   </div>
 
   <app-toast-container />
-  <app-confirm-dialog />
-</div>
+  <app-confirm-dialog /></div>

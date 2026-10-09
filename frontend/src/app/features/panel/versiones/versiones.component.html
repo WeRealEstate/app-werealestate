@@ -1,0 +1,40 @@
+<div class="page-enter">
+  <div>
+    <h1 class="font-heading text-2xl font-semibold text-ink">Versiones</h1>
+    <p class="mt-1 text-sm text-ink-muted">Versión actual: v{{ versionActual }}. Historial de cambios de la aplicación.</p>
+  </div>
+
+  <div class="mt-6 max-w-3xl space-y-4">
+    @for (g of grupos(); track g.mayor; let primerMayor = $first) {
+      <details class="rounded-2xl border border-border bg-surface p-5" [open]="primerMayor">
+        <summary class="cursor-pointer select-none font-heading text-lg font-semibold text-ink">Versión {{ g.mayor }}</summary>
+        <div class="mt-3 space-y-3 border-l border-border pl-4">
+          @for (m of g.menores; track m.clave; let primerMenor = $first) {
+            <details [open]="primerMayor && primerMenor">
+              <summary class="cursor-pointer select-none text-sm font-semibold text-ink">Versión {{ m.clave }}</summary>
+              <div class="mt-3 space-y-4 pl-4">
+                @for (e of m.entradas; track e.version) {
+                  <div>
+                    <p class="text-sm font-medium text-ink">
+                      v{{ e.version }}
+                      <span class="ml-1.5 text-xs font-normal text-ink-muted">{{ fecha(e.fecha) }}</span>
+                    </p>
+                    @if (e.cambios.length) {
+                      <ul class="mt-1.5 list-disc space-y-1 pl-5 text-sm text-ink-muted">
+                        @for (c of e.cambios; track $index) {
+                          <li>{{ c }}</li>
+                        }
+                      </ul>
+                    } @else {
+                      <p class="mt-1.5 text-sm text-ink-muted">Sin cambios registrados aún.</p>
+                    }
+                  </div>
+                }
+              </div>
+            </details>
+          }
+        </div>
+      </details>
+    }
+  </div>
+</div>
