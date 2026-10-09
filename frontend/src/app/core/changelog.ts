@@ -16,9 +16,10 @@ export interface EntradaVersion {
 export const CHANGELOG: EntradaVersion[] = [
   { version: '7.3.12', fecha: '2026-10-09', cambios: [
     "Todos los campos numericos se escriben con comas de miles y punto decimal (dinero, superficie con decimales, porcentajes, plazos); tambien en el cotizador y promociones, que ahora admiten centavos.",
-    "Clientes: la edad se calcula sola al elegir la fecha de nacimiento; al escribir la CURP se completan la fecha y el lugar de nacimiento (solo si estan vacios, nunca se cambian datos existentes); CURP y RFC en mayusculas con aviso de formato; los correos se guardan sin espacios y en minusculas.",
+    "Clientes: Automatizados los campos de nombre, apellido y correo electronico",
     "Ventas: el enganche tambien se captura como porcentaje del precio y se ve un resumen con saldo a financiar y fecha de la ultima mensualidad (tambien en el detalle de la venta).",
     "Lotes: al capturar un lote se ve el precio total (superficie por precio por m2) en vivo.",
+    "Folio requerido al registrar abonos"
   ] },
   { version: '7.3.11', fecha: '2026-10-09', cambios: [
     "Pantalla completa totalmente disponible, bug arreglado",
