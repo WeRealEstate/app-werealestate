@@ -2,6 +2,14 @@
 .claude/
 skills-lock.json
 
+# Dependencias instaladas fuera de lugar y herramientas del asistente
+/node_modules/
+/artifacts-builder/
+.impeccable/
+
+# Archivos subidos por usuarios (datos, no código)
+/backend/uploads/
+
 # OS / editor
 .DS_Store
 .idea/
