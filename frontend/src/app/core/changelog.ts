@@ -18,8 +18,8 @@ export const CHANGELOG: EntradaVersion[] = [
     "Comunidades We: la pantalla completa ahora cubre todo (tambien el menu lateral) para ver los equipos con todo el espacio; se sale con el boton Salir o con Esc.",
   ] },
   { version: '7.3.10', fecha: '2026-10-09', cambios: [
-    "Comunidades We ahora es un lienzo tipo draw.io: zoom con la rueda o los botones, mover el lienzo arrastrando el fondo, mover cada tarjeta a donde quieras (la posicion se recuerda en tu navegador), ajustar a pantalla, reordenar y pantalla completa.",
-    "Las lineas entre lider, linea 1 y linea 2 ya no se cortan: se dibujan de tarjeta a tarjeta y siguen a la tarjeta mientras la mueves.",
+    "Comunidades We ahora es un lienzo, zoom disponible, mover el lienzo arrastrando, mover cada tarjeta a donde quieras, reordenar arrastrando al equipo y pantalla completa ya disponible.",
+    "Las lineas entre lider, linea 1 y linea 2 ya no se cortan: se dibujan de tarjeta a tarjeta y siguen a la tarjeta mientras se mueve.",
     "Soltar una tarjeta sobre un lider o sobre alguien de linea 1 la reasigna; soltarla en Independientes la saca del equipo. Cada equipo se puede ocultar o mostrar.",
   ] },
   { version: '7.3.9', fecha: '2026-10-09', cambios: [
