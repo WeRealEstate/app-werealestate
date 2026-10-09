@@ -1,4 +1,5 @@
 import { ClienteLista } from '../../../../core/models/cliente.model';
+import { CopropietariosEditorComponent, hayCopropietariosRepetidos, idsCopropietarios } from '../../../../shared/copropietarios-editor/copropietarios-editor.component';
 import { ClienteSelectorComponent } from '../../../../shared/cliente-selector/cliente-selector.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
@@ -23,7 +24,7 @@ const SEGUNDOS_ESPERA_ELIMINAR = 10;
 @Component({
   selector: 'app-venta-detalle',
   standalone: true,
-  imports: [WeLoaderComponent, ReactiveFormsModule, RouterLink, ClienteSelectorComponent, LucidePencil, LucideTrash2],
+  imports: [WeLoaderComponent, ReactiveFormsModule, RouterLink, ClienteSelectorComponent, CopropietariosEditorComponent, LucidePencil, LucideTrash2],
   templateUrl: './venta-detalle.component.html',
 })
 export class VentaDetalleComponent implements OnInit, OnDestroy {
@@ -217,6 +218,7 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
 
   // --- Modificar venta (temporal) ---
   readonly clienteEdicion = signal<ClienteLista | null>(null);
+  readonly copropietariosEdicion = signal<(ClienteLista | null)[]>([]);
 
   abrirEdicion(): void {
     const v = this.venta();
@@ -235,6 +237,9 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
       diaPago: v.diaPago,
       notas: v.notas ?? '',
     });
+    this.copropietariosEdicion.set(
+      v.copropietarios.map((c) => ({ id: c.id, nombreCompleto: c.nombreCompleto, telefono: null, correo: null, activo: true, datosIncompletos: false, compras: 0, desarrollos: [], saldoPendiente: 0 })),
+    );
     this.edicionPrimeraMensualidadMesVenta.set(v.primeraMensualidadMesVenta);
     this.errorEdicion.set(null);
     this.editando.set(true);
@@ -245,6 +250,10 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
   }
 
   async guardarEdicion(): Promise<void> {
+    if (hayCopropietariosRepetidos(this.copropietariosEdicion(), this.clienteEdicion()?.id ?? null)) {
+      this.errorEdicion.set('Hay clientes repetidos entre el principal y los copropietarios.');
+      return;
+    }
     if (this.edicionForm.invalid || this.isSavingEdicion()) {
       this.edicionForm.markAllAsTouched();
       return;
@@ -257,6 +266,7 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
     try {
       const actualizada = await this.ventasService.actualizar(this.ventaId!, {
         clienteId: this.clienteEdicion()?.id ?? null,
+        copropietariosIds: idsCopropietarios(this.copropietariosEdicion()),
         ...parseAsesorSeleccion(v.asesor),
         fechaVenta: v.fechaVenta,
         formaPago: v.formaPago,

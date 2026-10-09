@@ -4,6 +4,7 @@ import { LucideX } from '@lucide/angular';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ClienteLista } from '../../../../core/models/cliente.model';
 import { ClientesService } from '../../../../core/services/clientes.service';
+import { CopropietariosEditorComponent, hayCopropietariosRepetidos, idsCopropietarios } from '../../../../shared/copropietarios-editor/copropietarios-editor.component';
 import { ClienteSelectorComponent } from '../../../../shared/cliente-selector/cliente-selector.component';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Desarrollo, UsuarioResumen } from '../../../../core/models/lead.model';
@@ -81,7 +82,7 @@ const ENGANCHE_LABEL_POR_TIPO: Record<TipoPago, string | null> = {
 @Component({
   selector: 'app-venta-form',
   standalone: true,
-  imports: [WeLoaderComponent, ReactiveFormsModule, FormsModule, RouterLink, LucideX, MonedaInputDirective, AportacionesSelectorComponent, ClienteSelectorComponent],
+  imports: [WeLoaderComponent, ReactiveFormsModule, FormsModule, RouterLink, LucideX, MonedaInputDirective, AportacionesSelectorComponent, ClienteSelectorComponent, CopropietariosEditorComponent],
   templateUrl: './venta-form.component.html',
 })
 export class VentaFormComponent {
@@ -99,6 +100,8 @@ export class VentaFormComponent {
   /** El cliente elegido (o registrado) para esta venta; obligatorio. */
   readonly clienteElegido = signal<ClienteLista | null>(null);
   readonly clienteFaltante = signal(false);
+  /** Copropietarios elegidos (máximo 4 además del principal). */
+  readonly copropietarios = signal<(ClienteLista | null)[]>([]);
 
   readonly estadoLabels = ESTADO_LOTE_LABELS;
   readonly desarrollos = signal<Desarrollo[]>([]);
@@ -381,6 +384,7 @@ export class VentaFormComponent {
     const errorAportaciones = this.errorAportaciones();
     if (
       this.clienteElegido() === null ||
+      hayCopropietariosRepetidos(this.copropietarios(), this.clienteElegido()?.id ?? null) ||
       this.form.invalid ||
       this.lotesAgregados().length === 0 ||
       faltaMontoEnganche ||
@@ -411,6 +415,7 @@ export class VentaFormComponent {
       const venta = await this.ventasService.crear({
         lotes: this.lotesAgregados().map((l) => ({ loteId: l.lote.id, precio: l.precio })),
         clienteId: this.clienteElegido()!.id,
+        copropietariosIds: idsCopropietarios(this.copropietarios()),
         ...parseAsesorSeleccion(v.asesor),
         formaPago: v.formaPago,
         fechaVenta: v.fechaVenta,

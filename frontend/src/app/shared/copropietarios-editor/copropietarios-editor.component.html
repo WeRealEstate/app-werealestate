@@ -1,0 +1,24 @@
+<div class="space-y-2">
+  <div class="flex items-center justify-between">
+    <label class="block text-sm font-medium text-ink">Copropietarios <span class="font-normal text-ink-muted">(opcional, hasta {{ max }} más)</span></label>
+    @if (puedeAgregar()) {
+      <button type="button" (click)="agregar()" class="text-sm font-semibold text-we-primary hover:underline">+ Agregar copropietario</button>
+    }
+  </div>
+  @for (c of copropietarios(); track $index; let i = $index) {
+    <div class="flex items-start gap-2" data-testid="copropietario">
+      <div class="min-w-0 flex-1">
+        <app-cliente-selector [cliente]="c" (clienteChange)="elegir(i, $event)" />
+        @if (c && repetidos().has(c.id)) {
+          <p class="mt-1 text-xs text-red-600">Este cliente ya está en la venta.</p>
+        }
+      </div>
+      <button
+        type="button" (click)="quitar(i)" [attr.aria-label]="'Quitar copropietario ' + (i + 1)" title="Quitar"
+        class="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2 hover:text-red-600"
+      >
+        <svg lucideX [size]="16" aria-hidden="true"></svg>
+      </button>
+    </div>
+  }
+</div>

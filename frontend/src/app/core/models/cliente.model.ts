@@ -40,6 +40,8 @@ export interface ClienteVenta {
   precio: number;
   abonado: number;
   saldo: number;
+  /** true si es copropietario de esa venta (no el cliente principal). */
+  copropietario: boolean;
 }
 
 export interface Cliente {

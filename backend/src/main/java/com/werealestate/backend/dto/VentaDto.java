@@ -17,6 +17,8 @@ public record VentaDto(
         String cliente,
         // El cliente ligado (null solo en una venta anterior que aún no se migra).
         Long clienteId,
+        // Copropietarios además del cliente principal (máximo 4).
+        List<ClienteResumenDto> copropietarios,
         VentaAsesorDto asesor,
         String formaPago,
         LocalDate fechaVenta,
@@ -38,6 +40,7 @@ public record VentaDto(
             Long numero,
             List<VentaLoteDto> lotes,
             List<VentaAportacionDto> aportaciones,
+            List<ClienteResumenDto> copropietarios,
             BigDecimal totalAbonado) {
         BigDecimal precioVenta = lotes.stream().map(VentaLoteDto::precio).reduce(BigDecimal.ZERO, BigDecimal::add);
         return new VentaDto(
@@ -47,6 +50,7 @@ public record VentaDto(
                 aportaciones,
                 venta.getCliente(),
                 venta.getClienteRef() != null ? venta.getClienteRef().getId() : null,
+                copropietarios,
                 VentaAsesorDto.from(venta),
                 venta.getFormaPago(),
                 venta.getFechaVenta(),

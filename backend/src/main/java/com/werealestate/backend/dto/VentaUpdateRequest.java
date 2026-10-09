@@ -15,6 +15,8 @@ import java.time.LocalDate;
 public record VentaUpdateRequest(
         // null = sin cambios; con valor, la venta pasa a ese cliente.
         Long clienteId,
+        // null = sin cambios; una lista (aunque vacía) reemplaza a los copropietarios. Máximo 4.
+        @Size(max = 4) java.util.List<Long> copropietariosIds,
         // Exactamente uno de los dos (ver VentaCreateRequest / VentaService.resolverAsesor).
         Long usuarioAsesorId,
         Long asesorExternoId,

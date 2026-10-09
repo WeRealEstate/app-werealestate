@@ -60,7 +60,7 @@
             <tbody class="divide-y divide-border">
               @for (v of c.ventas; track v.ventaId) {
                 <tr>
-                  <td class="py-2 pr-3"><a [routerLink]="['/panel/ventas', v.numero]" class="font-medium text-we-primary hover:underline">#{{ v.numero }}</a></td>
+                  <td class="py-2 pr-3"><a [routerLink]="['/panel/ventas', v.numero]" class="font-medium text-we-primary hover:underline">#{{ v.numero }}</a>@if (v.copropietario) { <span class="ml-1 rounded-full bg-surface-2 px-1.5 py-0.5 text-[11px] font-semibold text-ink-muted">Copropietario</span> }</td>
                   <td class="py-2 pr-3 text-ink-muted">{{ fecha(v.fechaVenta) }}</td>
                   <td class="py-2 pr-3 text-ink">{{ v.desarrollos.join(', ') }} · {{ v.lotes.join(', ') }}</td>
                   <td class="py-2 pr-3 text-right text-ink">${{ money(v.precio) }}</td>

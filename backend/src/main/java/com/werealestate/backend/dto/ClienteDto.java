@@ -61,7 +61,9 @@ public record ClienteDto(
             List<String> lotes,
             BigDecimal precio,
             BigDecimal abonado,
-            BigDecimal saldo) {
+            BigDecimal saldo,
+            // true si es copropietario de esa venta (no el cliente principal).
+            boolean copropietario) {
     }
 
     public static ClienteDto from(Cliente c, List<ClienteVentaDto> ventas) {

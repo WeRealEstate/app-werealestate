@@ -20,6 +20,14 @@
             {{ v.cliente }}
           }
         </h1>
+        @if (v.copropietarios.length > 0) {
+          <p class="mt-1 text-sm text-ink-muted">
+            Copropietario{{ v.copropietarios.length === 1 ? '' : 's' }}:
+            @for (c of v.copropietarios; track c.id; let ult = $last) {
+              <a [routerLink]="['/panel/clientes', c.id]" class="font-medium text-ink hover:underline">{{ c.nombreCompleto }}</a>@if (!ult) {, }
+            }
+          </p>
+        }
         <p class="mt-1 text-sm text-ink-muted">
           {{ v.lotes.length }} {{ v.lotes.length === 1 ? 'lote' : 'lotes' }} · {{ v.lotes[0].lote.desarrollo.nombre }}
         </p>
@@ -127,9 +135,12 @@
         <p class="mt-0.5 text-xs text-ink-muted">No cambia los lotes ni sus precios, solo los datos de esta ficha.</p>
 
         <form [formGroup]="edicionForm" (ngSubmit)="guardarEdicion()" class="mt-4 grid gap-4 sm:grid-cols-2" novalidate>
-          <div>
+          <div class="sm:col-span-2">
             <label for="ed-cliente" class="block text-sm font-medium text-ink mb-1.5">Cliente *</label>
             <app-cliente-selector [(cliente)]="clienteEdicion" />
+          </div>
+          <div class="sm:col-span-2">
+            <app-copropietarios-editor [(copropietarios)]="copropietariosEdicion" [principalId]="clienteEdicion()?.id ?? null" />
           </div>
           <div>
             <label for="ed-asesor" class="block text-sm font-medium text-ink mb-1.5">Asesor *</label>

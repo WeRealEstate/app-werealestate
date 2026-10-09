@@ -5,6 +5,7 @@ import com.werealestate.backend.dto.PaginaDto;
 import com.werealestate.backend.dto.PagoVentaCreateRequest;
 import com.werealestate.backend.dto.PagoVentaDto;
 import com.werealestate.backend.dto.VentaCreateRequest;
+import com.werealestate.backend.dto.ClienteResumenDto;
 import com.werealestate.backend.dto.VentaDto;
 import com.werealestate.backend.dto.VentaAportacionDto;
 import com.werealestate.backend.dto.VentaAportacionItemRequest;
@@ -23,6 +24,8 @@ import com.werealestate.backend.model.PagoVenta;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.model.Venta;
+import com.werealestate.backend.model.VentaCopropietario;
+import com.werealestate.backend.repository.VentaCopropietarioRepository;
 import com.werealestate.backend.model.VentaAportacion;
 import com.werealestate.backend.model.VentaLote;
 import com.werealestate.backend.repository.AsesorExternoRepository;
@@ -69,6 +72,7 @@ public class VentaService {
     private final PagoVentaRepository pagoVentaRepository;
     private final ComisionService comisionService;
     private final ClienteService clienteService;
+    private final VentaCopropietarioRepository copropietarioRepository;
     private final PasswordEncoder passwordEncoder;
     private final UsuarioRepository usuarioRepository;
     private final AsesorExternoRepository asesorExternoRepository;
@@ -83,6 +87,7 @@ public class VentaService {
             PagoVentaRepository pagoVentaRepository,
             ComisionService comisionService,
             ClienteService clienteService,
+            VentaCopropietarioRepository copropietarioRepository,
             PasswordEncoder passwordEncoder,
             UsuarioRepository usuarioRepository,
             AsesorExternoRepository asesorExternoRepository,
@@ -95,6 +100,7 @@ public class VentaService {
         this.pagoVentaRepository = pagoVentaRepository;
         this.comisionService = comisionService;
         this.clienteService = clienteService;
+        this.copropietarioRepository = copropietarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.usuarioRepository = usuarioRepository;
         this.asesorExternoRepository = asesorExternoRepository;
@@ -134,6 +140,7 @@ public class VentaService {
         venta.ligarCliente(clienteRef);
         venta.setRegistradaPor(currentUserProvider.getUsuarioActual());
         venta = ventaRepository.save(venta);
+        aplicarCopropietarios(venta, request.copropietariosIds());
 
         for (VentaAportacionItemRequest item : aportaciones) {
             ventaAportacionRepository.save(new VentaAportacion(venta, item.anio(), item.mes(), item.monto()));
@@ -239,6 +246,14 @@ public class VentaService {
             Cliente nuevo = clienteService.obtenerEntidad(request.clienteId());
             venta.ligarCliente(nuevo);
         }
+        if (request.copropietariosIds() != null) {
+            aplicarCopropietarios(venta, request.copropietariosIds());
+        } else if (request.clienteId() != null) {
+            // El principal cambió: si estaba como copropietario, deja de serlo.
+            copropietarioRepository.deleteAll(copropietarioRepository.findByVentaIdOrderByOrdenAsc(venta.getId()).stream()
+                    .filter(cp -> cp.getCliente().getId().equals(venta.getClienteRef().getId()))
+                    .toList());
+        }
         comisionService.sincronizar(venta);
         // La fecha pudo cambiar: se reacomodan los números y se vuelve a leer con el nuevo.
         return toDto(renumerar(venta.getId()));
@@ -268,6 +283,7 @@ public class VentaService {
         List<Long> loteIds = lotes.stream().map(vl -> vl.getLote().getId()).toList();
         pagoVentaRepository.deleteAll(pagoVentaRepository.findByVentaIdOrderByFechaDesc(id));
         ventaAportacionRepository.deleteAll(ventaAportacionRepository.findByVentaIdOrderByAnioAscMesAsc(id));
+        copropietarioRepository.deleteAll(copropietarioRepository.findByVentaIdOrderByOrdenAsc(id));
         ventaLoteRepository.deleteAll(lotes);
         ventaRepository.flush();
         ventaRepository.delete(venta);
@@ -387,7 +403,30 @@ public class VentaService {
                 .stream()
                 .map(VentaAportacionDto::from)
                 .toList();
-        return VentaDto.from(venta, venta.getNumero(), lotes, aportaciones, totalAbonado(venta.getId()));
+        List<ClienteResumenDto> copropietarios = copropietarioRepository.findByVentaIdOrderByOrdenAsc(venta.getId()).stream()
+                .map(cp -> ClienteResumenDto.from(cp.getCliente()))
+                .toList();
+        return VentaDto.from(venta, venta.getNumero(), lotes, aportaciones, copropietarios, totalAbonado(venta.getId()));
+    }
+
+    /** Reemplaza los copropietarios de la venta: hasta 4 clientes distintos, activos y distintos del principal. */
+    private void aplicarCopropietarios(Venta venta, List<Long> ids) {
+        copropietarioRepository.deleteAll(copropietarioRepository.findByVentaIdOrderByOrdenAsc(venta.getId()));
+        copropietarioRepository.flush();
+        if (ids == null || ids.isEmpty()) return;
+        if (ids.size() > 4) throw new ValidationException("Una venta admite hasta 5 clientes (el principal y 4 copropietarios)");
+        Set<Long> vistos = new HashSet<>();
+        Long principalId = venta.getClienteRef() != null ? venta.getClienteRef().getId() : null;
+        int orden = 1;
+        for (Long id : ids) {
+            if (id == null || !vistos.add(id)) throw new ValidationException("Un cliente no puede repetirse en la misma venta");
+            if (id.equals(principalId)) throw new ValidationException("El cliente principal no puede ser también copropietario");
+            Cliente c = clienteService.obtenerEntidad(id);
+            if (!c.isActivo()) {
+                throw new ValidationException("El cliente " + c.nombreCompleto() + " está inactivo: actívalo para registrarlo");
+            }
+            copropietarioRepository.save(new VentaCopropietario(venta, c, orden++));
+        }
     }
 
     /** Reacomoda el número de todas las ventas por fecha y devuelve la venta pedida ya leída de nuevo

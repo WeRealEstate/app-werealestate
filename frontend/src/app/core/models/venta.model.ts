@@ -38,6 +38,8 @@ export interface Venta {
   cliente: string;
   /** El cliente registrado al que está ligada (null solo en datos muy viejos). */
   clienteId: number | null;
+  /** Copropietarios además del cliente principal (máximo 4). */
+  copropietarios: { id: number; nombreCompleto: string }[];
   asesor: VentaAsesor;
   formaPago: string;
   fechaVenta: string;
@@ -68,6 +70,8 @@ export interface VentaLoteItemRequest {
 export interface VentaCreateRequest {
   lotes: VentaLoteItemRequest[];
   clienteId: number;
+  /** Copropietarios (máximo 4 además del principal). */
+  copropietariosIds?: number[];
   // Exactamente uno de los dos (ver backend VentaService.resolverAsesor).
   usuarioAsesorId: number | null;
   asesorExternoId: number | null;
@@ -91,6 +95,8 @@ export interface VentaCreateRequest {
 export interface VentaUpdateRequest {
   /** Opcional: si se manda, la venta se re-liga a ese cliente. */
   clienteId?: number | null;
+  /** Omitido = sin cambios; una lista (aunque vacía) reemplaza a los copropietarios. */
+  copropietariosIds?: number[];
   usuarioAsesorId: number | null;
   asesorExternoId: number | null;
   formaPago: string;

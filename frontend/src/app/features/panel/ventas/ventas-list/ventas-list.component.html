@@ -53,7 +53,7 @@
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
               <p class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Venta {{ v.numero }} · {{ v.fechaVenta | date: 'dd/MM/yyyy' }}</p>
-              <p class="mt-0.5 truncate font-heading text-base font-semibold text-ink">{{ v.cliente }}</p>
+              <p class="mt-0.5 truncate font-heading text-base font-semibold text-ink">{{ v.cliente }}@if (v.copropietarios.length > 0) { <span class="ml-1 rounded-full bg-surface-2 px-1.5 py-0.5 align-middle text-[11px] font-semibold text-ink-muted">+{{ v.copropietarios.length }}</span> }</p>
             </div>
             <span class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold" [class]="v.saldoPendiente > 0 ? 'bg-surface-2 text-ink' : 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300'">
               {{ v.saldoPendiente > 0 ? 'Saldo $' + money(v.saldoPendiente) : 'Liquidado' }}
@@ -105,7 +105,7 @@
             <tr class="stagger-item hover:bg-surface-2 transition-colors duration-150" [style.animation-delay.ms]="i < 8 ? i * 40 : 0">
               <td class="px-4 py-3 font-semibold text-ink">{{ v.numero }}</td>
               <td class="px-4 py-3 text-ink-muted">{{ v.fechaVenta | date: 'dd/MM/yyyy' }}</td>
-              <td class="px-4 py-3 font-medium text-ink">{{ v.cliente }}</td>
+              <td class="px-4 py-3 font-medium text-ink">{{ v.cliente }}@if (v.copropietarios.length > 0) { <span class="ml-1 rounded-full bg-surface-2 px-1.5 py-0.5 text-[11px] font-semibold text-ink-muted" title="Copropiedad">+{{ v.copropietarios.length }}</span> }</td>
               <td class="px-4 py-3 text-ink-muted">{{ v.asesor.nombre }}</td>
               <td class="px-4 py-3 text-ink-muted">{{ v.lotes[0].lote.desarrollo.nombre }}</td>
               <td class="px-4 py-3 text-ink-muted">

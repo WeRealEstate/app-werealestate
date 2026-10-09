@@ -58,6 +58,7 @@ public class ClienteService {
     private final ClienteRepository clienteRepository;
     private final VentaRepository ventaRepository;
     private final VentaLoteRepository ventaLoteRepository;
+    private final com.werealestate.backend.repository.VentaCopropietarioRepository copropietarioRepository;
     private final PagoVentaRepository pagoVentaRepository;
     private final VentaComisionRepository comisionRepository;
     private final UsuarioRepository usuarioRepository;
@@ -68,6 +69,7 @@ public class ClienteService {
             ClienteRepository clienteRepository,
             VentaRepository ventaRepository,
             VentaLoteRepository ventaLoteRepository,
+            com.werealestate.backend.repository.VentaCopropietarioRepository copropietarioRepository,
             PagoVentaRepository pagoVentaRepository,
             VentaComisionRepository comisionRepository,
             UsuarioRepository usuarioRepository,
@@ -76,6 +78,7 @@ public class ClienteService {
         this.clienteRepository = clienteRepository;
         this.ventaRepository = ventaRepository;
         this.ventaLoteRepository = ventaLoteRepository;
+        this.copropietarioRepository = copropietarioRepository;
         this.pagoVentaRepository = pagoVentaRepository;
         this.comisionRepository = comisionRepository;
         this.usuarioRepository = usuarioRepository;
@@ -256,12 +259,18 @@ public class ClienteService {
         private final Map<Long, List<Venta>> ventasPorCliente = new HashMap<>();
         private final Map<Long, List<VentaLote>> lotesPorVenta = new HashMap<>();
         private final Map<Long, BigDecimal> abonadoPorVenta = new HashMap<>();
+        /** "clienteId:ventaId" de las ventas en las que el cliente es copropietario (no el principal). */
+        private final java.util.Set<String> copropiedades = new java.util.HashSet<>();
 
         Resumenes() {
             for (Venta v : ventaRepository.findAll()) {
                 if (v.getClienteRef() != null) {
                     ventasPorCliente.computeIfAbsent(v.getClienteRef().getId(), k -> new ArrayList<>()).add(v);
                 }
+            }
+            for (com.werealestate.backend.model.VentaCopropietario cp : copropietarioRepository.findAll()) {
+                ventasPorCliente.computeIfAbsent(cp.getCliente().getId(), k -> new ArrayList<>()).add(cp.getVenta());
+                copropiedades.add(cp.getCliente().getId() + ":" + cp.getVenta().getId());
             }
             for (VentaLote vl : ventaLoteRepository.findAll()) {
                 lotesPorVenta.computeIfAbsent(vl.getVenta().getId(), k -> new ArrayList<>()).add(vl);
@@ -289,7 +298,8 @@ public class ClienteService {
                                         .toList(),
                                 precio,
                                 abonado,
-                                precio.subtract(abonado).max(BigDecimal.ZERO));
+                                precio.subtract(abonado).max(BigDecimal.ZERO),
+                                copropiedades.contains(clienteId + ":" + v.getId()));
                     })
                     .toList();
         }
