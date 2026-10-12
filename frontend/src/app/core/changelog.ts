@@ -14,6 +14,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '7.3.15', fecha: '2026-10-12', cambios: [
+    "Cambios en la UI, tipo y expediente de contrato agregado",
+  ] },
   { version: '7.3.14', fecha: '2026-10-12', cambios: [
     "Plano publico: al entrar con el PIN de asesor aparece, debajo del boton con su nombre, el boton Descargar PDF con el plano coloreado por estado y su leyenda. Sin PIN no se muestra.",
   ] },
