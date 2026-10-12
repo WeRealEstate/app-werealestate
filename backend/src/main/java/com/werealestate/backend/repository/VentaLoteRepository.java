@@ -16,6 +16,14 @@ public interface VentaLoteRepository extends JpaRepository<VentaLote, Long> {
     @Query("select count(distinct vl.lote.id) from VentaLote vl")
     long countLotesVendidos();
 
+    /** Lotes vendidos (cada uno una vez) de un desarrollo. */
+    @Query("select count(distinct vl.lote.id) from VentaLote vl where vl.lote.desarrollo.id = :desarrolloId")
+    long countLotesVendidosByDesarrolloId(@Param("desarrolloId") Long desarrolloId);
+
+    /** Ventas con al menos un lote de ese desarrollo (una venta mixta cuenta en cada desarrollo que toca). */
+    @Query("select count(distinct vl.venta.id) from VentaLote vl where vl.lote.desarrollo.id = :desarrolloId")
+    long countVentasByDesarrolloId(@Param("desarrolloId") Long desarrolloId);
+
     @Query("select count(distinct vl.lote.id) from VentaLote vl where vl.lote.desarrollo.nombre = :desarrolloNombre")
     long countLotesVendidosByDesarrolloNombre(@Param("desarrolloNombre") String desarrolloNombre);
 

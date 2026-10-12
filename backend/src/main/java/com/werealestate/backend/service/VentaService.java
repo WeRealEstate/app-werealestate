@@ -394,10 +394,25 @@ public class VentaService {
     }
 
     /** ascendente = la venta más antigua primero (número 1 arriba); si no, la más reciente primero.
-     * Ordena por número de venta, que ya sigue la fecha de venta (ver VentaRepository.renumerar). */
-    public PaginaDto<VentaDto> buscarPaginado(String busqueda, boolean ascendente, int pagina, int tamano) {
+     * Ordena por número de venta, que ya sigue la fecha de venta (ver VentaRepository.renumerar).
+     * desarrolloId (opcional): solo las ventas con al menos un lote de ese desarrollo; una venta mixta
+     * aparece en cada desarrollo que toca. */
+    public PaginaDto<VentaDto> buscarPaginado(
+            String busqueda, boolean ascendente, int pagina, int tamano, Long desarrolloId) {
         exigirAdminOLider();
         Specification<Venta> spec = (root, query, cb) -> cb.conjunction();
+
+        if (desarrolloId != null) {
+            spec = spec.and((root, query, cb) -> {
+                jakarta.persistence.criteria.Subquery<Long> sub = query.subquery(Long.class);
+                jakarta.persistence.criteria.Root<VentaLote> vl = sub.from(VentaLote.class);
+                sub.select(vl.<Long>get("id"))
+                        .where(
+                                cb.equal(vl.get("venta"), root),
+                                cb.equal(vl.get("lote").get("desarrollo").get("id"), desarrolloId));
+                return cb.exists(sub);
+            });
+        }
 
         if (busqueda != null && !busqueda.isBlank()) {
             String comodin = "%" + busqueda.trim().toLowerCase() + "%";
@@ -425,8 +440,13 @@ public class VentaService {
 
     /** Para los contadores de /panel/ventas: lotes vendidos (cada lote cuenta una vez) y ventas
      * registradas (una por operación, aunque incluya varios lotes). */
-    public ContadoresVentasDto contadores() {
+    public ContadoresVentasDto contadores(Long desarrolloId) {
         exigirAdminOLider();
+        if (desarrolloId != null) {
+            return new ContadoresVentasDto(
+                    ventaLoteRepository.countLotesVendidosByDesarrolloId(desarrolloId),
+                    ventaLoteRepository.countVentasByDesarrolloId(desarrolloId));
+        }
         return new ContadoresVentasDto(ventaLoteRepository.countLotesVendidos(), ventaRepository.count());
     }
 

@@ -44,13 +44,15 @@ public class VentaController {
             @RequestParam(required = false) String busqueda,
             @RequestParam(defaultValue = "desc") String orden,
             @RequestParam(defaultValue = "0") int pagina,
-            @RequestParam(defaultValue = "10") int tamano) {
-        return ventaService.buscarPaginado(busqueda, "asc".equalsIgnoreCase(orden), pagina, tamano);
+            @RequestParam(defaultValue = "10") int tamano,
+            @RequestParam(required = false) Long desarrolloId) {
+        return ventaService.buscarPaginado(busqueda, "asc".equalsIgnoreCase(orden), pagina, tamano, desarrolloId);
     }
 
+    /** desarrolloId opcional: solo las ventas y lotes de ese desarrollo. */
     @GetMapping("/contadores")
-    public ContadoresVentasDto contadores() {
-        return ventaService.contadores();
+    public ContadoresVentasDto contadores(@RequestParam(required = false) Long desarrolloId) {
+        return ventaService.contadores(desarrolloId);
     }
 
     @GetMapping("/samai-campestre/lotes-vendidos")

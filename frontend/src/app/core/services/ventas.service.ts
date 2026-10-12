@@ -20,6 +20,8 @@ export interface BuscarVentasParams {
   orden?: 'asc' | 'desc';
   pagina: number;
   tamano: number;
+  /** Solo las ventas con algún lote de ese desarrollo (una venta mixta aparece en cada uno). */
+  desarrolloId?: number | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -31,13 +33,17 @@ export class VentasService {
     let httpParams = new HttpParams().set('pagina', params.pagina).set('tamano', params.tamano);
     if (params.busqueda) httpParams = httpParams.set('busqueda', params.busqueda);
     if (params.orden) httpParams = httpParams.set('orden', params.orden);
+    if (params.desarrolloId) httpParams = httpParams.set('desarrolloId', params.desarrolloId);
 
     return firstValueFrom(this.http.get<Pagina<Venta>>(`${this.baseUrl}/buscar`, { params: httpParams }));
   }
 
   /** Lotes vendidos (cada lote una vez) y ventas registradas (una por operación). */
-  contadores(): Promise<{ lotesVendidos: number; ventasRegistradas: number }> {
-    return firstValueFrom(this.http.get<{ lotesVendidos: number; ventasRegistradas: number }>(`${this.baseUrl}/contadores`));
+  contadores(desarrolloId?: number | null): Promise<{ lotesVendidos: number; ventasRegistradas: number }> {
+    const params = desarrolloId ? new HttpParams().set('desarrolloId', desarrolloId) : undefined;
+    return firstValueFrom(
+      this.http.get<{ lotesVendidos: number; ventasRegistradas: number }>(`${this.baseUrl}/contadores`, { params }),
+    );
   }
 
   contarLotesVendidosSamaiCampestre(): Promise<number> {

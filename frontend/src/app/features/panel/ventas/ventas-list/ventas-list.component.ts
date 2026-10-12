@@ -4,6 +4,8 @@ import { LucideArrowDown, LucideArrowUp, LucideEye } from '@lucide/angular';
 import { inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { VentasService } from '../../../../core/services/ventas.service';
+import { LeadsService } from '../../../../core/services/leads.service';
+import { Desarrollo } from '../../../../core/models/lead.model';
 import { Venta } from '../../../../core/models/venta.model';
 import { WeLoaderComponent } from '../../../../shared/we-loader/we-loader.component';
 
@@ -21,6 +23,7 @@ const DEBOUNCE_BUSQUEDA_MS = 350;
 })
 export class VentasListComponent {
   private readonly ventasService = inject(VentasService);
+  private readonly leadsService = inject(LeadsService);
 
   readonly ventas = signal<Venta[]>([]);
   readonly isLoading = signal(true);
@@ -28,6 +31,9 @@ export class VentasListComponent {
   readonly hayMas = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly filtro = signal('');
+  /** Desarrollos para el selector, y el elegido (null = todos). Siempre arranca en "Todos". */
+  readonly desarrollos = signal<Desarrollo[]>([]);
+  readonly desarrolloId = signal<number | null>(null);
   /** Orden de la lista por fecha de venta (y por tanto por número): desc = la más reciente arriba. */
   readonly orden = signal<'asc' | 'desc'>('desc');
 
@@ -47,12 +53,20 @@ export class VentasListComponent {
   constructor() {
     void this.cargarContadores();
     this.cargar();
+    this.leadsService.listarDesarrollosGestionables().then((d) => this.desarrollos.set(d)).catch(() => undefined);
+  }
+
+  /** Al cambiar de desarrollo se recarga la lista desde la primera página y los contadores de ese desarrollo. */
+  onDesarrolloChange(valor: string): void {
+    this.desarrolloId.set(valor ? Number(valor) : null);
+    void this.cargarContadores();
+    void this.cargar();
   }
 
   private async cargarContadores(): Promise<void> {
     try {
       this.contadoresError.set(false);
-      this.contadores.set(await this.ventasService.contadores());
+      this.contadores.set(await this.ventasService.contadores(this.desarrolloId()));
     } catch {
       this.contadoresError.set(true);
       this.contadores.set(null);
@@ -102,7 +116,13 @@ export class VentasListComponent {
   }
 
   private buscarPagina(pagina: number, tamano: number) {
-    return this.ventasService.buscarPaginado({ busqueda: this.filtro().trim() || undefined, orden: this.orden(), pagina, tamano });
+    return this.ventasService.buscarPaginado({
+      busqueda: this.filtro().trim() || undefined,
+      orden: this.orden(),
+      pagina,
+      tamano,
+      desarrolloId: this.desarrolloId(),
+    });
   }
 
   money(valor: number): string {
