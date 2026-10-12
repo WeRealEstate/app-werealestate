@@ -331,7 +331,7 @@
        botones de cotizar y apartar. Ya verificado, muestra el nombre y permite salir. -->
   @if (!isLoading() && !errorMessage() && planoUrl()) {
     <div
-      class="plano-ui absolute right-[max(0.75rem,env(safe-area-inset-right))] top-[max(0.75rem,env(safe-area-inset-top))] z-20"
+      class="plano-ui absolute right-[max(0.75rem,env(safe-area-inset-right))] top-[max(0.75rem,env(safe-area-inset-top))] z-20 flex flex-col items-end gap-1.5"
       [class.plano-ui-in]="imagenLista()"
       style="--d: 1.4s"
     >
@@ -343,6 +343,16 @@
           class="max-w-[14rem] truncate rounded-md border border-gray-400/60 bg-black/50 px-2.5 py-1.5 text-xs font-medium text-white/80 hover:bg-black/70"
         >
           {{ asesor }} · salir
+        </button>
+        <button
+          type="button"
+          (click)="descargarPdf()"
+          [disabled]="generandoPdf()"
+          data-testid="descargar-pdf"
+          class="rounded-md border border-gray-400/60 bg-black/50 px-2.5 py-1.5 text-xs font-medium text-white/80 hover:bg-black/70
+                 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {{ generandoPdf() ? 'Generando PDF…' : 'Descargar PDF' }}
         </button>
       } @else {
         <button

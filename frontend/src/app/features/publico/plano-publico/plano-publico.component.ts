@@ -1,10 +1,11 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, DestroyRef, effect, ElementRef, HostListener, ViewChild, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, effect, ElementRef, HostListener, Injector, ViewChild, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
   ESTADO_LOTE_BADGE_CLASSES,
+  ESTADO_LOTE_COLOR_RGB,
   ESTADO_LOTE_LABELS,
   ESTADO_LOTE_POLIGONO_CLASSES,
   ESTADOS_LOTE_SOLO_ADMIN,
@@ -15,6 +16,7 @@ import {
 import { LotesService } from '../../../core/services/lotes.service';
 import { colorDeBarra, fondoDePagina } from '../../../core/utils/pagina';
 import { DetectorDeRueda } from '../../../core/utils/rueda';
+import { leerImagenParaPdf } from '../../../core/utils/imagen-pdf';
 import { ToastService } from '../../../core/services/toast.service';
 import { ToastContainerComponent } from '../../../shared/toast-container/toast-container.component';
 
@@ -85,6 +87,7 @@ export class PlanoPublicoComponent {
   private readonly lotesService = inject(LotesService);
   private readonly toast = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
 
   @ViewChild('contenedorPlano') private readonly contenedorPlano?: ElementRef<HTMLElement>;
 
@@ -115,6 +118,9 @@ export class PlanoPublicoComponent {
   readonly desarrolloNombre = computed(() => this.lotes()[0]?.desarrollo.nombre ?? '');
 
   readonly loteActivo = signal<Lote | null>(null);
+
+  /** true mientras se arma el PDF del plano (solo lo pide un asesor ya verificado con su PIN). */
+  readonly generandoPdf = signal(false);
 
   /** Lotes ya delimitados con su "points" de SVG y su tooltip calculados una sola vez (cuando cambia
    * la lista), no en cada ciclo de detección de cambios: con cientos de lotes, armar esos strings en
@@ -385,6 +391,40 @@ export class PlanoPublicoComponent {
     this.asesorVerificado.set(null);
     guardarAsesor(this.proyecto, null);
     this.mostrarApartar.set(false);
+  }
+
+  /** Descarga el plano completo en PDF, coloreado por estado y con su leyenda — el mismo archivo que
+   * baja el panel interno en /panel/plano. Solo se ofrece a un asesor verificado (ver el HTML). El
+   * generador de PDF (jsPDF) pesa bastante, así que se carga hasta que alguien lo pide. */
+  async descargarPdf(): Promise<void> {
+    const url = this.planoUrl();
+    if (!url || !this.asesorVerificado() || this.generandoPdf()) return;
+
+    this.generandoPdf.set(true);
+    try {
+      const [{ PdfService }, imagen] = await Promise.all([
+        import('../../../core/services/pdf-cotizacion.service'),
+        leerImagenParaPdf(url),
+      ]);
+      await this.injector.get(PdfService).downloadPlanoPdf({
+        desarrolloNombre: this.desarrolloNombre(),
+        fecha: new Date().toLocaleDateString('es-MX'),
+        imagenBytes: imagen.bytes,
+        anchoImagen: imagen.ancho,
+        altoImagen: imagen.alto,
+        poligonos: this.lotes()
+          .filter((lote) => this.tienePoligono(lote))
+          .map((lote) => ({ puntos: lote.mapaPoligono!, color: ESTADO_LOTE_COLOR_RGB[lote.estado] })),
+        leyenda: this.estadosLote.map((estado) => ({
+          label: this.estadoLabels[estado],
+          color: ESTADO_LOTE_COLOR_RGB[estado],
+        })),
+      });
+    } catch {
+      this.toast.error('No se pudo generar el PDF del plano.');
+    } finally {
+      this.generandoPdf.set(false);
+    }
   }
 
   abrirApartar(): void {
