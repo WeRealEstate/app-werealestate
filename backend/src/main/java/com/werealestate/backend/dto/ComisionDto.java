@@ -51,5 +51,13 @@ public record ComisionDto(
         // montoRetrasado es lo que se debe de ese tiempo (lo ganado con sábado vencido menos lo entregado).
         boolean retrasada,
         BigDecimal montoRetrasado,
-        LocalDateTime fechaCreacion) {
+        LocalDateTime fechaCreacion,
+        // Regla por tipo de abono (ventas nuevas): enganche completo, mensualidad y aportación a la
+        // mitad, apartado sin comisión. Las comisiones anteriores (false) conservan su cálculo.
+        boolean reglaNueva,
+        // Contrato de la venta firmado (y desde cuándo). Con la regla nueva y sin firma, la comisión se
+        // acumula pero no se puede entregar (bloqueadaPorContrato).
+        boolean contratoFirmado,
+        LocalDate contratoFechaFirma,
+        boolean bloqueadaPorContrato) {
 }

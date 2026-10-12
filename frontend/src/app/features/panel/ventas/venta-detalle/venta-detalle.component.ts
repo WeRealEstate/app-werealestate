@@ -15,6 +15,7 @@ import { UsuariosService } from '../../../../core/services/usuarios.service';
 import { AsesoresExternosService } from '../../../../core/services/asesores-externos.service';
 import { PagoVenta, ReciboHistorial, Venta } from '../../../../core/models/venta.model';
 import { ReciboFormComponent } from '../../../../shared/recibo-form/recibo-form.component';
+import { ContratoVentaComponent } from '../../../../shared/contrato-venta/contrato-venta.component';
 import { RecibosVentaComponent } from '../../../../shared/recibos-venta/recibos-venta.component';
 import { UsuarioResumen } from '../../../../core/models/lead.model';
 import { AsesorExterno } from '../../../../core/models/asesor-externo.model';
@@ -28,7 +29,7 @@ const SEGUNDOS_ESPERA_ELIMINAR = 10;
 @Component({
   selector: 'app-venta-detalle',
   standalone: true,
-  imports: [MonedaInputDirective, WeLoaderComponent, ReciboFormComponent, RecibosVentaComponent, ReactiveFormsModule, RouterLink, ClienteSelectorComponent, CopropietariosEditorComponent, LucidePencil, LucideTrash2],
+  imports: [MonedaInputDirective, WeLoaderComponent, ReciboFormComponent, RecibosVentaComponent, ContratoVentaComponent, ReactiveFormsModule, RouterLink, ClienteSelectorComponent, CopropietariosEditorComponent, LucidePencil, LucideTrash2],
   templateUrl: './venta-detalle.component.html',
 })
 export class VentaDetalleComponent implements OnInit, OnDestroy {

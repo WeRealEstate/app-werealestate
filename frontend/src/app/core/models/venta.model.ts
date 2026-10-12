@@ -57,6 +57,9 @@ export interface Venta {
   /** true: el mes de la venta cuenta como la primera mensualidad; false: la primera cae el mes siguiente. */
   primeraMensualidadMesVenta: boolean;
   notas: string | null;
+  /** Contrato firmado (y desde cuándo): sin él no se puede entregar la comisión de una venta nueva. */
+  contratoFirmado: boolean;
+  contratoFechaFirma: string | null;
   fechaCreacion: string;
   /** Se calculan a partir de sus lotes y sus pagos (ver PagoVenta), nunca se capturan a mano. */
   precioVenta: number;
@@ -89,6 +92,9 @@ export interface VentaCreateRequest {
   marcarLoteVendido: boolean;
   /** Solo con el tipo de pago "Con aportaciones"; el backend las valida (ver VentaService). */
   aportaciones?: VentaAportacion[];
+  /** Contrato firmado (opcional); con true, la fecha de firma es obligatoria. */
+  contratoFirmado?: boolean;
+  contratoFechaFirma?: string | null;
 }
 
 /** Igual que VentaCreateRequest pero sin lotes ni marcarLoteVendido: no toca qué lotes incluye la

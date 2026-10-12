@@ -15,6 +15,9 @@ export interface EntradaVersion {
 
 export const CHANGELOG: EntradaVersion[] = [
   { version: '7.3.13', fecha: '2026-10-09', cambios: [
+    "Tipos de abonos: se agregan tipos de abonos para poder diferenciar entre abonos de enganche, abonos de mensualidad y abonos extraordinarios.",
+  ] },
+  { version: '7.3.13', fecha: '2026-10-09', cambios: [
     "Finanzas: se agregan campos de fecha de pago y fecha de vencimiento a los abonos, para poder llevar un control de pagos atrasados.",
     "Ventas: se agrega la opción de ver el historial de cambios de cada venta, incluyendo cambios de estatus, abonos y comentarios.",
     "Se agregan tipos de abonos"

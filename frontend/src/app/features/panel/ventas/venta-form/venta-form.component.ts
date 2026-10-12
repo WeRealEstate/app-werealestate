@@ -129,6 +129,16 @@ export class VentaFormComponent {
    * pago mensual que reducir: ahí el depósito siempre se registra como abono). null mientras no se
    * ha elegido — se pide explícito, no hay default silencioso para una decisión financiera. */
   readonly aplicarDepositoA = signal<AplicarDepositoA | null>(null);
+  /** Contrato firmado (y desde cuándo): sin él, la comisión de la venta no se puede entregar. */
+  readonly hoyIso = new Date().toISOString().slice(0, 10);
+  readonly contratoFirmado = signal(false);
+  readonly contratoFecha = signal('');
+
+  alternarContrato(valor: boolean): void {
+    this.contratoFirmado.set(valor);
+    if (valor && !this.contratoFecha()) this.contratoFecha.set(this.hoyIso);
+  }
+
   /** Folio del recibo del depósito de apartado; se pide cuando ese dinero se registra como abono. */
   readonly folioDeposito = signal('');
   readonly registraDepositoComoAbono = computed(() => this.depositoTotal() > 0 && this.aplicarDepositoA() !== 'mensualidad');
@@ -416,6 +426,7 @@ export class VentaFormComponent {
     this.clienteFaltante.set(this.clienteElegido() === null);
     const faltaMontoEnganche = this.mostrarEnganche() && !this.montoEnganche();
     const faltaElegirDeposito = this.requiereElegirDeposito() && !this.aplicarDepositoA();
+    const faltaFechaContrato = this.contratoFirmado() && !this.contratoFecha();
     const faltaFolioDeposito = !faltaElegirDeposito && this.registraDepositoComoAbono() && !this.folioDeposito().trim();
     const errorAportaciones = this.errorAportaciones();
     if (
@@ -426,6 +437,7 @@ export class VentaFormComponent {
       faltaMontoEnganche ||
       faltaElegirDeposito ||
       faltaFolioDeposito ||
+      faltaFechaContrato ||
       errorAportaciones !== null ||
       this.isLoading()
     ) {
@@ -436,6 +448,8 @@ export class VentaFormComponent {
         this.errorMessage.set(`Ingresa el monto de ${this.engancheLabelActual()!.toLowerCase()}.`);
       } else if (faltaElegirDeposito) {
         this.errorMessage.set('Indica si el dinero ya apartado baja la mensualidad o el saldo.');
+      } else if (faltaFechaContrato) {
+        this.errorMessage.set('Indica la fecha de firma del contrato.');
       } else if (faltaFolioDeposito) {
         this.errorMessage.set('Ingresa el folio del dinero recibido al apartar el lote.');
       } else if (errorAportaciones !== null) {
@@ -466,6 +480,8 @@ export class VentaFormComponent {
         primeraMensualidadMesVenta: this.primeraMensualidadMesVenta(),
         notas: v.notas?.trim() || null,
         marcarLoteVendido: v.marcarLoteVendido,
+        contratoFirmado: this.contratoFirmado(),
+        contratoFechaFirma: this.contratoFirmado() ? this.contratoFecha() : null,
         aportaciones: this.esAportaciones()
           ? this.aportaciones().map((a) => ({ anio: a.anio, mes: a.mes, monto: a.monto as number }))
           : [],

@@ -120,14 +120,18 @@ export class RecibosVentaComponent {
   readonly guardando = signal(false);
   readonly errorModal = signal<string | null>(null);
 
+  /** Los cuatro tipos siempre salen; los que esta venta no puede recibir se muestran deshabilitados
+   * con la razón (por ejemplo, una venta de contado no tiene mensualidades). */
   readonly tiposDisponibles = computed(() => {
     const v = this.venta();
-    const tipos: TipoAbono[] = [];
-    if (v.plazoMeses && v.mensualidad) tipos.push('MENSUALIDAD');
-    if (v.enganche) tipos.push('ENGANCHE');
-    tipos.push('APARTADO');
-    if (v.aportaciones.length > 0) tipos.push('APORTACION');
-    return tipos.map((valor) => ({ valor, label: TIPO_ABONO_LABELS[valor] }));
+    const tienePlan = !!(v.plazoMeses && v.mensualidad);
+    const tieneAportaciones = v.aportaciones.length > 0;
+    return [
+      { valor: 'MENSUALIDAD' as TipoAbono, label: TIPO_ABONO_LABELS.MENSUALIDAD, deshabilitado: !tienePlan, motivo: 'esta venta no tiene mensualidades' },
+      { valor: 'ENGANCHE' as TipoAbono, label: TIPO_ABONO_LABELS.ENGANCHE, deshabilitado: false, motivo: '' },
+      { valor: 'APARTADO' as TipoAbono, label: TIPO_ABONO_LABELS.APARTADO, deshabilitado: false, motivo: '' },
+      { valor: 'APORTACION' as TipoAbono, label: TIPO_ABONO_LABELS.APORTACION, deshabilitado: !tieneAportaciones, motivo: 'esta venta no tiene aportaciones programadas' },
+    ];
   });
 
   private readonly planCompleto = computed<MesPlan[]>(() => mesesDelPlan(this.venta()));

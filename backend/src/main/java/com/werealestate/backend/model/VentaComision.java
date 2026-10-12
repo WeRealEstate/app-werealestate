@@ -62,6 +62,12 @@ public class VentaComision {
     @Column(nullable = false)
     private boolean cancelada;
 
+    /** true en las comisiones de ventas creadas con la regla por tipo de abono: enganche completo,
+     * mensualidad y aportación a la mitad, apartado sin comisión, y entrega frenada hasta que el
+     * contrato esté firmado. Las anteriores (false) conservan su cálculo de siempre. */
+    @Column(name = "regla_nueva", nullable = false)
+    private boolean reglaNueva;
+
     @Column(name = "fecha_creacion", nullable = false)
     private LocalDateTime fechaCreacion = LocalDateTime.now();
 
@@ -90,6 +96,14 @@ public class VentaComision {
 
     public Long getId() {
         return id;
+    }
+
+    public boolean isReglaNueva() {
+        return reglaNueva;
+    }
+
+    public void marcarReglaNueva() {
+        this.reglaNueva = true;
     }
 
     public Venta getVenta() {

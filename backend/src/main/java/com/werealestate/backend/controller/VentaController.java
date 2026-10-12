@@ -69,6 +69,12 @@ public class VentaController {
         return ventaService.obtener(id);
     }
 
+    /** Registra o corrige si el contrato está firmado y desde cuándo. */
+    @PutMapping("/{id}/contrato")
+    public VentaDto registrarContrato(@PathVariable Long id, @Valid @RequestBody com.werealestate.backend.dto.ContratoRequest request) {
+        return ventaService.registrarContrato(id, request);
+    }
+
     /** Edita los datos no financieros de un recibo (folio, nota, tipo, meses, aportación). */
     @PutMapping("/{id}/recibos/{reciboId}")
     public List<PagoVentaDto> editarRecibo(

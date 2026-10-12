@@ -84,6 +84,12 @@ export interface Comision {
   /** Lo que se debe de esas entregas vencidas. */
   montoRetrasado: number;
   fechaCreacion: string;
+  /** Regla por tipo de abono (ventas nuevas); las anteriores conservan su cálculo. */
+  reglaNueva: boolean;
+  contratoFirmado: boolean;
+  contratoFechaFirma: string | null;
+  /** Regla nueva sin contrato firmado: se acumula, pero no se puede entregar. */
+  bloqueadaPorContrato: boolean;
 }
 
 export interface ComisionDevengo {

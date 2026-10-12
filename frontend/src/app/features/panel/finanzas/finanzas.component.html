@@ -258,6 +258,11 @@
                           Retrasada · ${{ money(c.montoRetrasado) }}
                         </span>
                       }
+                      @if (c.bloqueadaPorContrato) {
+                        <span class="inline-flex whitespace-nowrap rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800 dark:bg-amber-500/15 dark:text-amber-300" title="El contrato de la venta no está firmado: la comisión se acumula, pero no se puede entregar hasta registrar la firma en la venta.">
+                          Contrato sin firmar
+                        </span>
+                      }
                       @if (c.porDevolver > 0) {
                         <span class="inline-flex whitespace-nowrap rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800 dark:bg-amber-500/15 dark:text-amber-300" title="Se entregó más de lo que respaldan los abonos vigentes (por ejemplo, se anuló un recibo). El asesor debe devolverlo.">
                           Por devolver · ${{ money(c.porDevolver) }}

@@ -29,6 +29,9 @@ public record VentaDto(
         int diaPago,
         boolean primeraMensualidadMesVenta,
         String notas,
+        // Contrato firmado (y desde cuándo): sin él no se puede entregar la comisión (regla nueva).
+        boolean contratoFirmado,
+        LocalDate contratoFechaFirma,
         LocalDateTime fechaCreacion,
         // Se calculan a partir de sus lotes y sus pagos (ver VentaService), nunca se guardan directo.
         BigDecimal precioVenta,
@@ -61,6 +64,8 @@ public record VentaDto(
                 venta.getDiaPago(),
                 venta.isPrimeraMensualidadMesVenta(),
                 venta.getNotas(),
+                venta.isContratoFirmado(),
+                venta.getContratoFechaFirma(),
                 venta.getFechaCreacion(),
                 precioVenta,
                 totalAbonado,

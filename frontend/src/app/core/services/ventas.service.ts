@@ -79,6 +79,11 @@ export class VentasService {
     return firstValueFrom(this.http.get<PagoVenta[]>(`${this.baseUrl}/${ventaId}/pagos`));
   }
 
+  /** Registra o corrige si el contrato está firmado y desde cuándo. */
+  registrarContrato(ventaId: number, firmado: boolean, fechaFirma: string | null): Promise<Venta> {
+    return firstValueFrom(this.http.put<Venta>(`${this.baseUrl}/${ventaId}/contrato`, { firmado, fechaFirma }));
+  }
+
   /** Edita folio, nota y, por línea, tipo/meses/aportación (nunca monto ni fecha). */
   editarRecibo(ventaId: number, reciboId: number, request: ReciboEditarRequest): Promise<PagoVenta[]> {
     return firstValueFrom(this.http.put<PagoVenta[]>(`${this.baseUrl}/${ventaId}/recibos/${reciboId}`, request));

@@ -129,7 +129,7 @@
               >
                 <option value="">Selecciona…</option>
                 @for (t of tiposDisponibles(); track t.valor) {
-                  <option [value]="t.valor">{{ t.label }}</option>
+                  <option [value]="t.valor" [disabled]="t.deshabilitado">{{ t.label }}{{ t.deshabilitado ? ' (' + t.motivo + ')' : '' }}</option>
                 }
               </select>
             </div>

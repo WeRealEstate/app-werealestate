@@ -44,5 +44,8 @@ public record VentaCreateRequest(
         boolean marcarLoteVendido,
         // Esquema "Con aportaciones": varias por año, cada una con su mes y monto. Opcional (null o
         // vacío = sin aportaciones); ver VentaService.validarAportaciones.
-        @Valid List<VentaAportacionItemRequest> aportaciones) {
+        @Valid List<VentaAportacionItemRequest> aportaciones,
+        // Contrato firmado (opcional; null = sin firmar). Con firmado = true, la fecha es obligatoria.
+        Boolean contratoFirmado,
+        LocalDate contratoFechaFirma) {
 }

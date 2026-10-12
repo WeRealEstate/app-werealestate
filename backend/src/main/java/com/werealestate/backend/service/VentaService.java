@@ -156,6 +156,9 @@ public class VentaService {
                 request.diaPago(), Boolean.TRUE.equals(request.primeraMensualidadMesVenta()), notas);
         venta.ligarCliente(clienteRef);
         venta.setRegistradaPor(currentUserProvider.getUsuarioActual());
+        boolean contratoFirmado = Boolean.TRUE.equals(request.contratoFirmado());
+        validarContrato(contratoFirmado, request.contratoFechaFirma());
+        venta.registrarContrato(contratoFirmado, request.contratoFechaFirma());
         venta = ventaRepository.save(venta);
         aplicarCopropietarios(venta, request.copropietariosIds());
 
@@ -174,7 +177,8 @@ public class VentaService {
             }
         }
 
-        comisionService.sincronizar(venta);
+        // Una venta nueva usa la regla de comisión por tipo de abono (las existentes conservan la suya).
+        comisionService.sincronizarVentaNueva(venta);
         return toDto(renumerar(venta.getId()));
     }
 
@@ -215,6 +219,29 @@ public class VentaService {
                 request.lotes().stream().map(VentaLoteItemRequest::precio).reduce(BigDecimal.ZERO, BigDecimal::add);
         if (total.compareTo(precio) >= 0) {
             throw new ValidationException("Las aportaciones no pueden sumar todo el precio de la venta");
+        }
+    }
+
+    /** Registra o corrige si el contrato de la venta ya está firmado y desde cuándo. Sin contrato
+     * firmado, la comisión de una venta nueva se acumula pero no se puede entregar; al firmar queda
+     * disponible el sábado siguiente a la firma. */
+    public VentaDto registrarContrato(Long ventaId, com.werealestate.backend.dto.ContratoRequest request) {
+        exigirAdminOLider();
+        Venta venta = obtenerEntidad(ventaId);
+        validarContrato(request.firmado(), request.fechaFirma());
+        venta.registrarContrato(request.firmado(), request.fechaFirma());
+        ventaRepository.save(venta);
+        comisionService.sincronizar(venta);
+        return toDto(venta);
+    }
+
+    private static void validarContrato(boolean firmado, java.time.LocalDate fechaFirma) {
+        if (!firmado) return;
+        if (fechaFirma == null) {
+            throw new ValidationException("Indica la fecha de firma del contrato");
+        }
+        if (fechaFirma.isAfter(java.time.LocalDate.now())) {
+            throw new ValidationException("La fecha de firma no puede ser futura");
         }
     }
 
@@ -559,6 +586,8 @@ public class VentaService {
         reciboVentaRepository.save(recibo);
         reciboHistorialRepository.save(new ReciboVentaHistorial(
                 recibo, AccionRecibo.EDITADO, actual, cambios.isEmpty() ? "Sin cambios" : String.join(" | ", cambios)));
+        // El tipo de cada línea define cuánto aporta a la comisión (regla por tipo de abono).
+        comisionService.sincronizar(venta);
         return pagoVentaRepository.findByReciboId(reciboId).stream().map(PagoVentaDto::from).toList();
     }
 

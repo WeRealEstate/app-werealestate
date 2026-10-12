@@ -156,6 +156,27 @@ public class Venta {
         this.notas = notas;
     }
 
+    /** Contrato firmado: la comisión de la venta solo se puede entregar con el contrato firmado
+     * (ver ComisionService, regla nueva). La fecha de firma es obligatoria cuando está firmado. */
+    @jakarta.persistence.Column(name = "contrato_firmado", nullable = false)
+    private boolean contratoFirmado;
+
+    @jakarta.persistence.Column(name = "contrato_fecha_firma")
+    private LocalDate contratoFechaFirma;
+
+    public boolean isContratoFirmado() {
+        return contratoFirmado;
+    }
+
+    public LocalDate getContratoFechaFirma() {
+        return contratoFechaFirma;
+    }
+
+    public void registrarContrato(boolean firmado, LocalDate fechaFirma) {
+        this.contratoFirmado = firmado;
+        this.contratoFechaFirma = firmado ? fechaFirma : null;
+    }
+
     public int getDiaPago() {
         return diaPago;
     }

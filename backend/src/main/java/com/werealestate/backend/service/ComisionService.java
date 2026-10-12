@@ -17,6 +17,7 @@ import com.werealestate.backend.model.Gasto;
 import com.werealestate.backend.model.ModalidadComision;
 import com.werealestate.backend.model.OrigenGasto;
 import com.werealestate.backend.model.PagoVenta;
+import com.werealestate.backend.model.TipoAbono;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.TipoGasto;
 import com.werealestate.backend.model.Usuario;
@@ -121,13 +122,27 @@ public class ComisionService {
     /** Llamado por VentaService al registrar una venta, editarla o registrarle un abono: crea la
      * comisión si no existe y deja al día a quién va, su modalidad y lo que lleva ganado. */
     public void sincronizar(Venta venta) {
+        sincronizar(venta, false);
+    }
+
+    /** Igual que {@link #sincronizar(Venta)} pero para una venta recién creada: su comisión usa la
+     * regla por tipo de abono (enganche completo, mensualidad y aportación a la mitad, apartado sin
+     * comisión, entrega frenada hasta que el contrato esté firmado). Las comisiones que ya existían
+     * (y las que se generan para ventas anteriores) conservan su cálculo de siempre. */
+    public void sincronizarVentaNueva(Venta venta) {
+        sincronizar(venta, true);
+    }
+
+    private void sincronizar(Venta venta, boolean ventaNueva) {
         VentaComision comision = comisionRepository.findByVentaId(venta.getId()).orElse(null);
         if (comision == null) {
             BigDecimal base = valorDeVenta(venta.getId());
             BigDecimal monto = porcentajeDe(base, PORCENTAJE_DEFECTO);
-            comision = comisionRepository.save(new VentaComision(
+            comision = new VentaComision(
                     venta, venta.getCliente(), venta.getUsuarioAsesor(), venta.getAsesorExterno(), base,
-                    PORCENTAJE_DEFECTO, monto, modalidadPara(venta, monto)));
+                    PORCENTAJE_DEFECTO, monto, modalidadPara(venta, monto));
+            if (ventaNueva) comision.marcarReglaNueva();
+            comision = comisionRepository.save(comision);
         } else if (!comision.isCancelada()) {
             boolean sinEntregas = !entregaRepository.existsByComisionId(comision.getId());
             comision.setCliente(venta.getCliente());
@@ -205,7 +220,7 @@ public class ComisionService {
             total = total.add(c.getMonto());
             devengado = devengado.add(dev);
             entregado = entregado.add(ent);
-            porEntregar = porEntregar.add(dev.subtract(ent).max(BigDecimal.ZERO));
+            if (!totales.bloqueada(c.getId())) porEntregar = porEntregar.add(dev.subtract(ent).max(BigDecimal.ZERO));
             pendiente = pendiente.add(c.getMonto().subtract(dev).max(BigDecimal.ZERO));
         }
         return new ComisionResumenDto(
@@ -298,6 +313,10 @@ public class ComisionService {
         VentaComision comision = obtenerEntidad(id);
 
         Totales totales = totales();
+        if (totales.bloqueada(id)) {
+            throw new ConflictException("El contrato de esta venta no está firmado: la comisión se acumula, "
+                    + "pero no se puede entregar hasta registrar la firma en la venta");
+        }
         BigDecimal porEntregar = totales.devengado(id).subtract(totales.entregado(id));
         if (request.monto().compareTo(porEntregar) > 0) {
             throw new ConflictException("Solo hay $" + porEntregar.max(BigDecimal.ZERO)
@@ -359,6 +378,11 @@ public class ComisionService {
 
         if (comision.getMonto().signum() <= 0) return;
 
+        if (comision.isReglaNueva()) {
+            reconstruirDevengosPorTipo(comision, venta);
+            return;
+        }
+
         if (comision.getModalidad() == ModalidadComision.UNA_EXHIBICION) {
             devengoRepository.save(new VentaComisionDevengo(
                     comision, null, venta.getFechaVenta(), sabadoSiguiente(venta.getFechaVenta()), comision.getMonto()));
@@ -375,6 +399,45 @@ public class ComisionService {
                     new VentaComisionDevengo(comision, pago, pago.getFecha(), sabadoSiguiente(pago.getFecha()), aporte));
             restante = restante.subtract(aporte);
         }
+    }
+
+    /**
+     * Regla por tipo de abono (ventas nuevas), sobre los abonos vigentes en orden: el ENGANCHE cuenta
+     * completo; la MENSUALIDAD y la APORTACION, la mitad; el APARTADO no cuenta (suelen ser $500 o
+     * $1,000); un abono sin tipo ("por completar") tampoco cuenta hasta que se clasifique. Se acumula
+     * hasta completar la comisión. Cada aporte se entrega el sábado siguiente a su abono y, si el
+     * contrato se firmó después, no antes del sábado siguiente a la firma. Mientras el contrato no
+     * esté firmado, lo acumulado no se puede entregar (ver Totales.bloqueada).
+     */
+    private void reconstruirDevengosPorTipo(VentaComision comision, Venta venta) {
+        LocalDate sabadoFirma = venta.isContratoFirmado() && venta.getContratoFechaFirma() != null
+                ? sabadoSiguiente(venta.getContratoFechaFirma())
+                : null;
+        BigDecimal restante = comision.getMonto();
+        BigDecimal enganche = BigDecimal.ZERO;
+        for (PagoVenta pago : pagoVentaRepository.findVigentesByVentaIdOrderByFechaAscIdAsc(venta.getId())) {
+            if (pago.getTipo() == TipoAbono.ENGANCHE) enganche = enganche.add(pago.getMonto());
+            if (restante.signum() <= 0) continue;
+            BigDecimal aporte = aporteDe(pago).min(restante);
+            if (aporte.signum() <= 0) continue;
+            LocalDate entrega = sabadoSiguiente(pago.getFecha());
+            if (sabadoFirma != null && sabadoFirma.isAfter(entrega)) entrega = sabadoFirma;
+            devengoRepository.save(new VentaComisionDevengo(comision, pago, pago.getFecha(), entrega, aporte));
+            restante = restante.subtract(aporte);
+        }
+        // Solo informativo: si el enganche cubrió la comisión completa se muestra como una exhibición.
+        comision.setModalidad(
+                enganche.compareTo(comision.getMonto()) >= 0 ? ModalidadComision.UNA_EXHIBICION : ModalidadComision.PARCIALIDADES);
+    }
+
+    /** Lo que aporta un abono a la comisión según su tipo (ver reconstruirDevengosPorTipo). */
+    private static BigDecimal aporteDe(PagoVenta pago) {
+        if (pago.getTipo() == null) return BigDecimal.ZERO;
+        return switch (pago.getTipo()) {
+            case ENGANCHE -> pago.getMonto();
+            case MENSUALIDAD, APORTACION -> pago.getMonto().divide(new BigDecimal("2"), 2, RoundingMode.HALF_UP);
+            case APARTADO -> BigDecimal.ZERO;
+        };
     }
 
     /** Si el enganche/pago inicial cubre la comisión se entrega completa; si no, por parcialidades.
@@ -410,6 +473,8 @@ public class ComisionService {
         private final Map<Long, List<VentaComisionDevengo>> devengos = new HashMap<>();
         private final Map<Long, BigDecimal> entregado = new HashMap<>();
         private final Map<Long, BigDecimal> devuelto = new HashMap<>();
+        /** Comisiones con la regla nueva cuyo contrato aún no está firmado: se acumulan pero no se entregan. */
+        private final java.util.Set<Long> bloqueadas = new java.util.HashSet<>();
         private final Map<Long, BigDecimal> abonadoPorVenta = new HashMap<>();
         private final Map<Long, FinanzasService.CobroVenta> cobros = finanzasService.cobroPorVenta();
 
@@ -426,6 +491,9 @@ public class ComisionService {
             for (VentaComisionDevolucion d : devolucionRepository.findAll()) {
                 devuelto.merge(d.getComision().getId(), d.getMonto(), BigDecimal::add);
             }
+            for (VentaComision c : comisionRepository.findAll()) {
+                if (c.isReglaNueva() && c.getVenta() != null && !c.getVenta().isContratoFirmado()) bloqueadas.add(c.getId());
+            }
         }
 
         BigDecimal devengado(Long id) {
@@ -434,7 +502,12 @@ public class ComisionService {
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
         }
 
+        boolean bloqueada(Long id) {
+            return bloqueadas.contains(id);
+        }
+
         BigDecimal devengadoHasta(Long id, LocalDate fecha) {
+            if (bloqueada(id)) return BigDecimal.ZERO;
             return devengos.getOrDefault(id, List.of()).stream()
                     .filter(d -> !d.getFechaEntrega().isAfter(fecha))
                     .map(VentaComisionDevengo::getMonto)
@@ -467,6 +540,7 @@ public class ComisionService {
 
         /** Lo ganado cuyo sábado de entrega ya pasó (anterior a hoy) y todavía no se entrega. */
         BigDecimal vencido(Long id, LocalDate hoy) {
+            if (bloqueada(id)) return BigDecimal.ZERO;
             BigDecimal alCorte = devengos.getOrDefault(id, List.of()).stream()
                     .filter(d -> d.getFechaEntrega().isBefore(hoy))
                     .map(VentaComisionDevengo::getMonto)
@@ -476,6 +550,7 @@ public class ComisionService {
 
         /** Primer sábado en que lo ganado supera lo ya entregado (los devengos van por fecha). */
         LocalDate proximaEntrega(Long id) {
+            if (bloqueada(id)) return null;
             BigDecimal yaEntregado = entregado(id);
             BigDecimal acumulado = BigDecimal.ZERO;
             for (VentaComisionDevengo d : devengos.getOrDefault(id, List.of())) {
@@ -493,7 +568,9 @@ public class ComisionService {
     private ComisionDto aDto(VentaComision c, Totales totales) {
         BigDecimal devengado = totales.devengado(c.getId());
         BigDecimal entregado = totales.entregado(c.getId());
-        BigDecimal porEntregar = devengado.subtract(entregado).max(BigDecimal.ZERO);
+        BigDecimal porEntregar = totales.bloqueada(c.getId())
+                ? BigDecimal.ZERO
+                : devengado.subtract(entregado).max(BigDecimal.ZERO);
 
         EstadoComision estado;
         if (c.isCancelada()) estado = EstadoComision.CANCELADA;
@@ -538,7 +615,11 @@ public class ComisionService {
                 porEntregar.signum() > 0 ? totales.proximaEntrega(c.getId()) : null,
                 vencido.signum() > 0,
                 vencido,
-                c.getFechaCreacion());
+                c.getFechaCreacion(),
+                c.isReglaNueva(),
+                c.getVenta() != null && c.getVenta().isContratoFirmado(),
+                c.getVenta() != null ? c.getVenta().getContratoFechaFirma() : null,
+                totales.bloqueada(c.getId()));
     }
 
     /** Cómo va el cliente este mes; null si este mes no le toca pagar nada. */
