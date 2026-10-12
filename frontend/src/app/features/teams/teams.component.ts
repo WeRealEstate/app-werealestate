@@ -44,6 +44,17 @@ interface Arista {
   d: string;
 }
 
+/** Arrastre del módulo de Independientes completo: se mueve la zona y, con ella, las tarjetas que el usuario
+ * ya había fijado dentro de ella. */
+interface ArrastreZona {
+  inicio: Punto; // puntero en coordenadas del mundo
+  zonaInicio: Punto;
+  fijadas: Map<number, Punto>; // posición fijada de cada independiente al empezar
+  pantallaX: number;
+  pantallaY: number;
+  movido: boolean;
+}
+
 interface ArrastreNodo {
   id: number;
   inicio: Punto; // puntero en coordenadas del mundo
@@ -65,6 +76,7 @@ const ZOOM_MAX = 2.5;
 const UMBRAL_ARRASTRE = 4;
 const CLAVE_POSICIONES = 'we-comunidades-posiciones-v1';
 const CLAVE_COLAPSADOS = 'we-comunidades-colapsados-v1';
+const CLAVE_ZONA = 'we-comunidades-zona-v1';
 
 @Component({
   selector: 'app-teams',
@@ -98,6 +110,9 @@ export class TeamsComponent {
   // --- Posiciones y colapsados que el usuario fijó a mano (se guardan en este navegador) ---
   readonly posiciones = signal<Record<number, Punto>>(this.leerLocal<Record<number, Punto>>(CLAVE_POSICIONES, {}));
   readonly colapsados = signal<Set<number>>(new Set(this.leerLocal<number[]>(CLAVE_COLAPSADOS, [])));
+  /** Dónde fijó el usuario el módulo de Independientes (null = debajo de los equipos, acomodo automático). */
+  readonly posZona = signal<Punto | null>(this.leerLocal<Punto | null>(CLAVE_ZONA, null));
+  readonly moviendoZona = signal(false);
 
   /** Qué tiene el cursor encima mientras se arrastra una tarjeta: id de un nodo, 'ZONA' o null. */
   readonly objetivo = signal<number | 'ZONA' | null>(null);
@@ -105,6 +120,7 @@ export class TeamsComponent {
   readonly paneando = signal(false);
 
   private arrastre: ArrastreNodo | null = null;
+  private arrastreZona: ArrastreZona | null = null;
   private readonly punteros = new Map<number, Punto>();
   private panInicio: { x: number; y: number; px: number; py: number } | null = null;
   private pinchDist = 0;
@@ -221,16 +237,29 @@ export class TeamsComponent {
     return { nodos, zona };
   });
 
-  readonly zona = computed(() => this.layout().zona);
+  /** El módulo de Independientes: donde lo dejó el usuario o, si no, debajo de todos los equipos. */
+  readonly zona = computed(() => {
+    const base = this.layout().zona;
+    const p = this.posZona();
+    return p ? { ...base, x: p.x, y: p.y } : base;
+  });
 
   /** Posición efectiva: la que el usuario fijó, o la automática + lo que se movió su padre. */
   private readonly efectivas = computed(() => {
-    const { nodos } = this.layout();
+    const { nodos, zona: zonaAuto } = this.layout();
     const pos = this.posiciones();
+    const zonaFija = this.zona();
+    // Los independientes acompañan al módulo cuando se reubica.
+    const dZona = { x: zonaFija.x - zonaAuto.x, y: zonaFija.y - zonaAuto.y };
     const resultado = new Map<number, NodoVista>();
     const delta = new Map<number, Punto>();
     for (const [id, n] of nodos) {
-      const d = n.parentId != null ? (delta.get(n.parentId) ?? { x: 0, y: 0 }) : { x: 0, y: 0 };
+      const d =
+        n.parentId != null
+          ? (delta.get(n.parentId) ?? { x: 0, y: 0 })
+          : n.a.tipo === 'INDEPENDIENTE'
+            ? dZona
+            : { x: 0, y: 0 };
       const fijada = pos[id];
       const x = fijada ? fijada.x : n.ax + d.x;
       const y = fijada ? fijada.y : n.ay + d.y;
@@ -377,6 +406,8 @@ export class TeamsComponent {
   /** Borra las posiciones movidas a mano y vuelve al acomodo automático. */
   reordenar(): void {
     this.posiciones.set({});
+    this.posZona.set(null);
+    this.escribirLocal(CLAVE_ZONA, null);
     this.guardarPosiciones();
     setTimeout(() => this.ajustar(), 0);
   }
@@ -461,6 +492,70 @@ export class TeamsComponent {
     };
     visitar(id);
     return ids;
+  }
+
+  // ------------------------------------------------------------------ mover el módulo de Independientes
+
+  onZonaDown(event: PointerEvent): void {
+    event.stopPropagation();
+    if (event.button !== 0 && event.pointerType === 'mouse') return;
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    const z = this.zona();
+    const pos = this.posiciones();
+    const fijadas = new Map<number, Punto>();
+    for (const a of this.independientes()) {
+      const p = pos[a.id];
+      if (p) fijadas.set(a.id, { ...p });
+    }
+    this.arrastreZona = {
+      inicio: this.aMundo(event.clientX, event.clientY),
+      zonaInicio: { x: z.x, y: z.y },
+      fijadas,
+      pantallaX: event.clientX,
+      pantallaY: event.clientY,
+      movido: false,
+    };
+  }
+
+  onZonaMove(event: PointerEvent): void {
+    const ar = this.arrastreZona;
+    if (!ar) return;
+    if (!ar.movido) {
+      if (Math.hypot(event.clientX - ar.pantallaX, event.clientY - ar.pantallaY) < UMBRAL_ARRASTRE) return;
+      ar.movido = true;
+      this.moviendoZona.set(true);
+    }
+    const w = this.aMundo(event.clientX, event.clientY);
+    const dx = this.ajustarACuadricula(w.x - ar.inicio.x);
+    const dy = this.ajustarACuadricula(w.y - ar.inicio.y);
+    this.posZona.set({ x: ar.zonaInicio.x + dx, y: ar.zonaInicio.y + dy });
+    if (ar.fijadas.size > 0) {
+      const nuevas = { ...this.posiciones() };
+      for (const [id, p] of ar.fijadas) nuevas[id] = { x: p.x + dx, y: p.y + dy };
+      this.posiciones.set(nuevas);
+    }
+  }
+
+  onZonaUp(): void {
+    const ar = this.arrastreZona;
+    this.arrastreZona = null;
+    this.moviendoZona.set(false);
+    if (!ar?.movido) return;
+    this.escribirLocal(CLAVE_ZONA, this.posZona());
+    this.guardarPosiciones();
+  }
+
+  onZonaCancel(): void {
+    const ar = this.arrastreZona;
+    this.arrastreZona = null;
+    this.moviendoZona.set(false);
+    if (!ar?.movido) return;
+    this.posZona.set(ar.zonaInicio);
+    const nuevas = { ...this.posiciones() };
+    for (const [id, p] of ar.fijadas) nuevas[id] = p;
+    this.posiciones.set(nuevas);
+    this.escribirLocal(CLAVE_ZONA, this.posZona());
+    this.guardarPosiciones();
   }
 
   onNodoDown(event: PointerEvent, nodo: NodoVista): void {

@@ -88,7 +88,20 @@
             [style.height.px]="zona().h"
             data-testid="zona-independientes"
           >
-            <p class="px-5 pt-3 font-heading text-sm font-semibold text-ink">Independientes</p>
+            <div
+              data-testid="zona-asa"
+              class="flex w-fit touch-none items-center gap-2 px-5 pt-3"
+              [class.cursor-move]="!moviendoZona()"
+              [class.cursor-grabbing]="moviendoZona()"
+              title="Arrastra para reubicar este módulo"
+              (pointerdown)="onZonaDown($event)"
+              (pointermove)="onZonaMove($event)"
+              (pointerup)="onZonaUp()"
+              (pointercancel)="onZonaCancel()"
+            >
+              <span aria-hidden="true" class="select-none text-ink-muted">⠿</span>
+              <p class="font-heading text-sm font-semibold text-ink">Independientes</p>
+            </div>
             @if (independientes().length === 0) {
               <p class="px-5 pt-1 text-xs text-ink-muted">Nadie independiente por ahora. Suelta aquí a quien quieras sacar de un equipo.</p>
             }
