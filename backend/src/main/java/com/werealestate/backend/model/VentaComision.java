@@ -68,6 +68,10 @@ public class VentaComision {
     @Column(name = "regla_nueva", nullable = false)
     private boolean reglaNueva;
 
+    /** true en la comisión del copropietario de la venta (un segundo asesor); false en la del asesor principal. */
+    @Column(nullable = false)
+    private boolean secundaria;
+
     @Column(name = "fecha_creacion", nullable = false)
     private LocalDateTime fechaCreacion = LocalDateTime.now();
 
@@ -104,6 +108,14 @@ public class VentaComision {
 
     public void marcarReglaNueva() {
         this.reglaNueva = true;
+    }
+
+    public boolean isSecundaria() {
+        return secundaria;
+    }
+
+    public void marcarSecundaria() {
+        this.secundaria = true;
     }
 
     public Venta getVenta() {

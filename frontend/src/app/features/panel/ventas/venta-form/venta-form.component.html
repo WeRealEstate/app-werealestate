@@ -145,6 +145,95 @@
       </div>
     </div>
 
+    <!-- COMISIONES: asesor (5% por defecto) y, si hay, copropietario; máximo 10% cada uno -->
+    <div class="rounded-lg border border-border px-3.5 py-3.5">
+      <p class="text-sm font-medium text-ink">Comisión</p>
+      <p class="mt-0.5 text-xs text-ink-muted">Sobre el valor total de la venta. Por defecto 5%; máximo {{ maxComision }}% para cada uno.</p>
+      <div class="mt-3 grid grid-cols-2 gap-4">
+        <div>
+          <label for="comisionPct" class="block text-xs font-medium text-ink-muted mb-1">Comisión del asesor (%)</label>
+          <input
+            id="comisionPct" appMoneda
+            [ngModel]="comisionPct()" (ngModelChange)="comisionPct.set($event)"
+            [ngModelOptions]="{ standalone: true }"
+            class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          />
+          @if (comisionPctInvalida()) {
+            <p class="mt-1.5 text-xs text-red-600">Debe estar entre 0 y {{ maxComision }}%.</p>
+          }
+        </div>
+        <div>
+          <p class="block text-xs font-medium text-ink-muted mb-1">Monto de la comisión</p>
+          <div class="flex items-center rounded-lg border border-border bg-surface-2 px-3.5 py-2.5 text-sm font-semibold text-ink min-h-[44px]">
+            ${{ money(comisionMonto()) }}
+          </div>
+        </div>
+      </div>
+
+      <label class="mt-4 flex items-start gap-2.5 text-sm text-ink cursor-pointer">
+        <input
+          type="checkbox"
+          [ngModel]="coasesorActivo()" (ngModelChange)="alternarCoasesor($event)"
+          [ngModelOptions]="{ standalone: true }"
+          class="mt-0.5 h-4 w-4 rounded border-border text-we-primary focus:ring-we-primary/50"
+        />
+        <span>
+          La venta tiene un copropietario (segundo asesor)
+          <span class="block text-xs text-ink-muted mt-0.5">Recibe su propia comisión, aparte de la del asesor principal.</span>
+        </span>
+      </label>
+      @if (coasesorActivo()) {
+        <div class="mt-3 grid gap-4 sm:grid-cols-2">
+          <div>
+            <label for="coasesor" class="block text-xs font-medium text-ink-muted mb-1">Copropietario *</label>
+            <select
+              id="coasesor"
+              [ngModel]="coasesorSel()" (ngModelChange)="coasesorSel.set($event)"
+              [ngModelOptions]="{ standalone: true }"
+              class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            >
+              <option value="" disabled>Selecciona un asesor…</option>
+              @if (asesoresInternos().length > 0) {
+                <optgroup label="Internos">
+                  @for (u of asesoresInternos(); track u.id) {
+                    <option [value]="'U-' + u.id">{{ u.nombre }}</option>
+                  }
+                </optgroup>
+              }
+              @if (asesoresExternos().length > 0) {
+                <optgroup label="Externos">
+                  @for (a of asesoresExternos(); track a.id) {
+                    <option [value]="'E-' + a.id">{{ a.nombre }}</option>
+                  }
+                </optgroup>
+              }
+            </select>
+            @if (coasesorIgualAlAsesor()) {
+              <p class="mt-1.5 text-xs text-red-600">Debe ser distinto al asesor de la venta.</p>
+            }
+          </div>
+          <div>
+            <label for="coasesorPct" class="block text-xs font-medium text-ink-muted mb-1">Comisión del copropietario (%)</label>
+            <div class="flex items-center gap-3">
+              <input
+                id="coasesorPct" appMoneda
+                [ngModel]="coasesorPct()" (ngModelChange)="coasesorPct.set($event)"
+                [ngModelOptions]="{ standalone: true }"
+                class="block w-28 rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
+                       focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+              />
+              <span class="text-sm font-semibold text-ink">${{ money(coasesorMonto()) }}</span>
+            </div>
+            @if (coasesorPctInvalida()) {
+              <p class="mt-1.5 text-xs text-red-600">Debe estar entre 0 y {{ maxComision }}%.</p>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
     <app-copropietarios-editor [(copropietarios)]="copropietarios" [principalId]="clienteElegido()?.id ?? null" />
 
     <div class="grid grid-cols-2 gap-4">

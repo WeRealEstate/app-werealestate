@@ -136,6 +136,20 @@ public class VentaService {
         }
 
         AsesorResuelto asesor = resolverAsesor(request.usuarioAsesorId(), request.asesorExternoId());
+        validarPorcentajeComision(request.comisionPorcentaje(), "La comisión del asesor");
+        // Copropietario (segundo asesor): opcional; distinto del asesor principal y con su propio %.
+        AsesorResuelto coasesor = null;
+        if (request.coasesorUsuarioId() != null || request.coasesorExternoId() != null) {
+            coasesor = resolverAsesor(request.coasesorUsuarioId(), request.coasesorExternoId());
+            boolean mismoUsuario = coasesor.usuario() != null && asesor.usuario() != null
+                    && coasesor.usuario().getId().equals(asesor.usuario().getId());
+            boolean mismoExterno = coasesor.externo() != null && asesor.externo() != null
+                    && coasesor.externo().getId().equals(asesor.externo().getId());
+            if (mismoUsuario || mismoExterno) {
+                throw new ValidationException("El copropietario debe ser distinto al asesor de la venta");
+            }
+            validarPorcentajeComision(request.coasesorComisionPorcentaje(), "La comisión del copropietario");
+        }
         List<VentaAportacionItemRequest> aportaciones =
                 request.aportaciones() == null ? List.of() : request.aportaciones();
         validarAportaciones(aportaciones, request);
@@ -180,7 +194,12 @@ public class VentaService {
         }
 
         // Una venta nueva usa la regla de comisión por tipo de abono (las existentes conservan la suya).
-        comisionService.sincronizarVentaNueva(venta);
+        comisionService.sincronizarVentaNueva(
+                venta,
+                request.comisionPorcentaje(),
+                coasesor != null ? coasesor.usuario() : null,
+                coasesor != null ? coasesor.externo() : null,
+                request.coasesorComisionPorcentaje());
         return toDto(renumerar(venta.getId()));
     }
 
@@ -710,6 +729,15 @@ public class VentaService {
     /** Exactamente uno de usuarioAsesorId/asesorExternoId debe venir, y debe corresponder a un
      * asesor activo — así "solo se puede registrar de entre los asesores registrados" se cumple
      * de verdad en el servidor, no solo porque el <select> del frontend no deje escribir texto. */
+    /** null = el 5% por defecto; si se indica, entre 0 y el máximo de 10% del valor de la venta. */
+    private static void validarPorcentajeComision(BigDecimal porcentaje, String quien) {
+        if (porcentaje == null) return;
+        if (porcentaje.signum() < 0 || porcentaje.compareTo(ComisionService.PORCENTAJE_MAXIMO) > 0) {
+            throw new ValidationException(
+                    quien + " debe estar entre 0% y " + ComisionService.PORCENTAJE_MAXIMO.toPlainString() + "% del valor de la venta");
+        }
+    }
+
     private AsesorResuelto resolverAsesor(Long usuarioAsesorId, Long asesorExternoId) {
         boolean tieneInterno = usuarioAsesorId != null;
         boolean tieneExterno = asesorExternoId != null;

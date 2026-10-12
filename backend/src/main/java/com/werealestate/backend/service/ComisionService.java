@@ -11,6 +11,7 @@ import com.werealestate.backend.exception.ConflictException;
 import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.exception.ValidationException;
+import com.werealestate.backend.model.AsesorExterno;
 import com.werealestate.backend.model.EstadoComision;
 import com.werealestate.backend.model.EstadoPagoCliente;
 import com.werealestate.backend.model.Gasto;
@@ -76,6 +77,8 @@ public class ComisionService {
     private static final Logger log = LoggerFactory.getLogger(ComisionService.class);
 
     public static final BigDecimal PORCENTAJE_DEFECTO = new BigDecimal("5");
+    /** Tope de la comisión de cada beneficiario, en % del valor de la venta. */
+    public static final BigDecimal PORCENTAJE_MAXIMO = new BigDecimal("10");
     private static final String TIPO_GASTO_COMISIONES = "Comisiones";
     private static final Set<String> ETIQUETAS_PAGO_INICIAL = Set.of("Enganche", "Pago inicial");
     private static final BigDecimal CIEN = new BigDecimal("100");
@@ -122,26 +125,42 @@ public class ComisionService {
     /** Llamado por VentaService al registrar una venta, editarla o registrarle un abono: crea la
      * comisión si no existe y deja al día a quién va, su modalidad y lo que lleva ganado. */
     public void sincronizar(Venta venta) {
-        sincronizar(venta, false);
+        sincronizar(venta, false, null, null, null, null);
     }
 
     /** Igual que {@link #sincronizar(Venta)} pero para una venta recién creada: su comisión usa la
      * regla por tipo de abono (enganche completo, mensualidad y aportación a la mitad, apartado sin
      * comisión, entrega frenada hasta que el contrato esté firmado). Las comisiones que ya existían
      * (y las que se generan para ventas anteriores) conservan su cálculo de siempre. */
-    public void sincronizarVentaNueva(Venta venta) {
-        sincronizar(venta, true);
+    public void sincronizarVentaNueva(
+            Venta venta,
+            BigDecimal porcentaje,
+            Usuario coasesorUsuario,
+            AsesorExterno coasesorExterno,
+            BigDecimal coasesorPorcentaje) {
+        sincronizar(venta, true, porcentaje, coasesorUsuario, coasesorExterno, coasesorPorcentaje);
     }
 
-    private void sincronizar(Venta venta, boolean ventaNueva) {
-        VentaComision comision = comisionRepository.findByVentaId(venta.getId()).orElse(null);
+    /** Crea la comisión (con el % elegido al registrar la venta, 5% por defecto) y la del copropietario si
+     * se indicó uno, y deja al día lo ganado de cada una. */
+    private void sincronizar(
+            Venta venta,
+            boolean ventaNueva,
+            BigDecimal porcentaje,
+            Usuario coasesorUsuario,
+            AsesorExterno coasesorExterno,
+            BigDecimal coasesorPorcentaje) {
+        VentaComision comision = comisionRepository.findByVentaIdAndSecundariaFalse(venta.getId()).orElse(null);
         if (comision == null) {
             BigDecimal base = valorDeVenta(venta.getId());
-            BigDecimal monto = porcentajeDe(base, PORCENTAJE_DEFECTO);
+            BigDecimal pct = porcentaje != null ? porcentaje.setScale(4, RoundingMode.HALF_UP) : PORCENTAJE_DEFECTO;
+            BigDecimal monto = porcentajeDe(base, pct);
             comision = new VentaComision(
                     venta, venta.getCliente(), venta.getUsuarioAsesor(), venta.getAsesorExterno(), base,
-                    PORCENTAJE_DEFECTO, monto, modalidadPara(venta, monto));
+                    pct, monto, modalidadPara(venta, monto));
             if (ventaNueva) comision.marcarReglaNueva();
+            // Un % distinto al 5% por defecto se marca como elegido a mano (✎ en Finanzas).
+            if (pct.compareTo(PORCENTAJE_DEFECTO) != 0) comision.setMontoYPorcentaje(monto, pct, true);
             comision = comisionRepository.save(comision);
         } else if (!comision.isCancelada()) {
             boolean sinEntregas = !entregaRepository.existsByComisionId(comision.getId());
@@ -155,12 +174,34 @@ public class ComisionService {
         if (!comision.isCancelada()) {
             reconstruirDevengos(comision, venta);
         }
+
+        // Copropietario de la venta (un segundo asesor): su propia comisión sobre el mismo valor.
+        VentaComision secundaria = comisionRepository.findByVentaIdAndSecundariaTrue(venta.getId()).orElse(null);
+        if (secundaria == null && ventaNueva && (coasesorUsuario != null || coasesorExterno != null)) {
+            BigDecimal base = valorDeVenta(venta.getId());
+            BigDecimal pct = coasesorPorcentaje != null
+                    ? coasesorPorcentaje.setScale(4, RoundingMode.HALF_UP)
+                    : PORCENTAJE_DEFECTO;
+            BigDecimal monto = porcentajeDe(base, pct);
+            secundaria = new VentaComision(
+                    venta, venta.getCliente(), coasesorUsuario, coasesorExterno, base, pct, monto,
+                    modalidadPara(venta, monto));
+            secundaria.marcarReglaNueva();
+            secundaria.marcarSecundaria();
+            if (pct.compareTo(PORCENTAJE_DEFECTO) != 0) secundaria.setMontoYPorcentaje(monto, pct, true);
+            secundaria = comisionRepository.save(secundaria);
+        } else if (secundaria != null && !secundaria.isCancelada()) {
+            secundaria.setCliente(venta.getCliente());
+        }
+        if (secundaria != null && !secundaria.isCancelada()) {
+            reconstruirDevengos(secundaria, venta);
+        }
     }
 
     /** La venta se va a eliminar: su comisión se queda en el historial ("Venta eliminada"), con el
      * número de venta que tenía. Lo ya ganado sigue pudiéndose entregar; deja de acumular. */
     public void desvincularVenta(Venta venta) {
-        comisionRepository.findByVentaId(venta.getId()).ifPresent(c -> c.desvincularVenta(venta.getNumero()));
+        comisionRepository.findAllByVentaId(venta.getId()).forEach(c -> c.desvincularVenta(venta.getNumero()));
         comisionRepository.flush();
     }
 
@@ -169,7 +210,7 @@ public class ComisionService {
     public void generarFaltantes() {
         try {
             for (Venta venta : ventaRepository.findAll()) {
-                if (!comisionRepository.existsByVentaId(venta.getId())) {
+                if (!comisionRepository.existsByVentaIdAndSecundariaFalse(venta.getId())) {
                     sincronizar(venta);
                 }
             }
@@ -268,9 +309,12 @@ public class ComisionService {
             porcentaje = comision.getBase().signum() == 0
                     ? BigDecimal.ZERO
                     : monto.multiply(CIEN).divide(comision.getBase(), 4, RoundingMode.HALF_UP);
+            if (porcentaje.compareTo(PORCENTAJE_MAXIMO) > 0) {
+                throw new ValidationException("La comisión no puede pasar de " + PORCENTAJE_MAXIMO.toPlainString() + "% del valor de la venta");
+            }
         } else {
-            if (request.porcentaje().signum() < 0 || request.porcentaje().compareTo(CIEN) > 0) {
-                throw new ValidationException("El porcentaje debe estar entre 0 y 100");
+            if (request.porcentaje().signum() < 0 || request.porcentaje().compareTo(PORCENTAJE_MAXIMO) > 0) {
+                throw new ValidationException("El porcentaje debe estar entre 0 y " + PORCENTAJE_MAXIMO.toPlainString());
             }
             porcentaje = request.porcentaje().setScale(4, RoundingMode.HALF_UP);
             monto = porcentajeDe(comision.getBase(), porcentaje);
@@ -619,7 +663,8 @@ public class ComisionService {
                 c.isReglaNueva(),
                 c.getVenta() != null && c.getVenta().isContratoFirmado(),
                 c.getVenta() != null ? c.getVenta().getContratoFechaFirma() : null,
-                totales.bloqueada(c.getId()));
+                totales.bloqueada(c.getId()),
+                c.isSecundaria());
     }
 
     /** Cómo va el cliente este mes; null si este mes no le toca pagar nada. */

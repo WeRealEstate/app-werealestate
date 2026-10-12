@@ -59,5 +59,7 @@ public record ComisionDto(
         // acumula pero no se puede entregar (bloqueadaPorContrato).
         boolean contratoFirmado,
         LocalDate contratoFechaFirma,
-        boolean bloqueadaPorContrato) {
+        boolean bloqueadaPorContrato,
+        // true en la comisión del copropietario de la venta (un segundo asesor).
+        boolean secundaria) {
 }

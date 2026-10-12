@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { LucideX } from '@lucide/angular';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ClienteLista } from '../../../../core/models/cliente.model';
@@ -130,6 +131,26 @@ export class VentaFormComponent {
    * pago mensual que reducir: ahí el depósito siempre se registra como abono). null mientras no se
    * ha elegido — se pide explícito, no hay default silencioso para una decisión financiera. */
   readonly aplicarDepositoA = signal<AplicarDepositoA | null>(null);
+  /** Comisión del asesor (5% por defecto) y, si la venta tiene copropietario (un segundo asesor), la suya;
+   * el máximo de cada una es 10% del valor de la venta. */
+  readonly maxComision = 10;
+  readonly comisionPct = signal<number | null>(5);
+  readonly coasesorActivo = signal(false);
+  readonly coasesorSel = signal('');
+  readonly coasesorPct = signal<number | null>(5);
+  readonly comisionMonto = computed(() => (this.precioTotal() * (this.comisionPct() ?? 0)) / 100);
+  readonly coasesorMonto = computed(() => (this.precioTotal() * (this.coasesorPct() ?? 0)) / 100);
+  readonly comisionPctInvalida = computed(() => pctInvalido(this.comisionPct(), this.maxComision));
+  readonly coasesorPctInvalida = computed(() => pctInvalido(this.coasesorPct(), this.maxComision));
+  readonly coasesorIgualAlAsesor = computed(
+    () => this.coasesorActivo() && !!this.coasesorSel() && this.coasesorSel() === this.asesorSeleccionado(),
+  );
+
+  alternarCoasesor(valor: boolean): void {
+    this.coasesorActivo.set(valor);
+    if (!valor) this.coasesorSel.set('');
+  }
+
   /** Contrato firmado (y desde cuándo): sin él, la comisión de la venta no se puede entregar. */
   readonly hoyIso = new Date().toISOString().slice(0, 10);
   readonly contratoFirmado = signal(false);
@@ -212,6 +233,9 @@ export class VentaFormComponent {
     notas: this.fb.control(''),
     marcarLoteVendido: this.fb.control(true, { nonNullable: true }),
   });
+
+  /** El asesor elegido arriba, como señal (para validar que el copropietario sea otra persona). */
+  readonly asesorSeleccionado = toSignal(this.form.controls.asesor.valueChanges, { initialValue: '' });
 
   /** Mini-formulario para agregar un lote a la lista (separado del form principal: no se envía
    * directo, cada "Agregar" lo empuja a lotesAgregados). */
@@ -429,6 +453,9 @@ export class VentaFormComponent {
     this.clienteFaltante.set(this.clienteElegido() === null);
     const faltaMontoEnganche = this.mostrarEnganche() && !this.montoEnganche();
     const faltaElegirDeposito = this.requiereElegirDeposito() && !this.aplicarDepositoA();
+    const faltaCoasesor = this.coasesorActivo() && (!this.coasesorSel() || this.coasesorIgualAlAsesor());
+    const comisionInvalida =
+      this.comisionPctInvalida() || (this.coasesorActivo() && this.coasesorPctInvalida());
     const faltaFechaContrato = this.contratoFirmado() && (!this.contratoFecha() || !this.contratoMedio());
     const faltaFolioDeposito = !faltaElegirDeposito && this.registraDepositoComoAbono() && !this.folioDeposito().trim();
     const errorAportaciones = this.errorAportaciones();
@@ -441,6 +468,8 @@ export class VentaFormComponent {
       faltaElegirDeposito ||
       faltaFolioDeposito ||
       faltaFechaContrato ||
+      faltaCoasesor ||
+      comisionInvalida ||
       errorAportaciones !== null ||
       this.isLoading()
     ) {
@@ -451,6 +480,10 @@ export class VentaFormComponent {
         this.errorMessage.set(`Ingresa el monto de ${this.engancheLabelActual()!.toLowerCase()}.`);
       } else if (faltaElegirDeposito) {
         this.errorMessage.set('Indica si el dinero ya apartado baja la mensualidad o el saldo.');
+      } else if (comisionInvalida) {
+        this.errorMessage.set(`La comisión debe estar entre 0% y ${this.maxComision}%.`);
+      } else if (faltaCoasesor) {
+        this.errorMessage.set('Elige al copropietario (distinto al asesor de la venta) o quita esa opción.');
       } else if (faltaFechaContrato) {
         this.errorMessage.set('Indica la fecha de firma y si el contrato se firmó en físico o en DocuSign.');
       } else if (faltaFolioDeposito) {
@@ -487,6 +520,17 @@ export class VentaFormComponent {
         contratoFechaFirma: this.contratoFirmado() ? this.contratoFecha() : null,
         contratoMedio: this.contratoFirmado() ? (this.contratoMedio() as MedioFirma) : null,
         contratoDriveUrl: this.contratoDriveUrl().trim() || null,
+        comisionPorcentaje: this.comisionPct() ?? 5,
+        ...(this.coasesorActivo()
+          ? (() => {
+              const co = parseAsesorSeleccion(this.coasesorSel());
+              return {
+                coasesorUsuarioId: co.usuarioAsesorId,
+                coasesorExternoId: co.asesorExternoId,
+                coasesorComisionPorcentaje: this.coasesorPct() ?? 5,
+              };
+            })()
+          : {}),
         aportaciones: this.esAportaciones()
           ? this.aportaciones().map((a) => ({ anio: a.anio, mes: a.mes, monto: a.monto as number }))
           : [],
@@ -524,4 +568,10 @@ export class VentaFormComponent {
   money(valor: number): string {
     return valor.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
+}
+
+/** true si el porcentaje es negativo o pasa del máximo (vacío cuenta como 0). */
+function pctInvalido(valor: number | null, max: number): boolean {
+  const v = valor ?? 0;
+  return v < 0 || v > max;
 }

@@ -50,5 +50,12 @@ public record VentaCreateRequest(
         LocalDate contratoFechaFirma,
         // Cómo se firmó (obligatorio con firmado = true) y enlace opcional a la carpeta de Drive.
         com.werealestate.backend.model.MedioFirma contratoMedio,
-        @Size(max = 500) String contratoDriveUrl) {
+        @Size(max = 500) String contratoDriveUrl,
+        // Comisión del asesor principal, en % del valor de la venta (null = 5%, máximo 10%).
+        BigDecimal comisionPorcentaje,
+        // Copropietario de la venta (un segundo asesor, interno o externo; ninguno = sin copropietario),
+        // con su propia comisión en % (null = 5%, máximo 10%).
+        Long coasesorUsuarioId,
+        Long coasesorExternoId,
+        BigDecimal coasesorComisionPorcentaje) {
 }

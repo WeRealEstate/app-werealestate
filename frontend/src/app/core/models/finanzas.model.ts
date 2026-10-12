@@ -90,6 +90,8 @@ export interface Comision {
   contratoFechaFirma: string | null;
   /** Regla nueva sin contrato firmado: se acumula, pero no se puede entregar. */
   bloqueadaPorContrato: boolean;
+  /** Comisión del copropietario de la venta (un segundo asesor). */
+  secundaria: boolean;
 }
 
 export interface ComisionDevengo {

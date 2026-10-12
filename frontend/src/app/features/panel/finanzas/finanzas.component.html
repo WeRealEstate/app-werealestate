@@ -258,6 +258,11 @@
                           Retrasada · ${{ money(c.montoRetrasado) }}
                         </span>
                       }
+                      @if (c.secundaria) {
+                        <span class="inline-flex whitespace-nowrap rounded-full bg-we-primary/10 px-2.5 py-1 text-xs font-medium text-we-primary" title="Comisión del copropietario de la venta (segundo asesor).">
+                          Copropietario
+                        </span>
+                      }
                       @if (c.bloqueadaPorContrato) {
                         <span class="inline-flex whitespace-nowrap rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800 dark:bg-amber-500/15 dark:text-amber-300" title="El contrato de la venta no está firmado: la comisión se acumula, pero no se puede entregar hasta registrar la firma en la venta.">
                           Contrato sin firmar
@@ -371,7 +376,7 @@
           <div>
             <label for="ed-porcentaje" class="mb-1 block text-xs font-medium text-ink-muted">Porcentaje (%)</label>
             <input
-              id="ed-porcentaje" name="porcentaje" appMoneda min="0" max="100"
+              id="ed-porcentaje" name="porcentaje" appMoneda min="0" max="10"
               [ngModel]="editPorcentaje()" (ngModelChange)="onPorcentajeChange($event)"
               class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
             />

@@ -221,8 +221,8 @@ export class FinanzasComponent {
     if (!c || this.guardando()) return;
     const porcentaje = this.editPorcentaje();
     const monto = this.editMonto();
-    if (porcentaje === null || monto === null || porcentaje < 0 || porcentaje > 100 || monto < 0) {
-      this.errorModal.set('Escribe un porcentaje entre 0 y 100 y un monto válido.');
+    if (porcentaje === null || monto === null || porcentaje < 0 || porcentaje > 10 || monto < 0) {
+      this.errorModal.set('Escribe un porcentaje entre 0 y 10 (el máximo de comisión es 10% del valor de la venta) y un monto válido.');
       return;
     }
     this.guardando.set(true);

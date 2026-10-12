@@ -109,6 +109,12 @@ export interface VentaCreateRequest {
   /** Obligatorio con firmado = true. */
   contratoMedio?: MedioFirma | null;
   contratoDriveUrl?: string | null;
+  /** Comisión del asesor en % del valor de la venta (omitido = 5; máximo 10). */
+  comisionPorcentaje?: number | null;
+  /** Copropietario de la venta (un segundo asesor, interno o externo) con su propia comisión en % (omitido = 5; máximo 10). */
+  coasesorUsuarioId?: number | null;
+  coasesorExternoId?: number | null;
+  coasesorComisionPorcentaje?: number | null;
 }
 
 /** Igual que VentaCreateRequest pero sin lotes ni marcarLoteVendido: no toca qué lotes incluye la

@@ -138,7 +138,7 @@ public class ClienteService {
         String nombre = c.nombreCompleto();
         for (Venta v : ventaRepository.findByClienteRefId(c.getId())) {
             v.ligarCliente(c);
-            comisionRepository.findByVentaId(v.getId()).ifPresent(com -> com.setCliente(nombre));
+            comisionRepository.findAllByVentaId(v.getId()).forEach(com -> com.setCliente(nombre));
         }
         return detalle(clienteRepository.save(c));
     }
