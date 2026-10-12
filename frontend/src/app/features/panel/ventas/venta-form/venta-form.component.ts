@@ -10,6 +10,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Desarrollo, UsuarioResumen } from '../../../../core/models/lead.model';
 import { ESTADO_LOTE_LABELS, Lote } from '../../../../core/models/lote.model';
 import { AsesorExterno } from '../../../../core/models/asesor-externo.model';
+import { MedioFirma } from '../../../../core/models/venta.model';
 import { AsesoresExternosService } from '../../../../core/services/asesores-externos.service';
 import { LeadsService } from '../../../../core/services/leads.service';
 import { LotesService } from '../../../../core/services/lotes.service';
@@ -133,6 +134,8 @@ export class VentaFormComponent {
   readonly hoyIso = new Date().toISOString().slice(0, 10);
   readonly contratoFirmado = signal(false);
   readonly contratoFecha = signal('');
+  readonly contratoMedio = signal<MedioFirma | ''>('');
+  readonly contratoDriveUrl = signal('');
 
   alternarContrato(valor: boolean): void {
     this.contratoFirmado.set(valor);
@@ -426,7 +429,7 @@ export class VentaFormComponent {
     this.clienteFaltante.set(this.clienteElegido() === null);
     const faltaMontoEnganche = this.mostrarEnganche() && !this.montoEnganche();
     const faltaElegirDeposito = this.requiereElegirDeposito() && !this.aplicarDepositoA();
-    const faltaFechaContrato = this.contratoFirmado() && !this.contratoFecha();
+    const faltaFechaContrato = this.contratoFirmado() && (!this.contratoFecha() || !this.contratoMedio());
     const faltaFolioDeposito = !faltaElegirDeposito && this.registraDepositoComoAbono() && !this.folioDeposito().trim();
     const errorAportaciones = this.errorAportaciones();
     if (
@@ -449,7 +452,7 @@ export class VentaFormComponent {
       } else if (faltaElegirDeposito) {
         this.errorMessage.set('Indica si el dinero ya apartado baja la mensualidad o el saldo.');
       } else if (faltaFechaContrato) {
-        this.errorMessage.set('Indica la fecha de firma del contrato.');
+        this.errorMessage.set('Indica la fecha de firma y si el contrato se firmó en físico o en DocuSign.');
       } else if (faltaFolioDeposito) {
         this.errorMessage.set('Ingresa el folio del dinero recibido al apartar el lote.');
       } else if (errorAportaciones !== null) {
@@ -482,6 +485,8 @@ export class VentaFormComponent {
         marcarLoteVendido: v.marcarLoteVendido,
         contratoFirmado: this.contratoFirmado(),
         contratoFechaFirma: this.contratoFirmado() ? this.contratoFecha() : null,
+        contratoMedio: this.contratoFirmado() ? (this.contratoMedio() as MedioFirma) : null,
+        contratoDriveUrl: this.contratoDriveUrl().trim() || null,
         aportaciones: this.esAportaciones()
           ? this.aportaciones().map((a) => ({ anio: a.anio, mes: a.mes, monto: a.monto as number }))
           : [],

@@ -47,5 +47,8 @@ public record VentaCreateRequest(
         @Valid List<VentaAportacionItemRequest> aportaciones,
         // Contrato firmado (opcional; null = sin firmar). Con firmado = true, la fecha es obligatoria.
         Boolean contratoFirmado,
-        LocalDate contratoFechaFirma) {
+        LocalDate contratoFechaFirma,
+        // Cómo se firmó (obligatorio con firmado = true) y enlace opcional a la carpeta de Drive.
+        com.werealestate.backend.model.MedioFirma contratoMedio,
+        @Size(max = 500) String contratoDriveUrl) {
 }

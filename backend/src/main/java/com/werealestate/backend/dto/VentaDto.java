@@ -32,6 +32,9 @@ public record VentaDto(
         // Contrato firmado (y desde cuándo): sin él no se puede entregar la comisión (regla nueva).
         boolean contratoFirmado,
         LocalDate contratoFechaFirma,
+        // FISICO o DOCUSIGN (solo con el contrato firmado) y enlace opcional a la carpeta de Drive.
+        com.werealestate.backend.model.MedioFirma contratoMedio,
+        String contratoDriveUrl,
         LocalDateTime fechaCreacion,
         // Se calculan a partir de sus lotes y sus pagos (ver VentaService), nunca se guardan directo.
         BigDecimal precioVenta,
@@ -66,6 +69,8 @@ public record VentaDto(
                 venta.getNotas(),
                 venta.isContratoFirmado(),
                 venta.getContratoFechaFirma(),
+                venta.getContratoMedio(),
+                venta.getContratoDriveUrl(),
                 venta.getFechaCreacion(),
                 precioVenta,
                 totalAbonado,

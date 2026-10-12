@@ -30,6 +30,14 @@ export interface VentaAportacion {
   monto: number;
 }
 
+/** Cómo se firmó el contrato. */
+export type MedioFirma = 'FISICO' | 'DOCUSIGN';
+
+export const MEDIO_FIRMA_LABELS: Record<MedioFirma, string> = {
+  FISICO: 'En físico',
+  DOCUSIGN: 'DocuSign',
+};
+
 export interface Venta {
   id: number;
   /** Posición por fecha de venta: la más antigua es la 1, sin importar el orden de registro. */
@@ -60,6 +68,9 @@ export interface Venta {
   /** Contrato firmado (y desde cuándo): sin él no se puede entregar la comisión de una venta nueva. */
   contratoFirmado: boolean;
   contratoFechaFirma: string | null;
+  /** Cómo se firmó (solo con el contrato firmado) y enlace opcional a su carpeta de Drive. */
+  contratoMedio: MedioFirma | null;
+  contratoDriveUrl: string | null;
   fechaCreacion: string;
   /** Se calculan a partir de sus lotes y sus pagos (ver PagoVenta), nunca se capturan a mano. */
   precioVenta: number;
@@ -95,6 +106,9 @@ export interface VentaCreateRequest {
   /** Contrato firmado (opcional); con true, la fecha de firma es obligatoria. */
   contratoFirmado?: boolean;
   contratoFechaFirma?: string | null;
+  /** Obligatorio con firmado = true. */
+  contratoMedio?: MedioFirma | null;
+  contratoDriveUrl?: string | null;
 }
 
 /** Igual que VentaCreateRequest pero sin lotes ni marcarLoteVendido: no toca qué lotes incluye la

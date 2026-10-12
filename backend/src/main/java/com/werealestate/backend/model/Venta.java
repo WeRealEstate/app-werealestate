@@ -172,9 +172,27 @@ public class Venta {
         return contratoFechaFirma;
     }
 
-    public void registrarContrato(boolean firmado, LocalDate fechaFirma) {
+    /** Cómo se firmó (solo con el contrato firmado) y, opcional, el enlace a su carpeta de Drive. */
+    @jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
+    @jakarta.persistence.Column(name = "contrato_medio", length = 20)
+    private MedioFirma contratoMedio;
+
+    @jakarta.persistence.Column(name = "contrato_drive_url", length = 500)
+    private String contratoDriveUrl;
+
+    public MedioFirma getContratoMedio() {
+        return contratoMedio;
+    }
+
+    public String getContratoDriveUrl() {
+        return contratoDriveUrl;
+    }
+
+    public void registrarContrato(boolean firmado, LocalDate fechaFirma, MedioFirma medio, String driveUrl) {
         this.contratoFirmado = firmado;
         this.contratoFechaFirma = firmado ? fechaFirma : null;
+        this.contratoMedio = firmado ? medio : null;
+        this.contratoDriveUrl = driveUrl;
     }
 
     public int getDiaPago() {

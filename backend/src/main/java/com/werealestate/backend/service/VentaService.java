@@ -24,6 +24,7 @@ import com.werealestate.backend.model.AsesorExterno;
 import com.werealestate.backend.model.Cliente;
 import com.werealestate.backend.model.Lote;
 import com.werealestate.backend.model.AccionRecibo;
+import com.werealestate.backend.model.MedioFirma;
 import com.werealestate.backend.model.MesCubierto;
 import com.werealestate.backend.model.PagoVenta;
 import com.werealestate.backend.model.ReciboVenta;
@@ -157,8 +158,9 @@ public class VentaService {
         venta.ligarCliente(clienteRef);
         venta.setRegistradaPor(currentUserProvider.getUsuarioActual());
         boolean contratoFirmado = Boolean.TRUE.equals(request.contratoFirmado());
-        validarContrato(contratoFirmado, request.contratoFechaFirma());
-        venta.registrarContrato(contratoFirmado, request.contratoFechaFirma());
+        String driveUrl = validarContrato(
+                contratoFirmado, request.contratoFechaFirma(), request.contratoMedio(), request.contratoDriveUrl());
+        venta.registrarContrato(contratoFirmado, request.contratoFechaFirma(), request.contratoMedio(), driveUrl);
         venta = ventaRepository.save(venta);
         aplicarCopropietarios(venta, request.copropietariosIds());
 
@@ -228,21 +230,33 @@ public class VentaService {
     public VentaDto registrarContrato(Long ventaId, com.werealestate.backend.dto.ContratoRequest request) {
         exigirAdminOLider();
         Venta venta = obtenerEntidad(ventaId);
-        validarContrato(request.firmado(), request.fechaFirma());
-        venta.registrarContrato(request.firmado(), request.fechaFirma());
+        String driveUrl = validarContrato(request.firmado(), request.fechaFirma(), request.medio(), request.driveUrl());
+        venta.registrarContrato(request.firmado(), request.fechaFirma(), request.medio(), driveUrl);
         ventaRepository.save(venta);
         comisionService.sincronizar(venta);
         return toDto(venta);
     }
 
-    private static void validarContrato(boolean firmado, java.time.LocalDate fechaFirma) {
-        if (!firmado) return;
+    /** Con el contrato firmado: fecha (no futura) y medio (físico o DocuSign) obligatorios. El enlace a
+     * la carpeta de Drive es opcional (siempre, firmado o no) y debe ser http(s). Devuelve el enlace
+     * limpio (o null). */
+    private static String validarContrato(
+            boolean firmado, java.time.LocalDate fechaFirma, MedioFirma medio, String driveUrl) {
+        String url = driveUrl == null || driveUrl.isBlank() ? null : driveUrl.trim();
+        if (url != null && !url.startsWith("https://") && !url.startsWith("http://")) {
+            throw new ValidationException("El enlace de Drive debe empezar con https://");
+        }
+        if (!firmado) return url;
         if (fechaFirma == null) {
             throw new ValidationException("Indica la fecha de firma del contrato");
         }
         if (fechaFirma.isAfter(java.time.LocalDate.now())) {
             throw new ValidationException("La fecha de firma no puede ser futura");
         }
+        if (medio == null) {
+            throw new ValidationException("Indica si el contrato se firmó en físico o en DocuSign");
+        }
+        return url;
     }
 
     public VentaDto obtener(Long id) {

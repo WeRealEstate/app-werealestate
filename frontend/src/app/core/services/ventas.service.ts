@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import { Pagina } from '../models/pagina.model';
 import {
   PagoVenta,
+  MedioFirma,
   PagoVentaCreateRequest,
   ReciboEditarRequest,
   ReciboHistorial,
@@ -80,8 +81,11 @@ export class VentasService {
   }
 
   /** Registra o corrige si el contrato está firmado y desde cuándo. */
-  registrarContrato(ventaId: number, firmado: boolean, fechaFirma: string | null): Promise<Venta> {
-    return firstValueFrom(this.http.put<Venta>(`${this.baseUrl}/${ventaId}/contrato`, { firmado, fechaFirma }));
+  registrarContrato(
+    ventaId: number,
+    datos: { firmado: boolean; fechaFirma: string | null; medio: MedioFirma | null; driveUrl: string | null },
+  ): Promise<Venta> {
+    return firstValueFrom(this.http.put<Venta>(`${this.baseUrl}/${ventaId}/contrato`, datos));
   }
 
   /** Edita folio, nota y, por línea, tipo/meses/aportación (nunca monto ni fecha). */
