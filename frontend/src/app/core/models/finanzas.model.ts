@@ -70,7 +70,12 @@ export interface Comision {
   cancelada: boolean;
   /** Ganado por los abonos de la venta / ya entregado / ganado y aún sin entregar. */
   devengado: number;
+  /** Neto de lo que el asesor ya devolvió. */
   entregado: number;
+  /** Lo que el asesor ya devolvió de lo entregado. */
+  devuelto: number;
+  /** Entregado de más: ya no lo respaldan abonos vigentes (p. ej. se anuló un recibo); el asesor debe devolverlo. */
+  porDevolver: number;
   porEntregar: number;
   /** Sábado (yyyy-MM-dd) en que toca entregar lo primero pendiente; null si no hay nada. */
   proximaEntrega: string | null;
@@ -97,10 +102,20 @@ export interface ComisionEntrega {
   fechaCreacion: string;
 }
 
+export interface ComisionDevolucion {
+  id: number;
+  fecha: string;
+  monto: number;
+  notas: string | null;
+  registradaPor: string;
+  fechaCreacion: string;
+}
+
 export interface ComisionDetalle {
   comision: Comision;
   devengos: ComisionDevengo[];
   entregas: ComisionEntrega[];
+  devoluciones: ComisionDevolucion[];
 }
 
 export interface ComisionResumen {
@@ -148,6 +163,8 @@ export interface IngresoMes {
   atrasoAcumulado: number;
   ventas: number;
   futuro: boolean;
+  /** Lo que los asesores devolvieron de comisiones ya entregadas (ingreso aparte: no es cobranza). */
+  devolucionesComision: number;
 }
 
 export interface FinanzasIngresos {
@@ -170,11 +187,14 @@ export interface IngresoAbono {
   ventaNumero: number;
   cliente: string;
   fecha: string;
+  /** Negativo = contra-asiento de un recibo anulado (en la fecha de la anulación). */
   monto: number;
+  concepto: string;
 }
 
 export interface IngresoDetalle {
   mes: string;
   esperados: IngresoConcepto[];
   recibidos: IngresoAbono[];
+  devolucionesComision: IngresoAbono[];
 }

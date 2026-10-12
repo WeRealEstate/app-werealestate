@@ -115,6 +115,19 @@ public class PagoVenta {
         return meses;
     }
 
+    /** false cuando su recibo fue anulado: ya no cuenta en el saldo ni en las comisiones. */
+    public boolean isVigente() {
+        return !recibo.isAnulado();
+    }
+
+    /** Edición de datos no financieros (monto y fecha nunca cambian: ver ReciboVenta). */
+    public void actualizarConcepto(TipoAbono tipo, VentaAportacion aportacion, List<MesCubierto> meses) {
+        this.tipo = tipo;
+        this.aportacion = aportacion;
+        this.meses.clear();
+        if (meses != null) this.meses.addAll(meses);
+    }
+
     public String getFolio() {
         return recibo.getFolio();
     }

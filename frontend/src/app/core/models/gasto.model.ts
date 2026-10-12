@@ -89,6 +89,8 @@ export interface NominaPagada {
 export interface GastoResumen {
   mes: string;
   ingresosMes: number;
+  /** Devoluciones de comisión del mes (ingreso aparte, suma a la ganancia). */
+  devolucionesComisionMes: number;
   gastadoMes: number;
   gananciaMes: number;
   pendientePorPagar: number;

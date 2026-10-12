@@ -39,7 +39,11 @@ public record ComisionDto(
         boolean cancelada,
         // Lo ya ganado por los abonos de la venta, lo ya entregado y la diferencia por entregar.
         BigDecimal devengado,
+        // entregado = neto de lo que el asesor ya devolvió; devuelto = lo devuelto hasta hoy; porDevolver =
+        // lo entregado de más (ya no respaldado por abonos vigentes) que el asesor todavía debe devolver.
         BigDecimal entregado,
+        BigDecimal devuelto,
+        BigDecimal porDevolver,
         BigDecimal porEntregar,
         // Sábado en que toca entregar lo primero que sigue sin entregarse; null si no hay nada.
         LocalDate proximaEntrega,

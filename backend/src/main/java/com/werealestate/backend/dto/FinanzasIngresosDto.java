@@ -17,7 +17,9 @@ public record FinanzasIngresosDto(IngresoMes mesActual, List<IngresoMes> meses) 
             BigDecimal diferencia,
             BigDecimal atrasoAcumulado,
             int ventas,
-            boolean futuro) {
+            boolean futuro,
+            // Lo que los asesores devolvieron de comisiones ya entregadas (ingreso aparte: no es cobranza).
+            BigDecimal devolucionesComision) {
     }
 
     public record Concepto(
@@ -30,10 +32,13 @@ public record FinanzasIngresosDto(IngresoMes mesActual, List<IngresoMes> meses) 
             BigDecimal esperado) {
     }
 
-    public record Abono(Long ventaId, Long ventaNumero, String cliente, LocalDate fecha, BigDecimal monto) {
+    /** monto negativo = contra-asiento de un recibo anulado (en la fecha de la anulación). */
+    public record Abono(
+            Long ventaId, Long ventaNumero, String cliente, LocalDate fecha, BigDecimal monto, String concepto) {
     }
 
     /** Detalle de un mes: qué se espera de quién y qué día, y los abonos que sí llegaron. */
-    public record Detalle(String mes, List<Concepto> esperados, List<Abono> recibidos) {
+    public record Detalle(
+            String mes, List<Concepto> esperados, List<Abono> recibidos, List<Abono> devolucionesComision) {
     }
 }

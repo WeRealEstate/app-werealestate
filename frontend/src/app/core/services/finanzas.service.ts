@@ -53,6 +53,10 @@ export class FinanzasService {
     return firstValueFrom(this.http.post<ComisionDetalle>(`${this.baseUrl}/${id}/entregas`, { monto, fecha, notas }));
   }
 
+  devolverComision(id: number, monto: number, fecha: string | null, notas: string | null): Promise<ComisionDetalle> {
+    return firstValueFrom(this.http.post<ComisionDetalle>(`${this.baseUrl}/${id}/devoluciones`, { monto, fecha, notas }));
+  }
+
   anularEntrega(comisionId: number, entregaId: number): Promise<ComisionDetalle> {
     return firstValueFrom(this.http.delete<ComisionDetalle>(`${this.baseUrl}/${comisionId}/entregas/${entregaId}`));
   }

@@ -4,6 +4,9 @@ import com.werealestate.backend.dto.ContadoresVentasDto;
 import com.werealestate.backend.dto.PaginaDto;
 import com.werealestate.backend.dto.PagoVentaCreateRequest;
 import com.werealestate.backend.dto.PagoVentaDto;
+import com.werealestate.backend.dto.ReciboAnularRequest;
+import com.werealestate.backend.dto.ReciboEditarRequest;
+import com.werealestate.backend.dto.ReciboHistorialDto;
 import com.werealestate.backend.dto.VentaCreateRequest;
 import com.werealestate.backend.dto.VentaEliminarRequest;
 import com.werealestate.backend.dto.VentaDto;
@@ -64,6 +67,26 @@ public class VentaController {
     @GetMapping("/{id}")
     public VentaDto obtener(@PathVariable Long id) {
         return ventaService.obtener(id);
+    }
+
+    /** Edita los datos no financieros de un recibo (folio, nota, tipo, meses, aportación). */
+    @PutMapping("/{id}/recibos/{reciboId}")
+    public List<PagoVentaDto> editarRecibo(
+            @PathVariable Long id, @PathVariable Long reciboId, @Valid @RequestBody ReciboEditarRequest request) {
+        return ventaService.editarRecibo(id, reciboId, request);
+    }
+
+    /** Anula un recibo (con motivo); no se borra. */
+    @PostMapping("/{id}/recibos/{reciboId}/anular")
+    public List<PagoVentaDto> anularRecibo(
+            @PathVariable Long id, @PathVariable Long reciboId, @Valid @RequestBody ReciboAnularRequest request) {
+        return ventaService.anularRecibo(id, reciboId, request);
+    }
+
+    /** Bitácora de los recibos de la venta. */
+    @GetMapping("/{id}/recibos/historial")
+    public List<ReciboHistorialDto> historialDeRecibos(@PathVariable Long id) {
+        return ventaService.historialDeRecibos(id);
     }
 
     /** Temporal: modifica los datos capturados de una venta (cliente, fechas, términos). */

@@ -90,9 +90,9 @@
             <p class="text-xs text-ink-muted mb-2">Historial de abonos</p>
             <div class="space-y-2 max-h-40 overflow-y-auto pr-1">
               @for (p of pagosInfoLote(); track p.id) {
-                <div class="flex items-center justify-between gap-2 rounded-lg bg-surface-2 px-3.5 py-2 text-sm">
+                <div class="flex items-center justify-between gap-2 rounded-lg bg-surface-2 px-3.5 py-2 text-sm" [class.opacity-60]="p.anulado" [class.line-through]="p.anulado">
                   <span class="text-ink-muted">{{ p.fecha }}</span>
-                  <span class="text-ink-muted truncate">{{ p.folio ? p.folio + ' · ' : '' }}{{ p.tipo ? tipoLabels[p.tipo] : 'Por completar' }}</span>
+                  <span class="text-ink-muted truncate">{{ p.folio ? p.folio + ' · ' : '' }}{{ p.tipo ? tipoLabels[p.tipo] : 'Por completar' }}{{ p.anulado ? ' · anulado' : '' }}</span>
                   <span class="font-medium text-ink">${{ money(p.monto) }}</span>
                 </div>
               }

@@ -7,6 +7,8 @@ import java.math.BigDecimal;
 public record GastoResumenDto(
         String mes,
         BigDecimal ingresosMes,
+        // Devoluciones de comisión del mes (ingreso aparte, suma a la ganancia).
+        BigDecimal devolucionesComisionMes,
         BigDecimal gastadoMes,
         BigDecimal gananciaMes,
         BigDecimal pendientePorPagar,

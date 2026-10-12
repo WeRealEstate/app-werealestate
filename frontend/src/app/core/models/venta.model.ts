@@ -146,6 +146,28 @@ export interface PagoVenta {
   notas: string | null;
   registradoPor: UsuarioResumen;
   fechaCreacion: string;
+  /** Recibo anulado: no cuenta en el saldo; se muestra con su motivo, quién y cuándo. */
+  anulado: boolean;
+  anuladoMotivo: string | null;
+  anuladoPor: UsuarioResumen | null;
+  anuladoFecha: string | null;
+}
+
+/** Una línea de la bitácora de un recibo (quién, qué, cuándo y el detalle de lo que cambió). */
+export interface ReciboHistorial {
+  reciboId: number;
+  folio: string | null;
+  accion: 'CREADO' | 'EDITADO' | 'ANULADO';
+  usuario: string;
+  fechaHora: string;
+  detalle: string | null;
+}
+
+/** Edita solo lo no financiero de un recibo: el monto y la fecha no cambian (si están mal, se anula y se registra otro). */
+export interface ReciboEditarRequest {
+  folio: string;
+  notas: string | null;
+  lineas: { pagoId: number; tipo: TipoAbono; meses?: MesCubierto[]; aportacionId?: number | null }[];
 }
 
 export interface LineaReciboRequest {

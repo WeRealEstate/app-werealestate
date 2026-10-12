@@ -5,7 +5,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-public record ComisionDetalleDto(ComisionDto comision, List<Devengo> devengos, List<Entrega> entregas) {
+public record ComisionDetalleDto(
+        ComisionDto comision, List<Devengo> devengos, List<Entrega> entregas, List<Devolucion> devoluciones) {
+
+    public record Devolucion(
+            Long id, LocalDate fecha, BigDecimal monto, String notas, String registradaPor, LocalDateTime fechaCreacion) {
+    }
 
     public record Devengo(LocalDate fechaOrigen, LocalDate fechaEntrega, BigDecimal monto) {
     }

@@ -275,7 +275,7 @@ public class ClienteService {
             for (VentaLote vl : ventaLoteRepository.findAll()) {
                 lotesPorVenta.computeIfAbsent(vl.getVenta().getId(), k -> new ArrayList<>()).add(vl);
             }
-            for (PagoVenta p : pagoVentaRepository.findAll()) {
+            for (PagoVenta p : pagoVentaRepository.findAllVigentes()) {
                 abonadoPorVenta.merge(p.getVenta().getId(), p.getMonto(), BigDecimal::add);
             }
         }

@@ -2,6 +2,7 @@ package com.werealestate.backend.controller;
 
 import com.werealestate.backend.dto.ComisionDetalleDto;
 import com.werealestate.backend.dto.ComisionDto;
+import com.werealestate.backend.dto.ComisionDevolucionRequest;
 import com.werealestate.backend.dto.ComisionEntregaRequest;
 import com.werealestate.backend.dto.ComisionResumenDto;
 import com.werealestate.backend.dto.ComisionUpdateRequest;
@@ -70,6 +71,12 @@ public class ComisionController {
     @PostMapping("/{id}/entregas")
     public ComisionDetalleDto entregar(@PathVariable Long id, @Valid @RequestBody ComisionEntregaRequest request) {
         return comisionService.entregar(id, request);
+    }
+
+    /** El asesor devuelve (total o parcialmente) una comisión ya entregada. */
+    @PostMapping("/{id}/devoluciones")
+    public ComisionDetalleDto devolver(@PathVariable Long id, @Valid @RequestBody ComisionDevolucionRequest request) {
+        return comisionService.devolver(id, request);
     }
 
     @DeleteMapping("/{id}/entregas/{entregaId}")

@@ -2,6 +2,7 @@ package com.werealestate.backend.service;
 
 import com.werealestate.backend.dto.ComisionDetalleDto;
 import com.werealestate.backend.dto.ComisionDto;
+import com.werealestate.backend.dto.ComisionDevolucionRequest;
 import com.werealestate.backend.dto.ComisionEntregaRequest;
 import com.werealestate.backend.dto.ComisionResumenDto;
 import com.werealestate.backend.dto.ComisionUpdateRequest;
@@ -22,12 +23,14 @@ import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.model.Venta;
 import com.werealestate.backend.model.VentaComision;
 import com.werealestate.backend.model.VentaComisionDevengo;
+import com.werealestate.backend.model.VentaComisionDevolucion;
 import com.werealestate.backend.model.VentaComisionEntrega;
 import com.werealestate.backend.model.VentaLote;
 import com.werealestate.backend.repository.GastoRepository;
 import com.werealestate.backend.repository.PagoVentaRepository;
 import com.werealestate.backend.repository.TipoGastoRepository;
 import com.werealestate.backend.repository.VentaComisionDevengoRepository;
+import com.werealestate.backend.repository.VentaComisionDevolucionRepository;
 import com.werealestate.backend.repository.VentaComisionEntregaRepository;
 import com.werealestate.backend.repository.VentaComisionRepository;
 import com.werealestate.backend.repository.VentaLoteRepository;
@@ -79,6 +82,7 @@ public class ComisionService {
     private final VentaComisionRepository comisionRepository;
     private final VentaComisionDevengoRepository devengoRepository;
     private final VentaComisionEntregaRepository entregaRepository;
+    private final VentaComisionDevolucionRepository devolucionRepository;
     private final VentaRepository ventaRepository;
     private final VentaLoteRepository ventaLoteRepository;
     private final PagoVentaRepository pagoVentaRepository;
@@ -91,6 +95,7 @@ public class ComisionService {
             VentaComisionRepository comisionRepository,
             VentaComisionDevengoRepository devengoRepository,
             VentaComisionEntregaRepository entregaRepository,
+            VentaComisionDevolucionRepository devolucionRepository,
             VentaRepository ventaRepository,
             VentaLoteRepository ventaLoteRepository,
             PagoVentaRepository pagoVentaRepository,
@@ -101,6 +106,7 @@ public class ComisionService {
         this.comisionRepository = comisionRepository;
         this.devengoRepository = devengoRepository;
         this.entregaRepository = entregaRepository;
+        this.devolucionRepository = devolucionRepository;
         this.ventaRepository = ventaRepository;
         this.ventaLoteRepository = ventaLoteRepository;
         this.pagoVentaRepository = pagoVentaRepository;
@@ -310,6 +316,24 @@ public class ComisionService {
         return detalle(comision);
     }
 
+    /** El asesor devuelve (total o parcialmente) una comisión ya entregada. Se captura a mano. No toca
+     * la entrega ni su gasto: queda como un ingreso aparte en Finanzas. No puede pasar de lo que
+     * queda entregado (neto de devoluciones anteriores). */
+    public ComisionDetalleDto devolver(Long id, ComisionDevolucionRequest request) {
+        Usuario actual = exigirAdminOLider();
+        VentaComision comision = obtenerEntidad(id);
+
+        BigDecimal entregado = totales().entregado(id);
+        if (request.monto().compareTo(entregado) > 0) {
+            throw new ConflictException("Solo hay $" + entregado.max(BigDecimal.ZERO)
+                    + " entregados que se puedan devolver en esta comisión");
+        }
+        LocalDate fecha = request.fecha() != null ? request.fecha() : LocalDate.now();
+        String notas = request.notas() == null || request.notas().isBlank() ? null : request.notas().trim();
+        devolucionRepository.save(new VentaComisionDevolucion(comision, fecha, request.monto(), notas, actual));
+        return detalle(comision);
+    }
+
     /** Anula una entrega y borra el gasto que generó. */
     public ComisionDetalleDto anularEntrega(Long comisionId, Long entregaId) {
         exigirAdminOLider();
@@ -342,7 +366,7 @@ public class ComisionService {
         }
 
         BigDecimal restante = comision.getMonto();
-        for (PagoVenta pago : pagoVentaRepository.findByVentaIdOrderByFechaAscIdAsc(venta.getId())) {
+        for (PagoVenta pago : pagoVentaRepository.findVigentesByVentaIdOrderByFechaAscIdAsc(venta.getId())) {
             if (restante.signum() <= 0) break;
             BigDecimal mitad = pago.getMonto().divide(new BigDecimal("2"), 2, RoundingMode.HALF_UP);
             BigDecimal aporte = mitad.min(restante);
@@ -385,11 +409,12 @@ public class ComisionService {
     private final class Totales {
         private final Map<Long, List<VentaComisionDevengo>> devengos = new HashMap<>();
         private final Map<Long, BigDecimal> entregado = new HashMap<>();
+        private final Map<Long, BigDecimal> devuelto = new HashMap<>();
         private final Map<Long, BigDecimal> abonadoPorVenta = new HashMap<>();
         private final Map<Long, FinanzasService.CobroVenta> cobros = finanzasService.cobroPorVenta();
 
         Totales() {
-            for (PagoVenta p : pagoVentaRepository.findAll()) {
+            for (PagoVenta p : pagoVentaRepository.findAllVigentes()) {
                 abonadoPorVenta.merge(p.getVenta().getId(), p.getMonto(), BigDecimal::add);
             }
             for (VentaComisionDevengo d : devengoRepository.findAllByOrderByFechaEntregaAscIdAsc()) {
@@ -397,6 +422,9 @@ public class ComisionService {
             }
             for (VentaComisionEntrega e : entregaRepository.findAll()) {
                 entregado.merge(e.getComision().getId(), e.getMonto(), BigDecimal::add);
+            }
+            for (VentaComisionDevolucion d : devolucionRepository.findAll()) {
+                devuelto.merge(d.getComision().getId(), d.getMonto(), BigDecimal::add);
             }
         }
 
@@ -413,8 +441,18 @@ public class ComisionService {
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
         }
 
+        /** Lo entregado al asesor, neto de lo que ya devolvió. */
         BigDecimal entregado(Long id) {
-            return entregado.getOrDefault(id, BigDecimal.ZERO);
+            return entregado.getOrDefault(id, BigDecimal.ZERO).subtract(devuelto(id));
+        }
+
+        BigDecimal devuelto(Long id) {
+            return devuelto.getOrDefault(id, BigDecimal.ZERO);
+        }
+
+        /** Lo entregado de más: ya no está respaldado por abonos vigentes (p. ej. se anuló un recibo). */
+        BigDecimal porDevolver(Long id) {
+            return entregado(id).subtract(devengado(id)).max(BigDecimal.ZERO);
         }
 
         FinanzasService.CobroVenta cobroDeVenta(Long ventaId) {
@@ -494,6 +532,8 @@ public class ComisionService {
                 c.isCancelada(),
                 devengado,
                 entregado,
+                totales.devuelto(c.getId()),
+                totales.porDevolver(c.getId()),
                 porEntregar,
                 porEntregar.signum() > 0 ? totales.proximaEntrega(c.getId()) : null,
                 vencido.signum() > 0,
@@ -532,7 +572,18 @@ public class ComisionService {
                         e.getRegistradaPor().getNombre(),
                         e.getFechaCreacion()))
                 .toList();
-        return new ComisionDetalleDto(aDto(comision, totales), devengos, entregas);
+        List<ComisionDetalleDto.Devolucion> devoluciones = devolucionRepository
+                .findByComisionIdOrderByFechaAscIdAsc(comision.getId())
+                .stream()
+                .map(d -> new ComisionDetalleDto.Devolucion(
+                        d.getId(),
+                        d.getFecha(),
+                        d.getMonto(),
+                        d.getNotas(),
+                        d.getRegistradaPor().getNombre(),
+                        d.getFechaCreacion()))
+                .toList();
+        return new ComisionDetalleDto(aDto(comision, totales), devengos, entregas, devoluciones);
     }
 
     // ---------------------------------------------------------------- utilidades

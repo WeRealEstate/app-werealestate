@@ -23,7 +23,12 @@ public record PagoVentaDto(
         String folio,
         String notas,
         UsuarioResumenDto registradoPor,
-        LocalDateTime fechaCreacion) {
+        LocalDateTime fechaCreacion,
+        // Recibo anulado: no cuenta en el saldo; se muestra con su motivo, quién y cuándo.
+        boolean anulado,
+        String anuladoMotivo,
+        UsuarioResumenDto anuladoPor,
+        LocalDate anuladoFecha) {
 
     public record MesCubiertoDto(int anio, int mes) {
     }
@@ -43,6 +48,10 @@ public record PagoVentaDto(
                 pago.getFolio(),
                 pago.getNotas(),
                 UsuarioResumenDto.from(pago.getRegistradoPor()),
-                pago.getFechaCreacion());
+                pago.getFechaCreacion(),
+                pago.getRecibo().isAnulado(),
+                pago.getRecibo().getAnuladoMotivo(),
+                pago.getRecibo().getAnuladoPor() != null ? UsuarioResumenDto.from(pago.getRecibo().getAnuladoPor()) : null,
+                pago.getRecibo().getAnuladoFecha());
     }
 }

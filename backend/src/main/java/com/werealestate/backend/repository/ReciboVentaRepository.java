@@ -6,7 +6,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ReciboVentaRepository extends JpaRepository<ReciboVenta, Long> {
 
-    boolean existsByFolioIgnoreCase(String folio);
+    /** El folio de un recibo anulado queda libre para reutilizarse. */
+    boolean existsByFolioIgnoreCaseAndAnuladoFalse(String folio);
+
+    java.util.Optional<ReciboVenta> findByFolioIgnoreCaseAndAnuladoFalse(String folio);
 
     List<ReciboVenta> findByVentaId(Long ventaId);
 }

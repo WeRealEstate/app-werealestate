@@ -4,6 +4,9 @@ import com.werealestate.backend.dto.ContadoresVentasDto;
 import com.werealestate.backend.dto.PaginaDto;
 import com.werealestate.backend.dto.PagoVentaCreateRequest;
 import com.werealestate.backend.dto.PagoVentaDto;
+import com.werealestate.backend.dto.ReciboAnularRequest;
+import com.werealestate.backend.dto.ReciboEditarRequest;
+import com.werealestate.backend.dto.ReciboHistorialDto;
 import com.werealestate.backend.dto.VentaCreateRequest;
 import com.werealestate.backend.dto.ClienteResumenDto;
 import com.werealestate.backend.dto.VentaDto;
@@ -20,9 +23,11 @@ import com.werealestate.backend.exception.ValidationException;
 import com.werealestate.backend.model.AsesorExterno;
 import com.werealestate.backend.model.Cliente;
 import com.werealestate.backend.model.Lote;
+import com.werealestate.backend.model.AccionRecibo;
 import com.werealestate.backend.model.MesCubierto;
 import com.werealestate.backend.model.PagoVenta;
 import com.werealestate.backend.model.ReciboVenta;
+import com.werealestate.backend.model.ReciboVentaHistorial;
 import com.werealestate.backend.model.TipoAbono;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Usuario;
@@ -34,6 +39,7 @@ import com.werealestate.backend.model.VentaLote;
 import com.werealestate.backend.repository.AsesorExternoRepository;
 import com.werealestate.backend.repository.LoteRepository;
 import com.werealestate.backend.repository.PagoVentaRepository;
+import com.werealestate.backend.repository.ReciboVentaHistorialRepository;
 import com.werealestate.backend.repository.ReciboVentaRepository;
 import com.werealestate.backend.repository.UsuarioRepository;
 import com.werealestate.backend.repository.VentaAportacionRepository;
@@ -76,6 +82,7 @@ public class VentaService {
     private final LoteService loteService;
     private final PagoVentaRepository pagoVentaRepository;
     private final ReciboVentaRepository reciboVentaRepository;
+    private final ReciboVentaHistorialRepository reciboHistorialRepository;
     private final ComisionService comisionService;
     private final ClienteService clienteService;
     private final VentaCopropietarioRepository copropietarioRepository;
@@ -92,6 +99,7 @@ public class VentaService {
             LoteService loteService,
             PagoVentaRepository pagoVentaRepository,
             ReciboVentaRepository reciboVentaRepository,
+            ReciboVentaHistorialRepository reciboHistorialRepository,
             ComisionService comisionService,
             ClienteService clienteService,
             VentaCopropietarioRepository copropietarioRepository,
@@ -106,6 +114,7 @@ public class VentaService {
         this.loteService = loteService;
         this.pagoVentaRepository = pagoVentaRepository;
         this.reciboVentaRepository = reciboVentaRepository;
+        this.reciboHistorialRepository = reciboHistorialRepository;
         this.comisionService = comisionService;
         this.clienteService = clienteService;
         this.copropietarioRepository = copropietarioRepository;
@@ -291,7 +300,10 @@ public class VentaService {
         List<Long> loteIds = lotes.stream().map(vl -> vl.getLote().getId()).toList();
         pagoVentaRepository.deleteAll(pagoVentaRepository.findByVentaIdOrderByFechaDesc(id));
         pagoVentaRepository.flush();
-        reciboVentaRepository.deleteAll(reciboVentaRepository.findByVentaId(id));
+        List<ReciboVenta> recibosDeVenta = reciboVentaRepository.findByVentaId(id);
+        recibosDeVenta.forEach(r -> reciboHistorialRepository.deleteAll(reciboHistorialRepository.findByReciboId(r.getId())));
+        reciboHistorialRepository.flush();
+        reciboVentaRepository.deleteAll(recibosDeVenta);
         ventaAportacionRepository.deleteAll(ventaAportacionRepository.findByVentaIdOrderByAnioAscMesAsc(id));
         copropietarioRepository.deleteAll(copropietarioRepository.findByVentaIdOrderByOrdenAsc(id));
         ventaLoteRepository.deleteAll(lotes);
@@ -387,7 +399,7 @@ public class VentaService {
         }
 
         String folio = request.folio().trim();
-        if (reciboVentaRepository.existsByFolioIgnoreCase(folio)) {
+        if (reciboVentaRepository.existsByFolioIgnoreCaseAndAnuladoFalse(folio)) {
             throw new ConflictException("Ya existe un abono con el folio " + folio);
         }
 
@@ -400,16 +412,27 @@ public class VentaService {
         }
 
         reciboVentaRepository.save(recibo);
+        reciboHistorialRepository.save(new ReciboVentaHistorial(
+                recibo, AccionRecibo.CREADO, actual, "Folio " + folio + " · " + describirLineas(lineas)));
         List<PagoVentaDto> guardadas = pagoVentaRepository.saveAll(lineas).stream().map(PagoVentaDto::from).toList();
         comisionService.sincronizar(venta);
         return guardadas;
     }
 
-    /** Valida lo que cada tipo exige y arma la línea: mensualidad = meses dentro del plazo de la venta;
-     * aportación = una aportación programada de esta misma venta; enganche y apartado, nada más. */
+    /** Valida lo que cada tipo exige y arma la línea. */
     private PagoVenta construirLinea(Venta venta, ReciboVenta recibo, PagoVentaCreateRequest.Linea linea) {
-        TipoAbono tipo = linea.tipo();
-        boolean traeMeses = linea.meses() != null && !linea.meses().isEmpty();
+        Referencias ref = validarReferencias(venta, linea.tipo(), linea.meses(), linea.aportacionId());
+        return new PagoVenta(venta, recibo, linea.monto(), linea.tipo(), ref.aportacion(), ref.meses());
+    }
+
+    private record Referencias(List<MesCubierto> meses, VentaAportacion aportacion) {
+    }
+
+    /** Mensualidad = meses dentro del plazo de la venta; aportación = una aportación programada de
+     * esta misma venta; enganche y apartado, nada más. */
+    private Referencias validarReferencias(
+            Venta venta, TipoAbono tipo, List<PagoVentaCreateRequest.Mes> mesesPedidos, Long aportacionId) {
+        boolean traeMeses = mesesPedidos != null && !mesesPedidos.isEmpty();
 
         if (tipo == TipoAbono.MENSUALIDAD) {
             if (venta.getPlazoMeses() == null || venta.getPlazoMeses() < 1 || venta.getMensualidad() == null) {
@@ -418,14 +441,14 @@ public class VentaService {
             if (!traeMeses) {
                 throw new ValidationException("Indica el mes o los meses que cubre la mensualidad");
             }
-            if (linea.aportacionId() != null) {
+            if (aportacionId != null) {
                 throw new ValidationException("Una mensualidad no se liga a una aportación");
             }
             YearMonth primero = YearMonth.from(venta.getFechaVenta()).plusMonths(venta.isPrimeraMensualidadMesVenta() ? 0 : 1);
             YearMonth ultimo = primero.plusMonths(venta.getPlazoMeses() - 1L);
             Set<YearMonth> vistos = new HashSet<>();
             List<MesCubierto> meses = new ArrayList<>();
-            for (PagoVentaCreateRequest.Mes m : linea.meses()) {
+            for (PagoVentaCreateRequest.Mes m : mesesPedidos) {
                 YearMonth ym = YearMonth.of(m.anio(), m.mes());
                 if (ym.isBefore(primero) || ym.isAfter(ultimo)) {
                     throw new ValidationException("El mes " + ym + " está fuera del plazo de la venta (" + primero + " a " + ultimo + ")");
@@ -435,33 +458,152 @@ public class VentaService {
                 }
                 meses.add(new MesCubierto(m.anio(), m.mes()));
             }
-            return new PagoVenta(venta, recibo, linea.monto(), tipo, null, meses);
+            return new Referencias(meses, null);
         }
 
         if (traeMeses) {
             throw new ValidationException("Solo una mensualidad cubre meses");
         }
         if (tipo == TipoAbono.APORTACION) {
-            if (linea.aportacionId() == null) {
+            if (aportacionId == null) {
                 throw new ValidationException("Indica qué aportación programada paga");
             }
-            VentaAportacion aportacion = ventaAportacionRepository.findById(linea.aportacionId())
+            VentaAportacion aportacion = ventaAportacionRepository.findById(aportacionId)
                     .filter(a -> a.getVenta().getId().equals(venta.getId()))
                     .orElseThrow(() -> new ValidationException("Esa aportación no pertenece a esta venta"));
-            return new PagoVenta(venta, recibo, linea.monto(), tipo, aportacion, null);
+            return new Referencias(List.of(), aportacion);
         }
-        if (linea.aportacionId() != null) {
+        if (aportacionId != null) {
             throw new ValidationException("Solo una aportación se liga a una aportación programada");
         }
-        return new PagoVenta(venta, recibo, linea.monto(), tipo, null, null);
+        return new Referencias(List.of(), null);
+    }
+
+    /** "Enganche $20,000 · Mensualidad $10,000 (2026-11, 2026-12)" para la bitácora. */
+    private static String describirLineas(List<PagoVenta> lineas) {
+        return lineas.stream().map(VentaService::describirLinea).collect(java.util.stream.Collectors.joining(" · "));
+    }
+
+    private static String describirLinea(PagoVenta l) {
+        String tipo = l.getTipo() == null ? "Sin tipo" : switch (l.getTipo()) {
+            case MENSUALIDAD -> "Mensualidad";
+            case ENGANCHE -> "Enganche";
+            case APARTADO -> "Apartado";
+            case APORTACION -> "Aportación";
+        };
+        String meses = l.getMeses().isEmpty()
+                ? ""
+                : " (" + l.getMeses().stream()
+                        .map(m -> YearMonth.of(m.getAnio(), m.getMes()).toString())
+                        .sorted()
+                        .collect(java.util.stream.Collectors.joining(", ")) + ")";
+        String aportacion = l.getAportacion() == null
+                ? ""
+                : " (" + YearMonth.of(l.getAportacion().getAnio(), l.getAportacion().getMes()) + ")";
+        return tipo + " $" + l.getMonto().toPlainString() + meses + aportacion;
+    }
+
+    // ---------------------------------------------------------------- editar / anular un recibo
+
+    /** Edita solo lo NO financiero de un recibo: folio, nota y, por línea, tipo, meses y aportación.
+     * El monto y la fecha no se tocan (los libros no se reescriben): si están mal, se anula el recibo
+     * y se registra uno nuevo. Un recibo anulado no se edita. Deja constancia en la bitácora. */
+    public List<PagoVentaDto> editarRecibo(Long ventaId, Long reciboId, ReciboEditarRequest request) {
+        Usuario actual = exigirAdminOLider();
+        Venta venta = obtenerEntidad(ventaId);
+        ReciboVenta recibo = obtenerRecibo(ventaId, reciboId);
+        if (recibo.isAnulado()) {
+            throw new ConflictException("Un recibo anulado no se puede editar");
+        }
+
+        String folio = request.folio().trim();
+        reciboVentaRepository.findByFolioIgnoreCaseAndAnuladoFalse(folio)
+                .filter(otro -> !otro.getId().equals(recibo.getId()))
+                .ifPresent(otro -> {
+                    throw new ConflictException("Ya existe un abono con el folio " + folio);
+                });
+
+        List<PagoVenta> lineas = pagoVentaRepository.findByReciboId(reciboId);
+        java.util.Map<Long, PagoVenta> porId = new java.util.HashMap<>();
+        lineas.forEach(l -> porId.put(l.getId(), l));
+
+        String antes = describirLineas(lineas);
+        List<String> cambios = new ArrayList<>();
+        if (!java.util.Objects.equals(recibo.getFolio(), folio)) {
+            cambios.add("Folio " + (recibo.getFolio() == null ? "(vacío)" : recibo.getFolio()) + " → " + folio);
+        }
+        String notas = request.notas() == null || request.notas().isBlank() ? null : request.notas().trim();
+        if (!java.util.Objects.equals(recibo.getNotas(), notas)) {
+            cambios.add("Nota actualizada");
+        }
+
+        // Se validan todas las líneas antes de guardar nada.
+        List<Runnable> aplicar = new ArrayList<>();
+        for (ReciboEditarRequest.Linea linea : request.lineas()) {
+            PagoVenta pago = porId.get(linea.pagoId());
+            if (pago == null) {
+                throw new ValidationException("La línea " + linea.pagoId() + " no pertenece a este recibo");
+            }
+            Referencias ref = validarReferencias(venta, linea.tipo(), linea.meses(), linea.aportacionId());
+            aplicar.add(() -> pago.actualizarConcepto(linea.tipo(), ref.aportacion(), ref.meses()));
+        }
+
+        recibo.setFolio(folio);
+        recibo.setNotas(notas);
+        aplicar.forEach(Runnable::run);
+        pagoVentaRepository.saveAll(lineas);
+        String despues = describirLineas(lineas);
+        if (!antes.equals(despues)) {
+            cambios.add("Conceptos: " + antes + " → " + despues);
+        }
+        reciboVentaRepository.save(recibo);
+        reciboHistorialRepository.save(new ReciboVentaHistorial(
+                recibo, AccionRecibo.EDITADO, actual, cambios.isEmpty() ? "Sin cambios" : String.join(" | ", cambios)));
+        return pagoVentaRepository.findByReciboId(reciboId).stream().map(PagoVentaDto::from).toList();
+    }
+
+    /** Anula un recibo: no se borra, queda con su motivo, quién y cuándo. Su dinero deja de contar en
+     * el saldo de la venta y en las comisiones; en Finanzas se registra un contra-asiento en la fecha
+     * de hoy (el mes original no cambia). Si la comisión ya se había entregado, la entrega no se toca:
+     * lo que ya no esté respaldado por abonos queda como "por devolver". */
+    public List<PagoVentaDto> anularRecibo(Long ventaId, Long reciboId, ReciboAnularRequest request) {
+        Usuario actual = exigirAdminOLider();
+        Venta venta = obtenerEntidad(ventaId);
+        ReciboVenta recibo = obtenerRecibo(ventaId, reciboId);
+        if (recibo.isAnulado()) {
+            throw new ConflictException("Este recibo ya está anulado");
+        }
+
+        String motivo = request.motivo().trim();
+        recibo.anular(motivo, actual, java.time.LocalDate.now());
+        reciboVentaRepository.save(recibo);
+        List<PagoVenta> lineas = pagoVentaRepository.findByReciboId(reciboId);
+        reciboHistorialRepository.save(new ReciboVentaHistorial(
+                recibo, AccionRecibo.ANULADO, actual, "Motivo: " + motivo + " · " + describirLineas(lineas)));
+        comisionService.sincronizar(venta);
+        return lineas.stream().map(PagoVentaDto::from).toList();
+    }
+
+    /** Bitácora de todos los recibos de la venta, la más reciente primero. */
+    public List<ReciboHistorialDto> historialDeRecibos(Long ventaId) {
+        exigirAdminOLider();
+        obtenerEntidad(ventaId);
+        return reciboHistorialRepository.findByVentaId(ventaId).stream().map(ReciboHistorialDto::from).toList();
+    }
+
+    private ReciboVenta obtenerRecibo(Long ventaId, Long reciboId) {
+        return reciboVentaRepository.findById(reciboId)
+                .filter(r -> r.getVenta().getId().equals(ventaId))
+                .orElseThrow(() -> new ResourceNotFoundException("Recibo no encontrado"));
     }
 
     private Venta obtenerEntidad(Long id) {
         return ventaRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada"));
     }
 
+    /** Lo abonado de verdad: los recibos anulados ya no cuentan. */
     private BigDecimal totalAbonado(Long ventaId) {
-        return pagoVentaRepository.findByVentaIdOrderByFechaDesc(ventaId).stream()
+        return pagoVentaRepository.findVigentesByVentaIdOrderByFechaAscIdAsc(ventaId).stream()
                 .map(PagoVenta::getMonto)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }

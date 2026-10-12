@@ -1,0 +1,225 @@
+@if (recibos().length === 0) {
+  <div class="mt-3 rounded-xl border border-dashed border-border p-8 text-center">
+    <p class="text-sm text-ink-muted">Todavía no se ha registrado ningún abono.</p>
+  </div>
+} @else {
+  <div class="mt-3 space-y-3">
+    @for (r of recibos(); track r.id) {
+      <div class="rounded-xl border bg-surface p-4" [class.border-border]="!r.anulado" [class.border-red-200]="r.anulado" [class.dark:border-red-500/25]="r.anulado">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p class="text-sm font-semibold text-ink" [class.line-through]="r.anulado" [class.text-ink-muted]="r.anulado">
+              @if (r.folio) {
+                Folio {{ r.folio }}
+              } @else {
+                Folio
+                <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">Por completar</span>
+              }
+            </p>
+            <p class="mt-0.5 text-xs text-ink-muted">
+              {{ fecha(r.fecha) }} · registrado por {{ r.registradoPor }}
+              @if (r.notas) {
+                · {{ r.notas }}
+              }
+            </p>
+          </div>
+          <div class="flex items-center gap-3">
+            @if (r.anulado) {
+              <span class="rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700 dark:bg-red-500/15 dark:text-red-300">Anulado</span>
+            }
+            <p class="text-base font-semibold" [class.line-through]="r.anulado" [class.text-ink-muted]="r.anulado" [class.text-ink]="!r.anulado">${{ money(r.total) }}</p>
+          </div>
+        </div>
+
+        <ul class="mt-3 space-y-1.5 text-sm" [class.opacity-60]="r.anulado">
+          @for (l of r.lineas; track l.id) {
+            <li class="flex items-start justify-between gap-3">
+              <span class="text-ink">
+                @if (l.tipo) {
+                  <span class="font-medium">{{ tipoLabels[l.tipo] }}</span>
+                  @if (detalleConcepto(l); as d) {
+                    <span class="ml-1 text-xs text-ink-muted capitalize">· {{ d }}</span>
+                  }
+                } @else {
+                  <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">Tipo por completar</span>
+                }
+              </span>
+              <span class="text-ink-muted">${{ money(l.monto) }}</span>
+            </li>
+          }
+        </ul>
+
+        @if (r.anulado) {
+          <p class="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-500/10 dark:text-red-300">
+            Anulado el {{ r.anuladoFecha ? fecha(r.anuladoFecha) : '' }} por {{ r.anuladoPor }}: {{ r.anuladoMotivo }}
+          </p>
+        }
+
+        <div class="mt-3 flex flex-wrap items-center gap-4 text-xs font-semibold">
+          @if (!r.anulado) {
+            <button type="button" (click)="abrirEdicion(r)" class="text-we-primary hover:underline">Editar</button>
+            <button type="button" (click)="abrirAnulacion(r)" class="text-red-600 hover:underline dark:text-red-400">Anular</button>
+          }
+          <button type="button" (click)="alternarHistorial(r.id)" class="text-ink-muted hover:underline">
+            {{ historialAbiertoId() === r.id ? 'Ocultar bitácora' : 'Bitácora (' + historialDe(r.id).length + ')' }}
+          </button>
+        </div>
+
+        @if (historialAbiertoId() === r.id) {
+          <ul class="mt-3 space-y-2 border-t border-border pt-3 text-xs">
+            @for (h of historialDe(r.id); track $index) {
+              <li class="text-ink-muted">
+                <span class="font-semibold text-ink">{{ accionLabels[h.accion] }}</span>
+                · {{ h.usuario }} · {{ fechaHora(h.fechaHora) }}
+                @if (h.detalle) {
+                  <span class="block">{{ h.detalle }}</span>
+                }
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    }
+  </div>
+}
+
+<!-- Editar recibo -->
+@if (editando(); as r) {
+  <button type="button" (click)="cerrarEdicion()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="editar-recibo-titulo">
+    <form (ngSubmit)="guardarEdicion()" class="modal-panel-enter flex max-h-[90vh] w-full max-w-lg flex-col rounded-xl border border-border bg-surface p-5 shadow-lg">
+      <h2 id="editar-recibo-titulo" class="font-heading text-lg font-semibold text-ink">Editar recibo</h2>
+      <p class="mt-1 text-xs text-ink-muted">
+        Solo se corrige lo que no mueve dinero: folio, nota, tipo, meses y aportación. Si el monto o la fecha están mal,
+        anula este recibo y registra uno nuevo.
+      </p>
+
+      <div class="mt-4 space-y-4 overflow-y-auto pr-1">
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label for="er-folio" class="mb-1 block text-xs font-medium text-ink-muted">Folio *</label>
+            <input
+              id="er-folio" name="folio" type="text" maxlength="50"
+              [ngModel]="editFolio()" (ngModelChange)="editFolio.set($event)"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+            />
+          </div>
+          <div>
+            <label for="er-notas" class="mb-1 block text-xs font-medium text-ink-muted">Notas</label>
+            <input
+              id="er-notas" name="notas" type="text" maxlength="500"
+              [ngModel]="editNotas()" (ngModelChange)="editNotas.set($event)"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+            />
+          </div>
+        </div>
+
+        @for (l of editLineas(); track l.pagoId; let i = $index) {
+          <div class="rounded-xl border border-border bg-surface-2/40 p-3.5">
+            <div class="flex items-center justify-between gap-2 text-sm">
+              <span class="font-medium text-ink">{{ editLineas().length > 1 ? 'Concepto ' + (i + 1) : 'Concepto' }}</span>
+              <span class="text-ink-muted">${{ money(l.monto) }} (no editable)</span>
+            </div>
+            <div class="mt-2.5">
+              <label [attr.for]="'er-tipo-' + l.pagoId" class="mb-1 block text-xs text-ink-muted">Tipo de abono *</label>
+              <select
+                [id]="'er-tipo-' + l.pagoId" [name]="'tipo-' + l.pagoId"
+                [ngModel]="l.tipo" (ngModelChange)="cambiarTipoEdicion(i, $event)"
+                class="block w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+              >
+                <option value="">Selecciona…</option>
+                @for (t of tiposDisponibles(); track t.valor) {
+                  <option [value]="t.valor">{{ t.label }}</option>
+                }
+              </select>
+            </div>
+
+            @if (l.tipo === 'MENSUALIDAD') {
+              <div class="mt-3">
+                <p class="mb-1.5 text-xs text-ink-muted">Meses que cubre * (puedes elegir varios)</p>
+                <div class="flex max-h-40 flex-wrap gap-2 overflow-y-auto">
+                  @for (m of mesesElegibles(); track m.clave) {
+                    <button
+                      type="button"
+                      (click)="alternarMesEdicion(i, m.clave)"
+                      [disabled]="mesEnOtraLinea(i, m.clave)"
+                      [attr.aria-pressed]="l.meses.includes(m.clave)"
+                      [class.border-we-primary]="l.meses.includes(m.clave)"
+                      [class.bg-we-primary/10]="l.meses.includes(m.clave)"
+                      [class.text-we-primary]="l.meses.includes(m.clave)"
+                      class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-ink capitalize hover:border-we-primary disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {{ m.etiqueta }}
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+
+            @if (l.tipo === 'APORTACION') {
+              <div class="mt-3">
+                <label [attr.for]="'er-aportacion-' + l.pagoId" class="mb-1 block text-xs text-ink-muted">Aportación que paga *</label>
+                <select
+                  [id]="'er-aportacion-' + l.pagoId" [name]="'aportacion-' + l.pagoId"
+                  [ngModel]="l.aportacionId" (ngModelChange)="cambiarAportacionEdicion(i, $event)"
+                  class="block w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink capitalize focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+                >
+                  <option [ngValue]="null">Selecciona…</option>
+                  @for (o of aportacionesOpciones(); track o.id) {
+                    <option [ngValue]="o.id">{{ o.etiqueta }}</option>
+                  }
+                </select>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      @if (errorModal(); as error) {
+        <p class="mt-3 text-xs text-red-600 dark:text-red-400" role="alert">{{ error }}</p>
+      }
+      <div class="flex justify-end gap-2.5 pt-5">
+        <button type="button" (click)="cerrarEdicion()" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cancelar</button>
+        <button type="submit" [disabled]="guardando()" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
+          {{ guardando() ? 'Guardando…' : 'Guardar cambios' }}
+        </button>
+      </div>
+    </form>
+  </div>
+}
+
+<!-- Anular recibo -->
+@if (anulando(); as r) {
+  <button type="button" (click)="cerrarAnulacion()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="anular-recibo-titulo">
+    <form (ngSubmit)="confirmarAnulacion()" class="modal-panel-enter w-full max-w-md rounded-xl border border-border bg-surface p-5 shadow-lg">
+      <h2 id="anular-recibo-titulo" class="font-heading text-lg font-semibold text-ink">Anular recibo{{ r.folio ? ' ' + r.folio : '' }}</h2>
+      <p class="mt-2 text-sm text-ink-muted">
+        Se anula el recibo de <strong class="text-ink">${{ money(r.total) }}</strong>. No se borra: queda con su motivo, quién y cuándo.
+      </p>
+      <ul class="mt-3 list-disc space-y-1 pl-5 text-xs text-ink-muted">
+        <li>Su dinero deja de contar en el saldo del cliente y en las comisiones.</li>
+        <li>En Finanzas queda un movimiento negativo con la fecha de hoy; el mes original no cambia.</li>
+        <li>Si la comisión ya se entregó, esa entrega no se toca: lo que ya no esté respaldado queda como "por devolver".</li>
+        <li>Su folio queda libre para usarse de nuevo.</li>
+      </ul>
+      <div class="mt-4">
+        <label for="ar-motivo" class="mb-1 block text-xs font-medium text-ink-muted">Motivo de la anulación *</label>
+        <textarea
+          id="ar-motivo" name="motivo" rows="3" maxlength="500"
+          [ngModel]="motivo()" (ngModelChange)="motivo.set($event)"
+          class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-red-500/40"
+        ></textarea>
+      </div>
+      @if (errorModal(); as error) {
+        <p class="mt-3 text-xs text-red-600 dark:text-red-400" role="alert">{{ error }}</p>
+      }
+      <div class="flex justify-end gap-2.5 pt-5">
+        <button type="button" (click)="cerrarAnulacion()" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cancelar</button>
+        <button type="submit" [disabled]="guardando()" class="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60">
+          {{ guardando() ? 'Anulando…' : 'Anular recibo' }}
+        </button>
+      </div>
+    </form>
+  </div>
+}

@@ -22,6 +22,7 @@ import com.werealestate.backend.repository.GastoRecurrentePagoRepository;
 import com.werealestate.backend.repository.GastoRecurrenteRepository;
 import com.werealestate.backend.repository.GastoRepository;
 import com.werealestate.backend.repository.PagoVentaRepository;
+import com.werealestate.backend.repository.VentaComisionDevolucionRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
@@ -57,6 +58,7 @@ public class GastoRecurrenteService {
     private final GastoRecurrentePagoRepository pagoRepository;
     private final GastoRepository gastoRepository;
     private final PagoVentaRepository pagoVentaRepository;
+    private final VentaComisionDevolucionRepository devolucionRepository;
     private final GastoService gastoService;
     private final CurrentUserProvider currentUserProvider;
 
@@ -65,12 +67,14 @@ public class GastoRecurrenteService {
             GastoRecurrentePagoRepository pagoRepository,
             GastoRepository gastoRepository,
             PagoVentaRepository pagoVentaRepository,
+            VentaComisionDevolucionRepository devolucionRepository,
             GastoService gastoService,
             CurrentUserProvider currentUserProvider) {
         this.recurrenteRepository = recurrenteRepository;
         this.pagoRepository = pagoRepository;
         this.gastoRepository = gastoRepository;
         this.pagoVentaRepository = pagoVentaRepository;
+        this.devolucionRepository = devolucionRepository;
         this.gastoService = gastoService;
         this.currentUserProvider = currentUserProvider;
     }
@@ -297,9 +301,20 @@ public class GastoRecurrenteService {
         } catch (RuntimeException e) {
             throw new ValidationException("Mes inválido: usa el formato yyyy-MM");
         }
-        BigDecimal ingresos = pagoVentaRepository.findAll().stream()
-                .filter(p -> YearMonth.from(p.getFecha()).equals(ym))
-                .map(PagoVenta::getMonto)
+        // Libro: cada abono en su mes y, si su recibo se anuló, un contra-asiento negativo en el mes de
+        // la anulación (el mes original no cambia).
+        BigDecimal ingresos = BigDecimal.ZERO;
+        for (PagoVenta p : pagoVentaRepository.findAllConRecibo()) {
+            if (YearMonth.from(p.getFecha()).equals(ym)) ingresos = ingresos.add(p.getMonto());
+            if (p.getRecibo().isAnulado() && p.getRecibo().getAnuladoFecha() != null
+                    && YearMonth.from(p.getRecibo().getAnuladoFecha()).equals(ym)) {
+                ingresos = ingresos.subtract(p.getMonto());
+            }
+        }
+        // Lo que los asesores devolvieron de comisiones ya entregadas: ingreso aparte.
+        BigDecimal devoluciones = devolucionRepository.findAll().stream()
+                .filter(d -> YearMonth.from(d.getFecha()).equals(ym))
+                .map(com.werealestate.backend.model.VentaComisionDevolucion::getMonto)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal gastado = gastoRepository.findAll().stream()
                 .filter(g -> YearMonth.from(g.getFecha()).equals(ym))
@@ -317,7 +332,8 @@ public class GastoRecurrenteService {
                 vencidos++;
             }
         }
-        return new GastoResumenDto(ym.toString(), ingresos, gastado, ingresos.subtract(gastado), pendiente, vencido, vencidos);
+        return new GastoResumenDto(
+                ym.toString(), ingresos, devoluciones, gastado, ingresos.add(devoluciones).subtract(gastado), pendiente, vencido, vencidos);
     }
 
     // ---------------------------------------------------------------- vencimientos

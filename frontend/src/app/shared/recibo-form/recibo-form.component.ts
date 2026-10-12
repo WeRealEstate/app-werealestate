@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { LineaReciboRequest, PagoVenta, TIPO_ABONO_LABELS, TipoAbono, Venta } from '../../core/models/venta.model';
 import { ToastService } from '../../core/services/toast.service';
 import { VentasService } from '../../core/services/ventas.service';
+import { MesPlan, claveMes as clave, etiquetaMes, mesesDelPlan } from '../../core/utils/plan-mensualidades';
 import { MonedaInputDirective } from '../moneda-input/moneda-input.directive';
 
 interface LineaForm {
@@ -17,17 +18,6 @@ interface LineaForm {
   montoManual: boolean;
   verTodosLosMeses: boolean;
 }
-
-interface MesPlan {
-  clave: string;
-  anio: number;
-  mes: number;
-  etiqueta: string;
-}
-
-const clave = (anio: number, mes: number): string => `${anio}-${String(mes).padStart(2, '0')}`;
-const etiquetaMes = (anio: number, mes: number): string =>
-  new Date(anio, mes - 1, 1).toLocaleDateString('es-MX', { month: 'short', year: 'numeric' }).replace('.', '');
 
 /** Cuántos meses pendientes se muestran antes de pedir "Ver todos". */
 const MESES_VISIBLES = 12;
@@ -66,26 +56,14 @@ export class ReciboFormComponent {
     return tipos.map((valor) => ({ valor, label: TIPO_ABONO_LABELS[valor] }));
   });
 
-  /** Todos los meses del plazo de la venta (la primera mensualidad cae el mes de la venta o el siguiente). */
-  private readonly mesesDelPlan = computed<MesPlan[]>(() => {
-    const v = this.venta();
-    if (!v.plazoMeses || !v.mensualidad) return [];
-    const [anio, mes] = v.fechaVenta.split('-').map(Number);
-    const resultado: MesPlan[] = [];
-    for (let k = 0; k < v.plazoMeses; k++) {
-      const indice = mes - 1 + (v.primeraMensualidadMesVenta ? 0 : 1) + k;
-      const a = anio + Math.floor(indice / 12);
-      const m = (indice % 12) + 1;
-      resultado.push({ clave: clave(a, m), anio: a, mes: m, etiqueta: etiquetaMes(a, m) });
-    }
-    return resultado;
-  });
+  /** Todos los meses del plazo de la venta. */
+  private readonly mesesDelPlan = computed<MesPlan[]>(() => mesesDelPlan(this.venta()));
 
   /** Meses ya cubiertos por una mensualidad registrada. */
   private readonly mesesCubiertos = computed(() => {
     const cubiertos = new Set<string>();
     for (const p of this.pagos()) {
-      if (p.tipo === 'MENSUALIDAD') for (const m of p.meses) cubiertos.add(clave(m.anio, m.mes));
+      if (p.tipo === 'MENSUALIDAD' && !p.anulado) for (const m of p.meses) cubiertos.add(clave(m.anio, m.mes));
     }
     return cubiertos;
   });
@@ -94,7 +72,7 @@ export class ReciboFormComponent {
 
   /** Aportaciones programadas con su estado (si ya tienen un pago registrado). */
   readonly aportacionesOpciones = computed(() => {
-    const pagadas = new Set(this.pagos().filter((p) => p.tipo === 'APORTACION').map((p) => p.aportacionId));
+    const pagadas = new Set(this.pagos().filter((p) => p.tipo === 'APORTACION' && !p.anulado).map((p) => p.aportacionId));
     return this.venta().aportaciones.map((a) => ({
       id: a.id!,
       monto: a.monto,

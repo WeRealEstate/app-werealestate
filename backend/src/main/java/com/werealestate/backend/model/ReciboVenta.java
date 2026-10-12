@@ -46,6 +46,23 @@ public class ReciboVenta {
     @Column(name = "fecha_creacion", nullable = false)
     private LocalDateTime fechaCreacion = LocalDateTime.now();
 
+    @Column(nullable = false)
+    private boolean anulado = false;
+
+    @Column(name = "anulado_motivo", length = 500)
+    private String anuladoMotivo;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "anulado_por_id")
+    private Usuario anuladoPor;
+
+    /** Fecha del contra-asiento en Finanzas: el mes original del recibo no cambia. */
+    @Column(name = "anulado_fecha")
+    private LocalDate anuladoFecha;
+
+    @Column(name = "anulado_en")
+    private LocalDateTime anuladoEn;
+
     protected ReciboVenta() {
         // JPA
     }
@@ -84,5 +101,42 @@ public class ReciboVenta {
 
     public LocalDateTime getFechaCreacion() {
         return fechaCreacion;
+    }
+
+    public void setFolio(String folio) {
+        this.folio = folio;
+    }
+
+    public void setNotas(String notas) {
+        this.notas = notas;
+    }
+
+    public boolean isAnulado() {
+        return anulado;
+    }
+
+    public String getAnuladoMotivo() {
+        return anuladoMotivo;
+    }
+
+    public Usuario getAnuladoPor() {
+        return anuladoPor;
+    }
+
+    public LocalDate getAnuladoFecha() {
+        return anuladoFecha;
+    }
+
+    public LocalDateTime getAnuladoEn() {
+        return anuladoEn;
+    }
+
+    /** Anula el recibo: no se borra, queda con su motivo, quién y cuándo. */
+    public void anular(String motivo, Usuario usuario, LocalDate fecha) {
+        this.anulado = true;
+        this.anuladoMotivo = motivo;
+        this.anuladoPor = usuario;
+        this.anuladoFecha = fecha;
+        this.anuladoEn = LocalDateTime.now();
     }
 }

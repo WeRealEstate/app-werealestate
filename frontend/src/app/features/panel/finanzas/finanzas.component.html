@@ -258,6 +258,11 @@
                           Retrasada · ${{ money(c.montoRetrasado) }}
                         </span>
                       }
+                      @if (c.porDevolver > 0) {
+                        <span class="inline-flex whitespace-nowrap rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800 dark:bg-amber-500/15 dark:text-amber-300" title="Se entregó más de lo que respaldan los abonos vigentes (por ejemplo, se anuló un recibo). El asesor debe devolverlo.">
+                          Por devolver · ${{ money(c.porDevolver) }}
+                        </span>
+                      }
                       <p class="text-xs text-ink-muted">{{ modalidadLabels[c.modalidad] }}</p>
                     </div>
                   </td>
@@ -269,6 +274,9 @@
                       <button type="button" (click)="abrirEdicion(c)" class="text-we-primary hover:underline">Editar</button>
                       @if (c.porEntregar > 0) {
                         <button type="button" (click)="abrirEntrega(c)" class="text-we-primary hover:underline">Entregar</button>
+                      }
+                      @if (c.entregado > 0) {
+                        <button type="button" (click)="abrirDevolucion(c)" class="text-we-primary hover:underline">Devolución</button>
                       }
                       <button type="button" (click)="alternarCancelada(c)" class="text-ink-muted hover:underline">
                         {{ c.cancelada ? 'Reactivar' : 'Cancelar' }}
@@ -319,6 +327,19 @@
                             }
                           </div>
                         </div>
+                        @if (d.devoluciones.length > 0) {
+                          <div class="mt-5">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Devoluciones del asesor</p>
+                            <ul class="mt-2 space-y-1.5 text-sm">
+                              @for (dv of d.devoluciones; track dv.id) {
+                                <li class="flex items-start justify-between gap-3">
+                                  <span class="text-ink-muted">{{ fecha(dv.fecha) }} · {{ dv.registradaPor }}{{ dv.notas ? ' · ' + dv.notas : '' }}</span>
+                                  <span class="font-medium text-green-600 dark:text-green-400">${{ money(dv.monto) }}</span>
+                                </li>
+                              }
+                            </ul>
+                          </div>
+                        }
                       } @else {
                         <app-we-loader modo="compacto" texto="Cargando detalle…" />
                       }
@@ -367,6 +388,59 @@
           <button type="button" (click)="cerrarEdicion()" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cancelar</button>
           <button type="submit" [disabled]="guardando()" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
             {{ guardando() ? 'Guardando…' : 'Guardar' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+
+  <!-- Devolución de comisión -->
+  @if (devolviendo(); as c) {
+    <button type="button" (click)="cerrarDevolucion()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="devolver-comision-titulo">
+      <form (ngSubmit)="confirmarDevolucion()" class="modal-panel-enter w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <h2 id="devolver-comision-titulo" class="font-heading text-lg font-semibold text-ink">Devolución de comisión</h2>
+        <p class="mt-1 text-sm text-ink-muted">
+          {{ c.cliente }} · {{ c.asesorNombre }}<br />
+          Entregado: <strong class="text-ink">${{ money(c.entregado) }}</strong>
+          @if (c.porDevolver > 0) {
+            · Por devolver: <strong class="text-amber-700 dark:text-amber-300">${{ money(c.porDevolver) }}</strong>
+          }
+        </p>
+        <div class="mt-4 space-y-3">
+          <div>
+            <label for="dv-monto" class="mb-1 block text-xs font-medium text-ink-muted">Monto que devolvió el asesor ($)</label>
+            <input
+              id="dv-monto" name="monto" appMoneda min="0.01"
+              [ngModel]="devolucionMonto()" (ngModelChange)="devolucionMonto.set($event)"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+            />
+          </div>
+          <div>
+            <label for="dv-fecha" class="mb-1 block text-xs font-medium text-ink-muted">Fecha en que se recibió</label>
+            <input
+              id="dv-fecha" name="fecha" type="date"
+              [ngModel]="devolucionFecha()" (ngModelChange)="devolucionFecha.set($event)"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+            />
+          </div>
+          <div>
+            <label for="dv-notas" class="mb-1 block text-xs font-medium text-ink-muted">Nota (opcional)</label>
+            <input
+              id="dv-notas" name="notas" type="text" maxlength="500"
+              [ngModel]="devolucionNotas()" (ngModelChange)="devolucionNotas.set($event)"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+            />
+          </div>
+        </div>
+        <p class="mt-2 text-xs text-ink-muted">Se registra a mano y cuenta como ingreso en Finanzas. La entrega original no se modifica.</p>
+        @if (errorModal(); as error) {
+          <p class="mt-3 text-xs text-red-600 dark:text-red-400" role="alert">{{ error }}</p>
+        }
+        <div class="flex justify-end gap-2.5 pt-5">
+          <button type="button" (click)="cerrarDevolucion()" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cancelar</button>
+          <button type="submit" [disabled]="guardando()" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
+            {{ guardando() ? 'Guardando…' : 'Registrar devolución' }}
           </button>
         </div>
       </form>

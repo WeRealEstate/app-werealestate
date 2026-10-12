@@ -14,6 +14,11 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '7.3.13', fecha: '2026-10-09', cambios: [
+    "Finanzas: se agregan campos de fecha de pago y fecha de vencimiento a los abonos, para poder llevar un control de pagos atrasados.",
+    "Ventas: se agrega la opción de ver el historial de cambios de cada venta, incluyendo cambios de estatus, abonos y comentarios.",
+    "Se agregan tipos de abonos"
+  ] },
   { version: '7.3.12', fecha: '2026-10-09', cambios: [
     "Todos los campos numericos se escriben con comas de miles y punto decimal (dinero, superficie con decimales, porcentajes, plazos); tambien en el cotizador y promociones, que ahora admiten centavos.",
     "Clientes: Automatizados los campos de nombre, apellido y correo electronico",

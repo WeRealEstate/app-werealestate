@@ -6,6 +6,8 @@ import { Pagina } from '../models/pagina.model';
 import {
   PagoVenta,
   PagoVentaCreateRequest,
+  ReciboEditarRequest,
+  ReciboHistorial,
   Venta,
   VentaCreateRequest,
   VentaUpdateRequest,
@@ -75,6 +77,20 @@ export class VentasService {
 
   listarPagos(ventaId: number): Promise<PagoVenta[]> {
     return firstValueFrom(this.http.get<PagoVenta[]>(`${this.baseUrl}/${ventaId}/pagos`));
+  }
+
+  /** Edita folio, nota y, por línea, tipo/meses/aportación (nunca monto ni fecha). */
+  editarRecibo(ventaId: number, reciboId: number, request: ReciboEditarRequest): Promise<PagoVenta[]> {
+    return firstValueFrom(this.http.put<PagoVenta[]>(`${this.baseUrl}/${ventaId}/recibos/${reciboId}`, request));
+  }
+
+  /** Anula un recibo (no se borra): su dinero deja de contar en el saldo y en las comisiones. */
+  anularRecibo(ventaId: number, reciboId: number, motivo: string): Promise<PagoVenta[]> {
+    return firstValueFrom(this.http.post<PagoVenta[]>(`${this.baseUrl}/${ventaId}/recibos/${reciboId}/anular`, { motivo }));
+  }
+
+  historialRecibos(ventaId: number): Promise<ReciboHistorial[]> {
+    return firstValueFrom(this.http.get<ReciboHistorial[]>(`${this.baseUrl}/${ventaId}/recibos/historial`));
   }
 
   registrarPago(ventaId: number, request: PagoVentaCreateRequest): Promise<PagoVenta[]> {

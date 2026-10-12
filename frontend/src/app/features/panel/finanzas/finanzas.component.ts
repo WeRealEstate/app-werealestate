@@ -107,6 +107,12 @@ export class FinanzasComponent {
   readonly entregaNotas = signal('');
   readonly entregaMax = signal(0);
 
+  // Devolución: el asesor devuelve (total o parcial) una comisión ya entregada; se captura a mano.
+  readonly devolviendo = signal<Comision | null>(null);
+  readonly devolucionMonto = signal<number | null>(null);
+  readonly devolucionFecha = signal(hoyIso());
+  readonly devolucionNotas = signal('');
+
   readonly guardando = signal(false);
   readonly errorModal = signal<string | null>(null);
 
@@ -278,6 +284,53 @@ export class FinanzasComponent {
       await this.refrescar();
     } catch (error) {
       this.errorModal.set(mensajeDe(error, 'No se pudo registrar la entrega.'));
+    } finally {
+      this.guardando.set(false);
+    }
+  }
+
+  // ---- Devolución de comisión ----
+
+  abrirDevolucion(c: Comision): void {
+    this.devolviendo.set(c);
+    // Se sugiere lo entregado de más (lo que ya no respaldan los abonos), si lo hay.
+    this.devolucionMonto.set(c.porDevolver > 0 ? c.porDevolver : null);
+    this.devolucionFecha.set(hoyIso());
+    this.devolucionNotas.set('');
+    this.errorModal.set(null);
+  }
+
+  cerrarDevolucion(): void {
+    this.devolviendo.set(null);
+  }
+
+  async confirmarDevolucion(): Promise<void> {
+    const c = this.devolviendo();
+    const monto = this.devolucionMonto();
+    if (!c || this.guardando()) return;
+    if (monto === null || monto <= 0) {
+      this.errorModal.set('Escribe el monto que devolvió el asesor.');
+      return;
+    }
+    if (monto > c.entregado) {
+      this.errorModal.set(`Solo hay $${dinero(c.entregado)} entregados que se puedan devolver.`);
+      return;
+    }
+    this.guardando.set(true);
+    this.errorModal.set(null);
+    try {
+      const actualizado = await this.finanzasService.devolverComision(
+        c.id,
+        monto,
+        this.devolucionFecha() || null,
+        this.devolucionNotas().trim() || null,
+      );
+      this.devolviendo.set(null);
+      this.toast.success('Devolución registrada: aparece como ingreso en Finanzas.');
+      if (this.expandidaId() === c.id) this.detalle.set(actualizado);
+      await this.refrescar();
+    } catch (error) {
+      this.errorModal.set(mensajeDe(error, 'No se pudo registrar la devolución.'));
     } finally {
       this.guardando.set(false);
     }
