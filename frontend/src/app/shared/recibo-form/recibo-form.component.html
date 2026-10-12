@@ -1,0 +1,182 @@
+<form (ngSubmit)="registrar()" class="mt-4 space-y-4" novalidate>
+  <div class="grid gap-4 sm:grid-cols-3">
+    <div>
+      <label for="recibo-fecha" class="block text-sm font-medium text-ink mb-1.5">Fecha *</label>
+      <input
+        id="recibo-fecha"
+        type="date"
+        name="fecha"
+        [ngModel]="fecha()"
+        (ngModelChange)="fecha.set($event)"
+        class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
+               focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+      />
+    </div>
+    <div>
+      <label for="recibo-folio" class="block text-sm font-medium text-ink mb-1.5">Folio *</label>
+      <input
+        id="recibo-folio"
+        type="text"
+        name="folio"
+        maxlength="50"
+        [ngModel]="folio()"
+        (ngModelChange)="folio.set($event)"
+        placeholder="Ej. A-0123"
+        class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
+               focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+      />
+    </div>
+    <div>
+      <label for="recibo-notas" class="block text-sm font-medium text-ink mb-1.5">Notas</label>
+      <input
+        id="recibo-notas"
+        type="text"
+        name="notas"
+        maxlength="500"
+        [ngModel]="notas()"
+        (ngModelChange)="notas.set($event)"
+        placeholder="Opcional"
+        class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
+               focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+      />
+    </div>
+  </div>
+
+  <div class="space-y-3">
+    @for (l of lineas(); track l.uid; let i = $index) {
+      <div class="rounded-xl border border-border bg-surface-2/40 p-3.5">
+        <div class="flex items-center justify-between gap-2">
+          <p class="text-sm font-medium text-ink">
+            {{ lineas().length > 1 ? 'Concepto ' + (i + 1) : 'Concepto' }}
+          </p>
+          @if (lineas().length > 1) {
+            <button
+              type="button"
+              (click)="quitarLinea(i)"
+              class="text-xs font-medium text-red-600 hover:underline focus:outline-none focus:ring-2 focus:ring-red-500/40 rounded"
+            >
+              Quitar
+            </button>
+          }
+        </div>
+
+        <div class="mt-2.5 grid gap-3 sm:grid-cols-2">
+          <div>
+            <label [attr.for]="'recibo-tipo-' + l.uid" class="block text-xs text-ink-muted mb-1">Tipo de abono *</label>
+            <select
+              [id]="'recibo-tipo-' + l.uid"
+              [name]="'tipo-' + l.uid"
+              [ngModel]="l.tipo"
+              (ngModelChange)="cambiarTipo(i, $event)"
+              class="block w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            >
+              <option value="">Selecciona…</option>
+              @for (t of tiposDisponibles(); track t.valor) {
+                <option [value]="t.valor">{{ t.label }}</option>
+              }
+            </select>
+          </div>
+          <div>
+            <label [attr.for]="'recibo-monto-' + l.uid" class="block text-xs text-ink-muted mb-1">Monto *</label>
+            <input
+              [id]="'recibo-monto-' + l.uid"
+              [name]="'monto-' + l.uid"
+              appMoneda
+              [ngModel]="l.monto"
+              (ngModelChange)="cambiarMonto(i, $event)"
+              placeholder="Ej. 5000"
+              class="block w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            />
+          </div>
+        </div>
+
+        @if (l.tipo === 'MENSUALIDAD') {
+          <div class="mt-3">
+            <p class="text-xs text-ink-muted mb-1.5">Meses que cubre * (puedes elegir varios)</p>
+            @if (mesesPendientes().length === 0) {
+              <p class="text-sm text-ink-muted">Todos los meses del plazo ya están cubiertos.</p>
+            } @else {
+              <div class="flex flex-wrap gap-2">
+                @for (m of mesesVisibles(l); track m.clave) {
+                  <button
+                    type="button"
+                    (click)="alternarMes(i, m.clave)"
+                    [disabled]="mesEnOtraLinea(i, m.clave)"
+                    [attr.aria-pressed]="l.meses.includes(m.clave)"
+                    [class.border-we-primary]="l.meses.includes(m.clave)"
+                    [class.bg-we-primary/10]="l.meses.includes(m.clave)"
+                    [class.text-we-primary]="l.meses.includes(m.clave)"
+                    class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-ink capitalize
+                           hover:border-we-primary active:scale-[0.97] transition-transform duration-150
+                           disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
+                  >
+                    {{ m.etiqueta }}
+                  </button>
+                }
+                @if (hayMasMeses(l)) {
+                  <button
+                    type="button"
+                    (click)="verTodos(i)"
+                    class="rounded-lg px-3 py-1.5 text-xs font-medium text-we-primary hover:underline"
+                  >
+                    Ver todos ({{ mesesPendientes().length }})
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        }
+
+        @if (l.tipo === 'APORTACION') {
+          <div class="mt-3">
+            <label [attr.for]="'recibo-aportacion-' + l.uid" class="block text-xs text-ink-muted mb-1">Aportación que paga *</label>
+            <select
+              [id]="'recibo-aportacion-' + l.uid"
+              [name]="'aportacion-' + l.uid"
+              [ngModel]="l.aportacionId"
+              (ngModelChange)="cambiarAportacion(i, $event)"
+              class="block w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink capitalize
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            >
+              <option [ngValue]="null">Selecciona…</option>
+              @for (o of aportacionesOpciones(); track o.id) {
+                <option [ngValue]="o.id">{{ o.etiqueta }}</option>
+              }
+            </select>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <button
+    type="button"
+    (click)="agregarLinea()"
+    class="text-sm font-medium text-we-primary hover:underline focus:outline-none focus:ring-2 focus:ring-we-primary/40 rounded"
+  >
+    + Agregar otro concepto al mismo folio
+  </button>
+
+  @if (lineas().length > 1) {
+    <p class="text-sm text-ink-muted">Total del recibo: <span class="font-semibold text-ink">${{ totalRecibo().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</span></p>
+  }
+
+  @if (error()) {
+    <div class="rounded-lg bg-red-50 border border-red-200 px-3.5 py-2.5 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
+      {{ error() }}
+    </div>
+  }
+
+  <button
+    type="submit"
+    [disabled]="guardando()"
+    class="inline-flex items-center justify-center rounded-lg bg-we-primary px-5 py-2.5 text-sm font-semibold text-white
+           hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
+           focus:outline-none focus:ring-2 focus:ring-we-primary/50
+           disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100 min-h-[44px]"
+  >
+    {{ guardando() ? 'Guardando…' : 'Registrar abono' }}
+  </button>
+</form>

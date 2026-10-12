@@ -92,7 +92,7 @@ public class VentaController {
     }
 
     @PostMapping("/{id}/pagos")
-    public PagoVentaDto registrarPago(@PathVariable Long id, @Valid @RequestBody PagoVentaCreateRequest request) {
+    public List<PagoVentaDto> registrarPago(@PathVariable Long id, @Valid @RequestBody PagoVentaCreateRequest request) {
         return ventaService.registrarPago(id, request);
     }
 }

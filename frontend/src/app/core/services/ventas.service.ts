@@ -77,7 +77,7 @@ export class VentasService {
     return firstValueFrom(this.http.get<PagoVenta[]>(`${this.baseUrl}/${ventaId}/pagos`));
   }
 
-  registrarPago(ventaId: number, request: PagoVentaCreateRequest): Promise<PagoVenta> {
-    return firstValueFrom(this.http.post<PagoVenta>(`${this.baseUrl}/${ventaId}/pagos`, request));
+  registrarPago(ventaId: number, request: PagoVentaCreateRequest): Promise<PagoVenta[]> {
+    return firstValueFrom(this.http.post<PagoVenta[]>(`${this.baseUrl}/${ventaId}/pagos`, request));
   }
 }

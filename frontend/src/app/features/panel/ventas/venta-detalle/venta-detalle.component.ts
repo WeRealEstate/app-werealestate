@@ -13,7 +13,8 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { VentasService } from '../../../../core/services/ventas.service';
 import { UsuariosService } from '../../../../core/services/usuarios.service';
 import { AsesoresExternosService } from '../../../../core/services/asesores-externos.service';
-import { PagoVenta, Venta } from '../../../../core/models/venta.model';
+import { PagoVenta, TIPO_ABONO_LABELS, Venta } from '../../../../core/models/venta.model';
+import { ReciboFormComponent } from '../../../../shared/recibo-form/recibo-form.component';
 import { UsuarioResumen } from '../../../../core/models/lead.model';
 import { AsesorExterno } from '../../../../core/models/asesor-externo.model';
 import { asesorSeleccionDe, parseAsesorSeleccion } from '../venta-form/venta-form.component';
@@ -26,7 +27,7 @@ const SEGUNDOS_ESPERA_ELIMINAR = 10;
 @Component({
   selector: 'app-venta-detalle',
   standalone: true,
-  imports: [MonedaInputDirective, WeLoaderComponent, ReactiveFormsModule, RouterLink, ClienteSelectorComponent, CopropietariosEditorComponent, LucidePencil, LucideTrash2],
+  imports: [MonedaInputDirective, WeLoaderComponent, ReciboFormComponent, ReactiveFormsModule, RouterLink, ClienteSelectorComponent, CopropietariosEditorComponent, LucidePencil, LucideTrash2],
   templateUrl: './venta-detalle.component.html',
 })
 export class VentaDetalleComponent implements OnInit, OnDestroy {
@@ -40,25 +41,17 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly fb = inject(FormBuilder);
 
+  readonly tipoLabels = TIPO_ABONO_LABELS;
   readonly venta = signal<Venta | null>(null);
   readonly asesoresInternos = signal<UsuarioResumen[]>([]);
   readonly asesoresExternos = signal<AsesorExterno[]>([]);
   readonly pagos = signal<PagoVenta[]>([]);
   readonly isLoading = signal(true);
-  readonly isSavingPago = signal(false);
   readonly errorMessage = signal<string | null>(null);
-  readonly pagoError = signal<string | null>(null);
 
   /** id estable de la venta (para escribir); se conoce al cargarla por el número de la dirección. */
   private ventaId: number | null = null;
   private numeroEnUrl!: number;
-
-  readonly pagoForm = this.fb.group({
-    fecha: this.fb.control(new Date().toISOString().slice(0, 10), { nonNullable: true, validators: [Validators.required] }),
-    monto: this.fb.control<number | null>(null, { validators: [Validators.required, Validators.min(1)] }),
-    folio: this.fb.control('', { nonNullable: true, validators: [Validators.required, Validators.pattern(/\S/), Validators.maxLength(50)] }),
-    notas: this.fb.control(''),
-  });
 
   /** Temporal: permite modificar los datos capturados de la venta (no sus lotes/precios). Se va a
    * quitar más adelante — avisan cuándo. */
@@ -174,38 +167,16 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
     }
   }
 
-  async registrarPago(): Promise<void> {
-    if (this.pagoForm.invalid || this.isSavingPago()) {
-      this.pagoForm.markAllAsTouched();
-      return;
+  /** "oct 2026, nov 2026" o la aportación que paga; vacío si no aplica. */
+  detalleConcepto(p: PagoVenta): string {
+    const etiqueta = (anio: number, mes: number) =>
+      new Date(anio, mes - 1, 1).toLocaleDateString('es-MX', { month: 'short', year: 'numeric' }).replace('.', '');
+    if (p.tipo === 'MENSUALIDAD') return p.meses.map((m) => etiqueta(m.anio, m.mes)).join(', ');
+    if (p.tipo === 'APORTACION') {
+      const a = this.venta()?.aportaciones.find((x) => x.id === p.aportacionId);
+      return a ? etiqueta(a.anio, a.mes) : '';
     }
-
-    this.isSavingPago.set(true);
-    this.pagoError.set(null);
-    const v = this.pagoForm.getRawValue();
-
-    try {
-      await this.ventasService.registrarPago(this.ventaId!, {
-        fecha: v.fecha,
-        monto: v.monto!,
-        folio: v.folio.trim(),
-        notas: v.notas?.trim() || null,
-      });
-      // El saldo pendiente se recalcula en el servidor; volvemos a cargar todo para que quede
-      // consistente en vez de intentar restar a mano aquí.
-      await this.cargar();
-      this.pagoForm.reset({ fecha: new Date().toISOString().slice(0, 10), monto: null, folio: '', notas: '' });
-      this.toast.success('Abono registrado.');
-    } catch (error) {
-      const mensaje =
-        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
-          ? error.error.message
-          : 'No se pudo registrar el abono.';
-      this.pagoError.set(mensaje);
-      this.toast.error(mensaje);
-    } finally {
-      this.isSavingPago.set(false);
-    }
+    return '';
   }
 
   totalAportaciones(): number {

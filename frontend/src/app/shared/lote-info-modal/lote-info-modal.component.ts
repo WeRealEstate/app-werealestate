@@ -1,7 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, input, output, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import {
   ESTADO_LOTE_BADGE_CLASSES,
@@ -9,12 +7,12 @@ import {
   Lote,
   MovimientoLote,
 } from '../../core/models/lote.model';
-import { PagoVenta, Venta } from '../../core/models/venta.model';
+import { PagoVenta, TIPO_ABONO_LABELS, Venta } from '../../core/models/venta.model';
 import { LotesService } from '../../core/services/lotes.service';
 import { ToastService } from '../../core/services/toast.service';
 import { VentasService } from '../../core/services/ventas.service';
 import { WeLoaderComponent } from '../we-loader/we-loader.component';
-import { MonedaInputDirective } from '../moneda-input/moneda-input.directive';
+import { ReciboFormComponent } from '../recibo-form/recibo-form.component';
 
 /** "Información del lote" de un lote comprometido (apartado, en firma o vendido) — solo para admin
  * y líder de área (mismo permiso que el módulo de Ventas). Un Vendido muestra su Venta si existe en
@@ -24,7 +22,7 @@ import { MonedaInputDirective } from '../moneda-input/moneda-input.directive';
 @Component({
   selector: 'app-lote-info-modal',
   standalone: true,
-  imports: [MonedaInputDirective, WeLoaderComponent, FormsModule, RouterLink, DatePipe],
+  imports: [ReciboFormComponent, WeLoaderComponent, RouterLink, DatePipe],
   templateUrl: './lote-info-modal.component.html',
 })
 export class LoteInfoModalComponent implements OnInit {
@@ -35,6 +33,7 @@ export class LoteInfoModalComponent implements OnInit {
   readonly lote = input.required<Lote>();
   readonly cerrar = output<void>();
 
+  readonly tipoLabels = TIPO_ABONO_LABELS;
   readonly estadoLabels = ESTADO_LOTE_LABELS;
   readonly badgeClases = ESTADO_LOTE_BADGE_CLASSES;
 
@@ -44,15 +43,8 @@ export class LoteInfoModalComponent implements OnInit {
   readonly cargandoInfoLote = signal(false);
   readonly errorInfoLote = signal<string | null>(null);
 
-  /** Historial de abonos de la venta mostrada, y el mini-formulario para registrar uno nuevo sin
-   * salir de la pantalla desde donde se abrió. */
+  /** Historial de abonos de la venta mostrada; el registro de uno nuevo lo hace app-recibo-form. */
   readonly pagosInfoLote = signal<PagoVenta[]>([]);
-  readonly fechaPagoInfoLote = signal(new Date().toISOString().slice(0, 10));
-  readonly montoPagoInfoLote = signal<number | null>(null);
-  readonly folioPagoInfoLote = signal('');
-  readonly notasPagoInfoLote = signal('');
-  readonly guardandoPagoInfoLote = signal(false);
-  readonly errorPagoInfoLote = signal<string | null>(null);
 
   ngOnInit(): void {
     void this.cargar();
@@ -97,56 +89,20 @@ export class LoteInfoModalComponent implements OnInit {
     }
   }
 
-  private reiniciarFormularioAbonoInfoLote(): void {
-    this.fechaPagoInfoLote.set(new Date().toISOString().slice(0, 10));
-    this.montoPagoInfoLote.set(null);
-    this.folioPagoInfoLote.set('');
-    this.notasPagoInfoLote.set('');
-    this.errorPagoInfoLote.set(null);
-  }
-
-  /** Vuelve a cargar la venta y sus pagos desde el servidor (igual que
-   * VentaDetalleComponent.registrarPago) para que total abonado/saldo queden consistentes con lo
-   * que ya calculó el backend, en vez de restar a mano aquí. */
-  async registrarAbonoInfoLote(): Promise<void> {
+  /** Vuelve a cargar la venta y sus pagos desde el servidor tras registrar un recibo, para que total
+   * abonado/saldo queden consistentes con lo que ya calculó el backend, en vez de restar a mano aquí. */
+  async recargarVentaInfoLote(): Promise<void> {
     const venta = this.ventaDeLote();
-    const monto = this.montoPagoInfoLote();
-    if (!venta || this.guardandoPagoInfoLote()) return;
-    if (!this.fechaPagoInfoLote() || !monto || monto <= 0) {
-      this.errorPagoInfoLote.set('Ingresa una fecha y un monto válido.');
-      return;
-    }
-    if (!this.folioPagoInfoLote().trim()) {
-      this.errorPagoInfoLote.set('Ingresa el folio del abono.');
-      return;
-    }
-
-    this.guardandoPagoInfoLote.set(true);
-    this.errorPagoInfoLote.set(null);
+    if (!venta) return;
     try {
-      await this.ventasService.registrarPago(venta.id, {
-        fecha: this.fechaPagoInfoLote(),
-        monto,
-        folio: this.folioPagoInfoLote().trim(),
-        notas: this.notasPagoInfoLote().trim() || null,
-      });
       const [ventaActualizada, pagos] = await Promise.all([
         this.ventasService.obtener(venta.id),
         this.ventasService.listarPagos(venta.id),
       ]);
       this.ventaDeLote.set(ventaActualizada);
       this.pagosInfoLote.set(pagos);
-      this.reiniciarFormularioAbonoInfoLote();
-      this.toast.success('Abono registrado.');
-    } catch (error) {
-      const mensaje =
-        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
-          ? error.error.message
-          : 'No se pudo registrar el abono.';
-      this.errorPagoInfoLote.set(mensaje);
-      this.toast.error(mensaje);
-    } finally {
-      this.guardandoPagoInfoLote.set(false);
+    } catch {
+      this.toast.error('El abono se registró, pero no se pudo actualizar la información.');
     }
   }
 }

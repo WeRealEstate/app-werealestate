@@ -475,9 +475,9 @@ export class VentaFormComponent {
         try {
           await this.ventasService.registrarPago(venta.id, {
             fecha: v.fechaVenta,
-            monto: this.depositoTotal(),
             folio: this.folioDeposito().trim(),
             notas: 'Dinero recibido al apartar el lote',
+            lineas: [{ tipo: 'APARTADO', monto: this.depositoTotal() }],
           });
         } catch {
           this.toast.error(

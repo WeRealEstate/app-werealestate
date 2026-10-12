@@ -1,7 +1,11 @@
 package com.werealestate.backend.model;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -12,11 +16,16 @@ import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Un abono recibido de una venta. Cada pago queda como su propio registro (a diferencia de un
- * campo "saldo" editable a mano): el saldo pendiente de la venta siempre se calcula sumando estos
- * registros, nunca se guarda directo, así que no se desactualiza ni se puede escribir mal.
+ * Una línea de un recibo de abono de una venta (ver {@link ReciboVenta}): un monto de un tipo
+ * (mensualidad, enganche, apartado o aportación). Cada pago queda como su propio registro (a
+ * diferencia de un campo "saldo" editable a mano): el saldo pendiente de la venta siempre se calcula
+ * sumando estos registros, nunca se guarda directo, así que no se desactualiza ni se puede escribir
+ * mal. Folio, nota y quién lo registró viven en el recibo. tipo, meses y aportación pueden faltar
+ * solo en abonos anteriores a que existieran: se completan a mano.
  */
 @Entity
 @Table(name = "pago_venta")
@@ -30,37 +39,48 @@ public class PagoVenta {
     @JoinColumn(name = "venta_id", nullable = false)
     private Venta venta;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recibo_id", nullable = false)
+    private ReciboVenta recibo;
+
     @Column(nullable = false)
     private LocalDate fecha;
 
     @Column(nullable = false, precision = 14, scale = 2)
     private BigDecimal monto;
 
-    /** Capturado a mano; obligatorio y único en los abonos nuevos (los anteriores no tienen). */
-    @Column(length = 50)
-    private String folio;
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private TipoAbono tipo;
 
-    @Column(length = 500)
-    private String notas;
-
+    /** Solo para tipo APORTACION: la aportación programada que paga. */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "registrado_por_id", nullable = false)
-    private Usuario registradoPor;
+    @JoinColumn(name = "aportacion_id")
+    private VentaAportacion aportacion;
 
-    @Column(name = "fecha_creacion", nullable = false)
-    private LocalDateTime fechaCreacion = LocalDateTime.now();
+    /** Solo para tipo MENSUALIDAD: los meses que cubre (puede ser más de uno). */
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "pago_venta_mes", joinColumns = @JoinColumn(name = "pago_id"))
+    private List<MesCubierto> meses = new ArrayList<>();
 
     protected PagoVenta() {
         // JPA
     }
 
-    public PagoVenta(Venta venta, LocalDate fecha, BigDecimal monto, String folio, String notas, Usuario registradoPor) {
+    public PagoVenta(
+            Venta venta,
+            ReciboVenta recibo,
+            BigDecimal monto,
+            TipoAbono tipo,
+            VentaAportacion aportacion,
+            List<MesCubierto> meses) {
         this.venta = venta;
-        this.fecha = fecha;
+        this.recibo = recibo;
+        this.fecha = recibo.getFecha();
         this.monto = monto;
-        this.folio = folio;
-        this.notas = notas;
-        this.registradoPor = registradoPor;
+        this.tipo = tipo;
+        this.aportacion = aportacion;
+        if (meses != null) this.meses.addAll(meses);
     }
 
     public Long getId() {
@@ -71,6 +91,10 @@ public class PagoVenta {
         return venta;
     }
 
+    public ReciboVenta getRecibo() {
+        return recibo;
+    }
+
     public LocalDate getFecha() {
         return fecha;
     }
@@ -79,19 +103,31 @@ public class PagoVenta {
         return monto;
     }
 
+    public TipoAbono getTipo() {
+        return tipo;
+    }
+
+    public VentaAportacion getAportacion() {
+        return aportacion;
+    }
+
+    public List<MesCubierto> getMeses() {
+        return meses;
+    }
+
     public String getFolio() {
-        return folio;
+        return recibo.getFolio();
     }
 
     public String getNotas() {
-        return notas;
+        return recibo.getNotas();
     }
 
     public Usuario getRegistradoPor() {
-        return registradoPor;
+        return recibo.getRegistradoPor();
     }
 
     public LocalDateTime getFechaCreacion() {
-        return fechaCreacion;
+        return recibo.getFechaCreacion();
     }
 }

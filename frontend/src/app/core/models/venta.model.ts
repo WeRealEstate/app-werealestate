@@ -23,6 +23,8 @@ export interface VentaAsesor {
  */
 /** Una aportación programada de la venta (esquema "Con aportaciones"): mes (1-12), año y monto. */
 export interface VentaAportacion {
+  /** Lo asigna el servidor; no va al crear la venta. */
+  id?: number;
   anio: number;
   mes: number;
   monto: number;
@@ -110,21 +112,55 @@ export interface VentaUpdateRequest {
   notas: string | null;
 }
 
-/** Un abono registrado contra una venta. */
+/** Para qué es una línea de un recibo. Los abonos anteriores a que existieran los tipos no lo
+ * tienen (null): se completan a mano. */
+export type TipoAbono = 'MENSUALIDAD' | 'ENGANCHE' | 'APARTADO' | 'APORTACION';
+
+export const TIPO_ABONO_LABELS: Record<TipoAbono, string> = {
+  MENSUALIDAD: 'Mensualidad',
+  ENGANCHE: 'Enganche',
+  APARTADO: 'Apartado',
+  APORTACION: 'Aportación',
+};
+
+export interface MesCubierto {
+  anio: number;
+  mes: number;
+}
+
+/** Una línea de un recibo de abono de una venta. Las líneas del mismo recibo comparten reciboId,
+ * folio, fecha y nota. */
 export interface PagoVenta {
   id: number;
+  reciboId: number;
   fecha: string;
   monto: number;
-  /** null en los abonos anteriores a que se pidiera el folio. */
+  /** null en los abonos anteriores a que se pidiera: por completar. */
+  tipo: TipoAbono | null;
+  /** Solo MENSUALIDAD: los meses que cubre. */
+  meses: MesCubierto[];
+  /** Solo APORTACION: la aportación programada que paga. */
+  aportacionId: number | null;
+  /** null en los abonos anteriores a que se pidiera el folio: por completar. */
   folio: string | null;
   notas: string | null;
   registradoPor: UsuarioResumen;
   fechaCreacion: string;
 }
 
+export interface LineaReciboRequest {
+  tipo: TipoAbono;
+  monto: number;
+  /** Solo MENSUALIDAD: al menos un mes. */
+  meses?: MesCubierto[];
+  /** Solo APORTACION. */
+  aportacionId?: number | null;
+}
+
+/** Un recibo: folio, fecha, nota y una o más líneas (un concepto cada una). */
 export interface PagoVentaCreateRequest {
   fecha: string;
-  monto: number;
   folio: string;
   notas: string | null;
+  lineas: LineaReciboRequest[];
 }

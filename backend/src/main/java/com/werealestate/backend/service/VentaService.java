@@ -20,7 +20,10 @@ import com.werealestate.backend.exception.ValidationException;
 import com.werealestate.backend.model.AsesorExterno;
 import com.werealestate.backend.model.Cliente;
 import com.werealestate.backend.model.Lote;
+import com.werealestate.backend.model.MesCubierto;
 import com.werealestate.backend.model.PagoVenta;
+import com.werealestate.backend.model.ReciboVenta;
+import com.werealestate.backend.model.TipoAbono;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.model.Venta;
@@ -31,6 +34,7 @@ import com.werealestate.backend.model.VentaLote;
 import com.werealestate.backend.repository.AsesorExternoRepository;
 import com.werealestate.backend.repository.LoteRepository;
 import com.werealestate.backend.repository.PagoVentaRepository;
+import com.werealestate.backend.repository.ReciboVentaRepository;
 import com.werealestate.backend.repository.UsuarioRepository;
 import com.werealestate.backend.repository.VentaAportacionRepository;
 import com.werealestate.backend.repository.VentaLoteRepository;
@@ -40,6 +44,7 @@ import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import java.math.BigDecimal;
 import java.time.YearMonth;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -70,6 +75,7 @@ public class VentaService {
     private final LoteRepository loteRepository;
     private final LoteService loteService;
     private final PagoVentaRepository pagoVentaRepository;
+    private final ReciboVentaRepository reciboVentaRepository;
     private final ComisionService comisionService;
     private final ClienteService clienteService;
     private final VentaCopropietarioRepository copropietarioRepository;
@@ -85,6 +91,7 @@ public class VentaService {
             LoteRepository loteRepository,
             LoteService loteService,
             PagoVentaRepository pagoVentaRepository,
+            ReciboVentaRepository reciboVentaRepository,
             ComisionService comisionService,
             ClienteService clienteService,
             VentaCopropietarioRepository copropietarioRepository,
@@ -98,6 +105,7 @@ public class VentaService {
         this.loteRepository = loteRepository;
         this.loteService = loteService;
         this.pagoVentaRepository = pagoVentaRepository;
+        this.reciboVentaRepository = reciboVentaRepository;
         this.comisionService = comisionService;
         this.clienteService = clienteService;
         this.copropietarioRepository = copropietarioRepository;
@@ -282,6 +290,8 @@ public class VentaService {
         List<VentaLote> lotes = ventaLoteRepository.findByVentaId(id);
         List<Long> loteIds = lotes.stream().map(vl -> vl.getLote().getId()).toList();
         pagoVentaRepository.deleteAll(pagoVentaRepository.findByVentaIdOrderByFechaDesc(id));
+        pagoVentaRepository.flush();
+        reciboVentaRepository.deleteAll(reciboVentaRepository.findByVentaId(id));
         ventaAportacionRepository.deleteAll(ventaAportacionRepository.findByVentaIdOrderByAnioAscMesAsc(id));
         copropietarioRepository.deleteAll(copropietarioRepository.findByVentaIdOrderByOrdenAsc(id));
         ventaLoteRepository.deleteAll(lotes);
@@ -360,28 +370,90 @@ public class VentaService {
         return pagoVentaRepository.findByVentaIdOrderByFechaDesc(ventaId).stream().map(PagoVentaDto::from).toList();
     }
 
-    /** Registra un abono. Se rechaza si excede el saldo pendiente: un abono de más casi siempre es
-     * un error de captura (monto o venta equivocada), no un pago real de más. */
-    public PagoVentaDto registrarPago(Long ventaId, PagoVentaCreateRequest request) {
+    /** Registra un recibo con una o más líneas (cada una de un tipo). Se rechaza si el total excede el
+     * saldo pendiente: un abono de más casi siempre es un error de captura (monto o venta
+     * equivocada), no un pago real de más. Devuelve las líneas creadas. */
+    public List<PagoVentaDto> registrarPago(Long ventaId, PagoVentaCreateRequest request) {
         Usuario actual = exigirAdminOLider();
         Venta venta = obtenerEntidad(ventaId);
 
+        BigDecimal totalRecibo = request.lineas().stream()
+                .map(PagoVentaCreateRequest.Linea::monto)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal saldoPendiente = precioVenta(ventaId).subtract(totalAbonado(ventaId));
-        if (request.monto().compareTo(saldoPendiente) > 0) {
+        if (totalRecibo.compareTo(saldoPendiente) > 0) {
             throw new ConflictException(
-                    "El abono ($" + request.monto() + ") excede el saldo pendiente ($" + saldoPendiente + ")");
+                    "El abono ($" + totalRecibo + ") excede el saldo pendiente ($" + saldoPendiente + ")");
         }
 
         String folio = request.folio().trim();
-        if (pagoVentaRepository.existsByFolioIgnoreCase(folio)) {
+        if (reciboVentaRepository.existsByFolioIgnoreCase(folio)) {
             throw new ConflictException("Ya existe un abono con el folio " + folio);
         }
 
+        // Se validan todas las líneas antes de guardar nada.
+        List<PagoVenta> lineas = new ArrayList<>();
         String notas = request.notas() == null || request.notas().isBlank() ? null : request.notas().trim();
-        PagoVenta pago = new PagoVenta(venta, request.fecha(), request.monto(), folio, notas, actual);
-        PagoVentaDto guardado = PagoVentaDto.from(pagoVentaRepository.save(pago));
+        ReciboVenta recibo = new ReciboVenta(venta, folio, request.fecha(), notas, actual);
+        for (PagoVentaCreateRequest.Linea linea : request.lineas()) {
+            lineas.add(construirLinea(venta, recibo, linea));
+        }
+
+        reciboVentaRepository.save(recibo);
+        List<PagoVentaDto> guardadas = pagoVentaRepository.saveAll(lineas).stream().map(PagoVentaDto::from).toList();
         comisionService.sincronizar(venta);
-        return guardado;
+        return guardadas;
+    }
+
+    /** Valida lo que cada tipo exige y arma la línea: mensualidad = meses dentro del plazo de la venta;
+     * aportación = una aportación programada de esta misma venta; enganche y apartado, nada más. */
+    private PagoVenta construirLinea(Venta venta, ReciboVenta recibo, PagoVentaCreateRequest.Linea linea) {
+        TipoAbono tipo = linea.tipo();
+        boolean traeMeses = linea.meses() != null && !linea.meses().isEmpty();
+
+        if (tipo == TipoAbono.MENSUALIDAD) {
+            if (venta.getPlazoMeses() == null || venta.getPlazoMeses() < 1 || venta.getMensualidad() == null) {
+                throw new ValidationException("Esta venta no tiene mensualidades");
+            }
+            if (!traeMeses) {
+                throw new ValidationException("Indica el mes o los meses que cubre la mensualidad");
+            }
+            if (linea.aportacionId() != null) {
+                throw new ValidationException("Una mensualidad no se liga a una aportación");
+            }
+            YearMonth primero = YearMonth.from(venta.getFechaVenta()).plusMonths(venta.isPrimeraMensualidadMesVenta() ? 0 : 1);
+            YearMonth ultimo = primero.plusMonths(venta.getPlazoMeses() - 1L);
+            Set<YearMonth> vistos = new HashSet<>();
+            List<MesCubierto> meses = new ArrayList<>();
+            for (PagoVentaCreateRequest.Mes m : linea.meses()) {
+                YearMonth ym = YearMonth.of(m.anio(), m.mes());
+                if (ym.isBefore(primero) || ym.isAfter(ultimo)) {
+                    throw new ValidationException("El mes " + ym + " está fuera del plazo de la venta (" + primero + " a " + ultimo + ")");
+                }
+                if (!vistos.add(ym)) {
+                    throw new ValidationException("El mes " + ym + " está repetido");
+                }
+                meses.add(new MesCubierto(m.anio(), m.mes()));
+            }
+            return new PagoVenta(venta, recibo, linea.monto(), tipo, null, meses);
+        }
+
+        if (traeMeses) {
+            throw new ValidationException("Solo una mensualidad cubre meses");
+        }
+        if (tipo == TipoAbono.APORTACION) {
+            if (linea.aportacionId() == null) {
+                throw new ValidationException("Indica qué aportación programada paga");
+            }
+            VentaAportacion aportacion = ventaAportacionRepository.findById(linea.aportacionId())
+                    .filter(a -> a.getVenta().getId().equals(venta.getId()))
+                    .orElseThrow(() -> new ValidationException("Esa aportación no pertenece a esta venta"));
+            return new PagoVenta(venta, recibo, linea.monto(), tipo, aportacion, null);
+        }
+        if (linea.aportacionId() != null) {
+            throw new ValidationException("Solo una aportación se liga a una aportación programada");
+        }
+        return new PagoVenta(venta, recibo, linea.monto(), tipo, null, null);
     }
 
     private Venta obtenerEntidad(Long id) {

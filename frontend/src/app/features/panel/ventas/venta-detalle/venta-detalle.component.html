@@ -321,80 +321,8 @@
     <!-- REGISTRAR ABONO -->
     <div class="mt-6 rounded-2xl border border-border bg-surface p-5">
       <h2 class="font-heading text-base font-semibold text-ink">Registrar abono</h2>
-      <form [formGroup]="pagoForm" (ngSubmit)="registrarPago()" class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" novalidate>
-        <div>
-          <label for="fecha" class="block text-sm font-medium text-ink mb-1.5">Fecha *</label>
-          <input
-            id="fecha"
-            type="date"
-            formControlName="fecha"
-            class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
-                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
-          />
-        </div>
-        <div>
-          <label for="monto" class="block text-sm font-medium text-ink mb-1.5">Monto *</label>
-          <input
-            id="monto"
-            appMoneda
-            min="1"
-            formControlName="monto"
-            placeholder="Ej. 5000"
-            class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
-                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
-          />
-          @if (pagoForm.controls.monto.invalid && pagoForm.controls.monto.touched) {
-            <p class="mt-1.5 text-xs text-red-600">Ingresa un monto válido.</p>
-          }
-        </div>
-        <div>
-          <label for="folio" class="block text-sm font-medium text-ink mb-1.5">Folio *</label>
-          <input
-            id="folio"
-            type="text"
-            maxlength="50"
-            formControlName="folio"
-            placeholder="Ej. A-0123"
-            class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
-                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
-          />
-          @if (pagoForm.controls.folio.invalid && pagoForm.controls.folio.touched) {
-            <p class="mt-1.5 text-xs text-red-600">Ingresa el folio del abono.</p>
-          }
-        </div>
-        <div>
-          <label for="notasPago" class="block text-sm font-medium text-ink mb-1.5">Notas</label>
-          <input
-            id="notasPago"
-            type="text"
-            formControlName="notas"
-            placeholder="Opcional"
-            class="block w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink
-                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
-          />
-        </div>
-
-        @if (pagoError()) {
-          <div class="sm:col-span-2 lg:col-span-4 rounded-lg bg-red-50 border border-red-200 px-3.5 py-2.5 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
-            {{ pagoError() }}
-          </div>
-        }
-
-        <div class="sm:col-span-2 lg:col-span-4">
-          <button
-            type="submit"
-            [disabled]="isSavingPago()"
-            class="inline-flex items-center justify-center rounded-lg bg-we-primary px-5 py-2.5 text-sm font-semibold text-white
-                   hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
-                   focus:outline-none focus:ring-2 focus:ring-we-primary/50
-                   disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100 min-h-[44px]"
-          >
-            {{ isSavingPago() ? 'Guardando…' : 'Registrar abono' }}
-          </button>
-        </div>
-      </form>
+      <app-recibo-form [venta]="v" [pagos]="pagos()" (registrado)="cargar()" />
     </div>
-
     <!-- HISTORIAL DE ABONOS -->
     <div class="mt-6">
       <h2 class="font-heading text-base font-semibold text-ink">Historial de abonos</h2>
@@ -409,6 +337,7 @@
               <tr class="text-left text-xs font-medium uppercase tracking-wide text-ink-muted">
                 <th class="px-4 py-3">Fecha</th>
                 <th class="px-4 py-3">Folio</th>
+                <th class="px-4 py-3">Concepto</th>
                 <th class="px-4 py-3">Monto</th>
                 <th class="px-4 py-3">Notas</th>
                 <th class="px-4 py-3">Registrado por</th>
@@ -418,7 +347,23 @@
               @for (p of pagos(); track p.id) {
                 <tr>
                   <td class="px-4 py-3 text-ink-muted">{{ p.fecha }}</td>
-                  <td class="px-4 py-3 text-ink-muted">{{ p.folio || '—' }}</td>
+                  <td class="px-4 py-3 text-ink-muted">
+                    @if (p.folio) {
+                      {{ p.folio }}
+                    } @else {
+                      <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">Por completar</span>
+                    }
+                  </td>
+                  <td class="px-4 py-3 text-ink">
+                    @if (p.tipo) {
+                      <span class="font-medium">{{ tipoLabels[p.tipo] }}</span>
+                      @if (detalleConcepto(p); as d) {
+                        <span class="block text-xs text-ink-muted capitalize">{{ d }}</span>
+                      }
+                    } @else {
+                      <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">Por completar</span>
+                    }
+                  </td>
                   <td class="px-4 py-3 font-medium text-ink">${{ money(p.monto) }}</td>
                   <td class="px-4 py-3 text-ink-muted">{{ p.notas || '—' }}</td>
                   <td class="px-4 py-3 text-ink-muted">{{ p.registradoPor.nombre }}</td>
