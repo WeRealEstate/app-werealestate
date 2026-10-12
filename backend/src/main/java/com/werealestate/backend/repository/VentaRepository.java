@@ -34,6 +34,12 @@ public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecific
             nativeQuery = true)
     int recorrer(@Param("desde") long desde, @Param("hasta") long hasta, @Param("exceptoId") long exceptoId);
 
+    /** Resta 1 al número de las ventas posteriores a la que se eliminó (numero > desde): así no queda hueco.
+     * Mismo motivo que recorrer: el índice único es diferido. */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = "update venta set numero = numero - 1 where numero > :desde", nativeQuery = true)
+    int bajarDesde(@Param("desde") long desde);
+
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = "update venta set numero = :numero where id = :id", nativeQuery = true)
     int fijarNumero(@Param("id") long id, @Param("numero") long numero);

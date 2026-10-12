@@ -15,8 +15,11 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '7.3.18', fecha: '2026-10-12', cambios: [
+    "Ventas: al eliminar una venta, las que tienen un numero mayor bajan 1 y no queda hueco (si eliminas la 4 de 9 ventas, quedan la 1 a la 8).",
+  ] },
   { version: '7.3.17', fecha: '2026-10-12', cambios: [
-    "Ventas: el numero de venta ya no se recalcula por fecha. Se asigna solo (el siguiente: mayor + 1) o se escribe a mano al registrar la venta y tambien al modificarla; si el numero ya esta ocupado, esa venta y las consecutivas que le siguen avanzan un numero. Al eliminar una venta queda un hueco, los demas numeros no cambian.",
+    "Ventas: el numero de venta ya no se recalcula por fecha. Se asigna solo (el siguiente: mayor + 1) o se escribe a mano al registrar la venta y tambien al modificarla; si el numero ya esta ocupado, esa venta y las consecutivas que le siguen avanzan un numero.",
   ] },
   { version: '7.3.16', fecha: '2026-10-12', cambios: [
     "Cambios en la UI, tipo y expediente de contrato agregado",

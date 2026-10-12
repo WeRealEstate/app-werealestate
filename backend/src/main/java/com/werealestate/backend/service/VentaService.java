@@ -351,7 +351,7 @@ public class VentaService {
      * contraseña. Se borran la venta, sus lotes (la relación, no los lotes), sus abonos y sus
      * aportaciones; los lotes que sigan VENDIDO vuelven a DISPONIBLE si se pide; la comisión se queda
      * en el historial como "venta eliminada" (y lo ya ganado sigue pudiéndose entregar); y se
-     * números de las demás ventas no cambian (queda un hueco).
+     * ventas con número mayor bajan 1 para no dejar hueco (si eliminas la 4, la 5 pasa a 4, y así).
      */
     public void eliminar(Long id, VentaEliminarRequest request) {
         Usuario actual = currentUserProvider.getUsuarioActual();
@@ -363,6 +363,7 @@ public class VentaService {
         }
         Venta venta = obtenerEntidad(id);
         ventaRepository.bloquearNumeracion();
+        long numeroEliminado = venta.getNumero();
 
         comisionService.desvincularVenta(venta);
 
@@ -389,6 +390,8 @@ public class VentaService {
                 }
             }
         }
+        // Las ventas con número mayor bajan 1: la numeración no queda con hueco.
+        ventaRepository.bajarDesde(numeroEliminado);
     }
 
     /** Para el ícono de "ver información de venta" en /panel/lotes: qué venta vendió este lote, si
