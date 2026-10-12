@@ -1,6 +1,7 @@
 package com.werealestate.backend.controller;
 
 import com.werealestate.backend.dto.ContadoresVentasDto;
+import com.werealestate.backend.dto.NumeracionVentaDto;
 import com.werealestate.backend.dto.PaginaDto;
 import com.werealestate.backend.dto.PagoVentaCreateRequest;
 import com.werealestate.backend.dto.PagoVentaDto;
@@ -53,6 +54,14 @@ public class VentaController {
     @GetMapping("/contadores")
     public ContadoresVentasDto contadores(@RequestParam(required = false) Long desarrolloId) {
         return ventaService.contadores(desarrolloId);
+    }
+
+    /** Siguiente número automático y, si "numero" ya lo tiene otra venta (distinta de excluirId), cuál es
+     * y cuántas se recorrerían: para avisarlo en el formulario antes de guardar. */
+    @GetMapping("/numeracion")
+    public NumeracionVentaDto numeracion(
+            @RequestParam(required = false) Long numero, @RequestParam(required = false) Long excluirId) {
+        return ventaService.consultarNumeracion(numero, excluirId);
     }
 
     @GetMapping("/samai-campestre/lotes-vendidos")

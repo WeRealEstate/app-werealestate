@@ -40,7 +40,7 @@ export const MEDIO_FIRMA_LABELS: Record<MedioFirma, string> = {
 
 export interface Venta {
   id: number;
-  /** Posición por fecha de venta: la más antigua es la 1, sin importar el orden de registro. */
+  /** Número de venta: automático (el siguiente, mayor + 1) o escrito a mano al registrarla; se puede cambiar. */
   numero: number;
   lotes: VentaLote[];
   /** Vacía si la venta no se pactó con aportaciones. */
@@ -86,6 +86,9 @@ export interface VentaLoteItemRequest {
 export interface VentaCreateRequest {
   lotes: VentaLoteItemRequest[];
   clienteId: number;
+  /** Opcional: número de venta escrito a mano; omitido = el siguiente (mayor + 1). Si está ocupado, el
+   * servidor recorre +1 esa venta y las consecutivas que le siguen. */
+  numero?: number | null;
   /** Copropietarios (máximo 4 además del principal). */
   copropietariosIds?: number[];
   // Exactamente uno de los dos (ver backend VentaService.resolverAsesor).
@@ -123,6 +126,8 @@ export interface VentaCreateRequest {
 export interface VentaUpdateRequest {
   /** Opcional: si se manda, la venta se re-liga a ese cliente. */
   clienteId?: number | null;
+  /** Omitido = sin cambios; con valor, la venta pasa a ese número (recorriendo las consecutivas si está ocupado). */
+  numero?: number | null;
   /** Omitido = sin cambios; una lista (aunque vacía) reemplaza a los copropietarios. */
   copropietariosIds?: number[];
   usuarioAsesorId: number | null;
@@ -211,4 +216,14 @@ export interface PagoVentaCreateRequest {
   folio: string;
   notas: string | null;
   lineas: LineaReciboRequest[];
+}
+
+/** Respuesta de /ventas/numeracion: siguiente número automático y, si el consultado está ocupado, quién lo
+ * tiene y cuántas ventas se recorrerían +1 (esa y las consecutivas que le siguen). */
+export interface NumeracionVenta {
+  siguiente: number;
+  ocupanteId: number | null;
+  ocupanteCliente: string | null;
+  ocupanteFecha: string | null;
+  ventasARecorrer: number;
 }

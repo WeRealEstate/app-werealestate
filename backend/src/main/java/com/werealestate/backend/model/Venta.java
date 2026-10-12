@@ -32,9 +32,10 @@ public class Venta {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** Número de venta por fecha de venta (la más antigua es la 1). Solo lectura para JPA: lo
-     * asigna la base (provisional al insertar) y lo reacomoda VentaService.renumerar — ver V39. */
-    @Column(name = "numero", insertable = false, updatable = false)
+    /** Número de venta visible: automático (mayor + 1) o escrito a mano al registrarla. Se fija al
+     * insertar; después solo lo cambia VentaService (consulta directa, que además recorre las
+     * consecutivas), por eso JPA no lo actualiza — ver V61. */
+    @Column(name = "numero", updatable = false, nullable = false)
     private Long numero;
 
     /** Nombre del cliente tal como se vio al registrar la venta (se actualiza si se edita el nombre del
@@ -213,6 +214,10 @@ public class Venta {
 
     public Long getId() {
         return id;
+    }
+
+    public void setNumero(Long numero) {
+        this.numero = numero;
     }
 
     public Long getNumero() {

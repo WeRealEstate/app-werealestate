@@ -18,6 +18,9 @@ public record VentaCreateRequest(
         @NotEmpty @Valid List<VentaLoteItemRequest> lotes,
         // El cliente ya registrado (ver Cliente / ClienteService): se elige al crear la venta.
         @NotNull Long clienteId,
+        // Opcional: número de venta escrito a mano; null = el siguiente (mayor + 1). Si ya está ocupado se
+        // recorren +1 ese número y los consecutivos que le siguen (ver VentaService.reservarNumero).
+        @Positive @Max(99999999) Long numero,
         // Copropietarios (opcional, máximo 4 además del principal: 5 clientes en total).
         @Size(max = 4) List<Long> copropietariosIds,
         // Exactamente uno de los dos: el asesor interno (usuario real del sistema) o externo (ver

@@ -148,6 +148,9 @@
           <div class="sm:col-span-2">
             <app-copropietarios-editor [(copropietarios)]="copropietariosEdicion" [principalId]="clienteEdicion()?.id ?? null" />
           </div>
+          <div class="sm:col-span-2 max-w-md">
+            <app-numero-venta [(numero)]="numeroEdicion" [excluirId]="venta()?.id ?? null" [numeroActual]="venta()?.numero ?? null" />
+          </div>
           <div>
             <label for="ed-asesor" class="block text-sm font-medium text-ink mb-1.5">Asesor *</label>
             <select

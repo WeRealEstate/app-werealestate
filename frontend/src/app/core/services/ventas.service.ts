@@ -6,6 +6,7 @@ import { Pagina } from '../models/pagina.model';
 import {
   PagoVenta,
   MedioFirma,
+  NumeracionVenta,
   PagoVentaCreateRequest,
   ReciboEditarRequest,
   ReciboHistorial,
@@ -16,7 +17,7 @@ import {
 
 export interface BuscarVentasParams {
   busqueda?: string;
-  /** Por fecha de venta: "desc" = la más reciente primero (default), "asc" = la más antigua primero. */
+  /** Por número de venta: "desc" = el más alto primero (default), "asc" = el más bajo primero. */
   orden?: 'asc' | 'desc';
   pagina: number;
   tamano: number;
@@ -46,13 +47,21 @@ export class VentasService {
     );
   }
 
+  /** Siguiente número automático y, si `numero` ya lo tiene otra venta (distinta de `excluirId`), cuál y cuántas se recorrerían. */
+  numeracion(numero?: number | null, excluirId?: number | null): Promise<NumeracionVenta> {
+    let params = new HttpParams();
+    if (numero) params = params.set('numero', numero);
+    if (excluirId) params = params.set('excluirId', excluirId);
+    return firstValueFrom(this.http.get<NumeracionVenta>(`${this.baseUrl}/numeracion`, { params }));
+  }
+
   contarLotesVendidosSamaiCampestre(): Promise<number> {
     return firstValueFrom(this.http.get<number>(`${this.baseUrl}/samai-campestre/lotes-vendidos`));
   }
 
-  /** Abrir una venta por su número visible (/panel/ventas/11). El número puede cambiar si se registra
-   * otra venta con fecha anterior, así que solo sirve para encontrarla: lo que escribe (abonos,
-   * modificar) usa el `id` de la venta devuelta. */
+  /** Abrir una venta por su número visible (/panel/ventas/11). El número puede cambiar si alguien lo
+   * edita o recorre, así que solo sirve para encontrarla: lo que escribe (abonos, modificar) usa el `id`
+   * de la venta devuelta. */
   obtenerPorNumero(numero: number): Promise<Venta> {
     return firstValueFrom(this.http.get<Venta>(`${this.baseUrl}/por-numero/${numero}`));
   }

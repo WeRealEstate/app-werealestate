@@ -28,6 +28,7 @@ import {
   mensualidadConAportaciones,
   totalAportaciones,
 } from '../../../../core/utils/aportaciones';
+import { NumeroVentaComponent } from '../../../../shared/numero-venta/numero-venta.component';
 
 /** Codifica la selección del <select> de asesor como un solo string ("U-5" / "E-3") porque un
  * formControl reactivo solo puede llevar un valor, y el asesor es uno de dos tipos distintos (ver
@@ -85,7 +86,7 @@ const ENGANCHE_LABEL_POR_TIPO: Record<TipoPago, string | null> = {
 @Component({
   selector: 'app-venta-form',
   standalone: true,
-  imports: [WeLoaderComponent, ReactiveFormsModule, FormsModule, RouterLink, LucideX, MonedaInputDirective, AportacionesSelectorComponent, ClienteSelectorComponent, CopropietariosEditorComponent],
+  imports: [WeLoaderComponent, ReactiveFormsModule, FormsModule, RouterLink, LucideX, MonedaInputDirective, AportacionesSelectorComponent, ClienteSelectorComponent, CopropietariosEditorComponent, NumeroVentaComponent],
   templateUrl: './venta-form.component.html',
 })
 export class VentaFormComponent {
@@ -103,6 +104,8 @@ export class VentaFormComponent {
   /** El cliente elegido (o registrado) para esta venta; obligatorio. */
   readonly clienteElegido = signal<ClienteLista | null>(null);
   readonly clienteFaltante = signal(false);
+  /** Número de venta escrito a mano; null = automático (el siguiente, mayor + 1). */
+  readonly numeroVenta = signal<number | null>(null);
   /** Copropietarios elegidos (máximo 4 además del principal). */
   readonly copropietarios = signal<(ClienteLista | null)[]>([]);
 
@@ -504,6 +507,7 @@ export class VentaFormComponent {
       const venta = await this.ventasService.crear({
         lotes: this.lotesAgregados().map((l) => ({ loteId: l.lote.id, precio: l.precio })),
         clienteId: this.clienteElegido()!.id,
+        numero: this.numeroVenta(),
         copropietariosIds: idsCopropietarios(this.copropietarios()),
         ...parseAsesorSeleccion(v.asesor),
         formaPago: v.formaPago,

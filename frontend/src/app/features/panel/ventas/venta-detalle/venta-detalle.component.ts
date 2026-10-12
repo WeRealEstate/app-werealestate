@@ -23,13 +23,14 @@ import { asesorSeleccionDe, parseAsesorSeleccion } from '../venta-form/venta-for
 import { WeLoaderComponent } from '../../../../shared/we-loader/we-loader.component';
 import { MonedaInputDirective } from '../../../../shared/moneda-input/moneda-input.directive';
 import { fechaLarga, porcentajeDe, ultimaMensualidad } from '../../../../core/utils/financiamiento';
+import { NumeroVentaComponent } from '../../../../shared/numero-venta/numero-venta.component';
 
 const SEGUNDOS_ESPERA_ELIMINAR = 10;
 
 @Component({
   selector: 'app-venta-detalle',
   standalone: true,
-  imports: [MonedaInputDirective, WeLoaderComponent, ReciboFormComponent, RecibosVentaComponent, ContratoVentaComponent, ReactiveFormsModule, RouterLink, ClienteSelectorComponent, CopropietariosEditorComponent, LucidePencil, LucideTrash2],
+  imports: [MonedaInputDirective, WeLoaderComponent, ReciboFormComponent, RecibosVentaComponent, ContratoVentaComponent, ReactiveFormsModule, RouterLink, ClienteSelectorComponent, CopropietariosEditorComponent, NumeroVentaComponent, LucidePencil, LucideTrash2],
   templateUrl: './venta-detalle.component.html',
 })
 export class VentaDetalleComponent implements OnInit, OnDestroy {
@@ -74,6 +75,8 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
     notas: this.fb.control(''),
   });
   readonly edicionPrimeraMensualidadMesVenta = signal(false);
+  /** Número de venta en la edición: arranca con el actual; si se cambia, el servidor recorre las consecutivas. */
+  readonly numeroEdicion = signal<number | null>(null);
 
   // --- Eliminar venta: solo admin. Estilo "permiso peligroso" de Android: el botón de confirmar se
   // habilita hasta que termina una cuenta regresiva de 10 s, y además pide la contraseña (que valida
@@ -222,6 +225,7 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
     );
     this.edicionPrimeraMensualidadMesVenta.set(v.primeraMensualidadMesVenta);
     this.errorEdicion.set(null);
+    this.numeroEdicion.set(this.venta()?.numero ?? null);
     this.editando.set(true);
   }
 
@@ -246,6 +250,7 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
     try {
       const actualizada = await this.ventasService.actualizar(this.ventaId!, {
         clienteId: this.clienteEdicion()?.id ?? null,
+        numero: this.numeroEdicion(),
         copropietariosIds: idsCopropietarios(this.copropietariosEdicion()),
         ...parseAsesorSeleccion(v.asesor),
         fechaVenta: v.fechaVenta,

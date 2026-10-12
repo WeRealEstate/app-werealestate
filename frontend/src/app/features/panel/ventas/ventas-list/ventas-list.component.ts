@@ -34,7 +34,7 @@ export class VentasListComponent {
   /** Desarrollos para el selector, y el elegido (null = todos). Siempre arranca en "Todos". */
   readonly desarrollos = signal<Desarrollo[]>([]);
   readonly desarrolloId = signal<number | null>(null);
-  /** Orden de la lista por fecha de venta (y por tanto por número): desc = la más reciente arriba. */
+  /** Orden de la lista por número de venta: desc = el más alto arriba. */
   readonly orden = signal<'asc' | 'desc'>('desc');
 
   readonly contadores = signal<{ lotesVendidos: number; ventasRegistradas: number } | null>(null);

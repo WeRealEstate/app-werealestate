@@ -1,6 +1,7 @@
 package com.werealestate.backend.service;
 
 import com.werealestate.backend.dto.ContadoresVentasDto;
+import com.werealestate.backend.dto.NumeracionVentaDto;
 import com.werealestate.backend.dto.PaginaDto;
 import com.werealestate.backend.dto.PagoVentaCreateRequest;
 import com.werealestate.backend.dto.PagoVentaDto;
@@ -127,6 +128,9 @@ public class VentaService {
 
     public VentaDto crear(VentaCreateRequest request) {
         exigirAdminOLider();
+        // Primero el número (puede recorrer otras ventas y vacía el contexto de persistencia): todavía
+        // no se ha cargado nada de esta operación.
+        long numeroVenta = reservarNumero(request.numero(), 0L);
 
         Set<Long> loteIdsUnicos = new HashSet<>();
         for (VentaLoteItemRequest item : request.lotes()) {
@@ -169,6 +173,7 @@ public class VentaService {
                 cliente, asesor.usuario(), asesor.externo(), request.formaPago().trim(), request.fechaVenta(),
                 request.mensualidad(), request.plazoMeses(), engancheLabel, request.enganche(),
                 request.diaPago(), Boolean.TRUE.equals(request.primeraMensualidadMesVenta()), notas);
+        venta.setNumero(numeroVenta);
         venta.ligarCliente(clienteRef);
         venta.setRegistradaPor(currentUserProvider.getUsuarioActual());
         boolean contratoFirmado = Boolean.TRUE.equals(request.contratoFirmado());
@@ -200,7 +205,7 @@ public class VentaService {
                 coasesor != null ? coasesor.usuario() : null,
                 coasesor != null ? coasesor.externo() : null,
                 request.coasesorComisionPorcentaje());
-        return toDto(renumerar(venta.getId()));
+        return toDto(obtenerEntidad(venta.getId()));
     }
 
     /** Reglas de las aportaciones (el frontend ya las aplica, aquí se hacen valer en el servidor):
@@ -332,8 +337,13 @@ public class VentaService {
                     .toList());
         }
         comisionService.sincronizar(venta);
-        // La fecha pudo cambiar: se reacomodan los números y se vuelve a leer con el nuevo.
-        return toDto(renumerar(venta.getId()));
+        // Si se pidió otro número, se mueve (recorriendo las consecutivas si estaba ocupado) y se vuelve a
+        // leer la venta con el número nuevo. La fecha ya no cambia el número.
+        if (request.numero() != null && !request.numero().equals(venta.getNumero())) {
+            long nuevo = reservarNumero(request.numero(), venta.getId(), venta.getNumero());
+            ventaRepository.fijarNumero(venta.getId(), nuevo);
+        }
+        return toDto(obtenerEntidad(id));
     }
 
     /**
@@ -341,7 +351,7 @@ public class VentaService {
      * contraseña. Se borran la venta, sus lotes (la relación, no los lotes), sus abonos y sus
      * aportaciones; los lotes que sigan VENDIDO vuelven a DISPONIBLE si se pide; la comisión se queda
      * en el historial como "venta eliminada" (y lo ya ganado sigue pudiéndose entregar); y se
-     * reacomodan los números de las demás ventas.
+     * números de las demás ventas no cambian (queda un hueco).
      */
     public void eliminar(Long id, VentaEliminarRequest request) {
         Usuario actual = currentUserProvider.getUsuarioActual();
@@ -379,7 +389,6 @@ public class VentaService {
                 }
             }
         }
-        ventaRepository.renumerar();
     }
 
     /** Para el ícono de "ver información de venta" en /panel/lotes: qué venta vendió este lote, si
@@ -394,7 +403,7 @@ public class VentaService {
     }
 
     /** ascendente = la venta más antigua primero (número 1 arriba); si no, la más reciente primero.
-     * Ordena por número de venta, que ya sigue la fecha de venta (ver VentaRepository.renumerar).
+     * Ordena por número de venta (automático = mayor + 1, o el que se escribió a mano).
      * desarrolloId (opcional): solo las ventas con al menos un lote de ese desarrollo; una venta mixta
      * aparece en cada desarrollo que toca. */
     public PaginaDto<VentaDto> buscarPaginado(
@@ -730,12 +739,54 @@ public class VentaService {
         }
     }
 
-    /** Reacomoda el número de todas las ventas por fecha y devuelve la venta pedida ya leída de nuevo
-     * (con su número definitivo). Va con candado para que dos registros simultáneos no se pisen. */
-    private Venta renumerar(Long ventaId) {
+    /** Deja libre el número que se quiere para una venta y devuelve el que le toca: sin número pedido, el
+     * siguiente automático (mayor + 1); con número pedido, ese mismo — y si otra venta ya lo tiene, se
+     * recorren +1 esa y las que le siguen de forma consecutiva (se detiene en el primer hueco). Va con
+     * candado para que dos registros simultáneos no se pisen. exceptoId = la venta que se está moviendo
+     * (0 si es una nueva) y numeroActual = el que tenía (-1 si es nueva): al irse, deja libre su lugar. */
+    private long reservarNumero(Long pedido, long exceptoId) {
+        return reservarNumero(pedido, exceptoId, -1L);
+    }
+
+    private long reservarNumero(Long pedido, long exceptoId, long numeroActual) {
         ventaRepository.bloquearNumeracion();
-        ventaRepository.renumerar();
-        return obtenerEntidad(ventaId);
+        if (pedido == null) {
+            return ventaRepository.maxNumero() + 1;
+        }
+        long hasta = finDeLaRacha(pedido, numeroActual);
+        if (hasta >= pedido) {
+            ventaRepository.recorrer(pedido, hasta, exceptoId);
+        }
+        return pedido;
+    }
+
+    /** Último número de la racha de consecutivos que empieza en "desde" (sin contar el que se está
+     * moviendo, que se va de su lugar); desde - 1 si "desde" está libre. */
+    private long finDeLaRacha(long desde, long numeroIgnorado) {
+        java.util.Set<Long> enUso = new java.util.HashSet<>(ventaRepository.numerosDesde(desde));
+        enUso.remove(numeroIgnorado);
+        long fin = desde - 1;
+        while (enUso.contains(fin + 1)) fin++;
+        return fin;
+    }
+
+    /** Para el formulario: el siguiente número automático y, si el número consultado ya está ocupado
+     * (por una venta distinta de excluirId), cuál es y cuántas ventas se recorrerían. */
+    @Transactional(readOnly = true)
+    public NumeracionVentaDto consultarNumeracion(Long numero, Long excluirId) {
+        exigirAdminOLider();
+        long siguiente = ventaRepository.maxNumero() + 1;
+        if (numero == null || numero < 1) {
+            return new NumeracionVentaDto(siguiente, null, null, null, 0);
+        }
+        Venta ocupante = ventaRepository.findByNumero(numero).orElse(null);
+        if (ocupante == null || ocupante.getId().equals(excluirId)) {
+            return new NumeracionVentaDto(siguiente, null, null, null, 0);
+        }
+        Long ignorado = excluirId == null ? null : ventaRepository.findById(excluirId).map(Venta::getNumero).orElse(null);
+        long fin = finDeLaRacha(numero, ignorado == null ? -1L : ignorado);
+        return new NumeracionVentaDto(
+                siguiente, ocupante.getId(), ocupante.getCliente(), ocupante.getFechaVenta(), (int) (fin - numero + 1));
     }
 
     private Usuario exigirAdminOLider() {
