@@ -22,7 +22,7 @@ export const CHANGELOG: EntradaVersion[] = [
     "Folio requerido al registrar abonos"
   ] },
   { version: '7.3.11', fecha: '2026-10-09', cambios: [
-    "Pantalla completa totalmente disponible, bug arreglado",
+    "Pantalla completa totalmente disponible en Comunidades We, bug arreglado",
   ] },
   { version: '7.3.10', fecha: '2026-10-09', cambios: [
     "Comunidades We ahora es un lienzo, zoom disponible, mover el lienzo arrastrando, mover cada tarjeta a donde quieras, reordenar arrastrando al equipo y pantalla completa ya disponible.",
