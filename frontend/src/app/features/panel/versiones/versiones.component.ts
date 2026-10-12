@@ -1,6 +1,5 @@
 import { Component, computed } from '@angular/core';
-import { version } from '../../../../../package.json';
-import { CHANGELOG, EntradaVersion } from '../../../core/changelog';
+import { CHANGELOG, EntradaVersion, VERSION_ACTUAL } from '../../../core/changelog';
 
 interface GrupoMenor {
   clave: string;
@@ -27,7 +26,7 @@ const masNuevoPrimero = (a: EntradaVersion, b: EntradaVersion): number => {
   templateUrl: './versiones.component.html',
 })
 export class VersionesComponent {
-  readonly versionActual = version;
+  readonly versionActual = VERSION_ACTUAL;
 
   /** Versión mayor → versión menor → versiones (la más nueva primero en todos los niveles). */
   readonly grupos = computed<GrupoMayor[]>(() => {

@@ -1,9 +1,10 @@
 /**
  * Historial de versiones que se ve al hacer clic en la versión del menú.
  *
- * Se llena a mano: al subir la versión en package.json, agrega aquí una entrada nueva con ese mismo
- * número (formato mayor.menor.parche). La ventana las ordena y las agrupa sola por versión mayor y menor.
- * `npm run build` avisa si la versión de package.json no tiene entrada.
+ * Se llena a mano: para publicar una versión nueva, agrega aquí una entrada con su número (formato
+ * mayor.menor.parche). La versión que muestra la app (menú y página de Versiones) es la MÁS ALTA de
+ * este archivo ({@link VERSION_ACTUAL}), así que no hace falta cambiar nada más para que se actualice.
+ * La página de Versiones ordena y agrupa las entradas sola por versión mayor y menor.
  */
 export interface EntradaVersion {
   /** Igual que en package.json, p. ej. '7.3.8'. */
@@ -23,10 +24,10 @@ export const CHANGELOG: EntradaVersion[] = [
   { version: '7.3.14', fecha: '2026-10-12', cambios: [
     "Plano publico: al entrar con el PIN de asesor aparece, debajo del boton con su nombre, el boton Descargar PDF con el plano coloreado por estado y su leyenda. Sin PIN no se muestra.",
   ] },
-  { version: '7.3.13', fecha: '2026-10-09', cambios: [
+  { version: '7.3.13', fecha: '2026-10-12', cambios: [
     "Tipos de abonos: se agregan tipos de abonos para poder diferenciar entre abonos de enganche, abonos de mensualidad y abonos extraordinarios.",
   ] },
-  { version: '7.3.13', fecha: '2026-10-09', cambios: [
+  { version: '7.3.13', fecha: '2026-10-12', cambios: [
     "Finanzas: se agregan campos de fecha de pago y fecha de vencimiento a los abonos, para poder llevar un control de pagos atrasados.",
     "Ventas: se agrega la opción de ver el historial de cambios de cada venta, incluyendo cambios de estatus, abonos y comentarios.",
     "Se agregan tipos de abonos"
@@ -62,3 +63,12 @@ export const CHANGELOG: EntradaVersion[] = [
     "Se agrega la opcion de ver cambios en la WeApp para cada version",
   ] },
 ];
+
+const comoNumeros = (v: string): number[] => v.split('.').map((n) => Number.parseInt(n, 10) || 0);
+
+/** La versión más alta del historial: es la que muestra la app (la única fuente de la versión). */
+export const VERSION_ACTUAL: string = CHANGELOG.map((e) => e.version).reduce((mayor, v) => {
+  const [a1, a2, a3] = comoNumeros(v);
+  const [b1, b2, b3] = comoNumeros(mayor);
+  return (a1 - b1 || a2 - b2 || a3 - b3) > 0 ? v : mayor;
+});
