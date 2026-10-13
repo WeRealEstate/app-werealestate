@@ -15,6 +15,7 @@ import com.werealestate.backend.model.Seguimiento;
 import com.werealestate.backend.model.Tarea;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.model.Venta;
+import com.werealestate.backend.model.WeFormRespuesta;
 import com.werealestate.backend.model.VentaLote;
 import com.werealestate.backend.repository.VentaLoteRepository;
 import com.werealestate.backend.repository.VentaRepository;
@@ -60,6 +61,7 @@ public class NotificacionService {
     private final MovimientoLoteRepository movimientoLoteRepository;
     private final VentaRepository ventaRepository;
     private final VentaLoteRepository ventaLoteRepository;
+    private final com.werealestate.backend.repository.WeFormRespuestaRepository respuestaRepository;
 
     public NotificacionService(
             LeadRepository leadRepository,
@@ -70,7 +72,8 @@ public class NotificacionService {
             CurrentUserProvider currentUserProvider,
             MovimientoLoteRepository movimientoLoteRepository,
             VentaRepository ventaRepository,
-            VentaLoteRepository ventaLoteRepository) {
+            VentaLoteRepository ventaLoteRepository,
+            com.werealestate.backend.repository.WeFormRespuestaRepository respuestaRepository) {
         this.leadRepository = leadRepository;
         this.seguimientoRepository = seguimientoRepository;
         this.tareaRepository = tareaRepository;
@@ -80,6 +83,7 @@ public class NotificacionService {
         this.movimientoLoteRepository = movimientoLoteRepository;
         this.ventaRepository = ventaRepository;
         this.ventaLoteRepository = ventaLoteRepository;
+        this.respuestaRepository = respuestaRepository;
     }
 
     public List<NotificacionDto> listar() {
@@ -171,6 +175,7 @@ public class NotificacionService {
             agregarAvisosDeLotes(actual, leidas, notificaciones);
             agregarAvisosDeVentas(actual, leidas, notificaciones);
         }
+        agregarAvisosDePrecontratos(actual, leidas, notificaciones);
 
         return notificaciones;
     }
@@ -186,6 +191,8 @@ public class NotificacionService {
             boolean apartado = m.getEstadoAnterior() == EstadoLote.DISPONIBLE && ESTADOS_APARTADO.contains(m.getEstadoNuevo());
             boolean desapartado = ESTADOS_APARTADO.contains(m.getEstadoAnterior()) && m.getEstadoNuevo() == EstadoLote.DISPONIBLE;
             if (m.getEstadoAnterior() == m.getEstadoNuevo()) continue;
+            // El aviso del precontrato (ver agregarAvisosDePrecontratos) ya cuenta este cambio de lote.
+            if ("Precontrato We Forms".equals(m.getNota())) continue;
             boolean otroCambio = !apartado && !desapartado;
             // Los cambios "de otro tipo" son avisos nuevos: solo el último día, para no soltar de golpe el historial.
             if (otroCambio && m.getFecha().isBefore(LocalDateTime.now().minusDays(1))) continue;
@@ -241,6 +248,8 @@ public class NotificacionService {
         }
         LocalDateTime desde = LocalDateTime.now().minusDays(DIAS_AVISOS_LOTES);
         for (Venta v : ventaRepository.recientesDeOtros(desde, actual.getId())) {
+            // Una venta que nació de un precontrato se avisa como precontrato (ver agregarAvisosDePrecontratos).
+            if (respuestaRepository.existsByVentaId(v.getId())) continue;
             String firma = v.getFechaCreacion().toString();
             if (leidas.contains(clave("VENTA_NUEVA", v.getId(), firma))) continue;
 
@@ -255,6 +264,31 @@ public class NotificacionService {
                     "Nueva venta #" + v.getNumero() + ": " + v.getCliente() + " · " + detalle + " · $"
                             + String.format("%,.2f", total) + " · asesor " + v.getAsesorNombre() + "." + por,
                     v.getId(),
+                    firma));
+        }
+    }
+
+    /** Aviso de cada precontrato de We Forms enviado en los últimos días (admin y quien tenga el módulo We
+     * Forms). Reemplaza al aviso de venta nueva y de cambio de lote que ese mismo precontrato generaría. */
+    private void agregarAvisosDePrecontratos(Usuario actual, Set<String> leidas, List<NotificacionDto> notificaciones) {
+        if (actual.getRol() != Role.ADMIN && !ModulosAcceso.efectivos(actual).contains(Modulo.WE_FORMS)) {
+            return;
+        }
+        LocalDateTime desde = LocalDateTime.now().minusDays(DIAS_AVISOS_LOTES);
+        for (WeFormRespuesta r : respuestaRepository.recientes(desde)) {
+            String firma = r.getFechaEnvio().toString();
+            if (leidas.contains(clave("PRECONTRATO_NUEVO", r.getId(), firma))) continue;
+            Venta v = r.getVenta();
+            String lotes = v == null ? "" : ventaLoteRepository.findByVentaId(v.getId()).stream()
+                    .map(vl -> "Mz " + vl.getLote().getManzana() + " Lote " + vl.getLote().getNumeroLote())
+                    .collect(java.util.stream.Collectors.joining(", "));
+            String cliente = r.getCliente() != null ? r.getCliente().nombreCompleto() : "un cliente";
+            notificaciones.add(NotificacionDto.precontratoNuevo(
+                    "Nuevo precontrato de " + r.getAsesorNombre() + ": " + cliente + (r.isClienteNuevo() ? " (cliente nuevo)" : "")
+                            + (lotes.isEmpty() ? "" : " · " + lotes)
+                            + (v != null ? " · venta #" + v.getNumero() : "") + ".",
+                    r.getId(),
+                    v != null ? v.getId() : null,
                     firma));
         }
     }

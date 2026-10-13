@@ -35,7 +35,8 @@ public final class ModulosAcceso {
                     Modulo.GASTOS,
                     Modulo.CALENDARIO,
                     Modulo.ASESORES_EXTERNOS,
-                    Modulo.COMUNIDADES);
+                    Modulo.COMUNIDADES,
+                    Modulo.WE_FORMS);
             case EQUIPO_INTERNO -> EnumSet.of(Modulo.CALENDARIO);
         };
     }
@@ -46,6 +47,8 @@ public final class ModulosAcceso {
         if (rol == Role.LIDER_AREA) {
             modulos.remove(Modulo.LEADS);
             modulos.remove(Modulo.PLANO);
+            // We Forms no se da de entrada: el admin lo activa a quien deba manejarlo.
+            modulos.remove(Modulo.WE_FORMS);
         }
         return modulos;
     }

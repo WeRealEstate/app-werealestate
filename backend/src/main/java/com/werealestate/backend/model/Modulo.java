@@ -16,7 +16,8 @@ public enum Modulo {
     GASTOS("Gastos"),
     CALENDARIO("Calendario"),
     ASESORES_EXTERNOS("Asesores externos"),
-    COMUNIDADES("Comunidades We");
+    COMUNIDADES("Comunidades We"),
+    WE_FORMS("We Forms");
 
     private final String etiqueta;
 

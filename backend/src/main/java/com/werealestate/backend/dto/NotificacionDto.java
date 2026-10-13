@@ -36,4 +36,9 @@ public record NotificacionDto(
     public static NotificacionDto ventaNueva(String mensaje, Long ventaId, String firma) {
         return new NotificacionDto("VENTA_NUEVA", mensaje, null, null, null, null, ventaId, firma);
     }
+
+    /** Un asesor envió un precontrato de We Forms (admin y personal con el módulo We Forms). ventaId = la venta que se creó. */
+    public static NotificacionDto precontratoNuevo(String mensaje, Long respuestaId, Long ventaId, String firma) {
+        return new NotificacionDto("PRECONTRATO_NUEVO", mensaje, null, null, null, respuestaId, ventaId, firma);
+    }
 }

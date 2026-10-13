@@ -1,5 +1,6 @@
 package com.werealestate.backend.controller;
 
+import com.werealestate.backend.dto.AplicarDepositoRequest;
 import com.werealestate.backend.dto.ContadoresVentasDto;
 import com.werealestate.backend.dto.NumeracionVentaDto;
 import com.werealestate.backend.dto.PaginaDto;
@@ -73,6 +74,12 @@ public class VentaController {
     @GetMapping("/por-numero/{numero}")
     public VentaDto obtenerPorNumero(@PathVariable Long numero) {
         return ventaService.obtenerPorNumero(numero);
+    }
+
+    /** Aplica el depósito pendiente de una venta que nació de un precontrato (We Forms). */
+    @PostMapping("/{id}/aplicar-deposito")
+    public VentaDto aplicarDeposito(@PathVariable Long id, @Valid @RequestBody AplicarDepositoRequest request) {
+        return ventaService.aplicarDeposito(id, request);
     }
 
     @GetMapping("/{id}")

@@ -51,6 +51,8 @@ public class ModuloAccesoInterceptor implements HandlerInterceptor {
         MODULOS_POR_PREFIJO.put(
                 "/api/asesores-externos", EnumSet.of(Modulo.ASESORES_EXTERNOS, Modulo.COMUNIDADES));
         MODULOS_POR_PREFIJO.put("/api/eventos-calendario", EnumSet.of(Modulo.CALENDARIO));
+        // We Forms (panel). El link público de los asesores vive en /api/forms-publico, fuera de este prefijo.
+        MODULOS_POR_PREFIJO.put("/api/we-forms", EnumSet.of(Modulo.WE_FORMS));
     }
 
     private final CurrentUserProvider currentUserProvider;

@@ -1,5 +1,6 @@
 package com.werealestate.backend.service;
 
+import com.werealestate.backend.dto.AplicarDepositoRequest;
 import com.werealestate.backend.dto.ContadoresVentasDto;
 import com.werealestate.backend.dto.NumeracionVentaDto;
 import com.werealestate.backend.dto.PaginaDto;
@@ -128,6 +129,18 @@ public class VentaService {
 
     public VentaDto crear(VentaCreateRequest request) {
         exigirAdminOLider();
+        return toDto(crearVenta(request, currentUserProvider.getUsuarioActual(), false));
+    }
+
+    /** La venta que nace de un precontrato de We Forms (ver WeFormPublicoService): sin sesión, a nombre
+     * del usuario de sistema; los lotes pasan a "En proceso de firma" (no a Vendido), la fecha queda
+     * como provisional y el dinero con el que estuvieran apartados queda pendiente de aplicar. Quien la
+     * llama ya validó el PIN del asesor, el cliente y que los lotes se puedan tomar. */
+    public Venta crearDesdePrecontrato(VentaCreateRequest request, Usuario sistema) {
+        return crearVenta(request, sistema, true);
+    }
+
+    private Venta crearVenta(VentaCreateRequest request, Usuario registradaPor, boolean precontrato) {
         // Primero el número (puede recorrer otras ventas y vacía el contexto de persistencia): todavía
         // no se ha cargado nada de esta operación.
         long numeroVenta = reservarNumero(request.numero(), 0L);
@@ -175,7 +188,7 @@ public class VentaService {
                 request.diaPago(), Boolean.TRUE.equals(request.primeraMensualidadMesVenta()), notas);
         venta.setNumero(numeroVenta);
         venta.ligarCliente(clienteRef);
-        venta.setRegistradaPor(currentUserProvider.getUsuarioActual());
+        venta.setRegistradaPor(registradaPor);
         boolean contratoFirmado = Boolean.TRUE.equals(request.contratoFirmado());
         String driveUrl = validarContrato(
                 contratoFirmado, request.contratoFechaFirma(), request.contratoMedio(), request.contratoDriveUrl());
@@ -187,15 +200,23 @@ public class VentaService {
             ventaAportacionRepository.save(new VentaAportacion(venta, item.anio(), item.mes(), item.monto()));
         }
 
+        BigDecimal depositoPendiente = BigDecimal.ZERO;
         for (VentaLoteItemRequest item : request.lotes()) {
             Lote lote = loteRepository
                     .findById(item.loteId())
                     .orElseThrow(() -> new ResourceNotFoundException("Lote no encontrado"));
             ventaLoteRepository.save(new VentaLote(venta, lote, item.precio()));
 
-            if (request.marcarLoteVendido()) {
+            if (precontrato) {
+                if (lote.getMontoApartado() != null) depositoPendiente = depositoPendiente.add(lote.getMontoApartado());
+                loteService.marcarEnProcesoDeFirma(lote.getId(), cliente, asesor.nombre(), registradaPor);
+            } else if (request.marcarLoteVendido()) {
                 loteService.marcarVendido(lote.getId(), cliente, asesor.nombre());
             }
+        }
+        if (precontrato) {
+            venta.setFechaProvisional(true);
+            venta.setDepositoPendiente(depositoPendiente.signum() > 0 ? depositoPendiente : null);
         }
 
         // Una venta nueva usa la regla de comisión por tipo de abono (las existentes conservan la suya).
@@ -205,7 +226,7 @@ public class VentaService {
                 coasesor != null ? coasesor.usuario() : null,
                 coasesor != null ? coasesor.externo() : null,
                 request.coasesorComisionPorcentaje());
-        return toDto(obtenerEntidad(venta.getId()));
+        return obtenerEntidad(venta.getId());
     }
 
     /** Reglas de las aportaciones (el frontend ya las aplica, aquí se hacen valer en el servidor):
@@ -309,6 +330,12 @@ public class VentaService {
                 : request.engancheLabel().trim();
         String notas = request.notas() == null || request.notas().isBlank() ? null : request.notas().trim();
 
+        // Una venta de precontrato con fecha provisional deja de serlo al cambiar la fecha o al confirmarla.
+        boolean fechaCambio = !request.fechaVenta().equals(venta.getFechaVenta());
+        if (venta.isFechaProvisional() && (fechaCambio || Boolean.TRUE.equals(request.confirmarFecha()))) {
+            venta.setFechaProvisional(false);
+        }
+
         venta.actualizar(
                 venta.getCliente(),
                 asesor.usuario(),
@@ -343,6 +370,52 @@ public class VentaService {
             long nuevo = reservarNumero(request.numero(), venta.getId(), venta.getNumero());
             ventaRepository.fijarNumero(venta.getId(), nuevo);
         }
+        return toDto(obtenerEntidad(id));
+    }
+
+    /** Aplica el dinero con el que ya estaba apartado el lote de una venta que nació de un precontrato
+     * (ver Venta.depositoPendiente): SALDO lo registra como abono de tipo apartado (con su folio) y baja lo
+     * que falta por pagar; MENSUALIDAD baja la mensualidad (mismo plazo, pago más bajo), igual que al
+     * registrar una venta con depósito. Después el depósito ya no está pendiente. */
+    public VentaDto aplicarDeposito(Long id, AplicarDepositoRequest request) {
+        Usuario actual = exigirAdminOLider();
+        Venta venta = obtenerEntidad(id);
+        BigDecimal monto = venta.getDepositoPendiente();
+        if (monto == null || monto.signum() <= 0) {
+            throw new ValidationException("Esta venta no tiene un depósito pendiente de aplicar");
+        }
+
+        if (request.aplicarA() == AplicarDepositoRequest.AplicarDepositoA.SALDO) {
+            if (request.folio() == null || request.folio().isBlank()) {
+                throw new ValidationException("Ingresa el folio del dinero recibido al apartar el lote");
+            }
+            registrarPago(id, new PagoVentaCreateRequest(
+                    java.time.LocalDate.now(),
+                    request.folio().trim(),
+                    "Dinero recibido al apartar el lote",
+                    List.of(new PagoVentaCreateRequest.Linea(TipoAbono.APARTADO, monto, null, null))));
+        } else {
+            if (venta.getPlazoMeses() == null || venta.getMensualidad() == null) {
+                throw new ValidationException("Esta venta no tiene mensualidades: aplica el depósito al saldo");
+            }
+            BigDecimal precio = precioVenta(id);
+            BigDecimal enganche = venta.getEnganche() == null ? BigDecimal.ZERO : venta.getEnganche();
+            List<VentaAportacion> aportaciones = ventaAportacionRepository.findByVentaIdOrderByAnioAscMesAsc(id);
+            BigDecimal aportado = aportaciones.stream().map(VentaAportacion::getMonto).reduce(BigDecimal.ZERO, BigDecimal::add);
+            int regulares = venta.getPlazoMeses() - aportaciones.size();
+            BigDecimal saldo = precio.subtract(enganche).subtract(monto).subtract(aportado);
+            if (regulares <= 0 || saldo.signum() <= 0) {
+                throw new ValidationException("El depósito cubre todo el saldo de las mensualidades: aplícalo al saldo");
+            }
+            BigDecimal nueva = saldo.divide(BigDecimal.valueOf(regulares), 2, java.math.RoundingMode.HALF_UP);
+            venta.setMensualidad(nueva);
+        }
+
+        venta.setDepositoPendiente(null);
+        for (VentaLote vl : ventaLoteRepository.findByVentaId(id)) {
+            loteService.limpiarMontoApartado(vl.getLote().getId());
+        }
+        comisionService.sincronizar(venta);
         return toDto(obtenerEntidad(id));
     }
 

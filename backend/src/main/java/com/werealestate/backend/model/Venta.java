@@ -97,6 +97,15 @@ public class Venta {
     @JoinColumn(name = "registrada_por_id")
     private Usuario registradaPor;
 
+    /** La venta nació de un precontrato (We Forms) y su fecha es la del día de envío, a confirmar. */
+    @Column(name = "fecha_provisional", nullable = false)
+    private boolean fechaProvisional;
+
+    /** Dinero con el que ya estaba apartado el lote al crear la venta desde un precontrato y que aún no
+     * se aplica (null = nada pendiente). */
+    @Column(name = "deposito_pendiente", precision = 14, scale = 2)
+    private java.math.BigDecimal depositoPendiente;
+
     protected Venta() {
         // JPA
     }
@@ -206,6 +215,26 @@ public class Venta {
 
     public Usuario getRegistradaPor() {
         return registradaPor;
+    }
+
+    public void setMensualidad(java.math.BigDecimal mensualidad) {
+        this.mensualidad = mensualidad;
+    }
+
+    public boolean isFechaProvisional() {
+        return fechaProvisional;
+    }
+
+    public void setFechaProvisional(boolean fechaProvisional) {
+        this.fechaProvisional = fechaProvisional;
+    }
+
+    public java.math.BigDecimal getDepositoPendiente() {
+        return depositoPendiente;
+    }
+
+    public void setDepositoPendiente(java.math.BigDecimal depositoPendiente) {
+        this.depositoPendiente = depositoPendiente;
     }
 
     public void setRegistradaPor(Usuario registradaPor) {

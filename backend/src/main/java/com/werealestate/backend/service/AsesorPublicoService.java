@@ -60,6 +60,30 @@ public class AsesorPublicoService {
                 : new Resultado(motivo, null);
     }
 
+    /** Quién es el asesor de un PIN, completo (para registrar a su nombre un precontrato de We Forms). */
+    public record Identificado(Motivo motivo, Usuario usuario, AsesorExterno externo) {
+        public String nombre() {
+            return usuario != null ? usuario.getNombre() : externo != null ? externo.getNombre() : null;
+        }
+    }
+
+    /** Igual que {@link #verificar} pero devuelve al asesor (interno o externo), no solo su nombre. */
+    public Identificado identificar(String pin, String proyecto) {
+        String buscado = pin == null ? "" : pin.trim().toUpperCase(Locale.ROOT);
+        if (!buscado.matches("[A-Z0-9]{4}")) return new Identificado(Motivo.NO_ENCONTRADO, null, null);
+
+        Optional<Usuario> interno = usuarioRepository.findByPin(buscado)
+                .filter(u -> u.isActivo() && !EMAIL_USUARIO_PUBLICO.equalsIgnoreCase(u.getEmail()));
+        if (interno.isPresent()) return new Identificado(Motivo.OK, interno.get(), null);
+
+        Optional<AsesorExterno> asesor = asesorExternoRepository.findByPin(buscado).filter(AsesorExterno::isActivo);
+        if (asesor.isEmpty()) return new Identificado(Motivo.NO_ENCONTRADO, null, null);
+        Motivo motivo = motivoExterno(asesor.get(), proyecto);
+        return motivo == Motivo.OK
+                ? new Identificado(Motivo.OK, null, asesor.get())
+                : new Identificado(motivo, null, null);
+    }
+
     private static Motivo motivoExterno(AsesorExterno a, String proyecto) {
         if (a.getContratoEstadoEfectivo() != EstadoContratoAsesor.VIGENTE) return Motivo.CONTRATO_NO_VIGENTE;
         if ("samai".equals(proyecto) && !a.isAccesoSamai()) return Motivo.SIN_ACCESO;

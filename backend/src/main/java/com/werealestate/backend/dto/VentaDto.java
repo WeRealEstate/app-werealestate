@@ -39,7 +39,11 @@ public record VentaDto(
         // Se calculan a partir de sus lotes y sus pagos (ver VentaService), nunca se guardan directo.
         BigDecimal precioVenta,
         BigDecimal totalAbonado,
-        BigDecimal saldoPendiente) {
+        BigDecimal saldoPendiente,
+        // Venta que nació de un precontrato: su fecha es la del envío y administración la confirma.
+        boolean fechaProvisional,
+        // Dinero apartado del lote que aún no se aplica a la venta (null = nada pendiente).
+        BigDecimal depositoPendiente) {
 
     public static VentaDto from(
             Venta venta,
@@ -74,6 +78,8 @@ public record VentaDto(
                 venta.getFechaCreacion(),
                 precioVenta,
                 totalAbonado,
-                precioVenta.subtract(totalAbonado));
+                precioVenta.subtract(totalAbonado),
+                venta.isFechaProvisional(),
+                venta.getDepositoPendiente());
     }
 }

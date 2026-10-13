@@ -8,6 +8,7 @@ import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.exception.ValidationException;
 import com.werealestate.backend.model.AsesorExterno;
+import com.werealestate.backend.model.FuenteCliente;
 import com.werealestate.backend.model.Cliente;
 import com.werealestate.backend.model.PagoVenta;
 import com.werealestate.backend.model.Role;
@@ -126,6 +127,76 @@ public class ClienteService {
         Cliente c = new Cliente(r.nombre().trim(), r.apellidoPaterno().trim(), limpio(r.apellidoMaterno()));
         aplicar(c, r);
         return detalle(clienteRepository.save(c));
+    }
+
+    /** El cliente de un precontrato de We Forms (sin sesión: ya se validó el PIN del asesor). La CURP manda:
+     * si ya existe un cliente con esa CURP es la misma persona y se vincula SIN tocar sus datos (solo se
+     * rellenan los campos que tenga vacíos); si no, se crea uno nuevo aunque haya otro con el mismo nombre
+     * o teléfono (pueden ser personas distintas). Nunca se vincula por nombre. */
+    public ClienteResuelto resolverDesdePrecontrato(
+            ClienteRequest r, Usuario captadoUsuario, AsesorExterno captadoAsesor) {
+        String nombre = limpio(r.nombre());
+        String paterno = limpio(r.apellidoPaterno());
+        String telefono = limpio(r.telefono());
+        String curp = limpio(r.curp()) == null ? null : limpio(r.curp()).toUpperCase(Locale.ROOT);
+        if (nombre == null || paterno == null || telefono == null || r.fechaNacimiento() == null || curp == null) {
+            throw new ValidationException("Faltan datos del cliente: nombre, apellido paterno, fecha de nacimiento, CURP y teléfono");
+        }
+        if (Period.between(r.fechaNacimiento(), LocalDate.now()).getYears() < 18) {
+            throw new ValidationException("El cliente debe ser mayor de edad");
+        }
+        if (!CURP.matcher(curp).matches()) {
+            throw new ValidationException("El CURP no tiene un formato válido (18 caracteres)");
+        }
+        String rfc = limpio(r.rfc()) == null ? null : limpio(r.rfc()).toUpperCase(Locale.ROOT);
+        if (rfc != null && !RFC.matcher(rfc).matches()) {
+            throw new ValidationException("El RFC no tiene un formato válido");
+        }
+
+        Cliente existente = clienteRepository.findByCurpIgnoreCase(curp).orElse(null);
+        if (existente != null) {
+            if (!existente.isActivo()) {
+                throw new ValidationException(
+                        "Ya existe un cliente con ese CURP pero está inactivo: comunícate con administración");
+            }
+            // Solo se completa lo que le falte; nada de lo que ya tiene se cambia.
+            existente.actualizarDatos(
+                    existente.getNombre(), existente.getApellidoPaterno(),
+                    vacio(existente.getApellidoMaterno(), limpio(r.apellidoMaterno())),
+                    existente.getFechaNacimiento(), existente.getTelefono(),
+                    vacio(existente.getTelefono2(), limpio(r.telefono2())),
+                    vacio(existente.getCorreo(), limpio(r.correo())), existente.getCurp(),
+                    vacio(existente.getRfc(), rfc),
+                    vacio(existente.getLugarNacimiento(), limpio(r.lugarNacimiento())),
+                    existente.getNacionalidad(), existente.getEstadoCivil(), existente.getOcupacion(),
+                    vacio(existente.getCalle(), limpio(r.calle())),
+                    vacio(existente.getColonia(), limpio(r.colonia())),
+                    vacio(existente.getMunicipio(), limpio(r.municipio())),
+                    vacio(existente.getEstado(), limpio(r.estado())),
+                    vacio(existente.getCodigoPostal(), limpio(r.codigoPostal())),
+                    existente.getBeneficiarioNombre(), existente.getBeneficiarioParentesco(),
+                    existente.getFuente(), existente.getFuenteDetalle(),
+                    existente.getCaptadoPorUsuario(), existente.getCaptadoPorAsesor(), existente.getNotas(),
+                    existente.getExpedienteUbicacion(), existente.getExpedienteDriveUrl());
+            return new ClienteResuelto(clienteRepository.save(existente), false);
+        }
+
+        Cliente c = new Cliente(nombre, paterno, limpio(r.apellidoMaterno()));
+        c.actualizarDatos(
+                nombre, paterno, limpio(r.apellidoMaterno()), r.fechaNacimiento(), telefono, null,
+                limpio(r.correo()), curp, rfc, limpio(r.lugarNacimiento()), null, null, null,
+                limpio(r.calle()), limpio(r.colonia()), limpio(r.municipio()), limpio(r.estado()),
+                limpio(r.codigoPostal()), null, null,
+                FuenteCliente.PRECONTRATO, null, captadoUsuario, captadoAsesor, null, null, null);
+        return new ClienteResuelto(clienteRepository.save(c), true);
+    }
+
+    /** El cliente que resultó de un precontrato y si se acaba de crear (false = ya existía con esa CURP). */
+    public record ClienteResuelto(Cliente cliente, boolean nuevo) {
+    }
+
+    private static String vacio(String actual, String nuevo) {
+        return actual != null && !actual.isBlank() ? actual : nuevo;
     }
 
     public ClienteDto actualizar(Long id, ClienteRequest r) {

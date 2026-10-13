@@ -31,5 +31,7 @@ public record VentaUpdateRequest(
         // null = sin cambios (clientes viejos que no los mandan).
         @Min(1) @Max(31) Integer diaPago,
         Boolean primeraMensualidadMesVenta,
-        @Size(max = 1000) String notas) {
+        @Size(max = 1000) String notas,
+        // true = la fecha de venta ya es la definitiva (quita la marca de "fecha provisional"); cambiarla también la quita.
+        Boolean confirmarFecha) {
 }

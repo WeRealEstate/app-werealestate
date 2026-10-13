@@ -55,6 +55,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", ex.getMessage()));
     }
 
+    /** Errores con estado propio (por ejemplo 429 por demasiados intentos de PIN en We Forms): siempre con "message". */
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    public ResponseEntity<Map<String, String>> handleStatus(org.springframework.web.server.ResponseStatusException ex) {
+        String mensaje = ex.getReason() == null ? "No se pudo completar la operación" : ex.getReason();
+        return ResponseEntity.status(ex.getStatusCode()).body(Map.of("message", mensaje));
+    }
+
     /** Sin esto, un archivo que supera spring.servlet.multipart.max-file-size (ej. el plano de un
      * desarrollo) llegaba al cliente como un error genérico sin mensaje, indistinguible de
      * cualquier otra falla. */

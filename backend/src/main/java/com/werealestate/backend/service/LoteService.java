@@ -488,6 +488,58 @@ public class LoteService {
         cambiarEstadoConHistorial(lote, EstadoLote.DISPONIBLE, actual, null, null, null, "Venta eliminada");
     }
 
+    /** El lote pasa a EN_PROCESO_DE_FIRMA a raíz de un precontrato de We Forms (ver VentaService.
+     * crearDesdePrecontrato), sin sesión: el cambio queda en el historial a nombre del usuario de sistema.
+     * A diferencia de marcarVendido, el dinero con el que estuviera apartado NO se borra: queda pendiente
+     * de aplicar en la venta (ver Venta.depositoPendiente) y lo limpia {@link #limpiarMontoApartado}. */
+    public void marcarEnProcesoDeFirma(Long id, String cliente, String asesor, Usuario actor) {
+        Lote lote = obtenerEntidad(id);
+        cambiarEstadoConHistorial(
+                lote, EstadoLote.EN_PROCESO_DE_FIRMA, actor, asesor, cliente, null, "Precontrato We Forms");
+        lote.setFechaExpiraApartado(null);
+    }
+
+    /** El dinero apartado del lote ya se aplicó a su venta: deja de aparecer como depósito pendiente. */
+    public void limpiarMontoApartado(Long id) {
+        obtenerEntidad(id).setMontoApartado(null);
+    }
+
+    /** Lotes que un asesor puede poner en un precontrato: los disponibles del desarrollo y los que ÉL mismo
+     * apartó (quien aparece en el último cambio a su estado actual). Un apartado que alguien más hizo, o
+     * uno sin asesor atribuido (por ejemplo, fijado por administración), no se ofrece. */
+    @Transactional(readOnly = true)
+    public List<LoteDto> listarParaPrecontrato(Long desarrolloId, Long asesorUsuarioId, String asesorNombre) {
+        return loteRepository.findByDesarrolloId(desarrolloId).stream()
+                .filter(l -> puedeTomarParaPrecontrato(l, asesorUsuarioId, asesorNombre))
+                .sorted(ORDEN_NATURAL_LOTES)
+                .map(LoteDto::from)
+                .toList();
+    }
+
+    /** Regla de {@link #listarParaPrecontrato}, y que no tenga ya una venta. */
+    public boolean puedeTomarParaPrecontrato(Lote lote, Long asesorUsuarioId, String asesorNombre) {
+        if (ventaLoteRepository.existsByLoteId(lote.getId())) return false;
+        EstadoLote estado = lote.getEstado();
+        if (estado == EstadoLote.DISPONIBLE) return true;
+        if (estado != EstadoLote.APARTADO && estado != EstadoLote.APARTADO_A_PLAZO
+                && estado != EstadoLote.APARTADO_CON_DINERO) {
+            return false;
+        }
+        return movimientoLoteRepository.findByLoteIdOrderByFechaDesc(lote.getId()).stream()
+                .filter(m -> m.getEstadoNuevo() == estado)
+                .findFirst()
+                .map(m -> {
+                    boolean mismoNombre = m.getNombreAsesor() != null
+                            && m.getNombreAsesor().trim().equalsIgnoreCase(asesorNombre == null ? "" : asesorNombre.trim());
+                    boolean mismoUsuario = asesorUsuarioId != null
+                            && m.getUsuario() != null
+                            && asesorUsuarioId.equals(m.getUsuario().getId())
+                            && m.getNombreAsesor() == null;
+                    return mismoNombre || mismoUsuario;
+                })
+                .orElse(false);
+    }
+
     /** Marca el lote como VENDIDO a raíz de un registro de {@code Venta} (ver VentaService), con el
      * mismo mecanismo de historial que cualquier otro cambio de estado. No repite el chequeo de rol
      * de {@link #cambiarEstado}: VentaService ya exige admin/líder de área para registrar una venta. */
