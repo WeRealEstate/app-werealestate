@@ -585,7 +585,7 @@ select.rounded-full:not([multiple]):not([size]) {
 .dl-salir { opacity: 0; pointer-events: none; }
 
 .dl-samai { --dl-bg: #f2efe7; --dl-fg: #121a0e; }
-html.dark .dl-samai:not([data-tema]), .dl-samai[data-tema='oscuro'] { --dl-bg: #121a0e; --dl-fg: #f2efe7; }
+html.dark .dl-samai:not([data-tema]), .dl-samai[data-tema='oscuro'] { --dl-bg: #000; --dl-fg: #f2efe7; }
 .dl-samai[data-tema='claro'] { --dl-bg: #f2efe7; --dl-fg: #121a0e; }
 .dl-nanuu { --dl-bg: #f6f1ea; --dl-fg: #99714a; }
 html.dark .dl-nanuu:not([data-tema]), .dl-nanuu[data-tema='oscuro'] { --dl-bg: #12100d; --dl-fg: #f6f1ea; }
