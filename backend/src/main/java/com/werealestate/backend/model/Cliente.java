@@ -23,6 +23,11 @@ public class Cliente {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** Consecutivo que se muestra como número de cliente; lo asigna la base (secuencia) al insertar. */
+    @org.hibernate.annotations.Generated(event = org.hibernate.generator.EventType.INSERT)
+    @Column(insertable = false, updatable = false)
+    private Long numero;
+
     @Column(nullable = false, length = 120)
     private String nombre;
 
@@ -195,6 +200,10 @@ public class Cliente {
         this.notas = notas;
         this.expedienteUbicacion = expedienteUbicacion;
         this.expedienteDriveUrl = expedienteDriveUrl;
+    }
+
+    public Long getNumero() {
+        return numero;
     }
 
     public Long getId() { return id; }

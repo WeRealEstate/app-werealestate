@@ -106,6 +106,7 @@ public class ClienteService {
         return clienteRepository.findAllByOrderByNombreAscApellidoPaternoAsc().stream()
                 .filter(Cliente::isActivo)
                 .filter(c -> buscado.isEmpty()
+                        || buscado.equals(String.valueOf(c.getNumero()))
                         || normalizar(c.nombreCompleto()).contains(buscado)
                         || (c.getTelefono() != null && c.getTelefono().replaceAll("\\D", "").contains(buscado.replaceAll("\\D", "")) && !buscado.replaceAll("\\D", "").isEmpty())
                         || (c.getCurp() != null && c.getCurp().toLowerCase(Locale.ROOT).contains(buscado)))
@@ -379,6 +380,7 @@ public class ClienteService {
             List<ClienteDto.ClienteVentaDto> ventas = ventasDe(c.getId());
             return new ClienteListaDto(
                     c.getId(),
+                    c.getNumero(),
                     c.nombreCompleto(),
                     c.getTelefono(),
                     c.getCorreo(),

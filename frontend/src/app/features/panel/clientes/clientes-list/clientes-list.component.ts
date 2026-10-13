@@ -33,7 +33,7 @@ export class ClientesListComponent {
     const estado = this.filtroEstado();
     const desarrollo = this.filtroDesarrollo();
     return this.clientes().filter((c) => {
-      if (texto && !`${c.nombreCompleto} ${c.telefono ?? ''} ${c.correo ?? ''}`.toLowerCase().includes(texto)) return false;
+      if (texto && !`${c.numero} ${c.nombreCompleto} ${c.telefono ?? ''} ${c.correo ?? ''}`.toLowerCase().includes(texto)) return false;
       if (estado === 'ACTIVOS' && !c.activo) return false;
       if (estado === 'INACTIVOS' && c.activo) return false;
       if (estado === 'INCOMPLETOS' && !c.datosIncompletos) return false;

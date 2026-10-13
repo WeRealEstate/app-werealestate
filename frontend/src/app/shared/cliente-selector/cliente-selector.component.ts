@@ -90,6 +90,7 @@ export class ClienteSelectorComponent implements OnDestroy {
   private aLista(c: Cliente): ClienteLista {
     return {
       id: c.id,
+      numero: c.numero,
       nombreCompleto: c.nombreCompleto,
       telefono: c.telefono,
       correo: c.correo,

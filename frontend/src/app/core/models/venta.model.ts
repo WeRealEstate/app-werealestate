@@ -49,7 +49,7 @@ export interface Venta {
   /** El cliente registrado al que está ligada (null solo en datos muy viejos). */
   clienteId: number | null;
   /** Copropietarios además del cliente principal (máximo 4). */
-  copropietarios: { id: number; nombreCompleto: string }[];
+  copropietarios: { id: number; numero: number; nombreCompleto: string }[];
   asesor: VentaAsesor;
   formaPago: string;
   fechaVenta: string;

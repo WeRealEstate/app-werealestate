@@ -6,6 +6,7 @@ import java.util.List;
 /** Una fila de la lista de clientes (y del buscador de la venta). */
 public record ClienteListaDto(
         Long id,
+        Long numero,
         String nombreCompleto,
         String telefono,
         String correo,

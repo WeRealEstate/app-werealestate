@@ -13,6 +13,7 @@ import java.util.List;
 /** Ficha completa de un cliente, con el resumen y el historial de sus compras. */
 public record ClienteDto(
         Long id,
+        Long numero,
         String nombre,
         String apellidoPaterno,
         String apellidoMaterno,
@@ -83,6 +84,7 @@ public record ClienteDto(
         BigDecimal abonado = ventas.stream().map(ClienteVentaDto::abonado).reduce(BigDecimal.ZERO, BigDecimal::add);
         return new ClienteDto(
                 c.getId(),
+                c.getNumero(),
                 c.getNombre(),
                 c.getApellidoPaterno(),
                 c.getApellidoMaterno(),

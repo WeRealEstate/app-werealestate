@@ -22,6 +22,8 @@ export const FUENTE_CLIENTE_LABELS: Record<FuenteCliente, string> = {
 /** Una fila de la lista de clientes y del buscador de la venta. */
 export interface ClienteLista {
   id: number;
+  /** Número de cliente (consecutivo). */
+  numero?: number;
   nombreCompleto: string;
   telefono: string | null;
   correo: string | null;
@@ -47,6 +49,7 @@ export interface ClienteVenta {
 
 export interface Cliente {
   id: number;
+  numero: number;
   nombre: string;
   apellidoPaterno: string;
   apellidoMaterno: string | null;

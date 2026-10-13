@@ -10,7 +10,7 @@
       <div>
         <h1 class="font-heading text-2xl font-semibold text-ink">{{ c.nombreCompleto }}</h1>
         <p class="mt-1 text-sm text-ink-muted">
-          Cliente desde {{ fecha(c.fechaCreacion) }}
+          Cliente n.º {{ c.numero }} · desde {{ fecha(c.fechaCreacion) }}
           @if (!c.activo) { · <strong>Inactivo</strong> }
           @if (c.datosIncompletos) { · <span class="text-amber-600 dark:text-amber-400">Datos incompletos: falta completar su ficha</span> }
         </p>

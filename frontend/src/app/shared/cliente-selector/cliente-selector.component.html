@@ -1,7 +1,7 @@
 @if (cliente(); as c) {
   <div class="flex items-center justify-between gap-2 rounded-lg border border-border bg-surface px-3.5 py-2.5" data-testid="cliente-elegido">
     <div class="min-w-0">
-      <p class="truncate text-sm font-medium text-ink">{{ c.nombreCompleto }}</p>
+      <p class="truncate text-sm font-medium text-ink">@if (c.numero) { <span class="text-ink-muted">#{{ c.numero }}</span> }{{ c.nombreCompleto }}</p>
       <p class="truncate text-xs text-ink-muted">
         {{ c.telefono || 'Sin teléfono' }}
         @if (c.compras > 0) { · {{ c.compras }} compra{{ c.compras === 1 ? '' : 's' }}@if (c.desarrollos.length > 0) { ({{ c.desarrollos.join(', ') }}) } }
@@ -16,7 +16,7 @@
   <div class="relative">
     <svg lucideSearch [size]="16" aria-hidden="true" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted"></svg>
     <input
-      id="cliente" type="text" autocomplete="off" placeholder="Buscar por nombre, teléfono o CURP…"
+      id="cliente" type="text" autocomplete="off" placeholder="Buscar por número, nombre, teléfono o CURP…"
       [ngModel]="texto()" (ngModelChange)="escribir($event)" (focus)="abrir()" (blur)="cerrarLista()"
       class="block w-full rounded-lg border border-border py-2.5 pl-9 pr-3.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
     />
@@ -27,7 +27,7 @@
         }
         @for (r of resultados(); track r.id) {
           <button type="button" (mousedown)="elegir(r)" [disabled]="!r.activo" class="block w-full px-3.5 py-2 text-left hover:bg-surface-2 disabled:opacity-50">
-            <span class="block text-sm font-medium text-ink">{{ r.nombreCompleto }}@if (!r.activo) { (inactivo) }</span>
+            <span class="block text-sm font-medium text-ink">@if (r.numero) { <span class="text-ink-muted">#{{ r.numero }}</span> }{{ r.nombreCompleto }}@if (!r.activo) { (inactivo) }</span>
             <span class="block text-xs text-ink-muted">
               {{ r.telefono || 'Sin teléfono' }}
               @if (r.compras > 0) { · {{ r.compras }} compra{{ r.compras === 1 ? '' : 's' }} ({{ r.desarrollos.join(', ') }}) }
