@@ -16,6 +16,9 @@ export interface EntradaVersion {
 
 export const CHANGELOG: EntradaVersion[] = [
   { version: '8.0.0', fecha: '2026-10-13', cambios: [
+    "Logos de carga por desarrollo personalizado", 
+  ] },
+  { version: '8.0.0', fecha: '2026-10-13', cambios: [
     "We Forms, estadisticas: nueva pestaña con total de respuestas, clientes nuevos y existentes, respuestas por dia y por asesor, y un resumen de cada pregunta (pastel o barras para opciones, lista para texto, minimo/promedio/maximo para numeros). La lista de formularios muestra el total por desarrollo.", 
   ] },
   { version: '7.3.20', fecha: '2026-10-13', cambios: [
