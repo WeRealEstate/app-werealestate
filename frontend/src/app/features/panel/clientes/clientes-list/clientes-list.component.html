@@ -67,7 +67,21 @@
       <table class="w-full text-left text-sm">
         <thead class="border-b border-border bg-surface-2 text-xs uppercase tracking-wide text-ink-muted">
           <tr>
-            <th class="px-4 py-3 font-semibold">N.º</th>
+            <th class="px-4 py-3 font-semibold" [attr.aria-sort]="orden() === 'asc' ? 'ascending' : 'descending'">
+              <button
+                type="button"
+                (click)="alternarOrden()"
+                [attr.title]="orden() === 'desc' ? 'Del número mayor al menor: clic para ordenar del menor al mayor' : 'Del número menor al mayor: clic para ordenar del mayor al menor'"
+                class="inline-flex items-center gap-1 uppercase tracking-wide hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50 rounded"
+              >
+                N.º
+                @if (orden() === 'desc') {
+                  <svg lucideArrowDown [size]="13" aria-hidden="true"></svg>
+                } @else {
+                  <svg lucideArrowUp [size]="13" aria-hidden="true"></svg>
+                }
+              </button>
+            </th>
             <th class="px-4 py-3 font-semibold">Cliente</th>
             <th class="px-4 py-3 font-semibold">Teléfono</th>
             <th class="px-4 py-3 font-semibold">Compras</th>

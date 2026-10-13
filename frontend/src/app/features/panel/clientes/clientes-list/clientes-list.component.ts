@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { LucideArrowDown, LucideArrowUp } from '@lucide/angular';
 import { ClienteLista } from '../../../../core/models/cliente.model';
 import { Cliente } from '../../../../core/models/cliente.model';
 import { ClientesService } from '../../../../core/services/clientes.service';
@@ -11,7 +12,7 @@ type FiltroEstado = 'TODOS' | 'ACTIVOS' | 'INACTIVOS' | 'INCOMPLETOS' | 'CON_SAL
 
 @Component({
   selector: 'app-clientes-list',
-  imports: [WeLoaderComponent, FormsModule, RouterLink, ClienteFormModalComponent],
+  imports: [WeLoaderComponent, FormsModule, RouterLink, ClienteFormModalComponent, LucideArrowDown, LucideArrowUp],
   templateUrl: './clientes-list.component.html',
 })
 export class ClientesListComponent {
@@ -25,6 +26,8 @@ export class ClientesListComponent {
   readonly filtroEstado = signal<FiltroEstado>('ACTIVOS');
   readonly filtroDesarrollo = signal('');
   readonly registrando = signal(false);
+  /** Orden por número de cliente: desc = el más reciente arriba. */
+  readonly orden = signal<'asc' | 'desc'>('desc');
 
   readonly desarrollos = computed(() => [...new Set(this.clientes().flatMap((c) => c.desarrollos))].sort());
 
@@ -32,6 +35,7 @@ export class ClientesListComponent {
     const texto = this.busqueda().trim().toLowerCase();
     const estado = this.filtroEstado();
     const desarrollo = this.filtroDesarrollo();
+    const signo = this.orden() === 'asc' ? 1 : -1;
     return this.clientes().filter((c) => {
       if (texto && !`${c.numero} ${c.nombreCompleto} ${c.telefono ?? ''} ${c.correo ?? ''}`.toLowerCase().includes(texto)) return false;
       if (estado === 'ACTIVOS' && !c.activo) return false;
@@ -40,8 +44,12 @@ export class ClientesListComponent {
       if (estado === 'CON_SALDO' && c.saldoPendiente <= 0) return false;
       if (desarrollo && !c.desarrollos.includes(desarrollo)) return false;
       return true;
-    });
+    }).sort((a, b) => signo * ((a.numero ?? 0) - (b.numero ?? 0)));
   });
+
+  alternarOrden(): void {
+    this.orden.update((o) => (o === 'desc' ? 'asc' : 'desc'));
+  }
 
   constructor() {
     void this.cargar();
