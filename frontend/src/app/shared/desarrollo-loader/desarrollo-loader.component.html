@@ -1,0 +1,37 @@
+@if (desarrollo() === 'nanuu') {
+  <div
+    class="dl dl-nanuu"
+    [class.dl--cubrir]="modo() === 'cubrir'"
+    [class.dl--pantalla]="modo() === 'pantalla'"
+    [class.dl--bloque]="modo() === 'bloque'"
+    [attr.data-tema]="tema()"
+    [style.--dl-retraso]="retraso()"
+    role="status"
+    aria-live="polite"
+  >
+    <div class="dl-n-logo" aria-hidden="true">
+      <div class="dl-n-aldea"></div>
+      <div class="dl-n-word"></div>
+      <div class="dl-n-leaf"></div>
+      <div class="dl-n-eco"></div>
+    </div>
+    <span class="sr-only">{{ texto() }}</span>
+  </div>
+} @else {
+  <div
+    class="dl dl-samai"
+    [class.dl--cubrir]="modo() === 'cubrir'"
+    [class.dl--pantalla]="modo() === 'pantalla'"
+    [class.dl--bloque]="modo() === 'bloque'"
+    [attr.data-tema]="tema()"
+    [style.--dl-retraso]="retraso()"
+    role="status"
+    aria-live="polite"
+  >
+    <div class="dl-s-emblem" aria-hidden="true"></div>
+    <div class="dl-s-word" aria-hidden="true"></div>
+    <div class="dl-s-sub" aria-hidden="true">CAMPESTRE</div>
+    <div class="dl-s-line" aria-hidden="true"></div>
+    <span class="sr-only">{{ texto() }}</span>
+  </div>
+}

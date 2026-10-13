@@ -13,7 +13,7 @@
       } @else {
         <div class="mt-5 space-y-3">
           @for (f of lista; track f.slug) {
-            <a [routerLink]="['/we-forms', f.slug]" data-testid="formulario-publico"
+            <a [routerLink]="['/we-forms', f.slug]" [queryParams]="{ proyecto: proyecto }" data-testid="formulario-publico"
               class="block rounded-xl border border-border bg-surface p-4 shadow-sm hover:border-we-primary active:scale-[0.99] transition-all duration-150">
               <p class="font-heading text-base font-semibold text-ink">{{ f.nombre }}</p>
               @if (f.descripcion) { <p class="mt-0.5 text-sm text-ink-muted">{{ f.descripcion }}</p> }

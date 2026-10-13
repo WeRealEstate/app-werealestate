@@ -7,7 +7,11 @@
       <app-pin-publico [error]="errorPin()" [cargando]="verificando()" texto="Escribe tu PIN de asesor para llenar el precontrato." (entrar)="cargar($event)" />
     }
     @case ('cargando') {
-      <p class="mt-10 text-sm text-ink-muted">Cargando…</p>
+      @if (proyecto(); as p) {
+        <app-desarrollo-loader [desarrollo]="p" modo="bloque" texto="Cargando el precontrato" />
+      } @else {
+        <p class="mt-10 text-sm text-ink-muted">Cargando…</p>
+      }
     }
     @case ('cerrado') {
       <div class="mt-6 w-full max-w-md rounded-xl border border-border bg-surface p-6 text-center shadow-sm" data-testid="form-cerrado">

@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&family=Jost:wght@300&display=swap" rel="stylesheet">
   <!-- Cloudflare Turnstile (captcha del login, ver login.component.ts) -->
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
@@ -42,7 +42,24 @@
       @keyframes ws{0%{transform:rotate(0)}65%,100%{transform:rotate(360deg)}}
       @keyframes wd{0%,40%,100%{transform:translateY(0);opacity:.35}20%{transform:translateY(-6px);opacity:1}}
     </style>
-    <script>if(/^\/(samai|aldea-nanuu)(\/|$)/.test(location.pathname)){document.documentElement.style.background="#000";document.write('<style>#we-splash{display:none!important}body{background:#000}</style>')}</script>
+    <script>
+    // Primer pantallazo de cada desarrollo (en vez del de We): el plano público de SAMAI / Nanuu y los
+    // precontratos que traen ?proyecto=. El CSS (.dl-*) está en styles.css; app-desarrollo-loader retoma
+    // la animación en la misma fase cuando arranca la app.
+    (function(){
+      var p=location.pathname,d=null,tema=null;
+      if(/^\/samai(\/|$)/.test(p)){d='samai';tema='oscuro'}
+      else if(/^\/aldea-nanuu(\/|$)/.test(p)){d='nanuu';tema='oscuro'}
+      else if(/^\/we-forms(\/|$)/.test(p)){var q=new URLSearchParams(location.search).get('proyecto');if(q==='samai'||q==='nanuu')d=q}
+      if(!d)return;
+      if(tema)document.documentElement.style.background='#000';
+      document.write('<style>#we-splash{display:none!important}'+(tema?'body{background:#000}':'')+'</style>');
+      var m=d==='samai'
+        ?'<div class="dl-s-emblem"></div><div class="dl-s-word"></div><div class="dl-s-sub">CAMPESTRE</div><div class="dl-s-line"></div>'
+        :'<div class="dl-n-logo"><div class="dl-n-aldea"></div><div class="dl-n-word"></div><div class="dl-n-leaf"></div><div class="dl-n-eco"></div></div>';
+      document.write('<div id="dev-splash" class="dl dl-'+d+' dl--pantalla"'+(tema?' data-tema="'+tema+'"':'')+' role="status" aria-label="Cargando">'+m+'</div>');
+    })();
+    </script>
     <div id="we-splash" class="we-splash" role="status" aria-label="Cargando">
       <div class="l">
         <div class="lt"><img class="b" src="/images/we-logo-color.png" alt=""><img class="e" src="/images/we-logo-color.png" alt=""></div>

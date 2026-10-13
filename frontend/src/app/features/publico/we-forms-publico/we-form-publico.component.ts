@@ -16,6 +16,7 @@ import { curpFormatoValido, datosDeCurp } from '../../../core/utils/identidad';
 import { AportacionesSelectorComponent } from '../../../shared/aportaciones-selector/aportaciones-selector.component';
 import { CorreoInputDirective } from '../../../shared/correo-input/correo-input.directive';
 import { MonedaInputDirective } from '../../../shared/moneda-input/moneda-input.directive';
+import { DesarrolloLoaderComponent, DesarrolloLoader } from '../../../shared/desarrollo-loader/desarrollo-loader.component';
 import { PinPublicoComponent } from '../../../shared/pin-publico/pin-publico.component';
 
 const TIPOS_CON_ENGANCHE: TipoPagoForm[] = ['downpayment', 'initial', 'annualities'];
@@ -32,7 +33,7 @@ type Etapa = 'pin' | 'cargando' | 'listo' | 'cerrado' | 'error' | 'enviado';
 @Component({
   selector: 'app-we-form-publico',
   standalone: true,
-  imports: [FormsModule, DecimalPipe, MonedaInputDirective, CorreoInputDirective, AportacionesSelectorComponent, PinPublicoComponent],
+  imports: [FormsModule, DecimalPipe, MonedaInputDirective, CorreoInputDirective, AportacionesSelectorComponent, PinPublicoComponent, DesarrolloLoaderComponent],
   templateUrl: './we-form-publico.component.html',
 })
 export class WeFormPublicoComponent {
@@ -44,6 +45,15 @@ export class WeFormPublicoComponent {
   readonly hoy = new Date().toISOString().slice(0, 10);
   /** El primer mes del plan es el mes en que se envía (la venta lleva la fecha de hoy). */
   readonly inicioPlan = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
+  /** Desarrollo del formulario, para su pantalla de carga: ?proyecto= del enlace (lo trae el listado y el
+   * plano) o, ya cargado el formulario, el nombre de su desarrollo; null = la carga genérica. */
+  readonly proyecto = computed<DesarrolloLoader | null>(() => {
+    const q = this.route.snapshot.queryParamMap.get('proyecto');
+    if (q === 'samai' || q === 'nanuu') return q;
+    const nombre = this.form()?.desarrolloNombre?.toLowerCase() ?? '';
+    return nombre.includes('nanuu') ? 'nanuu' : nombre.includes('samai') ? 'samai' : null;
+  });
 
   readonly etapa = signal<Etapa>('pin');
   readonly form = signal<WeFormPublico | null>(null);

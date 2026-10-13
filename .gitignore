@@ -9,6 +9,8 @@ skills-lock.json
 
 # Archivos subidos por usuarios (datos, no código)
 /backend/uploads/
+# Archivos privados (documentos de clientes de We Forms, tickets de gastos): nunca van al repositorio
+/backend/uploads-privados/
 
 # OS / editor
 .DS_Store

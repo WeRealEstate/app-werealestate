@@ -18,6 +18,7 @@ import { colorDeBarra, fondoDePagina } from '../../../core/utils/pagina';
 import { DetectorDeRueda } from '../../../core/utils/rueda';
 import { leerImagenParaPdf } from '../../../core/utils/imagen-pdf';
 import { ToastService } from '../../../core/services/toast.service';
+import { DesarrolloLoaderComponent } from '../../../shared/desarrollo-loader/desarrollo-loader.component';
 import { ToastContainerComponent } from '../../../shared/toast-container/toast-container.component';
 
 type ProyectoPublico = 'samai' | 'nanuu';
@@ -54,6 +55,9 @@ const DURACION_ANIMACION_MS = 220;
 const CLAVE_AVISO_ROTAR = 'plano-publico-aviso-rotar';
 const DURACION_AVISO_ROTAR_MS = 9000;
 
+/** Cuánto se ve, como mínimo, la animación de carga del desarrollo (llega al logo completo a ~2.8 s). */
+const MIN_CARGA_MS = 3500;
+
 function leerAsesorGuardado(proyecto: string): string | null {
   try {
     return sessionStorage.getItem(CLAVE_ASESOR + proyecto);
@@ -79,7 +83,7 @@ function guardarAsesor(proyecto: string, nombre: string | null): void {
 @Component({
   selector: 'app-plano-publico',
   standalone: true,
-  imports: [FormsModule, DecimalPipe, RouterLink, ToastContainerComponent],
+  imports: [FormsModule, DecimalPipe, RouterLink, ToastContainerComponent, DesarrolloLoaderComponent],
   templateUrl: './plano-publico.component.html',
 })
 export class PlanoPublicoComponent {
@@ -105,6 +109,8 @@ export class PlanoPublicoComponent {
   readonly isLoading = signal(true);
   /** Carga del plano (ver CSS .plano-*): la imagen ya llegó; la pantalla de carga sale y el plano se revela. */
   readonly imagenLista = signal(false);
+  private readonly inicioCarga = performance.now();
+  private cargaProgramada = false;
   readonly cargaTerminada = signal(false);
   readonly revelado = signal(false);
   readonly mostrarCarga = computed(
@@ -505,11 +511,18 @@ export class PlanoPublicoComponent {
     this.terminarCarga(false);
   }
 
+  /** La animación del desarrollo se ve armada al menos MIN_CARGA_MS desde que empezó la carga (si la
+   * página arrancó con el primer pantallazo del desarrollo, cuenta desde ahí), aunque el plano llegue antes. */
   private terminarCarga(conAnimacion: boolean): void {
-    if (this.imagenLista()) return;
-    this.imagenLista.set(true);
-    setTimeout(() => this.cargaTerminada.set(true), 600);
-    setTimeout(() => this.revelado.set(true), conAnimacion ? 2600 : 0);
+    if (this.cargaProgramada) return;
+    this.cargaProgramada = true;
+    const desde = document.getElementById('dev-splash') ? 0 : this.inicioCarga;
+    const espera = Math.max(0, MIN_CARGA_MS - (performance.now() - desde));
+    setTimeout(() => {
+      this.imagenLista.set(true);
+      setTimeout(() => this.cargaTerminada.set(true), 600);
+      setTimeout(() => this.revelado.set(true), conAnimacion ? 2600 : 0);
+    }, espera);
   }
 
   @HostListener('window:resize')

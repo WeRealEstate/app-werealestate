@@ -539,13 +539,12 @@ select.rounded-full:not([multiple]):not([size]) {
   .we-dot { animation-duration: 3.6s; }
 }
 
-/* ---- Carga del plano público: barra, "e" girando, y revelado del plano desde la parte baja ---- */
+/* ---- Carga del plano público: revelado del plano desde la parte baja ---- */
 @property --r {
   syntax: '<length-percentage>';
   inherits: false;
   initial-value: 0%;
 }
-@keyframes plano-barra { 0% { transform: scaleX(0); } 100% { transform: scaleX(0.92); } }
 @keyframes plano-revelar {
   0% { --r: 0%; filter: grayscale(1) brightness(0.7); }
   62% { --r: 140%; filter: grayscale(1) brightness(0.7); }
@@ -556,8 +555,6 @@ select.rounded-full:not([multiple]):not([size]) {
   100% { opacity: 1; transform: translateY(0); }
 }
 @keyframes plano-fade-in { 0% { opacity: 0; } 100% { opacity: 1; } }
-.plano-barra { transform: scaleX(0); animation: plano-barra 12s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
-.plano-barra-fin { transform: scaleX(1); transition: transform 0.35s ease-out; }
 .we-e-grande {
   position: relative; flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%; overflow: hidden;
   animation: we-spinE 1.8s cubic-bezier(0.7, 0, 0.3, 1) infinite;
@@ -574,6 +571,55 @@ select.rounded-full:not([multiple]):not([size]) {
 @media (prefers-reduced-motion: reduce) {
   .plano-revelar { animation: none; -webkit-mask-image: none; mask-image: none; }
   .plano-ui-in, .plano-fade-in { animation-duration: 0.01s; animation-delay: 0s; }
-  .plano-barra { animation: none; }
 }
 .we-dot-claro { background: #85b4f0 !important; }
+
+/* ---- Pantallas de carga por desarrollo: SAMAI Campestre y Aldea Nanuu ----
+   Animaciones solo CSS con el logo como máscara (el color sale del tema). Se usan en el componente
+   app-desarrollo-loader y en el primer pantallazo de index.html (#dev-splash), por eso viven aquí.
+   Sin data-tema siguen el tema de la app (html.dark); data-tema="oscuro|claro" lo fuerza. */
+.dl { --dl-retraso: 0s; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--dl-bg); color: var(--dl-fg); transition: opacity 0.6s ease; }
+.dl--cubrir { position: absolute; inset: 0; }
+.dl--pantalla { position: fixed; inset: 0; z-index: 9999; }
+.dl--bloque { min-height: 60dvh; padding: 40px 0; background: transparent; }
+.dl-salir { opacity: 0; pointer-events: none; }
+
+.dl-samai { --dl-bg: #f2efe7; --dl-fg: #121a0e; }
+html.dark .dl-samai:not([data-tema]), .dl-samai[data-tema='oscuro'] { --dl-bg: #121a0e; --dl-fg: #f2efe7; }
+.dl-samai[data-tema='claro'] { --dl-bg: #f2efe7; --dl-fg: #121a0e; }
+.dl-nanuu { --dl-bg: #f6f1ea; --dl-fg: #99714a; }
+html.dark .dl-nanuu:not([data-tema]), .dl-nanuu[data-tema='oscuro'] { --dl-bg: #12100d; --dl-fg: #f6f1ea; }
+.dl-nanuu[data-tema='claro'] { --dl-bg: #f6f1ea; --dl-fg: #99714a; }
+
+/* SAMAI Campestre: emblema, palabra que se dibuja de izquierda a derecha, subtítulo y línea */
+.dl-s-emblem, .dl-s-word { background: var(--dl-fg); -webkit-mask: center / contain no-repeat; mask: center / contain no-repeat; }
+.dl-s-emblem { width: 60px; height: 62px; -webkit-mask-image: url(/images/loaders/samai-emblema.png); mask-image: url(/images/loaders/samai-emblema.png); animation: dl-sFadeA 4.4s ease-out infinite; animation-delay: var(--dl-retraso); }
+.dl-s-word { margin-top: 26px; width: 280px; height: 61px; -webkit-mask-image: url(/images/loaders/samai-palabra.png); mask-image: url(/images/loaders/samai-palabra.png); animation: dl-sWipe 4.4s cubic-bezier(0.65, 0, 0.35, 1) infinite; animation-delay: var(--dl-retraso); }
+.dl-s-sub { margin-top: 20px; font-family: 'Jost', sans-serif; font-size: 14px; font-weight: 300; letter-spacing: 0.6em; margin-right: -0.6em; animation: dl-sFadeC 4.4s ease-out infinite; animation-delay: var(--dl-retraso); }
+.dl-s-line { margin-top: 34px; width: 56px; height: 1px; background: var(--dl-fg); animation: dl-sLine 4.4s ease-in-out infinite; animation-delay: var(--dl-retraso); }
+@media (max-width: 640px) {
+  .dl-s-emblem { width: 44px; height: 45px; }
+  .dl-s-word { margin-top: 18px; width: 164px; height: 36px; }
+  .dl-s-sub { margin-top: 14px; font-size: 10px; letter-spacing: 0.55em; margin-right: -0.55em; }
+  .dl-s-line { margin-top: 26px; width: 40px; }
+}
+@keyframes dl-sFadeA { 0% { opacity: 0; transform: translateY(6px); } 18%, 88% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+@keyframes dl-sWipe { 0%, 14% { clip-path: inset(0 100% 0 0); } 46%, 88% { clip-path: inset(0 0 0 0); opacity: 1; } 100% { clip-path: inset(0 0 0 0); opacity: 0; } }
+@keyframes dl-sFadeC { 0%, 42% { opacity: 0; } 64%, 88% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes dl-sLine { 0%, 50% { transform: scaleX(0); } 88% { transform: scaleX(1); opacity: 1; } 100% { transform: scaleX(1); opacity: 0; } }
+
+/* Aldea Nanuu: el logo se arma por partes (Aldea, palabra, hoja que brota y eco) */
+.dl-n-logo { position: relative; width: 360px; aspect-ratio: 776 / 241; }
+.dl-n-logo > div { position: absolute; background: var(--dl-fg); -webkit-mask: center / 100% 100% no-repeat; mask: center / 100% 100% no-repeat; animation-delay: var(--dl-retraso); }
+.dl-n-logo > .dl-n-aldea { left: 34.92%; top: 0; width: 29.51%; height: 14.52%; -webkit-mask-image: url(/images/loaders/nanuu-aldea.png); mask-image: url(/images/loaders/nanuu-aldea.png); animation: dl-nFade 4.4s ease-out infinite; animation-delay: var(--dl-retraso); }
+.dl-n-logo > .dl-n-word { left: 0; top: 8.3%; width: 90.34%; height: 70.12%; -webkit-mask-image: url(/images/loaders/nanuu-palabra.png); mask-image: url(/images/loaders/nanuu-palabra.png); animation: dl-nWipe 4.4s cubic-bezier(0.65, 0, 0.35, 1) infinite; animation-delay: var(--dl-retraso); }
+.dl-n-logo > .dl-n-leaf { left: 87.37%; top: 13.28%; width: 12.63%; height: 58.92%; transform-origin: 5% 95%; -webkit-mask-image: url(/images/loaders/nanuu-hoja.png); mask-image: url(/images/loaders/nanuu-hoja.png); animation: dl-nPop 4.4s ease-out infinite; animation-delay: var(--dl-retraso); }
+.dl-n-logo > .dl-n-eco { left: 29.38%; top: 85.89%; width: 40.59%; height: 14.11%; -webkit-mask-image: url(/images/loaders/nanuu-eco.png); mask-image: url(/images/loaders/nanuu-eco.png); animation: dl-nLate 4.4s ease-out infinite; animation-delay: var(--dl-retraso); }
+@media (max-width: 640px) { .dl-n-logo { width: 184px; } }
+@keyframes dl-nFade { 0%, 8% { opacity: 0; transform: translateY(4px); } 22%, 88% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+@keyframes dl-nWipe { 0%, 12% { clip-path: inset(0 100% 0 0); opacity: 1; } 48%, 88% { clip-path: inset(0 0 0 0); opacity: 1; } 100% { clip-path: inset(0 0 0 0); opacity: 0; } }
+@keyframes dl-nPop { 0%, 44% { opacity: 0; transform: scale(0.4) rotate(-28deg); } 60% { opacity: 1; transform: scale(1.06) rotate(5deg); } 68%, 88% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+@keyframes dl-nLate { 0%, 58% { opacity: 0; } 72%, 88% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .dl-s-emblem, .dl-s-word, .dl-s-sub, .dl-s-line, .dl-n-logo > div { animation: none; }
+}
