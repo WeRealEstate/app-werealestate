@@ -4,7 +4,9 @@ import com.werealestate.backend.dto.PaginaDto;
 import com.werealestate.backend.dto.WeFormDtos;
 import com.werealestate.backend.service.WeFormService;
 import jakarta.validation.Valid;
+import java.time.LocalDate;
 import java.util.List;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -79,8 +81,34 @@ public class WeFormController {
     public PaginaDto<WeFormDtos.Respuesta> respuestas(
             @PathVariable Long id,
             @RequestParam(defaultValue = "0") int pagina,
-            @RequestParam(defaultValue = "20") int tamano) {
-        return service.listarRespuestas(id, pagina, tamano);
+            @RequestParam(defaultValue = "20") int tamano,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
+            @RequestParam(required = false) String asesor) {
+        return service.listarRespuestas(id, pagina, tamano, desde, hasta, asesor);
+    }
+
+    @GetMapping("/{id}/respuestas/exportar")
+    public List<WeFormDtos.Respuesta> exportar(
+            @PathVariable Long id,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
+            @RequestParam(required = false) String asesor) {
+        return service.exportarRespuestas(id, desde, hasta, asesor);
+    }
+
+    @GetMapping("/{id}/estadisticas")
+    public WeFormDtos.Estadisticas estadisticas(
+            @PathVariable Long id,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
+            @RequestParam(required = false) String asesor) {
+        return service.estadisticas(id, desde, hasta, asesor);
+    }
+
+    @GetMapping("/resumen")
+    public WeFormDtos.ResumenGeneral resumen() {
+        return service.resumenGeneral();
     }
 
     @GetMapping("/respuestas/{respuestaId}/archivos/{itemId}")

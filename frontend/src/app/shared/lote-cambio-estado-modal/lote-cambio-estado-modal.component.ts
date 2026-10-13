@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   ESTADO_LOTE_BADGE_CLASSES,
@@ -7,7 +7,11 @@ import {
   EstadoLote,
   Lote,
 } from '../../core/models/lote.model';
+import { AsesorExterno } from '../../core/models/asesor-externo.model';
+import { UsuarioResumen } from '../../core/models/lead.model';
+import { AsesoresExternosService } from '../../core/services/asesores-externos.service';
 import { LotesService } from '../../core/services/lotes.service';
+import { UsuariosService } from '../../core/services/usuarios.service';
 import { ToastService } from '../../core/services/toast.service';
 import {
   HORAS_OPCIONES,
@@ -29,6 +33,10 @@ const ESTADOS_REQUIEREN_CLIENTE: EstadoLote[] = [
   'VENDIDO',
 ];
 
+/** Estados de apartado: al ponerlos desde el panel hay que decir a qué asesor pertenecen, para que
+ * ese asesor pueda usar el lote en su precontrato de We Forms. */
+const ESTADOS_APARTADO: EstadoLote[] = ['APARTADO', 'APARTADO_A_PLAZO', 'APARTADO_CON_DINERO'];
+
 /** Modal que un admin o líder de área confirma al mover un lote a otro estado (un asesor nunca pasa
  * por aquí, su cambio se aplica directo). Pide siempre una nota, y según el estado destino: fecha y
  * hora de vencimiento (Apartado a plazo), monto (Apartado con dinero) y nombre del cliente. Lo usan
@@ -40,8 +48,10 @@ const ESTADOS_REQUIEREN_CLIENTE: EstadoLote[] = [
   imports: [MonedaInputDirective, FormsModule],
   templateUrl: './lote-cambio-estado-modal.component.html',
 })
-export class LoteCambioEstadoModalComponent {
+export class LoteCambioEstadoModalComponent implements OnInit {
   private readonly lotesService = inject(LotesService);
+  private readonly usuariosService = inject(UsuariosService);
+  private readonly asesoresExternosService = inject(AsesoresExternosService);
   private readonly toast = inject(ToastService);
 
   readonly lote = input.required<Lote>();
@@ -61,16 +71,37 @@ export class LoteCambioEstadoModalComponent {
   readonly horaPlazo = signal(HORA_POR_DEFECTO);
   readonly minutoPlazo = signal(MINUTO_POR_DEFECTO);
   readonly guardandoCambioEstado = signal(false);
+  /** "U-5" (interno) / "E-3" (externo), igual que el formulario de ventas. */
+  readonly asesorCambioEstado = signal('');
+  readonly asesoresInternos = signal<UsuarioResumen[]>([]);
+  readonly asesoresExternos = signal<AsesorExterno[]>([]);
+
+  ngOnInit(): void {
+    if (this.requiereAsesorCambioEstado()) {
+      this.usuariosService.paraVenta().then((u) => this.asesoresInternos.set(u));
+      this.asesoresExternosService.listarActivos().then((a) => this.asesoresExternos.set(a));
+    }
+  }
 
   readonly requiereClienteCambioEstado = computed(() => ESTADOS_REQUIEREN_CLIENTE.includes(this.nuevoEstado()));
+  readonly requiereAsesorCambioEstado = computed(() => ESTADOS_APARTADO.includes(this.nuevoEstado()));
   readonly requiereMontoCambioEstado = computed(() => this.nuevoEstado() === 'APARTADO_CON_DINERO');
 
   readonly cambioEstadoInvalido = computed(() => {
     if (!this.notaCambioEstado().trim()) return true;
     if (this.nuevoEstado() === 'APARTADO_A_PLAZO' && !this.fechaPlazo()) return true;
+    if (this.requiereAsesorCambioEstado() && !this.asesorCambioEstado()) return true;
     if (this.requiereClienteCambioEstado() && !this.nombreClienteCambioEstado().trim()) return true;
     return this.requiereMontoCambioEstado() && !this.montoApartadoCambioEstado();
   });
+
+  private asesorElegido(): { usuarioAsesorId: number | null; asesorExternoId: number | null } {
+    const v = this.asesorCambioEstado();
+    return {
+      usuarioAsesorId: v.startsWith('U-') ? Number(v.slice(2)) : null,
+      asesorExternoId: v.startsWith('E-') ? Number(v.slice(2)) : null,
+    };
+  }
 
   async confirmarCambioEstado(): Promise<void> {
     if (this.cambioEstadoInvalido() || this.guardandoCambioEstado()) return;
@@ -88,6 +119,7 @@ export class LoteCambioEstadoModalComponent {
         this.notaCambioEstado().trim(),
         this.requiereClienteCambioEstado() ? this.nombreClienteCambioEstado().trim() : null,
         this.requiereMontoCambioEstado() ? this.montoApartadoCambioEstado() : null,
+        this.requiereAsesorCambioEstado() ? this.asesorElegido() : null,
       );
       this.toast.success('Estado del lote actualizado.');
       this.confirmado.emit(actualizado);

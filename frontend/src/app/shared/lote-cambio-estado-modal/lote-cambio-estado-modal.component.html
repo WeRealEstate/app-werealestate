@@ -67,6 +67,34 @@
         <p class="mt-1.5 text-xs text-ink-muted">Si este lote termina en una venta, se preguntará si baja la mensualidad o el saldo.</p>
       }
 
+      @if (requiereAsesorCambioEstado()) {
+        <label for="asesor-cambio-estado" class="mb-1.5 mt-4 block text-sm font-medium text-ink">Asesor del apartado *</label>
+        <select
+          id="asesor-cambio-estado"
+          [value]="asesorCambioEstado()"
+          (change)="asesorCambioEstado.set($any($event.target).value)"
+          class="block w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink
+                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+        >
+          <option value="" disabled [selected]="!asesorCambioEstado()">Selecciona un asesor…</option>
+          @if (asesoresInternos().length > 0) {
+            <optgroup label="Internos">
+              @for (u of asesoresInternos(); track u.id) {
+                <option [value]="'U-' + u.id">{{ u.nombre }}</option>
+              }
+            </optgroup>
+          }
+          @if (asesoresExternos().length > 0) {
+            <optgroup label="Externos">
+              @for (a of asesoresExternos(); track a.id) {
+                <option [value]="'E-' + a.id">{{ a.nombre }}</option>
+              }
+            </optgroup>
+          }
+        </select>
+        <p class="mt-1.5 text-xs text-ink-muted">Solo este asesor podrá usar el lote en su precontrato de We Forms.</p>
+      }
+
       @if (requiereClienteCambioEstado()) {
         <label for="cliente-cambio-estado" class="mb-1.5 mt-4 block text-sm font-medium text-ink">Nombre del cliente *</label>
         <input

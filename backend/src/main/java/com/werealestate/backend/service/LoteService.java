@@ -26,6 +26,7 @@ import com.werealestate.backend.model.Lote;
 import com.werealestate.backend.model.MovimientoLote;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Usuario;
+import com.werealestate.backend.repository.AsesorExternoRepository;
 import com.werealestate.backend.repository.DesarrolloRepository;
 import com.werealestate.backend.repository.LoteRepository;
 import com.werealestate.backend.repository.MovimientoLoteRepository;
@@ -62,6 +63,9 @@ public class LoteService {
             EstadoLote.EN_PROCESO_DE_FIRMA,
             EstadoLote.VENDIDO);
 
+    private static final Set<EstadoLote> ESTADOS_APARTADO =
+            Set.of(EstadoLote.APARTADO, EstadoLote.APARTADO_A_PLAZO, EstadoLote.APARTADO_CON_DINERO);
+
     /** Compara manzana/número de lote como números cuando se puede (así "2" queda antes que "10"
      * en vez del orden alfabético de VARCHAR, donde "10" queda antes que "2"); si alguno no es
      * numérico, cae a orden alfabético normal. */
@@ -89,6 +93,7 @@ public class LoteService {
     private final LoteRepository loteRepository;
     private final DesarrolloRepository desarrolloRepository;
     private final UsuarioRepository usuarioRepository;
+    private final AsesorExternoRepository asesorExternoRepository;
     private final MovimientoLoteRepository movimientoLoteRepository;
     private final VentaLoteRepository ventaLoteRepository;
     private final CurrentUserProvider currentUserProvider;
@@ -98,6 +103,7 @@ public class LoteService {
             LoteRepository loteRepository,
             DesarrolloRepository desarrolloRepository,
             UsuarioRepository usuarioRepository,
+            AsesorExternoRepository asesorExternoRepository,
             MovimientoLoteRepository movimientoLoteRepository,
             VentaLoteRepository ventaLoteRepository,
             CurrentUserProvider currentUserProvider,
@@ -105,6 +111,7 @@ public class LoteService {
         this.loteRepository = loteRepository;
         this.desarrolloRepository = desarrolloRepository;
         this.usuarioRepository = usuarioRepository;
+        this.asesorExternoRepository = asesorExternoRepository;
         this.movimientoLoteRepository = movimientoLoteRepository;
         this.ventaLoteRepository = ventaLoteRepository;
         this.currentUserProvider = currentUserProvider;
@@ -405,11 +412,37 @@ public class LoteService {
                 : request.nombreCliente().trim();
         BigDecimal montoApartado =
                 request.estado() == EstadoLote.APARTADO_CON_DINERO ? request.montoApartado() : null;
-        cambiarEstadoConHistorial(lote, request.estado(), actual, null, nombreCliente, montoApartado, nota);
+        // Un apartado que pone administración debe quedar a nombre del asesor al que pertenece: así
+        // ese asesor lo ve (y solo él) al armar un precontrato en We Forms.
+        String nombreAsesor = null;
+        if (ESTADOS_APARTADO.contains(request.estado())
+                && (actual.getRol() == Role.ADMIN || actual.getRol() == Role.LIDER_AREA)) {
+            nombreAsesor = resolverAsesor(request.usuarioAsesorId(), request.asesorExternoId());
+        }
+        cambiarEstadoConHistorial(lote, request.estado(), actual, nombreAsesor, nombreCliente, montoApartado, nota);
         lote.setFechaExpiraApartado(
                 request.estado() == EstadoLote.APARTADO_A_PLAZO ? request.fechaExpiraApartado() : null);
         lote.setMontoApartado(montoApartado);
         return LoteDto.from(lote);
+    }
+
+    /** Nombre del asesor (interno o externo) elegido al apartar un lote desde el panel; exactamente uno. */
+    private String resolverAsesor(Long usuarioAsesorId, Long asesorExternoId) {
+        if ((usuarioAsesorId == null) == (asesorExternoId == null)) {
+            throw new ValidationException("Elige a qué asesor pertenece este apartado");
+        }
+        if (usuarioAsesorId != null) {
+            return usuarioRepository
+                    .findById(usuarioAsesorId)
+                    .filter(Usuario::isActivo)
+                    .map(Usuario::getNombre)
+                    .orElseThrow(() -> new ValidationException("El asesor elegido no existe o está inactivo"));
+        }
+        return asesorExternoRepository
+                .findById(asesorExternoId)
+                .filter(com.werealestate.backend.model.AsesorExterno::isActivo)
+                .map(com.werealestate.backend.model.AsesorExterno::getNombre)
+                .orElseThrow(() -> new ValidationException("El asesor elegido no existe o está inactivo"));
     }
 
     private void validarUnico(Long desarrolloId, String manzana, String numeroLote, Long idAExcluir) {

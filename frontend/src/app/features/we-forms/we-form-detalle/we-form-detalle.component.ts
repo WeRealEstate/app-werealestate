@@ -4,7 +4,11 @@ import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
+  ConteoForm,
   DestinoPregunta,
+  EstadisticasForm,
+  FiltroRespuestas,
+  ResumenPregunta,
   TIPO_PREGUNTA_ETIQUETA,
   TIPOS_PREGUNTA_PROPIOS,
   TipoPreguntaForm,
@@ -15,6 +19,7 @@ import {
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { WeFormsService } from '../../../core/services/we-forms.service';
+import { exportarReportePdf, exportarRespuestasExcel } from '../../../core/utils/we-forms-export';
 import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 
 /** A qué campo alimenta cada pregunta predefinida, en palabras. */
@@ -26,6 +31,8 @@ const DESTINO_ETIQUETA: Record<DestinoPregunta, string> = {
   LOTES: 'Venta · lotes', TIPO_PAGO: 'Venta · tipo de pago', ENGANCHE: 'Venta · enganche', PLAZO: 'Venta · plazo',
   DIA_PAGO: 'Venta · día de pago', APORTACIONES: 'Venta · aportaciones', ASESOR: 'Venta · asesor',
 };
+
+const PALETA = ['#243fb8', '#16a34a', '#f59e0b', '#dc2626', '#0ea5e9', '#9333ea', '#db2777', '#64748b'];
 
 /** Un formulario de We Forms: su constructor de preguntas y las respuestas recibidas. */
 @Component({
@@ -44,7 +51,7 @@ export class WeFormDetalleComponent {
   readonly form = signal<WeFormDetalle | null>(null);
   readonly isLoading = signal(true);
   readonly errorMessage = signal<string | null>(null);
-  readonly pestana = signal<'preguntas' | 'respuestas'>('preguntas');
+  readonly pestana = signal<'preguntas' | 'respuestas' | 'estadisticas'>('preguntas');
 
   readonly tiposPropios = TIPOS_PREGUNTA_PROPIOS;
   readonly tipoEtiqueta = TIPO_PREGUNTA_ETIQUETA;
@@ -72,6 +79,23 @@ export class WeFormDetalleComponent {
   readonly respuestasCargadas = signal(false);
   readonly expandidas = signal<Set<number>>(new Set());
   private paginaRespuestas = 0;
+
+  // --- Filtros (comparten Respuestas, Estadísticas y la exportación) ---
+  readonly fDesde = signal('');
+  readonly fHasta = signal('');
+  readonly fAsesor = signal('');
+  readonly exportando = signal<'excel' | 'pdf' | null>(null);
+
+  // --- Estadísticas ---
+  readonly stats = signal<EstadisticasForm | null>(null);
+  readonly cargandoStats = signal(false);
+  readonly colores = PALETA;
+
+  readonly filtro = computed<FiltroRespuestas>(() => ({
+    desde: this.fDesde() || undefined,
+    hasta: this.fHasta() || undefined,
+    asesor: this.fAsesor() || undefined,
+  }));
 
   readonly linkPublico = computed(() => {
     const f = this.form();
@@ -262,7 +286,7 @@ export class WeFormDetalleComponent {
     if (desdeInicio) this.paginaRespuestas = 0;
     this.cargandoRespuestas.set(true);
     try {
-      const pagina = await this.service.respuestas(this.formId, this.paginaRespuestas);
+      const pagina = await this.service.respuestas(this.formId, this.paginaRespuestas, this.filtro());
       this.respuestas.update((r) => (desdeInicio ? pagina.contenido : [...r, ...pagina.contenido]));
       this.hayMas.set(pagina.hayMas);
       this.paginaRespuestas++;
@@ -272,6 +296,88 @@ export class WeFormDetalleComponent {
     } finally {
       this.cargandoRespuestas.set(false);
     }
+  }
+
+  async abrirEstadisticas(): Promise<void> {
+    this.pestana.set('estadisticas');
+    if (!this.stats()) await this.cargarEstadisticas();
+  }
+
+  async cargarEstadisticas(): Promise<void> {
+    this.cargandoStats.set(true);
+    try {
+      this.stats.set(await this.service.estadisticas(this.formId, this.filtro()));
+    } catch (error) {
+      this.toast.error(this.mensajeDe(error, 'No se pudieron cargar las estadísticas.'));
+    } finally {
+      this.cargandoStats.set(false);
+    }
+  }
+
+  /** Recarga la pestaña visible con los filtros actuales. */
+  async aplicarFiltros(): Promise<void> {
+    this.respuestasCargadas.set(false);
+    this.stats.set(null);
+    if (this.pestana() === 'respuestas') await this.cargarRespuestas(true);
+    else if (this.pestana() === 'estadisticas') await this.cargarEstadisticas();
+  }
+
+  async limpiarFiltros(): Promise<void> {
+    this.fDesde.set('');
+    this.fHasta.set('');
+    this.fAsesor.set('');
+    await this.aplicarFiltros();
+  }
+
+  async exportar(formato: 'excel' | 'pdf'): Promise<void> {
+    const f = this.form();
+    if (!f || this.exportando()) return;
+    this.exportando.set(formato);
+    try {
+      const respuestas = await this.service.exportar(this.formId, this.filtro());
+      if (respuestas.length === 0) {
+        this.toast.error('No hay respuestas con esos filtros para exportar.');
+        return;
+      }
+      if (formato === 'excel') {
+        await exportarRespuestasExcel(f.nombre, respuestas);
+      } else {
+        const stats = await this.service.estadisticas(this.formId, this.filtro());
+        await exportarReportePdf(f.nombre, this.filtro(), stats, respuestas);
+      }
+    } catch (error) {
+      this.toast.error(this.mensajeDe(error, 'No se pudo exportar.'));
+    } finally {
+      this.exportando.set(null);
+    }
+  }
+
+  // --- Gráficas ---
+
+  /** Pregunta cuyo resumen se dibuja como pastel (una sola opción por respuesta). */
+  esPastel(p: ResumenPregunta): boolean {
+    return (p.tipo === 'OPCION_MULTIPLE' || p.tipo === 'DESPLEGABLE' || p.tipo === 'TIPO_PAGO') && p.opciones.length <= 8;
+  }
+
+  porcentaje(o: ConteoForm, lista: ConteoForm[]): number {
+    const total = lista.reduce((s, x) => s + x.cantidad, 0);
+    return total ? Math.round((o.cantidad / total) * 100) : 0;
+  }
+
+  /** Fondo CSS del pastel (conic-gradient) para una lista de opciones. */
+  pastel(lista: ConteoForm[]): string {
+    const total = lista.reduce((s, x) => s + x.cantidad, 0) || 1;
+    let acumulado = 0;
+    const tramos = lista.map((o, idx) => {
+      const ini = (acumulado / total) * 100;
+      acumulado += o.cantidad;
+      return `${PALETA[idx % PALETA.length]} ${ini}% ${(acumulado / total) * 100}%`;
+    });
+    return `conic-gradient(${tramos.join(', ')})`;
+  }
+
+  maximo(lista: ConteoForm[]): number {
+    return Math.max(1, ...lista.map((o) => o.cantidad));
   }
 
   alternarRespuesta(id: number): void {

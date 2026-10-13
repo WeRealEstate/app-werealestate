@@ -40,6 +40,11 @@
         [class]="pestana() === 'respuestas' ? 'border-we-primary text-we-primary dark:text-we-blue-light' : 'border-transparent text-ink-muted hover:text-ink'">
         Respuestas
       </button>
+      <button type="button" (click)="abrirEstadisticas()" data-testid="tab-estadisticas"
+        class="-mb-px border-b-2 px-4 py-2.5 text-sm font-semibold transition-colors"
+        [class]="pestana() === 'estadisticas' ? 'border-we-primary text-we-primary dark:text-we-blue-light' : 'border-transparent text-ink-muted hover:text-ink'">
+        Estadísticas
+      </button>
     </div>
 
     @if (pestana() === 'preguntas') {
@@ -138,7 +143,44 @@
           + Agregar pregunta
         </button>
       </div>
-    } @else {
+    } @else if (pestana() === 'respuestas') {
+      <div class="mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-surface p-3.5" data-testid="filtros">
+        <div>
+          <label for="f-desde" class="mb-1 block text-xs font-medium text-ink-muted">Desde</label>
+          <input id="f-desde" type="date" [value]="fDesde()" (input)="fDesde.set($any($event.target).value)"
+            class="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary" />
+        </div>
+        <div>
+          <label for="f-hasta" class="mb-1 block text-xs font-medium text-ink-muted">Hasta</label>
+          <input id="f-hasta" type="date" [value]="fHasta()" (input)="fHasta.set($any($event.target).value)"
+            class="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary" />
+        </div>
+        <div class="min-w-[10rem] flex-1">
+          <label for="f-asesor" class="mb-1 block text-xs font-medium text-ink-muted">Asesor</label>
+          <input id="f-asesor" type="text" placeholder="Nombre del asesor" [value]="fAsesor()" (input)="fAsesor.set($any($event.target).value)"
+            (keyup.enter)="aplicarFiltros()"
+            class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary" />
+        </div>
+        <button type="button" (click)="aplicarFiltros()" data-testid="aplicar-filtros"
+          class="rounded-lg bg-we-primary px-4 py-2 text-sm font-semibold text-white hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150">
+          Filtrar
+        </button>
+        <button type="button" (click)="limpiarFiltros()"
+          class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-ink hover:border-we-primary active:scale-[0.97] transition-transform duration-150">
+          Limpiar
+        </button>
+        <div class="ml-auto flex gap-2">
+          <button type="button" (click)="exportar('excel')" [disabled]="exportando() !== null" data-testid="exportar-excel"
+            class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-ink hover:border-we-primary disabled:opacity-60 active:scale-[0.97] transition-transform duration-150">
+            {{ exportando() === 'excel' ? 'Exportando…' : 'Exportar Excel' }}
+          </button>
+          <button type="button" (click)="exportar('pdf')" [disabled]="exportando() !== null" data-testid="exportar-pdf"
+            class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-ink hover:border-we-primary disabled:opacity-60 active:scale-[0.97] transition-transform duration-150">
+            {{ exportando() === 'pdf' ? 'Exportando…' : 'Exportar PDF' }}
+          </button>
+        </div>
+      </div>
+
       @if (cargandoRespuestas() && respuestas().length === 0) {
         <app-we-loader texto="Cargando respuestas…" />
       } @else if (respuestas().length === 0) {
@@ -190,6 +232,140 @@
             <button type="button" (click)="cargarRespuestas(false)" [disabled]="cargandoRespuestas()" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-ink hover:border-we-primary disabled:opacity-60">
               {{ cargandoRespuestas() ? 'Cargando…' : 'Cargar más' }}
             </button>
+          </div>
+        }
+      }
+    } @else {
+      <div class="mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-surface p-3.5" data-testid="filtros">
+        <div>
+          <label for="f-desde" class="mb-1 block text-xs font-medium text-ink-muted">Desde</label>
+          <input id="f-desde" type="date" [value]="fDesde()" (input)="fDesde.set($any($event.target).value)"
+            class="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary" />
+        </div>
+        <div>
+          <label for="f-hasta" class="mb-1 block text-xs font-medium text-ink-muted">Hasta</label>
+          <input id="f-hasta" type="date" [value]="fHasta()" (input)="fHasta.set($any($event.target).value)"
+            class="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary" />
+        </div>
+        <div class="min-w-[10rem] flex-1">
+          <label for="f-asesor" class="mb-1 block text-xs font-medium text-ink-muted">Asesor</label>
+          <input id="f-asesor" type="text" placeholder="Nombre del asesor" [value]="fAsesor()" (input)="fAsesor.set($any($event.target).value)"
+            (keyup.enter)="aplicarFiltros()"
+            class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary" />
+        </div>
+        <button type="button" (click)="aplicarFiltros()" data-testid="aplicar-filtros"
+          class="rounded-lg bg-we-primary px-4 py-2 text-sm font-semibold text-white hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150">
+          Filtrar
+        </button>
+        <button type="button" (click)="limpiarFiltros()"
+          class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-ink hover:border-we-primary active:scale-[0.97] transition-transform duration-150">
+          Limpiar
+        </button>
+        <div class="ml-auto flex gap-2">
+          <button type="button" (click)="exportar('excel')" [disabled]="exportando() !== null" data-testid="exportar-excel"
+            class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-ink hover:border-we-primary disabled:opacity-60 active:scale-[0.97] transition-transform duration-150">
+            {{ exportando() === 'excel' ? 'Exportando…' : 'Exportar Excel' }}
+          </button>
+          <button type="button" (click)="exportar('pdf')" [disabled]="exportando() !== null" data-testid="exportar-pdf"
+            class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-ink hover:border-we-primary disabled:opacity-60 active:scale-[0.97] transition-transform duration-150">
+            {{ exportando() === 'pdf' ? 'Exportando…' : 'Exportar PDF' }}
+          </button>
+        </div>
+      </div>
+
+      @if (cargandoStats() && !stats()) {
+        <app-we-loader texto="Calculando estadísticas…" />
+      } @else if (stats(); as st) {
+        @if (st.total === 0) {
+          <div class="mt-6 rounded-xl border border-dashed border-border p-10 text-center">
+            <p class="text-sm text-ink-muted">No hay respuestas con estos filtros.</p>
+          </div>
+        } @else {
+          <div class="mt-4 grid gap-3 sm:grid-cols-3" data-testid="kpis">
+            <div class="rounded-xl border border-border bg-surface p-4 shadow-sm">
+              <p class="text-xs text-ink-muted">Respuestas</p>
+              <p class="mt-1 text-2xl font-semibold text-ink" data-testid="kpi-total">{{ st.total }}</p>
+            </div>
+            <div class="rounded-xl border border-border bg-surface p-4 shadow-sm">
+              <p class="text-xs text-ink-muted">Clientes nuevos</p>
+              <p class="mt-1 text-2xl font-semibold text-green-600 dark:text-green-400">{{ st.clientesNuevos }}</p>
+            </div>
+            <div class="rounded-xl border border-border bg-surface p-4 shadow-sm">
+              <p class="text-xs text-ink-muted">Clientes existentes</p>
+              <p class="mt-1 text-2xl font-semibold text-ink">{{ st.clientesExistentes }}</p>
+            </div>
+          </div>
+
+          <div class="mt-4 grid gap-4 lg:grid-cols-2">
+            <section class="rounded-xl border border-border bg-surface p-4 shadow-sm" data-testid="stats-por-dia">
+              <h3 class="text-sm font-semibold text-ink">Respuestas por día</h3>
+              <div class="mt-3 flex h-40 items-end gap-1.5 overflow-x-auto pb-1">
+                @for (d of st.porDia; track d.etiqueta) {
+                  <div class="flex min-w-[2.25rem] flex-1 flex-col items-center justify-end gap-1" [title]="d.etiqueta + ': ' + d.cantidad">
+                    <span class="text-[11px] font-medium text-ink">{{ d.cantidad }}</span>
+                    <div class="w-full rounded-t bg-we-primary" [style.height.px]="4 + (d.cantidad / maximo(st.porDia)) * 100"></div>
+                    <span class="text-[10px] text-ink-muted">{{ d.etiqueta.slice(0, 5) }}</span>
+                  </div>
+                }
+              </div>
+            </section>
+            <section class="rounded-xl border border-border bg-surface p-4 shadow-sm" data-testid="stats-por-asesor">
+              <h3 class="text-sm font-semibold text-ink">Respuestas por asesor</h3>
+              <div class="mt-3 space-y-2">
+                @for (a of st.porAsesor; track a.etiqueta) {
+                  <div>
+                    <div class="flex justify-between text-xs"><span class="truncate text-ink">{{ a.etiqueta }}</span><span class="text-ink-muted">{{ a.cantidad }}</span></div>
+                    <div class="mt-1 h-2 rounded bg-surface-2"><div class="h-2 rounded bg-we-primary" [style.width.%]="(a.cantidad / maximo(st.porAsesor)) * 100"></div></div>
+                  </div>
+                }
+              </div>
+            </section>
+          </div>
+
+          <h3 class="mt-6 text-sm font-semibold text-ink">Por pregunta</h3>
+          <div class="mt-2 grid gap-4 lg:grid-cols-2" data-testid="stats-preguntas">
+            @for (p of st.preguntas; track p.preguntaId) {
+              <section class="rounded-xl border border-border bg-surface p-4 shadow-sm" data-testid="stats-pregunta">
+                <h4 class="text-sm font-semibold text-ink">{{ p.titulo }}</h4>
+                <p class="text-xs text-ink-muted">{{ p.respondidas }} {{ p.respondidas === 1 ? 'respuesta' : 'respuestas' }} · {{ tipoEtiqueta[p.tipo] }}</p>
+
+                @if (p.opciones.length > 0) {
+                  @if (esPastel(p)) {
+                    <div class="mt-3 flex items-center gap-4">
+                      <div class="h-28 w-28 shrink-0 rounded-full" [style.background]="pastel(p.opciones)" data-testid="pastel"></div>
+                      <ul class="min-w-0 space-y-1 text-xs">
+                        @for (o of p.opciones; track o.etiqueta; let idx = $index) {
+                          <li class="flex items-center gap-2">
+                            <span class="h-2.5 w-2.5 shrink-0 rounded-full" [style.background]="colores[idx % colores.length]"></span>
+                            <span class="truncate text-ink">{{ o.etiqueta }}</span>
+                            <span class="ml-auto shrink-0 text-ink-muted">{{ o.cantidad }} · {{ porcentaje(o, p.opciones) }}%</span>
+                          </li>
+                        }
+                      </ul>
+                    </div>
+                  } @else {
+                    <div class="mt-3 space-y-2">
+                      @for (o of p.opciones; track o.etiqueta) {
+                        <div>
+                          <div class="flex justify-between gap-2 text-xs"><span class="truncate text-ink">{{ o.etiqueta }}</span><span class="shrink-0 text-ink-muted">{{ o.cantidad }}</span></div>
+                          <div class="mt-1 h-2 rounded bg-surface-2"><div class="h-2 rounded bg-we-primary" [style.width.%]="(o.cantidad / maximo(p.opciones)) * 100"></div></div>
+                        </div>
+                      }
+                    </div>
+                  }
+                } @else if (p.minimo !== null) {
+                  <dl class="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
+                    <div class="rounded-lg bg-surface-2 p-2"><dt class="text-ink-muted">Mínimo</dt><dd class="font-semibold text-ink">{{ p.minimo }}</dd></div>
+                    <div class="rounded-lg bg-surface-2 p-2"><dt class="text-ink-muted">Promedio</dt><dd class="font-semibold text-ink">{{ p.promedio }}</dd></div>
+                    <div class="rounded-lg bg-surface-2 p-2"><dt class="text-ink-muted">Máximo</dt><dd class="font-semibold text-ink">{{ p.maximo }}</dd></div>
+                  </dl>
+                } @else if (p.textos.length > 0) {
+                  <ul class="mt-3 max-h-40 space-y-1 overflow-y-auto rounded-lg bg-surface-2 p-2 text-xs text-ink">
+                    @for (t of p.textos; track $index) { <li class="truncate" [title]="t">{{ t }}</li> }
+                  </ul>
+                }
+              </section>
+            }
           </div>
         }
       }

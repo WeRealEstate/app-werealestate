@@ -71,6 +71,28 @@ public final class WeFormDtos {
             boolean clienteNuevo, Long ventaId, Long ventaNumero, List<ItemRespuesta> items) {
     }
 
+    // ------------------------------------------------------------------ estadísticas
+
+    public record Conteo(String etiqueta, long cantidad) {
+    }
+
+    /** Resumen de una pregunta: conteo por opción (preguntas de elegir), valores sueltos (texto) o
+     * mínimo/máximo/promedio (números). */
+    public record ResumenPregunta(
+            Long preguntaId, String titulo, TipoPreguntaForm tipo, long respondidas, List<Conteo> opciones,
+            List<String> textos, java.math.BigDecimal minimo, java.math.BigDecimal maximo,
+            java.math.BigDecimal promedio) {
+    }
+
+    public record Estadisticas(
+            long total, long clientesNuevos, long clientesExistentes, List<Conteo> porDia, List<Conteo> porAsesor,
+            List<ResumenPregunta> preguntas) {
+    }
+
+    /** Respuestas por desarrollo y por asesor, de todos los formularios (resumen de la lista). */
+    public record ResumenGeneral(long total, List<Conteo> porDesarrollo, List<Conteo> porAsesor) {
+    }
+
     // ------------------------------------------------------------------ link público (con PIN)
 
     public record PublicoLista(String slug, String nombre, String descripcion) {

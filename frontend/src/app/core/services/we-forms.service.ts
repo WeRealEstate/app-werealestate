@@ -5,6 +5,9 @@ import { environment } from '../../../environments/environment';
 import { Desarrollo } from '../models/lead.model';
 import { Pagina } from '../models/pagina.model';
 import {
+  EstadisticasForm,
+  FiltroRespuestas,
+  ResumenGeneralForm,
   WeFormActualizarRequest,
   WeFormCrearRequest,
   WeFormDetalle,
@@ -57,9 +60,33 @@ export class WeFormsService {
     return firstValueFrom(this.http.put<WeFormPregunta[]>(`${this.baseUrl}/${id}/preguntas/orden`, { ids }));
   }
 
-  respuestas(id: number, pagina: number, tamano = 20): Promise<Pagina<WeFormRespuesta>> {
-    const params = new HttpParams().set('pagina', pagina).set('tamano', tamano);
+  private paramsDe(filtro: FiltroRespuestas, params = new HttpParams()): HttpParams {
+    if (filtro.desde) params = params.set('desde', filtro.desde);
+    if (filtro.hasta) params = params.set('hasta', filtro.hasta);
+    if (filtro.asesor?.trim()) params = params.set('asesor', filtro.asesor.trim());
+    return params;
+  }
+
+  respuestas(id: number, pagina: number, filtro: FiltroRespuestas = {}, tamano = 20): Promise<Pagina<WeFormRespuesta>> {
+    const params = this.paramsDe(filtro, new HttpParams().set('pagina', pagina).set('tamano', tamano));
     return firstValueFrom(this.http.get<Pagina<WeFormRespuesta>>(`${this.baseUrl}/${id}/respuestas`, { params }));
+  }
+
+  /** Todas las respuestas del filtro (hasta 5000), para exportar. */
+  exportar(id: number, filtro: FiltroRespuestas = {}): Promise<WeFormRespuesta[]> {
+    return firstValueFrom(
+      this.http.get<WeFormRespuesta[]>(`${this.baseUrl}/${id}/respuestas/exportar`, { params: this.paramsDe(filtro) }),
+    );
+  }
+
+  estadisticas(id: number, filtro: FiltroRespuestas = {}): Promise<EstadisticasForm> {
+    return firstValueFrom(
+      this.http.get<EstadisticasForm>(`${this.baseUrl}/${id}/estadisticas`, { params: this.paramsDe(filtro) }),
+    );
+  }
+
+  resumen(): Promise<ResumenGeneralForm> {
+    return firstValueFrom(this.http.get<ResumenGeneralForm>(`${this.baseUrl}/resumen`));
   }
 
   /** Los archivos viven detrás de autenticación: se traen con el JWT y se abren como blob URL. */

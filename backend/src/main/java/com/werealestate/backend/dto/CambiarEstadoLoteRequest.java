@@ -12,11 +12,15 @@ import java.time.LocalDateTime;
  * nombreCliente es opcional a nivel de validación de este DTO, pero la UI lo exige al mover un
  * lote a un estado comprometido (apartado en cualquiera de sus variantes, en firma o vendido) —
  * así queda un dato estructurado y buscable, no solo enterrado en la nota libre. montoApartado es
- * obligatorio (y debe ser mayor a 0) solo cuando estado == APARTADO_CON_DINERO. */
+ * obligatorio (y debe ser mayor a 0) solo cuando estado == APARTADO_CON_DINERO. usuarioAsesorId /
+ * asesorExternoId (exactamente uno) son obligatorios cuando admin o líder de área pone cualquier
+ * variante de apartado: es el asesor al que pertenece. */
 public record CambiarEstadoLoteRequest(
         @NotNull EstadoLote estado,
         LocalDateTime fechaExpiraApartado,
         @Size(max = 500) String nota,
         @Size(max = 150) String nombreCliente,
-        BigDecimal montoApartado) {
+        BigDecimal montoApartado,
+        Long usuarioAsesorId,
+        Long asesorExternoId) {
 }

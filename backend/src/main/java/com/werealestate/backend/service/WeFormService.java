@@ -28,6 +28,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.SecureRandom;
 import java.text.Normalizer;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -110,22 +111,166 @@ public class WeFormService {
                 .toList();
     }
 
+    /** Respuestas del formulario filtradas por fecha de envío (ambas fechas inclusivas) y por asesor
+     * (parte del nombre), de la más reciente a la más antigua. */
+    private List<WeFormRespuesta> respuestasFiltradas(Long formId, LocalDate desde, LocalDate hasta, String asesor) {
+        String buscado = asesor == null ? "" : asesor.trim().toLowerCase(Locale.ROOT);
+        return respuestaRepository.findByFormIdOrderByFechaEnvioDesc(formId).stream()
+                .filter(r -> desde == null || !r.getFechaEnvio().toLocalDate().isBefore(desde))
+                .filter(r -> hasta == null || !r.getFechaEnvio().toLocalDate().isAfter(hasta))
+                .filter(r -> buscado.isEmpty() || r.getAsesorNombre().toLowerCase(Locale.ROOT).contains(buscado))
+                .toList();
+    }
+
+    private List<WeFormDtos.Respuesta> conItems(List<WeFormRespuesta> respuestas) {
+        if (respuestas.isEmpty()) return List.of();
+        Map<Long, List<WeFormRespuestaItem>> itemsPorRespuesta = itemRepository
+                .findByRespuestaIdInOrderByOrdenAsc(respuestas.stream().map(WeFormRespuesta::getId).toList())
+                .stream()
+                .collect(Collectors.groupingBy(i -> i.getRespuesta().getId()));
+        return respuestas.stream()
+                .map(r -> respuestaDto(r, itemsPorRespuesta.getOrDefault(r.getId(), List.of())))
+                .toList();
+    }
+
     @Transactional(readOnly = true)
-    public PaginaDto<WeFormDtos.Respuesta> listarRespuestas(Long formId, int pagina, int tamano) {
+    public PaginaDto<WeFormDtos.Respuesta> listarRespuestas(
+            Long formId, int pagina, int tamano, LocalDate desde, LocalDate hasta, String asesor) {
         exigirAcceso();
         obtenerEntidad(formId);
-        var resultado = respuestaRepository.findByFormIdOrderByFechaEnvioDesc(
-                formId, PageRequest.of(Math.max(0, pagina), Math.min(Math.max(1, tamano), 50)));
-        List<Long> ids = resultado.getContent().stream().map(WeFormRespuesta::getId).toList();
-        Map<Long, List<WeFormRespuestaItem>> itemsPorRespuesta = ids.isEmpty()
-                ? Map.of()
-                : itemRepository.findByRespuestaIdInOrderByOrdenAsc(ids).stream()
-                        .collect(Collectors.groupingBy(i -> i.getRespuesta().getId()));
-        return new PaginaDto<>(
-                resultado.getContent().stream()
-                        .map(r -> respuestaDto(r, itemsPorRespuesta.getOrDefault(r.getId(), List.of())))
-                        .toList(),
-                resultado.hasNext());
+        int tam = Math.min(Math.max(1, tamano), 50);
+        int inicio = Math.max(0, pagina) * tam;
+        List<WeFormRespuesta> todas = respuestasFiltradas(formId, desde, hasta, asesor);
+        List<WeFormRespuesta> pag = todas.stream().skip(inicio).limit(tam).toList();
+        return new PaginaDto<>(conItems(pag), inicio + tam < todas.size());
+    }
+
+    private static final int MAX_EXPORTAR = 5000;
+
+    /** Todas las respuestas del filtro (hasta 5000), para exportar a Excel o PDF. */
+    @Transactional(readOnly = true)
+    public List<WeFormDtos.Respuesta> exportarRespuestas(Long formId, LocalDate desde, LocalDate hasta, String asesor) {
+        exigirAcceso();
+        obtenerEntidad(formId);
+        return conItems(respuestasFiltradas(formId, desde, hasta, asesor).stream().limit(MAX_EXPORTAR).toList());
+    }
+
+    private static final int MAX_TEXTOS = 100;
+    private static final java.time.format.DateTimeFormatter DIA = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+    @Transactional(readOnly = true)
+    public WeFormDtos.Estadisticas estadisticas(Long formId, LocalDate desde, LocalDate hasta, String asesor) {
+        exigirAcceso();
+        obtenerEntidad(formId);
+        List<WeFormRespuesta> respuestas = respuestasFiltradas(formId, desde, hasta, asesor);
+
+        long nuevos = respuestas.stream().filter(WeFormRespuesta::isClienteNuevo).count();
+        Map<LocalDate, Long> dias = new java.util.TreeMap<>();
+        Map<String, Long> asesores = new java.util.LinkedHashMap<>();
+        for (WeFormRespuesta r : respuestas) {
+            dias.merge(r.getFechaEnvio().toLocalDate(), 1L, Long::sum);
+            asesores.merge(r.getAsesorNombre(), 1L, Long::sum);
+        }
+        List<WeFormDtos.Conteo> porDia = dias.entrySet().stream()
+                .map(e -> new WeFormDtos.Conteo(e.getKey().format(DIA), e.getValue()))
+                .toList();
+        List<WeFormDtos.Conteo> porAsesor = ordenado(asesores);
+
+        // Resumen por pregunta: se agrupa por pregunta (aunque ya esté archivada) con el título que tenía al responder.
+        Map<Long, List<WeFormRespuestaItem>> itemsPorPregunta = new java.util.LinkedHashMap<>();
+        if (!respuestas.isEmpty()) {
+            itemRepository.findByRespuestaIdInOrderByOrdenAsc(respuestas.stream().map(WeFormRespuesta::getId).toList())
+                    .stream()
+                    .filter(i -> i.getPreguntaTipo() != TipoPreguntaForm.TITULO)
+                    .forEach(i -> itemsPorPregunta.computeIfAbsent(i.getPregunta().getId(), k -> new ArrayList<>()).add(i));
+        }
+        List<WeFormDtos.ResumenPregunta> resumenes = new ArrayList<>();
+        itemsPorPregunta.forEach((preguntaId, items) -> resumenes.add(resumir(preguntaId, items)));
+        resumenes.sort(java.util.Comparator.comparingInt(r -> ordenDePregunta(itemsPorPregunta.get(r.preguntaId()))));
+        return new WeFormDtos.Estadisticas(
+                respuestas.size(), nuevos, respuestas.size() - nuevos, porDia, porAsesor, resumenes);
+    }
+
+    private static int ordenDePregunta(List<WeFormRespuestaItem> items) {
+        return items.get(0).getOrden();
+    }
+
+    private static List<WeFormDtos.Conteo> ordenado(Map<String, Long> conteos) {
+        return conteos.entrySet().stream()
+                .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+                .map(e -> new WeFormDtos.Conteo(e.getKey(), e.getValue()))
+                .toList();
+    }
+
+    private WeFormDtos.ResumenPregunta resumir(Long preguntaId, List<WeFormRespuestaItem> items) {
+        WeFormRespuestaItem ultimo = items.get(items.size() - 1);
+        TipoPreguntaForm tipo = ultimo.getPreguntaTipo();
+        List<String> valores = items.stream()
+                .map(WeFormRespuestaItem::getValor)
+                .filter(v -> v != null && !v.isBlank())
+                .toList();
+        long respondidas = items.stream()
+                .filter(i -> i.getArchivoExtension() != null || (i.getValor() != null && !i.getValor().isBlank()))
+                .count();
+
+        Map<String, Long> conteos = new java.util.LinkedHashMap<>();
+        List<String> textos = List.of();
+        java.math.BigDecimal min = null;
+        java.math.BigDecimal max = null;
+        java.math.BigDecimal promedio = null;
+        switch (tipo) {
+            case OPCION_MULTIPLE, DESPLEGABLE, TIPO_PAGO, ASESOR ->
+                    valores.forEach(v -> conteos.merge(v.trim(), 1L, Long::sum));
+            case CASILLAS -> valores.forEach(v -> {
+                for (String parte : v.split(", ")) conteos.merge(parte.trim(), 1L, Long::sum);
+            });
+            case LOTES -> valores.forEach(v -> {
+                for (String parte : v.split("; ")) {
+                    int corte = parte.indexOf(" ($");
+                    conteos.merge((corte > 0 ? parte.substring(0, corte) : parte).trim(), 1L, Long::sum);
+                }
+            });
+            case NUMERO -> {
+                List<java.math.BigDecimal> nums = new ArrayList<>();
+                for (String v : valores) {
+                    try {
+                        nums.add(new java.math.BigDecimal(v.trim().replace(",", "")));
+                    } catch (NumberFormatException e) {
+                        // valor que no es número: no entra al cálculo
+                    }
+                }
+                if (!nums.isEmpty()) {
+                    min = nums.stream().min(java.util.Comparator.naturalOrder()).orElse(null);
+                    max = nums.stream().max(java.util.Comparator.naturalOrder()).orElse(null);
+                    promedio = nums.stream().reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add)
+                            .divide(java.math.BigDecimal.valueOf(nums.size()), 2, java.math.RoundingMode.HALF_UP);
+                }
+            }
+            case ARCHIVO, APORTACIONES -> {
+                // solo cuenta cuántas respondieron
+            }
+            default -> textos = valores.stream().limit(MAX_TEXTOS).toList();
+        }
+        return new WeFormDtos.ResumenPregunta(
+                preguntaId, ultimo.getPreguntaTitulo(), tipo, respondidas, ordenado(conteos), textos, min, max,
+                promedio);
+    }
+
+    /** Totales de todos los formularios por desarrollo y por asesor (la lista del módulo). */
+    @Transactional(readOnly = true)
+    public WeFormDtos.ResumenGeneral resumenGeneral() {
+        exigirAcceso();
+        Map<String, Long> desarrollos = new java.util.LinkedHashMap<>();
+        Map<String, Long> asesores = new java.util.LinkedHashMap<>();
+        long total = 0;
+        for (WeForm f : formRepository.findAll()) {
+            for (WeFormRespuesta r : respuestaRepository.findByFormIdOrderByFechaEnvioDesc(f.getId())) {
+                total++;
+                desarrollos.merge(f.getDesarrollo().getNombre(), 1L, Long::sum);
+                asesores.merge(r.getAsesorNombre(), 1L, Long::sum);
+            }
+        }
+        return new WeFormDtos.ResumenGeneral(total, ordenado(desarrollos), ordenado(asesores));
     }
 
     /** El archivo (INE, comprobante) de una respuesta, solo con sesión y el módulo; nunca como URL estática. */

@@ -142,6 +142,46 @@ export interface WeFormRespuesta {
   items: WeFormItemRespuesta[];
 }
 
+// ---- Estadísticas ----
+
+export interface FiltroRespuestas {
+  desde?: string;
+  hasta?: string;
+  asesor?: string;
+}
+
+export interface ConteoForm {
+  etiqueta: string;
+  cantidad: number;
+}
+
+export interface ResumenPregunta {
+  preguntaId: number;
+  titulo: string;
+  tipo: TipoPreguntaForm;
+  respondidas: number;
+  opciones: ConteoForm[];
+  textos: string[];
+  minimo: number | null;
+  maximo: number | null;
+  promedio: number | null;
+}
+
+export interface EstadisticasForm {
+  total: number;
+  clientesNuevos: number;
+  clientesExistentes: number;
+  porDia: ConteoForm[];
+  porAsesor: ConteoForm[];
+  preguntas: ResumenPregunta[];
+}
+
+export interface ResumenGeneralForm {
+  total: number;
+  porDesarrollo: ConteoForm[];
+  porAsesor: ConteoForm[];
+}
+
 // ---- Link público ----
 
 export interface WeFormPublicoLista {

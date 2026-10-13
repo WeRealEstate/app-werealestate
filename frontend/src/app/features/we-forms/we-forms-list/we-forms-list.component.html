@@ -30,7 +30,18 @@
       <p class="text-sm text-ink-muted">Todavía no hay formularios. Crea el primero con "Nuevo formulario".</p>
     </div>
   } @else {
-    <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    @if (resumen(); as r) {
+      @if (r.total > 0) {
+        <div class="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-border bg-surface p-4 text-sm shadow-sm" data-testid="resumen-general">
+          <span class="text-ink"><strong>{{ r.total }}</strong> {{ r.total === 1 ? 'precontrato' : 'precontratos' }} en total</span>
+          @for (d of r.porDesarrollo; track d.etiqueta) {
+            <span class="text-ink-muted">{{ d.etiqueta }}: <strong class="text-ink">{{ d.cantidad }}</strong></span>
+          }
+          <span class="text-ink-muted">Asesor con más: <strong class="text-ink">{{ r.porAsesor[0].etiqueta }}</strong> ({{ r.porAsesor[0].cantidad }})</span>
+        </div>
+      }
+    }
+    <div class="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       @for (f of formularios(); track f.id) {
         <div class="flex flex-col rounded-xl border border-border bg-surface p-5 shadow-sm" data-testid="formulario-card">
           <div class="flex items-start justify-between gap-3">

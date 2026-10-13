@@ -124,6 +124,7 @@ export class LotesService {
     nota?: string,
     nombreCliente?: string | null,
     montoApartado?: number | null,
+    asesor?: { usuarioAsesorId: number | null; asesorExternoId: number | null } | null,
   ): Promise<Lote> {
     return firstValueFrom(
       this.http.put<Lote>(`${this.baseUrl}/${id}/estado`, {
@@ -132,6 +133,8 @@ export class LotesService {
         nota: nota ?? null,
         nombreCliente: nombreCliente ?? null,
         montoApartado: montoApartado ?? null,
+        usuarioAsesorId: asesor?.usuarioAsesorId ?? null,
+        asesorExternoId: asesor?.asesorExternoId ?? null,
       }),
     );
   }

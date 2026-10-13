@@ -13,6 +13,8 @@ public interface WeFormRespuestaRepository extends JpaRepository<WeFormRespuesta
 
     Page<WeFormRespuesta> findByFormIdOrderByFechaEnvioDesc(Long formId, Pageable pageable);
 
+    List<WeFormRespuesta> findByFormIdOrderByFechaEnvioDesc(Long formId);
+
     long countByFormId(Long formId);
 
     /** Serializa los envíos de precontratos (dos asesores tomando el mismo lote a la vez). Se suelta al terminar la transacción. */

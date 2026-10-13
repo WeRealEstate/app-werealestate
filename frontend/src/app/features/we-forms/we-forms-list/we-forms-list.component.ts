@@ -3,7 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Desarrollo } from '../../../core/models/lead.model';
-import { WeFormLista } from '../../../core/models/we-form.model';
+import { ResumenGeneralForm, WeFormLista } from '../../../core/models/we-form.model';
 import { ToastService } from '../../../core/services/toast.service';
 import { WeFormsService } from '../../../core/services/we-forms.service';
 import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
@@ -21,6 +21,7 @@ export class WeFormsListComponent {
   private readonly router = inject(Router);
 
   readonly formularios = signal<WeFormLista[]>([]);
+  readonly resumen = signal<ResumenGeneralForm | null>(null);
   readonly isLoading = signal(true);
   readonly errorMessage = signal<string | null>(null);
 
@@ -39,6 +40,7 @@ export class WeFormsListComponent {
   private async cargar(): Promise<void> {
     try {
       this.formularios.set(await this.service.listar());
+      this.resumen.set(await this.service.resumen());
     } catch {
       this.errorMessage.set('No se pudieron cargar los formularios. Intenta de nuevo.');
     } finally {
