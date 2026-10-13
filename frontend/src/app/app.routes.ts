@@ -249,11 +249,29 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'we-forms',
+        canActivate: [roleGuard(['ADMIN', 'LIDER_AREA']), moduloGuard(['WE_FORMS'])],
+        loadComponent: () => import('./features/we-forms/we-forms-list/we-forms-list.component').then((m) => m.WeFormsListComponent),
+      },
+      {
+        path: 'we-forms/:id',
+        canActivate: [roleGuard(['ADMIN', 'LIDER_AREA']), moduloGuard(['WE_FORMS'])],
+        loadComponent: () => import('./features/we-forms/we-form-detalle/we-form-detalle.component').then((m) => m.WeFormDetalleComponent),
+      },
+      {
         path: 'teams',
         canActivate: [roleGuard(['ADMIN', 'LIDER_AREA']), moduloGuard(['COMUNIDADES'])],
         loadComponent: () => import('./features/teams/teams.component').then((m) => m.TeamsComponent),
       },
     ],
+  },
+  {
+    path: 'we-forms',
+    loadComponent: () => import('./features/publico/we-forms-publico/we-forms-publico-lista.component').then((m) => m.WeFormsPublicoListaComponent),
+  },
+  {
+    path: 'we-forms/:slug',
+    loadComponent: () => import('./features/publico/we-forms-publico/we-form-publico.component').then((m) => m.WeFormPublicoComponent),
   },
   { path: '**', redirectTo: 'login' },
 ];

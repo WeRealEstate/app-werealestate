@@ -5,7 +5,8 @@ export type TipoNotificacion =
   | 'LOTE_APARTADO'
   | 'LOTE_DESAPARTADO'
   | 'LOTE_ESTADO'
-  | 'VENTA_NUEVA';
+  | 'VENTA_NUEVA'
+  | 'PRECONTRATO_NUEVO';
 
 export interface Notificacion {
   tipo: TipoNotificacion;
@@ -13,7 +14,7 @@ export interface Notificacion {
   leadId: number | null;
   tareaId: number | null;
   eventoId: number | null;
-  /** Solo en los avisos de lotes (admin y líder): id del movimiento de estado que los originó. */
+  /** Solo en los avisos de lotes (admin y líder): id del movimiento de estado que los originó; en PRECONTRATO_NUEVO, el id de la respuesta del precontrato. */
   movimientoId: number | null;
   /** Solo en VENTA_NUEVA (admin y Administración): id de la venta registrada. */
   ventaId: number | null;

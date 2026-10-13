@@ -44,7 +44,8 @@ export class ClienteFormModalComponent implements OnInit {
 
   readonly estados = Object.keys(ESTADO_CIVIL_LABELS) as EstadoCivil[];
   readonly estadoLabels = ESTADO_CIVIL_LABELS;
-  readonly fuentes = Object.keys(FUENTE_CLIENTE_LABELS) as FuenteCliente[];
+  /** PRECONTRATO lo pone solo We Forms al crear al cliente: no se elige a mano. */
+  readonly fuentes = (Object.keys(FUENTE_CLIENTE_LABELS) as FuenteCliente[]).filter((f) => f !== 'PRECONTRATO');
   readonly fuenteLabels = FUENTE_CLIENTE_LABELS;
   readonly ubicaciones: UbicacionDocumento[] = ['DRIVE', 'FISICO', 'AMBOS', 'NO_TIENE'];
   readonly ubicacionLabels = UBICACION_DOCUMENTO_LABELS;

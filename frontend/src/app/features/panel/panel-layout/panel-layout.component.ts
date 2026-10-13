@@ -4,6 +4,7 @@ import {
   LucideCalendar,
   LucideHandCoins,
   LucideChartLine,
+  LucideClipboardList,
   LucideContactRound,
   LucideHouse,
   LucideKanban,
@@ -31,7 +32,7 @@ interface NavItem {
   modulo?: Modulo;
   /** Alternativa: el item también se muestra a quien tenga este otro módulo (Finanzas incluye la pestaña Gastos). */
   tambienConModulo?: Modulo;
-  icon: 'home' | 'leads' | 'usuarios' | 'calendario' | 'pipeline' | 'cotizador' | 'lotes' | 'plano' | 'ventas' | 'clientes' | 'finanzas' | 'gastos';
+  icon: 'home' | 'leads' | 'usuarios' | 'calendario' | 'pipeline' | 'cotizador' | 'lotes' | 'plano' | 'ventas' | 'clientes' | 'finanzas' | 'gastos' | 'forms';
 }
 
 const ASESORES_EXTERNOS_NAV_ITEM: NavItem = {
@@ -41,6 +42,7 @@ const ASESORES_EXTERNOS_NAV_ITEM: NavItem = {
   icon: 'usuarios',
 };
 const TEAMS_NAV_ITEM: NavItem = { label: 'Comunidades We', route: '/panel/teams', modulo: 'COMUNIDADES', icon: 'usuarios' };
+const WE_FORMS_NAV_ITEM: NavItem = { label: 'We Forms', route: '/panel/we-forms', modulo: 'WE_FORMS', icon: 'forms' };
 
 /** {@code label: null} agrupa items sin encabezado visible (Inicio, siempre arriba y suelto). */
 interface NavSection {
@@ -86,6 +88,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
       items: [
         ASESORES_EXTERNOS_NAV_ITEM,
         TEAMS_NAV_ITEM,
+        WE_FORMS_NAV_ITEM,
         { label: 'Calendario', route: '/panel/calendario', modulo: 'CALENDARIO', icon: 'calendario' },
       ],
     },
@@ -120,6 +123,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
         { label: 'Usuarios', route: '/panel/usuarios', icon: 'usuarios' },
         ASESORES_EXTERNOS_NAV_ITEM,
         TEAMS_NAV_ITEM,
+        WE_FORMS_NAV_ITEM,
         { label: 'Calendario', route: '/panel/calendario', modulo: 'CALENDARIO', icon: 'calendario' },
       ],
     },
@@ -146,6 +150,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
     LucideMap,
     LucideChartLine,
     LucideContactRound,
+    LucideClipboardList,
     LucideUser,
     LucideMenu,
     LucideWallet,

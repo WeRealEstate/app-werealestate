@@ -9,13 +9,14 @@ export const ESTADO_CIVIL_LABELS: Record<EstadoCivil, string> = {
   VIUDO: 'Viudo(a)',
 };
 
-export type FuenteCliente = 'REDES_SOCIALES' | 'RECOMENDACION' | 'EVENTO' | 'ESPECTACULAR' | 'OTRO';
+export type FuenteCliente = 'REDES_SOCIALES' | 'RECOMENDACION' | 'EVENTO' | 'ESPECTACULAR' | 'OTRO' | 'PRECONTRATO';
 export const FUENTE_CLIENTE_LABELS: Record<FuenteCliente, string> = {
   REDES_SOCIALES: 'Redes sociales',
   RECOMENDACION: 'Recomendación',
   EVENTO: 'Evento',
   ESPECTACULAR: 'Espectacular',
   OTRO: 'Otro',
+  PRECONTRATO: 'Precontrato We Forms',
 };
 
 /** Una fila de la lista de clientes y del buscador de la venta. */

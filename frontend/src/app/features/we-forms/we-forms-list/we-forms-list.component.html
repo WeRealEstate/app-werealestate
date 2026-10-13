@@ -1,0 +1,112 @@
+<div class="page-enter">
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="font-heading text-2xl font-semibold text-ink">We Forms</h1>
+      <p class="mt-1 text-sm text-ink-muted">
+        Formularios de precontrato: el asesor los llena con su PIN en un link público y, al enviarlos, se crea el cliente y la venta.
+      </p>
+    </div>
+    <button
+      type="button"
+      (click)="abrirNuevo()"
+      data-testid="nuevo-formulario"
+      class="inline-flex shrink-0 items-center justify-center rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
+             hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150 min-h-[44px]"
+    >
+      + Nuevo formulario
+    </button>
+  </div>
+
+  @if (errorMessage()) {
+    <div class="mt-6 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  @if (isLoading()) {
+    <app-we-loader texto="Cargando formularios…" />
+  } @else if (formularios().length === 0 && !errorMessage()) {
+    <div class="mt-8 rounded-xl border border-dashed border-border p-10 text-center">
+      <p class="text-sm text-ink-muted">Todavía no hay formularios. Crea el primero con "Nuevo formulario".</p>
+    </div>
+  } @else {
+    <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      @for (f of formularios(); track f.id) {
+        <div class="flex flex-col rounded-xl border border-border bg-surface p-5 shadow-sm" data-testid="formulario-card">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <h2 class="truncate font-heading text-base font-semibold text-ink">{{ f.nombre }}</h2>
+              <p class="mt-0.5 text-xs text-ink-muted">{{ f.desarrolloNombre }}</p>
+            </div>
+            <span
+              class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold"
+              [class]="f.estado === 'ACTIVO' ? 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300' : 'bg-surface-2 text-ink-muted'"
+            >
+              {{ f.estado === 'ACTIVO' ? 'Activo' : 'Cerrado' }}
+            </span>
+          </div>
+          <p class="mt-4 text-sm text-ink"><span class="font-semibold">{{ f.totalRespuestas }}</span> {{ f.totalRespuestas === 1 ? 'respuesta' : 'respuestas' }}</p>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <a
+              [routerLink]="['/panel/we-forms', f.id]"
+              class="inline-flex items-center justify-center rounded-lg bg-we-primary px-3.5 py-2 text-sm font-semibold text-white hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150"
+            >
+              Abrir
+            </a>
+            <button
+              type="button"
+              (click)="copiarLink(f.slug)"
+              class="inline-flex items-center justify-center rounded-lg border border-border px-3.5 py-2 text-sm font-semibold text-ink hover:border-we-primary active:scale-[0.97] transition-transform duration-150"
+            >
+              Copiar link
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  @if (mostrarNuevo()) {
+    <button type="button" (click)="mostrarNuevo.set(false)" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="nuevo-form-titulo">
+      <form (submit)="$event.preventDefault(); crear()" class="modal-panel-enter w-full max-w-md rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <h2 id="nuevo-form-titulo" class="font-heading text-lg font-semibold text-ink">Nuevo formulario</h2>
+        <p class="mt-1 text-xs text-ink-muted">Nace con las preguntas del cliente y de la venta ya ligadas; después puedes ordenarlas y agregar las tuyas.</p>
+
+        <div class="mt-4 space-y-3">
+          <div>
+            <label for="nf-nombre" class="mb-1 block text-xs font-medium text-ink-muted">Nombre *</label>
+            <input id="nf-nombre" name="nombre" [ngModel]="nuevoNombre()" (ngModelChange)="nuevoNombre.set($event)" placeholder="Ej. Precontrato SAMAI"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+          </div>
+          <div>
+            <label for="nf-desarrollo" class="mb-1 block text-xs font-medium text-ink-muted">Desarrollo *</label>
+            <select id="nf-desarrollo" name="desarrollo" [ngModel]="nuevoDesarrolloId()" (ngModelChange)="nuevoDesarrolloId.set($event)"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50">
+              <option [ngValue]="null">Selecciona un desarrollo</option>
+              @for (d of desarrollos(); track d.id) {
+                <option [ngValue]="d.id">{{ d.nombre }}</option>
+              }
+            </select>
+            <p class="mt-1 text-xs text-ink-muted">De aquí salen los lotes que se pueden elegir y el acceso del PIN del asesor.</p>
+          </div>
+          <div>
+            <label for="nf-desc" class="mb-1 block text-xs font-medium text-ink-muted">Descripción (opcional)</label>
+            <textarea id="nf-desc" name="descripcion" rows="2" [ngModel]="nuevoDescripcion()" (ngModelChange)="nuevoDescripcion.set($event)"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"></textarea>
+          </div>
+        </div>
+
+        @if (errorNuevo()) {
+          <p class="mt-3 text-sm text-red-600 dark:text-red-400">{{ errorNuevo() }}</p>
+        }
+        <div class="mt-5 flex justify-end gap-2.5">
+          <button type="button" (click)="mostrarNuevo.set(false)" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cancelar</button>
+          <button type="submit" [disabled]="creando()" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
+            {{ creando() ? 'Creando…' : 'Crear formulario' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+</div>

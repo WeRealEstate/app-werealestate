@@ -76,6 +76,10 @@ export interface Venta {
   precioVenta: number;
   totalAbonado: number;
   saldoPendiente: number;
+  /** Nació de un precontrato (We Forms): su fecha es la del envío y administración la confirma. */
+  fechaProvisional: boolean;
+  /** Dinero con el que ya estaba apartado el lote y que aún no se aplica a la venta (null = nada pendiente). */
+  depositoPendiente: number | null;
 }
 
 export interface VentaLoteItemRequest {
@@ -124,6 +128,8 @@ export interface VentaCreateRequest {
  * venta, solo sus datos capturados. Temporal: el botón "Modificar venta" que usa esto se va a
  * quitar más adelante. */
 export interface VentaUpdateRequest {
+  /** true = la fecha de venta ya es la definitiva (quita la marca de "fecha provisional"). */
+  confirmarFecha?: boolean;
   /** Opcional: si se manda, la venta se re-liga a ese cliente. */
   clienteId?: number | null;
   /** Omitido = sin cambios; con valor, la venta pasa a ese número (recorriendo las consecutivas si está ocupado). */
@@ -226,4 +232,12 @@ export interface NumeracionVenta {
   ocupanteCliente: string | null;
   ocupanteFecha: string | null;
   ventasARecorrer: number;
+}
+
+export type AplicarDepositoA = 'SALDO' | 'MENSUALIDAD';
+
+/** Cómo aplicar el depósito pendiente; el folio es obligatorio con SALDO. */
+export interface AplicarDepositoRequest {
+  aplicarA: AplicarDepositoA;
+  folio?: string;
 }

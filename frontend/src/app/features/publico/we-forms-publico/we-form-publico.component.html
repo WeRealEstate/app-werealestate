@@ -1,0 +1,198 @@
+<div class="flex min-h-dvh flex-col items-center bg-canvas px-4 py-8">
+  <img src="/images/we-logo-color.png" alt="We Real Estate" class="mb-5 h-11 w-auto dark:hidden" />
+  <img src="/images/we-logo.png" alt="" aria-hidden="true" class="mb-5 hidden h-11 w-auto dark:block" />
+
+  @switch (etapa()) {
+    @case ('pin') {
+      <app-pin-publico [error]="errorPin()" [cargando]="verificando()" texto="Escribe tu PIN de asesor para llenar el precontrato." (entrar)="cargar($event)" />
+    }
+    @case ('cargando') {
+      <p class="mt-10 text-sm text-ink-muted">Cargando…</p>
+    }
+    @case ('cerrado') {
+      <div class="mt-6 w-full max-w-md rounded-xl border border-border bg-surface p-6 text-center shadow-sm" data-testid="form-cerrado">
+        <h1 class="font-heading text-lg font-semibold text-ink">Formulario cerrado</h1>
+        <p class="mt-2 text-sm text-ink-muted">{{ mensajeError() }}</p>
+      </div>
+    }
+    @case ('error') {
+      <div class="mt-6 w-full max-w-md rounded-xl border border-border bg-surface p-6 text-center shadow-sm">
+        <h1 class="font-heading text-lg font-semibold text-ink">No encontramos este formulario</h1>
+        <p class="mt-2 text-sm text-ink-muted">{{ mensajeError() }}</p>
+      </div>
+    }
+    @case ('enviado') {
+      @if (resultado(); as r) {
+        <div class="mt-6 w-full max-w-md rounded-xl border border-border bg-surface p-6 text-center shadow-sm" data-testid="form-enviado">
+          <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-2xl text-green-700 dark:bg-green-500/15 dark:text-green-300">✓</div>
+          <h1 class="mt-3 font-heading text-xl font-semibold text-ink">Precontrato enviado</h1>
+          <p class="mt-2 text-sm text-ink">
+            {{ r.clienteNombre }} {{ r.clienteNuevo ? 'quedó registrado como cliente nuevo' : 'ya estaba registrado y se vinculó a esta venta' }}.
+          </p>
+          <p class="mt-1 text-sm text-ink-muted">Se creó la <span class="font-semibold text-ink">venta #{{ r.ventaNumero }}</span> y los lotes quedaron en proceso de firma. Administración la revisará.</p>
+          <button type="button" (click)="nuevoPrecontrato()" class="mt-5 w-full rounded-lg bg-we-primary px-4 py-3 text-sm font-semibold text-white hover:bg-we-primary/90 min-h-[44px]">
+            Llenar otro precontrato
+          </button>
+        </div>
+      }
+    }
+    @case ('listo') {
+      @if (form(); as f) {
+        <div class="w-full max-w-2xl">
+          <div class="rounded-xl border border-border bg-surface p-5 shadow-sm">
+            <h1 class="font-heading text-xl font-semibold text-ink" data-testid="titulo-form">{{ f.nombre }}</h1>
+            <p class="mt-0.5 text-sm text-ink-muted">{{ f.desarrolloNombre }}</p>
+            @if (f.descripcion) { <p class="mt-2 text-sm text-ink">{{ f.descripcion }}</p> }
+            <p class="mt-3 text-xs text-ink-muted">Asesor: <span class="font-semibold text-ink">{{ f.asesorNombre }}</span> · Los campos con <span class="text-red-600">*</span> son obligatorios.</p>
+          </div>
+
+          <div class="mt-4 space-y-4">
+            @for (p of f.preguntas; track p.id) {
+              @if (p.tipo === 'TITULO') {
+                <h2 class="pt-3 font-heading text-sm font-semibold uppercase tracking-wide text-ink">{{ p.titulo }}</h2>
+              } @else if (visible(p)) {
+                <div [id]="'q-' + p.id" class="rounded-xl border bg-surface p-4 shadow-sm" [class]="errores()[p.id] ? 'border-red-400' : 'border-border'" [attr.data-testid]="'pregunta-' + (p.destino ?? p.id)">
+                  <label class="block text-sm font-medium text-ink">
+                    {{ etiquetaDe(p) }}@if (obligatoria(p)) { <span class="text-red-600"> *</span> }
+                  </label>
+                  @if (p.descripcion) { <p class="mt-0.5 text-xs text-ink-muted">{{ p.descripcion }}</p> }
+
+                  <div class="mt-2.5">
+                    @switch (p.tipo) {
+                      @case ('CORTA') {
+                        <input type="text" [value]="valor(p.id) ?? ''" (input)="escribirTexto(p, $event)" [attr.maxlength]="p.destino === 'CURP' ? 18 : p.destino === 'RFC' ? 13 : null"
+                          [class.uppercase]="p.destino === 'CURP' || p.destino === 'RFC'" autocomplete="off"
+                          class="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+                      }
+                      @case ('PARRAFO') {
+                        <textarea rows="3" [value]="valor(p.id) ?? ''" (input)="escribirTexto(p, $event)"
+                          class="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"></textarea>
+                      }
+                      @case ('TELEFONO') {
+                        <input type="tel" inputmode="tel" [value]="valor(p.id) ?? ''" (input)="escribirTexto(p, $event)" autocomplete="off"
+                          class="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+                      }
+                      @case ('CORREO') {
+                        <input type="email" [value]="valor(p.id) ?? ''" (input)="escribirTexto(p, $event)" autocomplete="off"
+                          class="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+                      }
+                      @case ('FECHA') {
+                        <input type="date" [value]="valor(p.id) ?? ''" (input)="escribirTexto(p, $event)" [max]="p.destino === 'FECHA_NACIMIENTO' ? hoy : null"
+                          class="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+                      }
+                      @case ('NUMERO') {
+                        <input appMoneda [decimales]="p.destino === 'PLAZO' || p.destino === 'DIA_PAGO' ? 0 : 2" [ngModel]="valor(p.id)" (ngModelChange)="setValor(p.id, $event)"
+                          [ngModelOptions]="{ standalone: true }" [attr.data-testid]="'numero-' + (p.destino ?? p.id)"
+                          class="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+                      }
+                      @case ('DESPLEGABLE') {
+                        <select [value]="valor(p.id) ?? ''" (change)="setValor(p.id, $any($event.target).value)"
+                          class="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50">
+                          <option value="">Selecciona…</option>
+                          @for (o of p.opciones; track o) { <option [value]="o">{{ o }}</option> }
+                        </select>
+                      }
+                      @case ('OPCION_MULTIPLE') {
+                        <div class="space-y-1.5">
+                          @for (o of p.opciones; track o) {
+                            <label class="flex items-center gap-2.5 text-sm text-ink">
+                              <input type="radio" [name]="'q-' + p.id" [checked]="valor(p.id) === o" (change)="setValor(p.id, o)" /> {{ o }}
+                            </label>
+                          }
+                        </div>
+                      }
+                      @case ('CASILLAS') {
+                        <div class="space-y-1.5">
+                          @for (o of p.opciones; track o) {
+                            <label class="flex items-center gap-2.5 text-sm text-ink">
+                              <input type="checkbox" [checked]="estaEnLista(p.id, o)" (change)="alternarCasilla(p.id, o)" /> {{ o }}
+                            </label>
+                          }
+                        </div>
+                      }
+                      @case ('ARCHIVO') {
+                        @if (archivos().get(p.id); as a) {
+                          <div class="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface-2/60 px-3.5 py-2.5 text-sm text-ink">
+                            <span class="truncate">{{ a.name }}</span>
+                            <button type="button" (click)="quitarArchivo(p)" class="shrink-0 text-xs font-semibold text-red-600 hover:underline">Quitar</button>
+                          </div>
+                        } @else {
+                          <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" (change)="elegirArchivo(p, $event)" [attr.data-testid]="'archivo-' + p.id"
+                            class="block w-full text-sm text-ink file:mr-3 file:rounded-lg file:border-0 file:bg-we-primary/10 file:px-3.5 file:py-2 file:text-sm file:font-semibold file:text-we-primary" />
+                          <p class="mt-1 text-xs text-ink-muted">Imagen (JPG, PNG, WEBP) o PDF, hasta 2 MB.</p>
+                        }
+                      }
+                      @case ('ASESOR') {
+                        <div class="rounded-lg border border-border bg-surface-2/60 px-3.5 py-2.5 text-sm font-medium text-ink">{{ f.asesorNombre }}</div>
+                      }
+                      @case ('LOTES') {
+                        @if (f.lotes.length === 0) {
+                          <p class="rounded-lg border border-dashed border-border p-4 text-sm text-ink-muted">No hay lotes disponibles para ti en este desarrollo por ahora.</p>
+                        } @else {
+                          <div class="max-h-72 space-y-1.5 overflow-y-auto pr-1" data-testid="lista-lotes">
+                            @for (l of f.lotes; track l.id) {
+                              <label class="flex cursor-pointer items-center justify-between gap-3 rounded-lg border px-3.5 py-2.5 text-sm transition-colors"
+                                [class]="estaEnLista(p.id, l.id) ? 'border-we-primary bg-we-primary/10' : 'border-border hover:border-we-primary/50'">
+                                <span class="flex items-center gap-2.5 text-ink">
+                                  <input type="checkbox" [checked]="estaEnLista(p.id, l.id)" (change)="alternarLote(p.id, l.id)" [attr.data-testid]="'lote-' + l.manzana + '-' + l.numeroLote" />
+                                  Mz {{ l.manzana }} · Lote {{ l.numeroLote }}
+                                  <span class="text-xs text-ink-muted">{{ l.superficie | number: '1.0-2' }} m²</span>
+                                  @if (l.estado !== 'DISPONIBLE') { <span class="rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">Apartado por ti</span> }
+                                </span>
+                                <span class="font-medium text-ink">${{ l.precio | number: '1.2-2' }}</span>
+                              </label>
+                            }
+                          </div>
+                        }
+                      }
+                      @case ('TIPO_PAGO') {
+                        <div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                          @for (t of tiposPago; track t.value) {
+                            <button type="button" (click)="setValor(p.id, t.value)" [attr.data-testid]="'pago-' + t.value"
+                              [class]="valor(p.id) === t.value ? 'border-we-primary bg-we-primary/10 text-we-primary' : 'border-border'"
+                              class="rounded-xl border p-3 text-left transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md">
+                              <p class="text-sm font-semibold">{{ t.label }}</p>
+                              <p class="text-xs text-ink-muted">{{ t.sublabel }}</p>
+                            </button>
+                          }
+                        </div>
+                      }
+                      @case ('APORTACIONES') {
+                        <app-aportaciones-selector [inicio]="inicioPlan" [meses]="plazo() ?? 1" [(valor)]="aportaciones" />
+                      }
+                    }
+                  </div>
+                  @if (errores()[p.id]) { <p class="mt-1.5 text-xs text-red-600" role="alert">{{ errores()[p.id] }}</p> }
+                </div>
+              }
+            }
+          </div>
+
+          @if (lotesElegidos().length > 0) {
+            <div class="mt-4 rounded-xl border border-we-primary/30 bg-we-primary/5 p-4" data-testid="resumen-precontrato">
+              <p class="text-sm font-semibold text-ink">Resumen</p>
+              <dl class="mt-2 grid gap-y-1.5 text-sm">
+                <div class="flex justify-between gap-3"><dt class="text-ink-muted">Total de inversión</dt><dd class="font-semibold text-ink">${{ precioTotal() | number: '1.2-2' }}</dd></div>
+                @if (enganche() !== null && tipoPago() && tipoPago() !== 'cash') {
+                  <div class="flex justify-between gap-3"><dt class="text-ink-muted">Enganche</dt><dd class="font-medium text-ink">${{ enganche() | number: '1.2-2' }}</dd></div>
+                }
+                @if (mensualidad() !== null) {
+                  <div class="flex justify-between gap-3"><dt class="text-ink-muted">Mensualidad estimada</dt><dd class="font-semibold text-ink" data-testid="mensualidad">${{ mensualidad() | number: '1.2-2' }}</dd></div>
+                }
+              </dl>
+            </div>
+          }
+
+          @if (errorEnvio(); as e) {
+            <div class="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-300" role="alert" data-testid="error-envio">{{ e }}</div>
+          }
+          <button type="button" (click)="enviar()" [disabled]="enviando()" data-testid="enviar-precontrato"
+            class="mt-4 w-full rounded-lg bg-we-primary px-4 py-3.5 text-sm font-semibold text-white hover:bg-we-primary/90 active:scale-[0.99] transition-transform duration-150 disabled:opacity-60 disabled:cursor-not-allowed min-h-[48px]">
+            {{ enviando() ? 'Enviando…' : 'Enviar precontrato' }}
+          </button>
+          <p class="mt-3 pb-6 text-center text-xs text-ink-muted">Al enviarlo se crea el cliente y la venta, y los lotes pasan a "En proceso de firma".</p>
+        </div>
+      }
+    }
+  }
+</div>

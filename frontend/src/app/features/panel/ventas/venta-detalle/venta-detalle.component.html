@@ -71,6 +71,71 @@
       </div>
     </div>
 
+    @if (v.fechaProvisional || v.depositoPendiente) {
+      <div class="mt-6 space-y-3" data-testid="avisos-precontrato">
+        @if (v.fechaProvisional) {
+          <div class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200" data-testid="aviso-fecha-provisional">
+            <p class="font-semibold">Fecha de venta provisional</p>
+            <p class="mt-0.5">
+              Esta venta nació de un precontrato (We Forms): su fecha ({{ v.fechaVenta }}) es la del día en que se envió. Corrígela en «Modificar venta» cuando se firme, o márcala como definitiva ahí mismo.
+            </p>
+          </div>
+        }
+        @if (v.depositoPendiente) {
+          <div class="flex flex-col gap-3 rounded-xl border border-we-primary/30 bg-we-primary/5 p-4 text-sm text-ink sm:flex-row sm:items-center sm:justify-between" data-testid="aviso-deposito">
+            <p>
+              <span class="font-semibold">${{ money(v.depositoPendiente) }}</span> ya estaban apartados con dinero en el lote de esta venta y todavía no se aplican.
+            </p>
+            <button type="button" (click)="abrirDeposito()" data-testid="aplicar-deposito"
+              class="shrink-0 rounded-lg bg-we-primary px-4 py-2 text-sm font-semibold text-white hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150">
+              Aplicar depósito
+            </button>
+          </div>
+        }
+      </div>
+    }
+
+    @if (mostrarDeposito()) {
+      <button type="button" (click)="mostrarDeposito.set(false)" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
+      <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+        <div class="modal-panel-enter w-full max-w-md rounded-xl border border-border bg-surface p-5 shadow-lg">
+          <h2 class="font-heading text-lg font-semibold text-ink">Aplicar depósito de apartado</h2>
+          <p class="mt-1 text-sm text-ink-muted">Son ${{ money(v.depositoPendiente ?? 0) }}. ¿Cómo se aplican a esta venta?</p>
+          <div class="mt-4 grid gap-2.5">
+            <button type="button" (click)="depositoModo.set('SALDO')" data-testid="deposito-saldo"
+              [class]="depositoModo() === 'SALDO' ? 'border-we-primary bg-we-primary/10 text-we-primary' : 'border-border'"
+              class="rounded-lg border p-3 text-left transition-all duration-150">
+              <p class="text-sm font-semibold">Baja el saldo</p>
+              <p class="text-xs text-ink-muted">Se registra como abono inicial; mismo pago mensual, se liquida antes.</p>
+            </button>
+            @if (v.mensualidad) {
+              <button type="button" (click)="depositoModo.set('MENSUALIDAD')" data-testid="deposito-mensualidad"
+                [class]="depositoModo() === 'MENSUALIDAD' ? 'border-we-primary bg-we-primary/10 text-we-primary' : 'border-border'"
+                class="rounded-lg border p-3 text-left transition-all duration-150">
+                <p class="text-sm font-semibold">Baja la mensualidad</p>
+                <p class="text-xs text-ink-muted">Mismo plazo, pago mensual más bajo.</p>
+              </button>
+            }
+          </div>
+          @if (depositoModo() === 'SALDO') {
+            <div class="mt-4">
+              <label for="dep-folio" class="mb-1 block text-xs font-medium text-ink-muted">Folio del dinero recibido al apartar *</label>
+              <input id="dep-folio" [value]="depositoFolio()" (input)="depositoFolio.set($any($event.target).value)" data-testid="deposito-folio"
+                class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+            </div>
+          }
+          @if (errorDeposito()) { <p class="mt-3 text-sm text-red-600 dark:text-red-400">{{ errorDeposito() }}</p> }
+          <div class="mt-5 flex justify-end gap-2.5">
+            <button type="button" (click)="mostrarDeposito.set(false)" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cancelar</button>
+            <button type="button" (click)="aplicarDeposito()" [disabled]="aplicandoDeposito()" data-testid="confirmar-deposito"
+              class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
+              {{ aplicandoDeposito() ? 'Aplicando…' : 'Aplicar' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
     @if (!editando()) {
       <div class="mt-6 grid gap-4 rounded-2xl border border-border bg-surface p-5 sm:grid-cols-2">
         <div>
@@ -250,6 +315,12 @@
             </button>
             <p class="text-sm text-ink">El mes de la venta cuenta como primera mensualidad</p>
           </div>
+          @if (v.fechaProvisional) {
+            <label class="flex items-center gap-2.5 text-sm text-ink sm:col-span-2" data-testid="confirmar-fecha">
+              <input type="checkbox" [checked]="confirmarFechaEdicion()" (change)="confirmarFechaEdicion.set($any($event.target).checked)" />
+              La fecha de venta ya es la definitiva (quita la marca de «fecha provisional»)
+            </label>
+          }
           <div class="sm:col-span-2">
             <label for="ed-notas" class="block text-sm font-medium text-ink mb-1.5">Notas</label>
             <textarea

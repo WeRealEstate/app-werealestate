@@ -6,6 +6,7 @@ import { Pagina } from '../models/pagina.model';
 import {
   PagoVenta,
   MedioFirma,
+  AplicarDepositoRequest,
   NumeracionVenta,
   PagoVentaCreateRequest,
   ReciboEditarRequest,
@@ -53,6 +54,11 @@ export class VentasService {
     if (numero) params = params.set('numero', numero);
     if (excluirId) params = params.set('excluirId', excluirId);
     return firstValueFrom(this.http.get<NumeracionVenta>(`${this.baseUrl}/numeracion`, { params }));
+  }
+
+  /** Aplica el depósito pendiente de una venta que nació de un precontrato (We Forms). */
+  aplicarDeposito(id: number, request: AplicarDepositoRequest): Promise<Venta> {
+    return firstValueFrom(this.http.post<Venta>(`${this.baseUrl}/${id}/aplicar-deposito`, request));
   }
 
   contarLotesVendidosSamaiCampestre(): Promise<number> {

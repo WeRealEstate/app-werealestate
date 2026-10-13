@@ -1,0 +1,28 @@
+<div class="flex min-h-dvh flex-col items-center bg-canvas px-4 py-10">
+  <img src="/images/we-logo-color.png" alt="We Real Estate" class="mb-6 h-12 w-auto dark:hidden" />
+  <img src="/images/we-logo.png" alt="" aria-hidden="true" class="mb-6 hidden h-12 w-auto dark:block" />
+
+  @if (formularios(); as lista) {
+    <div class="w-full max-w-lg">
+      <h1 class="font-heading text-xl font-semibold text-ink">Precontratos · {{ nombreProyecto }}</h1>
+      <p class="mt-1 text-sm text-ink-muted">Elige el formulario que vas a llenar.</p>
+      @if (lista.length === 0) {
+        <div class="mt-6 rounded-xl border border-dashed border-border p-8 text-center text-sm text-ink-muted">
+          No hay formularios activos para este desarrollo por ahora.
+        </div>
+      } @else {
+        <div class="mt-5 space-y-3">
+          @for (f of lista; track f.slug) {
+            <a [routerLink]="['/we-forms', f.slug]" data-testid="formulario-publico"
+              class="block rounded-xl border border-border bg-surface p-4 shadow-sm hover:border-we-primary active:scale-[0.99] transition-all duration-150">
+              <p class="font-heading text-base font-semibold text-ink">{{ f.nombre }}</p>
+              @if (f.descripcion) { <p class="mt-0.5 text-sm text-ink-muted">{{ f.descripcion }}</p> }
+            </a>
+          }
+        </div>
+      }
+    </div>
+  } @else {
+    <app-pin-publico [error]="error()" [cargando]="verificando()" texto="Escribe tu PIN de asesor para ver los precontratos." (entrar)="entrar($event)" />
+  }
+</div>

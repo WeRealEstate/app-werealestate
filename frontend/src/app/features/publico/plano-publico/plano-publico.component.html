@@ -354,6 +354,16 @@
         >
           {{ generandoPdf() ? 'Generando PDF…' : 'Descargar PDF' }}
         </button>
+        <!-- We Forms: el precontrato se llena en otra pestaña (pide el PIN de nuevo: el PIN no viaja en el enlace). -->
+        <a
+          [href]="'/we-forms?proyecto=' + proyecto"
+          target="_blank"
+          rel="noopener"
+          data-testid="precontrato"
+          class="rounded-md border border-gray-400/60 bg-black/50 px-2.5 py-1.5 text-xs font-medium text-white/80 hover:bg-black/70"
+        >
+          Precontrato
+        </a>
       } @else {
         <button
           type="button"

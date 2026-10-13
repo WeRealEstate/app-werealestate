@@ -77,6 +77,15 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
   readonly edicionPrimeraMensualidadMesVenta = signal(false);
   /** Número de venta en la edición: arranca con el actual; si se cambia, el servidor recorre las consecutivas. */
   readonly numeroEdicion = signal<number | null>(null);
+  /** Venta de precontrato: marcar la fecha de venta como definitiva al guardar (cambiarla también la confirma). */
+  readonly confirmarFechaEdicion = signal(false);
+
+  // --- Depósito pendiente de aplicar (venta que nació de un precontrato con un lote apartado con dinero) ---
+  readonly mostrarDeposito = signal(false);
+  readonly depositoModo = signal<'SALDO' | 'MENSUALIDAD'>('SALDO');
+  readonly depositoFolio = signal('');
+  readonly aplicandoDeposito = signal(false);
+  readonly errorDeposito = signal<string | null>(null);
 
   // --- Eliminar venta: solo admin. Estilo "permiso peligroso" de Android: el botón de confirmar se
   // habilita hasta que termina una cuenta regresiva de 10 s, y además pide la contraseña (que valida
@@ -226,7 +235,49 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
     this.edicionPrimeraMensualidadMesVenta.set(v.primeraMensualidadMesVenta);
     this.errorEdicion.set(null);
     this.numeroEdicion.set(this.venta()?.numero ?? null);
+    this.confirmarFechaEdicion.set(false);
     this.editando.set(true);
+  }
+
+  abrirDeposito(): void {
+    this.depositoModo.set('SALDO');
+    this.depositoFolio.set('');
+    this.errorDeposito.set(null);
+    this.mostrarDeposito.set(true);
+  }
+
+  async aplicarDeposito(): Promise<void> {
+    const v = this.venta();
+    if (!v || this.aplicandoDeposito()) return;
+    if (this.depositoModo() === 'SALDO' && !this.depositoFolio().trim()) {
+      this.errorDeposito.set('Ingresa el folio del dinero recibido al apartar el lote.');
+      return;
+    }
+    this.aplicandoDeposito.set(true);
+    this.errorDeposito.set(null);
+    try {
+      const actualizada = await this.ventasService.aplicarDeposito(v.id, {
+        aplicarA: this.depositoModo(),
+        folio: this.depositoModo() === 'SALDO' ? this.depositoFolio().trim() : undefined,
+      });
+      this.venta.set(actualizada);
+      this.mostrarDeposito.set(false);
+      this.toast.success('Depósito aplicado.');
+      const [pagos, historial] = await Promise.all([
+        this.ventasService.listarPagos(v.id),
+        this.ventasService.historialRecibos(v.id),
+      ]);
+      this.pagos.set(pagos);
+      this.historialRecibos.set(historial);
+    } catch (error) {
+      this.errorDeposito.set(
+        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+          ? error.error.message
+          : 'No se pudo aplicar el depósito.',
+      );
+    } finally {
+      this.aplicandoDeposito.set(false);
+    }
   }
 
   cancelarEdicion(): void {
@@ -251,6 +302,7 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
       const actualizada = await this.ventasService.actualizar(this.ventaId!, {
         clienteId: this.clienteEdicion()?.id ?? null,
         numero: this.numeroEdicion(),
+        confirmarFecha: this.confirmarFechaEdicion() || undefined,
         copropietariosIds: idsCopropietarios(this.copropietariosEdicion()),
         ...parseAsesorSeleccion(v.asesor),
         fechaVenta: v.fechaVenta,
