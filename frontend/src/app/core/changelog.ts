@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '8.0.8', fecha: '2026-10-14', cambios: [
+    "Agregado numero de cliente modificable", 
+  ] },
   { version: '8.0.7', fecha: '2026-10-14', cambios: [
     "Agregado numero de cliente modificable", 
   ] },
