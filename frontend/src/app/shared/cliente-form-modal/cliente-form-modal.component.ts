@@ -1,5 +1,5 @@
 import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { startWith } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -19,13 +19,15 @@ import { AsesoresExternosService } from '../../core/services/asesores-externos.s
 import { ClientesService } from '../../core/services/clientes.service';
 import { UsuariosService } from '../../core/services/usuarios.service';
 import { CorreoInputDirective } from '../correo-input/correo-input.directive';
-import { PaisSelectorComponent } from '../pais-selector/pais-selector.component';
+import { ListaSelectorComponent } from '../lista-selector/lista-selector.component';
+import { ESTADOS_MX, estadoCanonico } from '../../core/data/estados-mx';
+import { PAISES, PAIS_PRINCIPAL } from '../../core/data/paises';
 import { curpFormatoValido, datosDeCurp, edadDe, fechaCorta, rfcFormatoValido } from '../../core/utils/identidad';
 
 /** Alta y edición de un cliente (ficha completa). Se usa en /panel/clientes, en su ficha y en el selector de la venta. */
 @Component({
   selector: 'app-cliente-form-modal',
-  imports: [CorreoInputDirective, PaisSelectorComponent, ReactiveFormsModule, LucideX],
+  imports: [CorreoInputDirective, ListaSelectorComponent, ReactiveFormsModule, LucideX],
   templateUrl: './cliente-form-modal.component.html',
 })
 export class ClienteFormModalComponent implements OnInit {
@@ -89,6 +91,37 @@ export class ClienteFormModalComponent implements OnInit {
     expedienteDriveUrl: this.fb.control('', { nonNullable: true }),
     activo: this.fb.control(true, { nonNullable: true }),
   });
+
+  // --- País y estado: con México, el estado se elige de la lista; con otro país es texto libre ---
+
+  readonly paises = PAISES;
+  readonly estadosMx = ESTADOS_MX;
+  private readonly paisValor = toSignal(
+    this.form.controls.paisResidencia.valueChanges.pipe(startWith(this.form.controls.paisResidencia.value)),
+    { initialValue: '' },
+  );
+  readonly paisMexico = computed(() => this.paisValor() === PAIS_PRINCIPAL);
+  /** Estado que traía la ficha y no es de la lista: se vació para que elija uno de los 32 estados. */
+  readonly estadoAnterior = signal<string | null>(null);
+
+  constructor() {
+    this.form.controls.paisResidencia.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.ajustarEstado());
+    this.form.controls.estado.valueChanges.pipe(takeUntilDestroyed()).subscribe((v) => {
+      if (v) this.estadoAnterior.set(null);
+    });
+  }
+
+  /** Con México como país, un estado que no sea de la lista se borra (y se avisa cuál era); si coincide con uno
+   * de la lista, se deja con su nombre oficial. */
+  private ajustarEstado(): void {
+    if (this.form.controls.paisResidencia.value !== PAIS_PRINCIPAL) return;
+    const actual = this.form.controls.estado.value.trim();
+    if (!actual) return;
+    const oficial = estadoCanonico(actual);
+    if (oficial === actual) return;
+    this.form.controls.estado.setValue(oficial ?? '');
+    if (!oficial) this.estadoAnterior.set(actual);
+  }
 
   // --- Automatismos: edad en vivo y datos que salen de la CURP (solo completan campos vacíos) ---
 
@@ -191,6 +224,7 @@ export class ClienteFormModalComponent implements OnInit {
         this.form.patchValue({ nombre: partes.slice(0, partes.length > 2 ? partes.length - 2 : 1).join(' ') });
       }
     }
+    this.ajustarEstado();
     this.usuariosService.paraVenta().then((u) => this.usuarios.set(u)).catch(() => undefined);
     this.asesoresService.listarActivos().then((a) => this.asesores.set(a)).catch(() => undefined);
   }

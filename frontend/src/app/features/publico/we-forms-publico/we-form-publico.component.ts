@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
@@ -17,7 +17,9 @@ import { AportacionesSelectorComponent } from '../../../shared/aportaciones-sele
 import { CorreoInputDirective } from '../../../shared/correo-input/correo-input.directive';
 import { MonedaInputDirective } from '../../../shared/moneda-input/moneda-input.directive';
 import { DesarrolloLoaderComponent, DesarrolloLoader } from '../../../shared/desarrollo-loader/desarrollo-loader.component';
-import { PaisSelectorComponent } from '../../../shared/pais-selector/pais-selector.component';
+import { ListaSelectorComponent } from '../../../shared/lista-selector/lista-selector.component';
+import { ESTADOS_MX, estadoCanonico } from '../../../core/data/estados-mx';
+import { PAISES, PAIS_PRINCIPAL } from '../../../core/data/paises';
 import { PinPublicoComponent } from '../../../shared/pin-publico/pin-publico.component';
 
 const TIPOS_CON_ENGANCHE: TipoPagoForm[] = ['downpayment', 'initial', 'annualities'];
@@ -34,7 +36,7 @@ type Etapa = 'pin' | 'cargando' | 'listo' | 'cerrado' | 'error' | 'enviado';
 @Component({
   selector: 'app-we-form-publico',
   standalone: true,
-  imports: [FormsModule, DecimalPipe, PaisSelectorComponent, MonedaInputDirective, CorreoInputDirective, AportacionesSelectorComponent, PinPublicoComponent, DesarrolloLoaderComponent],
+  imports: [FormsModule, DecimalPipe, ListaSelectorComponent, MonedaInputDirective, CorreoInputDirective, AportacionesSelectorComponent, PinPublicoComponent, DesarrolloLoaderComponent],
   templateUrl: './we-form-publico.component.html',
 })
 export class WeFormPublicoComponent {
@@ -71,9 +73,35 @@ export class WeFormPublicoComponent {
   readonly errores = signal<Record<number, string>>({});
   readonly aportaciones = signal<Aportacion[]>([]);
 
+  readonly paises = PAISES;
+  readonly estadosMx = ESTADOS_MX;
+
+  /** País que eligió el asesor: el de la primera pregunta tipo País del formulario ('' = aún ninguno). */
+  readonly paisElegido = computed(() => {
+    const q = this.form()?.preguntas.find((x) => x.tipo === 'PAIS');
+    return q ? String(this.valores()[q.id] ?? '') : '';
+  });
+  /** Con México como país, el Estado se elige de la lista de estados; con otro país es texto libre. */
+  readonly esMexico = computed(() => this.paisElegido() === PAIS_PRINCIPAL);
+
   constructor() {
     const pin = this.service.pin();
     if (pin) void this.cargar(pin);
+    // Al pasar a México, un Estado escrito que no sea de la lista se borra para que elija uno (si coincide con
+    // uno de la lista, se pone con su nombre oficial).
+    effect(() => {
+      if (!this.esMexico()) return;
+      const q = this.pregunta('ESTADO');
+      if (!q) return;
+      const actual = String(this.valores()[q.id] ?? '');
+      const oficial = estadoCanonico(actual);
+      if (actual && oficial !== actual) untracked(() => this.setValor(q.id, oficial ?? ''));
+    });
+  }
+
+  /** La pregunta Estado se contesta con la lista de estados (solo si el país es México). */
+  usaListaEstados(p: PreguntaPublica): boolean {
+    return p.destino === 'ESTADO' && this.esMexico();
   }
 
   // ------------------------------------------------------------------ carga
@@ -314,6 +342,11 @@ export class WeFormPublicoComponent {
     if (curp && !errores[curp.id]) {
       const v = String(this.valor(curp.id) ?? '');
       if (v && !curpFormatoValido(v)) errores[curp.id] = 'El CURP no tiene un formato válido (18 caracteres).';
+    }
+    const estadoQ = this.pregunta('ESTADO');
+    if (estadoQ && this.esMexico() && !errores[estadoQ.id]) {
+      const v = String(this.valor(estadoQ.id) ?? '');
+      if (v && !estadoCanonico(v)) errores[estadoQ.id] = 'Elige un estado de la lista.';
     }
     const dia = this.pregunta('DIA_PAGO');
     if (dia && this.visible(dia) && !errores[dia.id]) {

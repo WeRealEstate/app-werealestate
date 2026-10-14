@@ -13,6 +13,7 @@ import com.werealestate.backend.exception.ValidationException;
 import com.werealestate.backend.model.DestinoPregunta;
 import com.werealestate.backend.model.EstadoWeForm;
 import com.werealestate.backend.model.Lote;
+import com.werealestate.backend.model.EstadosMexico;
 import com.werealestate.backend.model.Paises;
 import com.werealestate.backend.model.TipoPreguntaForm;
 import com.werealestate.backend.model.Usuario;
@@ -289,7 +290,20 @@ public class WeFormPublicoService {
                 .filter(t -> t != null && !t.isBlank())
                 .findFirst()
                 .orElse(null);
-        ClienteRequest datosCliente = datosCliente(porDestino, paisResidencia);
+        // Con México como país, el estado debe ser uno de la lista (la misma regla que en Clientes); con otro
+        // país, o sin país, es texto libre. La respuesta guarda el nombre de la lista.
+        String estadoCliente = null;
+        JsonNode estadoNodo = porDestino.get(DestinoPregunta.ESTADO);
+        if (Paises.MEXICO.equals(paisResidencia) && estadoNodo != null && !estadoNodo.asText().isBlank()) {
+            estadoCliente = EstadosMexico.canonico(estadoNodo.asText());
+            if (estadoCliente == null) {
+                throw new ValidationException("Estado: elige un estado de la lista");
+            }
+            for (WeFormPregunta p : preguntas) {
+                if (p.getDestino() == DestinoPregunta.ESTADO) textoPorPregunta.put(p.getId(), estadoCliente);
+            }
+        }
+        ClienteRequest datosCliente = datosCliente(porDestino, paisResidencia, estadoCliente);
         ClienteService.ClienteResuelto resuelto =
                 clienteService.resolverDesdePrecontrato(datosCliente, asesor.usuario(), asesor.externo());
 
@@ -465,7 +479,8 @@ public class WeFormPublicoService {
         return lista;
     }
 
-    private static ClienteRequest datosCliente(Map<DestinoPregunta, JsonNode> d, String paisResidencia) {
+    private static ClienteRequest datosCliente(
+            Map<DestinoPregunta, JsonNode> d, String paisResidencia, String estadoDeLista) {
         LocalDate nacimiento;
         try {
             nacimiento = LocalDate.parse(texto(d, DestinoPregunta.FECHA_NACIMIENTO));
@@ -477,7 +492,7 @@ public class WeFormPublicoService {
                 texto(d, DestinoPregunta.APELLIDO_MATERNO), nacimiento, texto(d, DestinoPregunta.TELEFONO), null,
                 minusculas(texto(d, DestinoPregunta.CORREO)), texto(d, DestinoPregunta.CURP), texto(d, DestinoPregunta.RFC),
                 null, null, null, null, texto(d, DestinoPregunta.CALLE), texto(d, DestinoPregunta.COLONIA),
-                texto(d, DestinoPregunta.MUNICIPIO), texto(d, DestinoPregunta.ESTADO),
+                texto(d, DestinoPregunta.MUNICIPIO), estadoDeLista != null ? estadoDeLista : texto(d, DestinoPregunta.ESTADO),
                 texto(d, DestinoPregunta.CODIGO_POSTAL), null, null, null, null, null, null, null, null, null, null,
                 paisResidencia);
     }

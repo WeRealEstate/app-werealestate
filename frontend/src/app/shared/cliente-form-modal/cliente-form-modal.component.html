@@ -66,7 +66,7 @@
           </div>
           <div>
             <label for="c-pais" class="mb-1 block text-xs font-medium text-ink-muted">País de residencia</label>
-            <app-pais-selector inputId="c-pais" formControlName="paisResidencia" />
+            <app-lista-selector inputId="c-pais" [lista]="paises" formControlName="paisResidencia" />
           </div>
           <div>
             <label for="c-civil" class="mb-1 block text-xs font-medium text-ink-muted">Estado civil</label>
@@ -154,9 +154,16 @@
           </div>
           <div>
             <label for="c-estado" class="mb-1 block text-xs font-medium text-ink-muted">Estado</label>
-            <input id="c-estado" type="text" formControlName="estado"  class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
-            @if (form.controls.estado.invalid && form.controls.estado.touched) {
-              <p class="mt-1 text-xs text-red-600 dark:text-red-400">Valor no válido.</p>
+            @if (paisMexico()) {
+              <app-lista-selector inputId="c-estado" [lista]="estadosMx" placeholder="Elige un estado…" formControlName="estado" />
+              @if (estadoAnterior(); as anterior) {
+                <p class="mt-1 text-xs text-amber-600 dark:text-amber-400">El estado guardado («{{ anterior }}») no está en la lista: elige uno.</p>
+              }
+            } @else {
+              <input id="c-estado" type="text" formControlName="estado"  class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+              @if (form.controls.estado.invalid && form.controls.estado.touched) {
+                <p class="mt-1 text-xs text-red-600 dark:text-red-400">Valor no válido.</p>
+              }
             }
           </div>
           <div>

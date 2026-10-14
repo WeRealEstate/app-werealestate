@@ -1,3 +1,5 @@
+import { canonicoEnLista } from '../utils/lista';
+
 /** Catálogo de países (nombres en español) para elegir el país de residencia. México va primero y el resto
  * en orden alfabético. Es la misma lista que el backend (resources/paises.txt, clase Paises): si se edita
  * aquí hay que editarla allá, porque el backend valida el nombre exacto. */
@@ -204,25 +206,7 @@ export const PAISES: readonly string[] = [
   'Zimbabue',
 ];
 
-/** Minúsculas y sin acentos, para comparar lo que escribe el usuario con la lista. */
-export function normalizarPais(texto: string): string {
-  return texto
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim();
-}
-
 /** El nombre de la lista que corresponde al texto (sin importar mayúsculas ni acentos), o null. */
 export function paisCanonico(texto: string | null | undefined): string | null {
-  if (!texto) return null;
-  const clave = normalizarPais(texto);
-  return PAISES.find((p) => normalizarPais(p) === clave) ?? null;
-}
-
-/** Países que contienen el texto (México siempre primero si coincide); sin texto, toda la lista. */
-export function buscarPaises(texto: string): string[] {
-  const clave = normalizarPais(texto);
-  if (!clave) return [...PAISES];
-  return PAISES.filter((p) => normalizarPais(p).includes(clave));
+  return canonicoEnLista(PAISES, texto);
 }

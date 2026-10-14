@@ -12,6 +12,7 @@ import com.werealestate.backend.model.AsesorExterno;
 import com.werealestate.backend.model.FuenteCliente;
 import com.werealestate.backend.model.Cliente;
 import com.werealestate.backend.model.PagoVenta;
+import com.werealestate.backend.model.EstadosMexico;
 import com.werealestate.backend.model.Paises;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.UbicacionDocumento;
@@ -207,6 +208,8 @@ public class ClienteService {
         if (rfc != null && !RFC.matcher(rfc).matches()) {
             throw new ValidationException("El RFC no tiene un formato válido");
         }
+        String pais = paisValido(r.paisResidencia());
+        String estado = estadoValido(pais, r.estado());
 
         Cliente existente = clienteRepository.findByCurpIgnoreCase(curp).orElse(null);
         if (existente != null) {
@@ -227,14 +230,14 @@ public class ClienteService {
                     vacio(existente.getCalle(), limpio(r.calle())),
                     vacio(existente.getColonia(), limpio(r.colonia())),
                     vacio(existente.getMunicipio(), limpio(r.municipio())),
-                    vacio(existente.getEstado(), limpio(r.estado())),
+                    vacio(existente.getEstado(), estado),
                     vacio(existente.getCodigoPostal(), limpio(r.codigoPostal())),
                     existente.getBeneficiarioNombre(), existente.getBeneficiarioParentesco(),
                     existente.getFuente(), existente.getFuenteDetalle(),
                     existente.getCaptadoPorUsuario(), existente.getCaptadoPorAsesor(), existente.getNotas(),
                     existente.getExpedienteUbicacion(), existente.getExpedienteDriveUrl());
             if (existente.getPaisResidencia() == null || existente.getPaisResidencia().isBlank()) {
-                existente.setPaisResidencia(paisValido(r.paisResidencia()));
+                existente.setPaisResidencia(pais);
             }
             return new ClienteResuelto(clienteRepository.save(existente), false);
         }
@@ -244,10 +247,10 @@ public class ClienteService {
         c.actualizarDatos(
                 nombre, paterno, limpio(r.apellidoMaterno()), r.fechaNacimiento(), telefono, null,
                 limpio(r.correo()), curp, rfc, limpio(r.lugarNacimiento()), null, null, null,
-                limpio(r.calle()), limpio(r.colonia()), limpio(r.municipio()), limpio(r.estado()),
+                limpio(r.calle()), limpio(r.colonia()), limpio(r.municipio()), estado,
                 limpio(r.codigoPostal()), null, null,
                 FuenteCliente.PRECONTRATO, null, captadoUsuario, captadoAsesor, null, null, null);
-        c.setPaisResidencia(paisValido(r.paisResidencia()));
+        c.setPaisResidencia(pais);
         return new ClienteResuelto(clienteRepository.save(c), true);
     }
 
@@ -315,15 +318,17 @@ public class ClienteService {
         String materno = limpio(r.apellidoMaterno());
         String telefono = r.telefono().trim();
         verificarDuplicado(c.getId(), nombre, paterno, materno, nacimiento, telefono, curp);
+        String pais = paisValido(r.paisResidencia());
+        String estadoCliente = estadoValido(pais, r.estado());
 
         c.actualizarDatos(
                 nombre, paterno, materno, nacimiento, telefono, limpio(r.telefono2()), limpio(r.correo()), curp, rfc,
                 limpio(r.lugarNacimiento()), limpio(r.nacionalidad()), r.estadoCivil(), limpio(r.ocupacion()),
-                limpio(r.calle()), limpio(r.colonia()), limpio(r.municipio()), limpio(r.estado()),
+                limpio(r.calle()), limpio(r.colonia()), limpio(r.municipio()), estadoCliente,
                 limpio(r.codigoPostal()), limpio(r.beneficiarioNombre()), limpio(r.beneficiarioParentesco()),
                 r.fuente(), limpio(r.fuenteDetalle()), captadoUsuario, captadoAsesor, limpio(r.notas()),
                 ubicacion, url);
-        c.setPaisResidencia(paisValido(r.paisResidencia()));
+        c.setPaisResidencia(pais);
     }
 
     /** El país de la lista que corresponde al texto (null si viene vacío); cualquier otro texto se rechaza. */
@@ -332,6 +337,16 @@ public class ClienteService {
         if (limpio == null) return null;
         String canonico = Paises.canonico(limpio);
         if (canonico == null) throw new ValidationException("Elige un país de la lista");
+        return canonico;
+    }
+
+    /** El estado limpio. Si el país es México debe ser uno de los 32 estados de la lista (se guarda el nombre
+     * de la lista); en cualquier otro caso (otro país o sin país) es texto libre. */
+    private static String estadoValido(String pais, String texto) {
+        String limpio = limpio(texto);
+        if (limpio == null || !Paises.MEXICO.equals(pais)) return limpio;
+        String canonico = EstadosMexico.canonico(limpio);
+        if (canonico == null) throw new ValidationException("Elige un estado de la lista");
         return canonico;
     }
 

@@ -68,9 +68,14 @@
                   <div class="mt-2.5">
                     @switch (p.tipo) {
                       @case ('CORTA') {
-                        <input type="text" [value]="valor(p.id) ?? ''" (input)="escribirTexto(p, $event)" [attr.maxlength]="p.destino === 'CURP' ? 18 : p.destino === 'RFC' ? 13 : null"
-                          [class.uppercase]="p.destino === 'CURP' || p.destino === 'RFC'" autocomplete="off"
-                          class="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+                        @if (usaListaEstados(p)) {
+                          <app-lista-selector [lista]="estadosMx" placeholder="Elige un estado…" [ngModel]="valor(p.id) ?? ''" (ngModelChange)="setValor(p.id, $event)"
+                            [ngModelOptions]="{ standalone: true }" [invalido]="!!errores()[p.id]" />
+                        } @else {
+                          <input type="text" [value]="valor(p.id) ?? ''" (input)="escribirTexto(p, $event)" [attr.maxlength]="p.destino === 'CURP' ? 18 : p.destino === 'RFC' ? 13 : null"
+                            [class.uppercase]="p.destino === 'CURP' || p.destino === 'RFC'" autocomplete="off"
+                            class="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+                        }
                       }
                       @case ('PARRAFO') {
                         <textarea rows="3" [value]="valor(p.id) ?? ''" (input)="escribirTexto(p, $event)"
@@ -94,7 +99,7 @@
                           class="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
                       }
                       @case ('PAIS') {
-                        <app-pais-selector [ngModel]="valor(p.id) ?? ''" (ngModelChange)="setValor(p.id, $event)"
+                        <app-lista-selector [lista]="paises" [ngModel]="valor(p.id) ?? ''" (ngModelChange)="setValor(p.id, $event)"
                           [ngModelOptions]="{ standalone: true }" [invalido]="!!errores()[p.id]" />
                       }
                       @case ('DESPLEGABLE') {

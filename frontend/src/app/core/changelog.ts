@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '8.0.11', fecha: '2026-10-14', cambios: [
+    "We Forms y Clientes: si el país de residencia es México, el Estado se elige de la lista de los 32 estados (con buscador); con otro país sigue siendo texto libre. Si cambian el país a México y ya habían escrito un estado que no está en la lista, se borra para que elijan uno.",
+  ] },
   { version: '8.0.10', fecha: '2026-10-14', cambios: [
     "We Forms: nuevo tipo de pregunta 'País' (lista de países con buscador, México primero). La primera pregunta de ese tipo llena el país de residencia del cliente; si el cliente ya existe y ya tiene país, no se cambia.",
     "Clientes: nuevo campo 'País de residencia' (se elige de la lista) en la ficha y en el formulario del cliente.",
