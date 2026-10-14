@@ -23,6 +23,8 @@
         </div>
       }
     </div>
+  } @else if (entrandoSolo()) {
+    <app-desarrollo-loader [desarrollo]="proyecto" modo="bloque" texto="Cargando precontratos" />
   } @else {
     <app-pin-publico [error]="error()" [cargando]="verificando()" texto="Escribe tu PIN de asesor para ver los precontratos." (entrar)="entrar($event)" />
   }

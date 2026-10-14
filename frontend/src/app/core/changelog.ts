@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '8.0.5', fecha: '2026-10-14', cambios: [
+    "Arreglo BUG en los precontratos: se mostraba la pantalla de PIN mientras cargaba el precontrato", 
+  ] },
   { version: '8.0.4', fecha: '2026-10-14', cambios: [
     "Ahora no siempre se pide el PIN de asesor, PIN se guarda en la memoria interna del navegador", 
   ] },

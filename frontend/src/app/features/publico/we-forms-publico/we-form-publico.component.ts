@@ -55,7 +55,8 @@ export class WeFormPublicoComponent {
     return nombre.includes('nanuu') ? 'nanuu' : nombre.includes('samai') ? 'samai' : null;
   });
 
-  readonly etapa = signal<Etapa>('pin');
+  // Con un PIN recordado se arranca en 'cargando' para no mostrar un instante la pantalla del PIN.
+  readonly etapa = signal<Etapa>(this.service.pin() ? 'cargando' : 'pin');
   readonly form = signal<WeFormPublico | null>(null);
   readonly mensajeError = signal<string | null>(null);
   readonly errorPin = signal<string | null>(null);

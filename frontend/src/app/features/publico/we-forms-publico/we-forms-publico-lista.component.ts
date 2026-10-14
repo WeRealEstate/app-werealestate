@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { WeFormPublicoLista } from '../../../core/models/we-form.model';
 import { WeFormsPublicoService } from '../../../core/services/we-forms-publico.service';
+import { DesarrolloLoaderComponent } from '../../../shared/desarrollo-loader/desarrollo-loader.component';
 import { PinPublicoComponent } from '../../../shared/pin-publico/pin-publico.component';
 
 /** /we-forms?proyecto=samai: a donde lleva el botón "Precontrato" del plano. Pide el PIN y muestra los
@@ -10,7 +11,7 @@ import { PinPublicoComponent } from '../../../shared/pin-publico/pin-publico.com
 @Component({
   selector: 'app-we-forms-publico-lista',
   standalone: true,
-  imports: [RouterLink, PinPublicoComponent],
+  imports: [RouterLink, PinPublicoComponent, DesarrolloLoaderComponent],
   templateUrl: './we-forms-publico-lista.component.html',
 })
 export class WeFormsPublicoListaComponent {
@@ -23,10 +24,12 @@ export class WeFormsPublicoListaComponent {
   readonly formularios = signal<WeFormPublicoLista[] | null>(null);
   readonly error = signal<string | null>(null);
   readonly verificando = signal(false);
+  /** true mientras se entra solo con el PIN recordado: así no se ve un instante la pantalla del PIN. */
+  readonly entrandoSolo = signal(!!this.service.pin());
 
   constructor() {
     const pin = this.service.pin();
-    if (pin) void this.entrar(pin);
+    if (pin) void this.entrar(pin).finally(() => this.entrandoSolo.set(false));
   }
 
   /** Olvida el PIN de este dispositivo para que otro asesor pueda entrar con el suyo. */
