@@ -2,6 +2,10 @@
   <img src="/images/we-logo-color.png" alt="We Real Estate" class="mb-5 h-11 w-auto dark:hidden" />
   <img src="/images/we-logo.png" alt="" aria-hidden="true" class="mb-5 hidden h-11 w-auto dark:block" />
 
+  @if (etapa() !== 'pin' && etapa() !== 'cargando') {
+    <button type="button" (click)="salir()" data-testid="cambiar-asesor" class="-mt-2 mb-4 text-xs text-ink-muted underline underline-offset-2 hover:text-ink">Cambiar de asesor</button>
+  }
+
   @switch (etapa()) {
     @case ('pin') {
       <app-pin-publico [error]="errorPin()" [cargando]="verificando()" texto="Escribe tu PIN de asesor para llenar el precontrato." (entrar)="cargar($event)" />

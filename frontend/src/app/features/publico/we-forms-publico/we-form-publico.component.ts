@@ -81,7 +81,7 @@ export class WeFormPublicoComponent {
     this.errorPin.set(null);
     try {
       this.form.set(await this.service.obtener(this.slug, pin));
-      this.service.pin.set(pin);
+      this.service.guardarPin(pin);
       this.etapa.set('listo');
     } catch (e) {
       const mensaje = e instanceof HttpErrorResponse && typeof e.error?.message === 'string' ? e.error.message : 'No se pudo abrir el formulario.';
@@ -93,13 +93,21 @@ export class WeFormPublicoComponent {
         this.mensajeError.set(mensaje);
         this.etapa.set('error');
       } else {
-        this.service.pin.set(null);
+        // Solo se olvida el PIN si el servidor lo rechazó; un fallo de red o el límite de intentos no lo borran.
+        if (status === 403 || status === 404) this.service.guardarPin(null);
         this.errorPin.set(mensaje);
         this.etapa.set('pin');
       }
     } finally {
       this.verificando.set(false);
     }
+  }
+
+  /** Olvida el PIN de este dispositivo para que otro asesor pueda entrar con el suyo. */
+  salir(): void {
+    this.service.guardarPin(null);
+    this.errorPin.set(null);
+    this.etapa.set('pin');
   }
 
   // ------------------------------------------------------------------ valores y reglas

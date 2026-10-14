@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '8.0.4', fecha: '2026-10-14', cambios: [
+    "Ahora no siempre se pide el PIN de asesor, PIN se guarda en la memoria interna del navegador", 
+  ] },
   { version: '8.0.3', fecha: '2026-10-13', cambios: [
     "Cambio de orden de numero de cliente", 
   ] },

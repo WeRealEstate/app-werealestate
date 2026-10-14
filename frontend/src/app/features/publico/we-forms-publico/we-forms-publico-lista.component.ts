@@ -29,14 +29,22 @@ export class WeFormsPublicoListaComponent {
     if (pin) void this.entrar(pin);
   }
 
+  /** Olvida el PIN de este dispositivo para que otro asesor pueda entrar con el suyo. */
+  salir(): void {
+    this.service.guardarPin(null);
+    this.formularios.set(null);
+    this.error.set(null);
+  }
+
   async entrar(pin: string): Promise<void> {
     this.verificando.set(true);
     this.error.set(null);
     try {
       this.formularios.set(await this.service.listar(this.proyecto, pin));
-      this.service.pin.set(pin);
+      this.service.guardarPin(pin);
     } catch (e) {
-      this.service.pin.set(null);
+      // Solo se olvida el PIN si el servidor lo rechazó; un fallo de red no debe borrarlo.
+      if (e instanceof HttpErrorResponse && (e.status === 403 || e.status === 404)) this.service.guardarPin(null);
       this.error.set(
         e instanceof HttpErrorResponse && typeof e.error?.message === 'string' ? e.error.message : 'No se pudo verificar el PIN.',
       );
