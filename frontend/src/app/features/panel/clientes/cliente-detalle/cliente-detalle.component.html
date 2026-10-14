@@ -10,7 +10,11 @@
       <div>
         <h1 class="font-heading text-2xl font-semibold text-ink">{{ c.nombreCompleto }}</h1>
         <p class="mt-1 text-sm text-ink-muted">
-          Cliente n.º {{ c.numero }} · desde {{ fecha(c.fechaCreacion) }}
+          Cliente n.º {{ c.numero }}
+          <button type="button" (click)="abrirCambioNumero(c)" data-testid="cambiar-numero-cliente" class="ml-0.5 inline-flex align-middle rounded p-1 text-ink-muted hover:bg-surface-2 hover:text-ink" aria-label="Cambiar el número de cliente" title="Cambiar el número de cliente">
+            <svg lucidePencil [size]="13" aria-hidden="true"></svg>
+          </button>
+          · desde {{ fecha(c.fechaCreacion) }}
           @if (!c.activo) { · <strong>Inactivo</strong> }
           @if (c.datosIncompletos) { · <span class="text-amber-600 dark:text-amber-400">Datos incompletos: falta completar su ficha</span> }
         </p>
@@ -131,5 +135,43 @@
     @if (editando()) {
       <app-cliente-form-modal [cliente]="c" (guardado)="alGuardar()" (cerrado)="editando.set(false)" (duplicado)="editando.set(false)" />
     }
+  }
+  @if (cambiandoNumero() && cliente(); as c) {
+    <button type="button" (click)="cerrarCambioNumero()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/50"></button>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="cambiar-numero-titulo">
+      <form (submit)="$event.preventDefault(); guardarNumero()" class="modal-panel-enter w-full max-w-md rounded-2xl border border-border bg-surface p-5 shadow-xl">
+        <h2 id="cambiar-numero-titulo" class="font-heading text-lg font-semibold text-ink">Número de cliente</h2>
+        <p class="mt-0.5 text-sm text-ink-muted">{{ c.nombreCompleto }} · hoy es el n.º {{ c.numero }}</p>
+
+        <label for="numero-cliente" class="mt-4 block text-sm font-medium text-ink">Nuevo número</label>
+        <input
+          id="numero-cliente" type="text" inputmode="numeric" autocomplete="off" data-testid="numero-cliente-input"
+          [ngModel]="numeroNuevo()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="alEscribirNumero($event)"
+          class="mt-1.5 w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+        />
+
+        @if (numeracion(); as n) {
+          @if (n.ocupanteId !== null) {
+            <p class="mt-3 rounded-lg bg-amber-50 px-3.5 py-2.5 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-200" data-testid="aviso-recorrido">
+              El n.º {{ numeroNuevo() }} lo tiene <strong>{{ n.ocupanteNombre }}</strong>. Al guardar se recorrerá +1
+              {{ n.clientesARecorrer === 1 ? 'ese cliente' : 'ese cliente y los ' + (n.clientesARecorrer - 1) + ' consecutivos que le siguen' }}.
+            </p>
+          } @else {
+            <p class="mt-2 text-xs text-ink-muted">Ese número está libre. El siguiente automático es el {{ n.siguiente }}.</p>
+          }
+        }
+
+        @if (errorNumero(); as e) {
+          <p class="mt-3 text-sm text-red-600">{{ e }}</p>
+        }
+
+        <div class="mt-5 flex justify-end gap-2">
+          <button type="button" (click)="cerrarCambioNumero()" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink hover:border-we-primary">Cancelar</button>
+          <button type="submit" [disabled]="numeroNuevo() === null || guardandoNumero()" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-50">
+            {{ guardandoNumero() ? 'Guardando…' : 'Guardar' }}
+          </button>
+        </div>
+      </form>
+    </div>
   }
 </div>

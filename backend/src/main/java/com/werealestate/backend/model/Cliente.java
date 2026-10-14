@@ -23,9 +23,9 @@ public class Cliente {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** Consecutivo que se muestra como número de cliente; lo asigna la base (secuencia) al insertar. */
-    @org.hibernate.annotations.Generated(event = org.hibernate.generator.EventType.INSERT)
-    @Column(insertable = false, updatable = false)
+    /** Número de cliente que se muestra en la app: lo asigna ClienteService (mayor + 1) al crearlo y solo
+     * cambia por las consultas nativas de ClienteRepository, nunca por un guardado de la ficha. */
+    @Column(nullable = false, updatable = false)
     private Long numero;
 
     @Column(nullable = false, length = 120)
@@ -204,6 +204,10 @@ public class Cliente {
 
     public Long getNumero() {
         return numero;
+    }
+
+    public void setNumero(Long numero) {
+        this.numero = numero;
     }
 
     public Long getId() { return id; }

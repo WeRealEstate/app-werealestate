@@ -34,6 +34,15 @@ export interface ClienteLista {
   saldoPendiente: number;
 }
 
+/** Respuesta de /api/clientes/numeracion. */
+export interface NumeracionCliente {
+  siguiente: number;
+  ocupanteId: number | null;
+  ocupanteNombre: string | null;
+  /** Cuántos clientes se recorrerían +1 (el que ocupa ese número y los consecutivos que le siguen). */
+  clientesARecorrer: number;
+}
+
 export interface ClienteVenta {
   ventaId: number;
   numero: number;

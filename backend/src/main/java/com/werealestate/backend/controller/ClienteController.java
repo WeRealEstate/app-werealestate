@@ -2,7 +2,9 @@ package com.werealestate.backend.controller;
 
 import com.werealestate.backend.dto.ClienteDto;
 import com.werealestate.backend.dto.ClienteListaDto;
+import com.werealestate.backend.dto.ClienteNumeroRequest;
 import com.werealestate.backend.dto.ClienteRequest;
+import com.werealestate.backend.dto.NumeracionClienteDto;
 import com.werealestate.backend.service.ClienteService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -36,6 +38,14 @@ public class ClienteController {
         return clienteService.buscar(q);
     }
 
+    /** Siguiente número de cliente automático y, si "numero" ya lo tiene otro cliente (distinto de excluirId),
+     * cuál es y cuántos se recorrerían: para avisarlo antes de guardar. */
+    @GetMapping("/numeracion")
+    public NumeracionClienteDto numeracion(
+            @RequestParam(required = false) Long numero, @RequestParam(required = false) Long excluirId) {
+        return clienteService.consultarNumeracion(numero, excluirId);
+    }
+
     @GetMapping("/{id}")
     public ClienteDto obtener(@PathVariable Long id) {
         return clienteService.obtener(id);
@@ -44,6 +54,11 @@ public class ClienteController {
     @PostMapping
     public ClienteDto crear(@Valid @RequestBody ClienteRequest request) {
         return clienteService.crear(request);
+    }
+
+    @PutMapping("/{id}/numero")
+    public ClienteDto cambiarNumero(@PathVariable Long id, @Valid @RequestBody ClienteNumeroRequest request) {
+        return clienteService.cambiarNumero(id, request.numero());
     }
 
     @PutMapping("/{id}")

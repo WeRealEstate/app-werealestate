@@ -3,6 +3,7 @@ package com.werealestate.backend.service;
 import com.werealestate.backend.dto.ClienteDto;
 import com.werealestate.backend.dto.ClienteListaDto;
 import com.werealestate.backend.dto.ClienteRequest;
+import com.werealestate.backend.dto.NumeracionClienteDto;
 import com.werealestate.backend.exception.ClienteDuplicadoException;
 import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
@@ -127,7 +128,59 @@ public class ClienteService {
         exigirAdminOLider();
         Cliente c = new Cliente(r.nombre().trim(), r.apellidoPaterno().trim(), limpio(r.apellidoMaterno()));
         aplicar(c, r);
+        c.setNumero(siguienteNumero());
         return detalle(clienteRepository.save(c));
+    }
+
+    /** Cambia el número de un cliente. Si otro ya lo tiene, ese y los consecutivos que le siguen se recorren
+     * +1 (se detiene en el primer hueco), igual que el número de venta; el lugar que deja queda libre. */
+    public ClienteDto cambiarNumero(Long id, Long numero) {
+        exigirAdminOLider();
+        if (numero == null || numero < 1) throw new ValidationException("El número de cliente debe ser 1 o mayor");
+        Cliente c = obtenerEntidad(id);
+        long actual = c.getNumero();
+        if (numero == actual) return detalle(c);
+        clienteRepository.bloquearNumeracion();
+        long hasta = finDeLaRacha(numero, actual);
+        if (hasta >= numero) {
+            clienteRepository.apartarDeSuLugar(id);
+            clienteRepository.negarRango(numero, hasta, id);
+            clienteRepository.subirNegados(-hasta, -numero);
+        }
+        clienteRepository.fijarNumero(id, numero);
+        return detalle(obtenerEntidad(id));
+    }
+
+    /** Para el aviso previo: el siguiente número automático y, si el consultado lo tiene otro cliente
+     * (distinto de excluirId), cuál es y cuántos se recorrerían. */
+    @Transactional(readOnly = true)
+    public NumeracionClienteDto consultarNumeracion(Long numero, Long excluirId) {
+        exigirAdminOLider();
+        long siguiente = clienteRepository.maxNumero() + 1;
+        if (numero == null || numero < 1) return new NumeracionClienteDto(siguiente, null, null, 0);
+        Cliente ocupante = clienteRepository.findByNumero(numero).orElse(null);
+        if (ocupante == null || ocupante.getId().equals(excluirId)) {
+            return new NumeracionClienteDto(siguiente, null, null, 0);
+        }
+        Long ignorado = excluirId == null ? null : clienteRepository.findById(excluirId).map(Cliente::getNumero).orElse(null);
+        long fin = finDeLaRacha(numero, ignorado == null ? -1L : ignorado);
+        return new NumeracionClienteDto(siguiente, ocupante.getId(), ocupante.nombreCompleto(), (int) (fin - numero + 1));
+    }
+
+    /** El número de un cliente nuevo: el mayor en uso + 1. Con candado para que dos altas simultáneas no repitan. */
+    private long siguienteNumero() {
+        clienteRepository.bloquearNumeracion();
+        return clienteRepository.maxNumero() + 1;
+    }
+
+    /** Último número de la racha de consecutivos que empieza en "desde" (sin contar el que se está moviendo,
+     * que se va de su lugar); desde - 1 si "desde" está libre. */
+    private long finDeLaRacha(long desde, long numeroIgnorado) {
+        java.util.Set<Long> enUso = new java.util.HashSet<>(clienteRepository.numerosDesde(desde));
+        enUso.remove(numeroIgnorado);
+        long fin = desde - 1;
+        while (enUso.contains(fin + 1)) fin++;
+        return fin;
     }
 
     /** El cliente de un precontrato de We Forms (sin sesión: ya se validó el PIN del asesor). La CURP manda:
@@ -183,6 +236,7 @@ public class ClienteService {
         }
 
         Cliente c = new Cliente(nombre, paterno, limpio(r.apellidoMaterno()));
+        c.setNumero(siguienteNumero());
         c.actualizarDatos(
                 nombre, paterno, limpio(r.apellidoMaterno()), r.fechaNacimiento(), telefono, null,
                 limpio(r.correo()), curp, rfc, limpio(r.lugarNacimiento()), null, null, null,
@@ -301,7 +355,9 @@ public class ClienteService {
                 String clave = normalizar(v.getCliente());
                 Cliente c = porNombre.get(clave);
                 if (c == null) {
-                    c = clienteRepository.save(desdeTexto(v.getCliente()));
+                    c = desdeTexto(v.getCliente());
+                    c.setNumero(siguienteNumero());
+                    c = clienteRepository.save(c);
                     porNombre.put(clave, c);
                 }
                 v.ligarCliente(c);

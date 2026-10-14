@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Cliente, ClienteLista, ClienteRequest } from '../models/cliente.model';
+import { Cliente, ClienteLista, ClienteRequest, NumeracionCliente } from '../models/cliente.model';
 
 @Injectable({ providedIn: 'root' })
 export class ClientesService {
@@ -20,6 +20,17 @@ export class ClientesService {
 
   obtener(id: number): Promise<Cliente> {
     return firstValueFrom(this.http.get<Cliente>(`${this.baseUrl}/${id}`));
+  }
+
+  /** Siguiente número de cliente y, si "numero" ya lo tiene otro cliente, quién y cuántos se recorrerían. */
+  numeracion(numero: number | null, excluirId: number): Promise<NumeracionCliente> {
+    let params = new HttpParams().set('excluirId', excluirId);
+    if (numero !== null) params = params.set('numero', numero);
+    return firstValueFrom(this.http.get<NumeracionCliente>(`${this.baseUrl}/numeracion`, { params }));
+  }
+
+  cambiarNumero(id: number, numero: number): Promise<Cliente> {
+    return firstValueFrom(this.http.put<Cliente>(`${this.baseUrl}/${id}/numero`, { numero }));
   }
 
   crear(request: ClienteRequest): Promise<Cliente> {
