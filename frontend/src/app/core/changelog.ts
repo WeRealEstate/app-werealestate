@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '8.0.9', fecha: '2026-10-14', cambios: [
+    "Vista previa al compartir links: el cotizador se ve como 'We Real Estate | Cotizador asesores', el plano de Samai como 'We Real Estate | Plano Samai', el de Nanuu como 'We Real Estate | Plano Nanuu' y el precontrato como 'We Real Estate | Precontrato'; los planos muestran la portada de su desarrollo.",
+  ] },
   { version: '8.0.8', fecha: '2026-10-14', cambios: [
     "Agregado numero de cliente modificable", 
   ] },

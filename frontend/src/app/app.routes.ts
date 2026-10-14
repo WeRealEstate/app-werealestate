@@ -17,14 +17,14 @@ export const routes: Routes = [
     // estado de cada lote y apartar uno disponible, pero no editar el plano ni liberar un lote ya
     // apartado. Ver PlanoPublicoComponent.
     path: 'samai',
-    title: 'SAMAI Campestre | We Real Estate',
+    title: 'We Real Estate | Plano Samai',
     data: { proyecto: 'samai' },
     loadComponent: () =>
       import('./features/publico/plano-publico/plano-publico.component').then((m) => m.PlanoPublicoComponent),
   },
   {
     path: 'aldea-nanuu',
-    title: 'Aldea Nanuu | We Real Estate',
+    title: 'We Real Estate | Plano Nanuu',
     data: { proyecto: 'nanuu' },
     loadComponent: () =>
       import('./features/publico/plano-publico/plano-publico.component').then((m) => m.PlanoPublicoComponent),
@@ -35,7 +35,7 @@ export const routes: Routes = [
     // El layout público solo pone el header/footer de marca y el ancho centrado (lo que
     // PanelLayoutComponent le da al Cotizador interno); no exige login ni agrega navegación.
     path: 'cotizador-publico',
-    title: 'Cotizador | We Real Estate',
+    title: 'We Real Estate | Cotizador asesores',
     loadComponent: () =>
       import('./features/publico/cotizador-publico-layout/cotizador-publico-layout.component').then(
         (m) => m.CotizadorPublicoLayoutComponent,
@@ -270,12 +270,12 @@ export const routes: Routes = [
   },
   {
     path: 'we-forms',
-    title: 'Precontrato | We Real Estate',
+    title: 'We Real Estate | Precontrato',
     loadComponent: () => import('./features/publico/we-forms-publico/we-forms-publico-lista.component').then((m) => m.WeFormsPublicoListaComponent),
   },
   {
     path: 'we-forms/:slug',
-    title: 'Precontrato | We Real Estate',
+    title: 'We Real Estate | Precontrato',
     loadComponent: () => import('./features/publico/we-forms-publico/we-form-publico.component').then((m) => m.WeFormPublicoComponent),
   },
   { path: '**', redirectTo: 'login' },

@@ -9,12 +9,13 @@ const SITIO = (process.env.SITE_URL ?? 'https://app.weinversiones.com').replace(
 const IMAGEN = `${SITIO}/images/we-logo-color.png`;
 const CARPETA = new URL('../dist/frontend/browser/', import.meta.url);
 
-// Mismos títulos que el `title` de cada ruta en src/app/app.routes.ts.
+// Mismos títulos que el `title` de cada ruta en src/app/app.routes.ts. `imagen` (opcional) es un archivo de
+// public/images de 1200x630 y menos de 300 KB (WhatsApp ignora las más pesadas); sin ella se usa el logo.
 const PAGINAS = [
-  { ruta: 'cotizador-publico', titulo: 'Cotizador | We Real Estate', descripcion: 'Cotiza tu terreno en SAMAI Campestre o Aldea Nanuu' },
-  { ruta: 'samai', titulo: 'SAMAI Campestre | We Real Estate', descripcion: 'Consulta la disponibilidad de lotes de SAMAI Campestre en el plano' },
-  { ruta: 'aldea-nanuu', titulo: 'Aldea Nanuu | We Real Estate', descripcion: 'Consulta la disponibilidad de lotes de Aldea Nanuu en el plano' },
-  { ruta: 'we-forms', titulo: 'Precontrato | We Real Estate', descripcion: 'Llena el precontrato de tu cliente' },
+  { ruta: 'cotizador-publico', titulo: 'We Real Estate | Cotizador asesores', descripcion: 'Cotiza tu terreno en SAMAI Campestre o Aldea Nanuu' },
+  { ruta: 'samai', titulo: 'We Real Estate | Plano Samai', descripcion: 'Consulta la disponibilidad de lotes de SAMAI Campestre en el plano', imagen: 'samai-og.jpg' },
+  { ruta: 'aldea-nanuu', titulo: 'We Real Estate | Plano Nanuu', descripcion: 'Consulta la disponibilidad de lotes de Aldea Nanuu en el plano', imagen: 'nanuu-og.jpg' },
+  { ruta: 'we-forms', titulo: 'We Real Estate | Precontrato', descripcion: 'Llena el precontrato de tu cliente' },
 ];
 
 const esc = (t) => t.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
@@ -31,7 +32,7 @@ if (!BLOQUE.test(base)) {
   process.exit(1);
 }
 
-for (const { ruta, titulo, descripcion } of PAGINAS) {
+for (const { ruta, titulo, descripcion, imagen } of PAGINAS) {
   // Reemplaza el título y la vista previa genéricos de index.html por los de la página.
   const bloque = [
     '<!-- vista-previa:inicio -->',
@@ -42,10 +43,10 @@ for (const { ruta, titulo, descripcion } of PAGINAS) {
     `<meta property="og:title" content="${esc(titulo)}">`,
     `<meta property="og:description" content="${esc(descripcion)}">`,
     `<meta property="og:url" content="${SITIO}/${ruta}">`,
-    `<meta property="og:image" content="${IMAGEN}">`,
-    `<meta property="og:image:width" content="600">`,
-    `<meta property="og:image:height" content="259">`,
-    `<meta name="twitter:card" content="summary">`,
+    `<meta property="og:image" content="${imagen ? `${SITIO}/images/${imagen}` : IMAGEN}">`,
+    `<meta property="og:image:width" content="${imagen ? 1200 : 600}">`,
+    `<meta property="og:image:height" content="${imagen ? 630 : 259}">`,
+    `<meta name="twitter:card" content="${imagen ? 'summary_large_image' : 'summary'}">`,
     '<!-- vista-previa:fin -->',
   ].join('\n  ');
   mkdirSync(new URL(`${ruta}/`, CARPETA), { recursive: true });
