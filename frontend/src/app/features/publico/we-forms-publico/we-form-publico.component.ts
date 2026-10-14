@@ -138,6 +138,31 @@ export class WeFormPublicoComponent {
     return (this.form()?.lotes ?? []).filter((l) => ids.includes(l.id));
   });
 
+  /** Filtros de la lista de lotes: la manzana se elige de las que tienen lotes; el lote filtra por el
+   * principio de su número (con "2" salen el 2, 21, 23…). Los lotes ya marcados siguen elegidos aunque
+   * el filtro los oculte. */
+  readonly filtroManzana = signal('');
+  readonly filtroLote = signal('');
+
+  readonly manzanas = computed(() =>
+    [...new Set((this.form()?.lotes ?? []).map((l) => String(l.manzana)))].sort((a, b) =>
+      a.localeCompare(b, 'es', { numeric: true }),
+    ),
+  );
+
+  readonly lotesFiltrados = computed(() => {
+    const manzana = this.filtroManzana();
+    const numero = this.filtroLote().trim();
+    return (this.form()?.lotes ?? []).filter(
+      (l) => (!manzana || String(l.manzana) === manzana) && (!numero || String(l.numeroLote).startsWith(numero)),
+    );
+  });
+
+  limpiarFiltrosLotes(): void {
+    this.filtroManzana.set('');
+    this.filtroLote.set('');
+  }
+
   readonly precioTotal = computed(() => this.lotesElegidos().reduce((s, l) => s + l.precio, 0));
 
   private numeroDe(destino: string): number | null {
@@ -352,6 +377,7 @@ export class WeFormPublicoComponent {
     this.archivos.set(new Map());
     this.errores.set({});
     this.aportaciones.set([]);
+    this.limpiarFiltrosLotes();
     this.errorEnvio.set(null);
     this.resultado.set(null);
     this.etapa.set('cargando');

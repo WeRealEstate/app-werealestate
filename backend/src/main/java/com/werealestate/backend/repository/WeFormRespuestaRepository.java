@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -22,6 +23,11 @@ public interface WeFormRespuestaRepository extends JpaRepository<WeFormRespuesta
     String bloquearEnvios();
 
     boolean existsByVentaId(Long ventaId);
+
+    /** Al eliminar una venta, el precontrato (y sus documentos) se conserva pero ya no apunta a ella. */
+    @Modifying(flushAutomatically = true)
+    @Query("update WeFormRespuesta r set r.venta = null where r.venta.id = :ventaId")
+    void desvincularVenta(@Param("ventaId") Long ventaId);
 
     @Query("select r from WeFormRespuesta r where r.fechaEnvio >= :desde order by r.fechaEnvio desc")
     List<WeFormRespuesta> recientes(@Param("desde") LocalDateTime desde);

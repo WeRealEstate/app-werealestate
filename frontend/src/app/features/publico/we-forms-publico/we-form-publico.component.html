@@ -137,8 +137,30 @@
                         @if (f.lotes.length === 0) {
                           <p class="rounded-lg border border-dashed border-border p-4 text-sm text-ink-muted">No hay lotes disponibles para ti en este desarrollo por ahora.</p>
                         } @else {
+                          <div class="mb-3 flex items-center gap-2">
+                            <select [ngModel]="filtroManzana()" (ngModelChange)="filtroManzana.set($event)" aria-label="Manzana" data-testid="filtro-manzana"
+                              class="w-1/2 rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50">
+                              <option value="">Todas las manzanas</option>
+                              @for (m of manzanas(); track m) { <option [value]="m">Manzana {{ m }}</option> }
+                            </select>
+                            <input type="text" inputmode="numeric" autocomplete="off" placeholder="N.º de lote" aria-label="Número de lote" data-testid="filtro-lote"
+                              [ngModel]="filtroLote()" (ngModelChange)="filtroLote.set($event)"
+                              class="w-1/2 rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+                            @if (filtroManzana() || filtroLote()) {
+                              <button type="button" (click)="limpiarFiltrosLotes()" class="shrink-0 text-xs text-ink-muted underline underline-offset-2 hover:text-ink">Limpiar</button>
+                            }
+                          </div>
+                          @if (lotesElegidos().length > 0) {
+                            <p class="mb-2 text-xs text-ink-muted" data-testid="resumen-lotes">
+                              {{ lotesElegidos().length }} {{ lotesElegidos().length === 1 ? 'lote elegido' : 'lotes elegidos' }}:
+                              @for (e of lotesElegidos(); track e.id; let ult = $last) { <span class="font-medium text-ink">Mz {{ e.manzana }} · Lote {{ e.numeroLote }}</span>@if (!ult) {, } }
+                            </p>
+                          }
+                          @if (lotesFiltrados().length === 0) {
+                            <p class="rounded-lg border border-dashed border-border p-4 text-sm text-ink-muted">No hay lotes disponibles con ese filtro.</p>
+                          }
                           <div class="max-h-72 space-y-1.5 overflow-y-auto pr-1" data-testid="lista-lotes">
-                            @for (l of f.lotes; track l.id) {
+                            @for (l of lotesFiltrados(); track l.id) {
                               <label class="flex cursor-pointer items-center justify-between gap-3 rounded-lg border px-3.5 py-2.5 text-sm transition-colors"
                                 [class]="estaEnLista(p.id, l.id) ? 'border-we-primary bg-we-primary/10' : 'border-border hover:border-we-primary/50'">
                                 <span class="flex items-center gap-2.5 text-ink">

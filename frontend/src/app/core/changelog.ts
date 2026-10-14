@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '8.0.6', fecha: '2026-10-14', cambios: [
+    "Agrego opciones de pago a Nannu y arreglo de mas bugs en precontratos", 
+  ] },
   { version: '8.0.5', fecha: '2026-10-14', cambios: [
     "Arreglo BUG en los precontratos: se mostraba la pantalla de PIN mientras cargaba el precontrato", 
   ] },

@@ -19,6 +19,8 @@ export interface QuotePdfData {
   pricePerM2: number;
   totalPrice: number;
   paymentMethod: string;
+  /** true solo si el contado lleva precio especial con descuento (lote estándar de SAMAI); si no, es precio de lista. */
+  descuentoContado?: boolean;
   downPaymentLabel: string;
   downPayment: number;
   financedAmount: number;
@@ -396,11 +398,11 @@ export class PdfService {
         : [
             ['Superficie', `${this.number(data.area)} m²`],
             [
-              data.paymentMethod === 'Contado'
+              data.descuentoContado ?? data.paymentMethod === 'Contado'
                 ? 'Modalidad de precio'
                 : 'Precio por m²',
 
-              data.paymentMethod === 'Contado'
+              data.descuentoContado ?? data.paymentMethod === 'Contado'
                 ? 'Precio especial de contado'
                 : this.money(data.pricePerM2)
             ],

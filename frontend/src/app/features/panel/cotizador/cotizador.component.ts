@@ -516,7 +516,7 @@ export class CotizadorComponent implements OnInit {
   }
 
   get downPaymentAmountInvalid(): boolean {
-    if (this.selectedProject !== 'samai' || this.selectedPaymentType !== 'downpayment') {
+    if (this.selectedPaymentType !== 'downpayment') {
       return false;
     }
 
@@ -751,17 +751,7 @@ export class CotizadorComponent implements OnInit {
       return this.initialPayment;
     }
 
-    if (this.selectedProject === 'nanuu') {
-      if (this.selectedPaymentType === 'downpayment') {
-        return this.totalPrice * 0.2;
-      }
-
-      if (this.selectedPaymentType === 'msi') {
-        return 0;
-      }
-    }
-
-    // SAMAI: monto de enganche libre, capturado directamente por el asesor.
+    // Monto de enganche libre, capturado directamente por el asesor (igual para ambos proyectos).
     if (this.selectedPaymentType === 'downpayment') {
       return this.downPaymentAmount;
     }
@@ -776,6 +766,12 @@ export class CotizadorComponent implements OnInit {
       return this.totalInvestment;
     }
 
+    // Contado: se paga todo de una vez, no queda nada que financiar (en ambos proyectos).
+    if (this.selectedPaymentType === 'cash') {
+      return 0;
+    }
+
+    // Nanuu: el saldo incluye los intereses (si el interruptor está activado), también con anualidades o aportaciones.
     if (this.selectedProject === 'nanuu') {
       return this.totalInvestment - this.downPayment;
     }
@@ -796,6 +792,10 @@ export class CotizadorComponent implements OnInit {
   }
 
   get financingMonths(): number {
+    if (this.selectedPaymentType === 'cash') {
+      return 0;
+    }
+
     if (this.selectedProject === 'nanuu') {
       return this.selectedMonths;
     }
@@ -824,17 +824,17 @@ export class CotizadorComponent implements OnInit {
       return (this.promocionSeleccionada?.mensualidadFija ?? 0) * this.promocionFactorAjuste;
     }
 
-    // NANUU
-    if (this.selectedProject === 'nanuu') {
-      return this.financedAmount / this.selectedMonths;
-    }
-
     if (this.selectedPaymentType === 'annualities') {
       return this.annualitiesMonthlyPayment;
     }
 
     if (this.isAportaciones) {
       return this.aportacionesMonthlyPayment;
+    }
+
+    // NANUU
+    if (this.selectedProject === 'nanuu') {
+      return this.financedAmount / this.selectedMonths;
     }
 
     // SAMAI
@@ -854,7 +854,12 @@ export class CotizadorComponent implements OnInit {
       return `Promoción "${this.promocionSeleccionada?.nombre}" · ${this.selectedMonths} meses`;
     }
 
-    if (this.selectedProject === 'nanuu') {
+    if (
+      this.selectedProject === 'nanuu' &&
+      this.selectedPaymentType !== 'annualities' &&
+      this.selectedPaymentType !== 'aportaciones' &&
+      this.selectedPaymentType !== 'cash'
+    ) {
       return `${this.selectedMonths} meses`;
     }
 
@@ -981,7 +986,7 @@ export class CotizadorComponent implements OnInit {
 
     if (this.isAnnualities) {
       return this.buildAnnualContributionAmortizationTable(
-        this.totalPrice,
+        this.totalInvestment,
         this.annualContribution,
         this.annualitiesMonthlyPayment,
       );
@@ -999,7 +1004,7 @@ export class CotizadorComponent implements OnInit {
       return tablaConAportaciones(
         this.inicioPlan,
         this.selectedMonths,
-        this.totalPrice,
+        this.totalInvestment,
         this.aportacionesMonthlyPayment,
         this.aportaciones,
         this.monthNames,
@@ -1207,6 +1212,8 @@ export class CotizadorComponent implements OnInit {
 
       paymentMethod: this.paymentMethodLabel,
 
+      descuentoContado: this.cashDiscountApplied,
+
       downPaymentLabel: this.isPromocion
         ? this.promocionUsaAportaciones
           ? 'Total en aportaciones'
@@ -1288,7 +1295,7 @@ export class CotizadorComponent implements OnInit {
   }
 
   get interestPercentage(): number {
-    if (this.selectedProject === 'samai' || !this.interesesActivados()) {
+    if (this.selectedProject === 'samai' || !this.interesesActivados() || this.selectedPaymentType === 'cash') {
       return 0;
     }
 
@@ -1380,7 +1387,7 @@ export class CotizadorComponent implements OnInit {
   aportaciones: Aportacion[] = [];
 
   get isAportaciones(): boolean {
-    return this.selectedProject === 'samai' && this.selectedPaymentType === 'aportaciones';
+    return this.selectedPaymentType === 'aportaciones';
   }
 
   get aportacionesTotal(): number {
@@ -1388,11 +1395,11 @@ export class CotizadorComponent implements OnInit {
   }
 
   get aportacionesMonthlyPayment(): number {
-    return mensualidadConAportaciones(this.totalPrice, this.aportaciones, this.selectedMonths);
+    return mensualidadConAportaciones(this.totalInvestment, this.aportaciones, this.selectedMonths);
   }
 
   get aportacionesInvalid(): boolean {
-    return this.isAportaciones && !aportacionesValidas(this.totalPrice, this.aportaciones, this.selectedMonths);
+    return this.isAportaciones && !aportacionesValidas(this.totalInvestment, this.aportaciones, this.selectedMonths);
   }
 
   /** Mensaje de por qué las aportaciones no son válidas (null si lo son o si todavía no hay ninguna). */
@@ -1476,11 +1483,11 @@ export class CotizadorComponent implements OnInit {
   }
 
   get annualitiesAvailable(): boolean {
-    return this.selectedProject === 'samai' && this.selectedMonths > 12;
+    return this.selectedMonths > 12;
   }
 
   get isAnnualities(): boolean {
-    return this.selectedProject === 'samai' && this.selectedPaymentType === 'annualities';
+    return this.selectedPaymentType === 'annualities';
   }
 
   onAnnualContributionInput(event: Event): void {
@@ -1498,7 +1505,7 @@ export class CotizadorComponent implements OnInit {
   }
 
   get annualitiesMonthlyBalance(): number {
-    return Math.max(this.totalPrice - this.annualContributionsTotal, 0);
+    return Math.max(this.totalInvestment - this.annualContributionsTotal, 0);
   }
 
   get regularPaymentMonths(): number {
@@ -1516,14 +1523,14 @@ export class CotizadorComponent implements OnInit {
 
     // Si todavía no hay anualidad
     if (this.annualContribution <= 0) {
-      return this.totalPrice / this.selectedMonths;
+      return this.totalInvestment / this.selectedMonths;
     }
 
     // Total que se pagará mediante anualidades
     const annualitiesTotal = this.annualContribution * this.annualContributionsCount;
 
     // Lo que todavía falta cubrir con mensualidades
-    const remainingBalance = this.totalPrice - annualitiesTotal;
+    const remainingBalance = this.totalInvestment - annualitiesTotal;
 
     // Meses normales restantes
     const regularMonths = this.selectedMonths - this.annualContributionsCount;
@@ -1540,7 +1547,7 @@ export class CotizadorComponent implements OnInit {
       return 0;
     }
 
-    return this.totalPrice / this.selectedMonths;
+    return this.totalInvestment / this.selectedMonths;
   }
 
   get annualContributionInvalid(): boolean {
@@ -1572,7 +1579,7 @@ export class CotizadorComponent implements OnInit {
       return 0;
     }
 
-    return Math.floor((this.totalPrice - 1) / this.annualContributionsCount);
+    return Math.floor((this.totalInvestment - 1) / this.annualContributionsCount);
   }
 
   get annualContributionValid(): boolean {

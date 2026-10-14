@@ -724,57 +724,58 @@
             </button>
           </div>
 
-          @if (selectedPaymentType === 'downpayment') {
-            <div weFadeIn class="mt-6 rounded-2xl border border-we-primary/20 dark:border-we-primary/25 bg-we-primary/5 dark:bg-we-primary/10 p-5">
-              <p class="mb-5 text-sm font-semibold text-ink">Configura el enganche</p>
+        }
 
-              <div class="grid gap-5 sm:grid-cols-2">
-                <!-- MONTO DE ENGANCHE -->
-                <div>
-                  <label class="mb-2 block text-sm font-medium text-ink">Monto del enganche</label>
+        @if (selectedPaymentType === 'downpayment') {
+          <div weFadeIn class="mt-6 rounded-2xl border border-we-primary/20 dark:border-we-primary/25 bg-we-primary/5 dark:bg-we-primary/10 p-5">
+            <p class="mb-5 text-sm font-semibold text-ink">Configura el enganche</p>
 
-                  <div class="relative">
-                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted">$</span>
-                    <input
-                      type="text"
-                      inputmode="decimal"
-                      [value]="downPaymentAmountDisplay"
-                      (input)="onDownPaymentAmountInput($event)"
-                      placeholder="Ej. 80,000"
-                      [class.border-red-500]="downPaymentAmountInvalid"
-                      [class.focus:border-red-500]="downPaymentAmountInvalid"
-                      class="w-full rounded-xl border border-border bg-surface py-3.5 pl-8 pr-16 text-sm outline-none transition-all focus:border-we-primary focus:ring-4 focus:ring-we-primary/10"
-                    />
-                    <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-ink-muted">MXN</span>
-                  </div>
+            <div class="grid gap-5 sm:grid-cols-2">
+              <!-- MONTO DE ENGANCHE -->
+              <div>
+                <label class="mb-2 block text-sm font-medium text-ink">Monto del enganche</label>
 
-                  @if (downPaymentAmount <= 0) {
-                    <p class="mt-1.5 text-xs text-red-500">Ingresa el monto del enganche.</p>
-                  } @else if (downPaymentAmount >= totalPrice) {
-                    <p class="mt-1.5 text-xs text-red-500">Debe ser menor al precio total del terreno.</p>
-                  }
-                </div>
-              </div>
-
-              <!-- MINI RESUMEN -->
-              <div class="mt-5 grid gap-3 rounded-xl bg-surface p-4 sm:grid-cols-3">
-                <div>
-                  <p class="text-xs text-ink-muted">Enganche</p>
-                  <p class="mt-1 font-semibold text-ink">${{ downPayment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</p>
+                <div class="relative">
+                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted">$</span>
+                  <input
+                    type="text"
+                    inputmode="decimal"
+                    [value]="downPaymentAmountDisplay"
+                    (input)="onDownPaymentAmountInput($event)"
+                    placeholder="Ej. 80,000"
+                    [class.border-red-500]="downPaymentAmountInvalid"
+                    [class.focus:border-red-500]="downPaymentAmountInvalid"
+                    class="w-full rounded-xl border border-border bg-surface py-3.5 pl-8 pr-16 text-sm outline-none transition-all focus:border-we-primary focus:ring-4 focus:ring-we-primary/10"
+                  />
+                  <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-ink-muted">MXN</span>
                 </div>
 
-                <div>
-                  <p class="text-xs text-ink-muted">Saldo</p>
-                  <p class="mt-1 font-semibold text-ink">${{ financedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</p>
-                </div>
-
-                <div>
-                  <p class="text-xs text-ink-muted">Mensualidad</p>
-                  <p class="mt-1 font-semibold text-we-primary dark:text-we-blue-light">${{ monthlyPayment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</p>
-                </div>
+                @if (downPaymentAmount <= 0) {
+                  <p class="mt-1.5 text-xs text-red-500">Ingresa el monto del enganche.</p>
+                } @else if (downPaymentAmount >= totalPrice) {
+                  <p class="mt-1.5 text-xs text-red-500">Debe ser menor al precio total del terreno.</p>
+                }
               </div>
             </div>
-          }
+
+            <!-- MINI RESUMEN -->
+            <div class="mt-5 grid gap-3 rounded-xl bg-surface p-4 sm:grid-cols-3">
+              <div>
+                <p class="text-xs text-ink-muted">Enganche</p>
+                <p class="mt-1 font-semibold text-ink">${{ downPayment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</p>
+              </div>
+
+              <div>
+                <p class="text-xs text-ink-muted">Saldo</p>
+                <p class="mt-1 font-semibold text-ink">${{ financedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</p>
+              </div>
+
+              <div>
+                <p class="text-xs text-ink-muted">Mensualidad</p>
+                <p class="mt-1 font-semibold text-we-primary dark:text-we-blue-light">${{ monthlyPayment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</p>
+              </div>
+            </div>
+          </div>
         }
 
         @if (isAnnualities) {
@@ -900,7 +901,7 @@
         }
 
         @if (selectedProject === 'nanuu') {
-          <div weFadeIn class="grid gap-3 sm:grid-cols-3">
+          <div weFadeIn class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <button
               type="button"
               weMotionPress
@@ -910,7 +911,7 @@
               class="rounded-2xl border border-border bg-surface p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
             >
               <p class="font-semibold">Con enganche</p>
-              <p class="mt-1 text-sm text-ink-muted">20% de enganche</p>
+              <p class="mt-1 text-sm text-ink-muted">Tú decides el monto</p>
             </button>
 
             <button
@@ -935,7 +936,55 @@
               class="rounded-2xl border border-border bg-surface p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
             >
               <p class="font-semibold">Pago inicial</p>
-              <p class="mt-1 text-sm text-ink-muted">Tú decides el monto</p>
+              <p class="mt-1 text-sm text-ink-muted">Baja tu mensualidad</p>
+            </button>
+
+            <!-- ANUALIDADES -->
+            <button
+              type="button"
+              weMotionPress
+              (click)="selectPaymentType('annualities')"
+              [class.border-we-primary]="selectedPaymentType === 'annualities'"
+              [class.text-we-primary]="selectedPaymentType === 'annualities'"
+              [disabled]="!annualitiesAvailable"
+              [class.opacity-40]="!annualitiesAvailable"
+              [class.cursor-not-allowed]="!annualitiesAvailable"
+              class="rounded-2xl border border-border bg-surface p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <p class="font-semibold">Con anualidades</p>
+              <p class="mt-1 text-sm text-ink-muted">Aportación anual</p>
+            </button>
+
+            <!-- APORTACIONES -->
+            <button
+              type="button"
+              weMotionPress
+              (click)="selectPaymentType('aportaciones')"
+              [class.border-we-primary]="selectedPaymentType === 'aportaciones'"
+              [class.text-we-primary]="selectedPaymentType === 'aportaciones'"
+              [disabled]="!annualitiesAvailable"
+              [class.opacity-40]="!annualitiesAvailable"
+              [class.cursor-not-allowed]="!annualitiesAvailable"
+              class="rounded-2xl border border-border bg-surface p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <p class="font-semibold">Con aportaciones</p>
+              <p class="mt-1 text-sm text-ink-muted">Varias por año, cada una en su mes</p>
+            </button>
+
+            <!-- CONTADO -->
+            <button
+              type="button"
+              weMotionPress
+              (click)="selectPaymentType('cash')"
+              [disabled]="!contadoDisponible"
+              [class.opacity-40]="!contadoDisponible"
+              [class.cursor-not-allowed]="!contadoDisponible"
+              [class.border-we-primary]="selectedPaymentType === 'cash'"
+              [class.text-we-primary]="selectedPaymentType === 'cash'"
+              class="rounded-2xl border border-border bg-surface p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <p class="font-semibold">Contado</p>
+              <p class="mt-1 text-sm text-ink-muted">Pago único, sin intereses</p>
             </button>
           </div>
         }

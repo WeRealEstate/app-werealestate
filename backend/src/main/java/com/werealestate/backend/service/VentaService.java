@@ -89,6 +89,7 @@ public class VentaService {
     private final ComisionService comisionService;
     private final ClienteService clienteService;
     private final VentaCopropietarioRepository copropietarioRepository;
+    private final com.werealestate.backend.repository.WeFormRespuestaRepository weFormRespuestaRepository;
     private final PasswordEncoder passwordEncoder;
     private final UsuarioRepository usuarioRepository;
     private final AsesorExternoRepository asesorExternoRepository;
@@ -106,6 +107,7 @@ public class VentaService {
             ComisionService comisionService,
             ClienteService clienteService,
             VentaCopropietarioRepository copropietarioRepository,
+            com.werealestate.backend.repository.WeFormRespuestaRepository weFormRespuestaRepository,
             PasswordEncoder passwordEncoder,
             UsuarioRepository usuarioRepository,
             AsesorExternoRepository asesorExternoRepository,
@@ -121,6 +123,7 @@ public class VentaService {
         this.comisionService = comisionService;
         this.clienteService = clienteService;
         this.copropietarioRepository = copropietarioRepository;
+        this.weFormRespuestaRepository = weFormRespuestaRepository;
         this.passwordEncoder = passwordEncoder;
         this.usuarioRepository = usuarioRepository;
         this.asesorExternoRepository = asesorExternoRepository;
@@ -439,6 +442,8 @@ public class VentaService {
         long numeroEliminado = venta.getNumero();
 
         comisionService.desvincularVenta(venta);
+        // El precontrato de We Forms que originó la venta se conserva, solo deja de apuntar a ella.
+        weFormRespuestaRepository.desvincularVenta(id);
 
         List<VentaLote> lotes = ventaLoteRepository.findByVentaId(id);
         List<Long> loteIds = lotes.stream().map(vl -> vl.getLote().getId()).toList();
