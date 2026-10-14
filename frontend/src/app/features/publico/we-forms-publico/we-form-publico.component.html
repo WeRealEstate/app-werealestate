@@ -93,6 +93,10 @@
                           [ngModelOptions]="{ standalone: true }" [attr.data-testid]="'numero-' + (p.destino ?? p.id)"
                           class="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
                       }
+                      @case ('PAIS') {
+                        <app-pais-selector [ngModel]="valor(p.id) ?? ''" (ngModelChange)="setValor(p.id, $event)"
+                          [ngModelOptions]="{ standalone: true }" [invalido]="!!errores()[p.id]" />
+                      }
                       @case ('DESPLEGABLE') {
                         <select [value]="valor(p.id) ?? ''" (change)="setValor(p.id, $any($event.target).value)"
                           class="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50">

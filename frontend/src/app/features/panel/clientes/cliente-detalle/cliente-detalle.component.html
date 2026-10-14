@@ -83,6 +83,7 @@
         <h2 class="font-heading text-base font-semibold text-ink">Datos personales</h2>
         <dl class="mt-3 space-y-2 text-sm">
           <div><dt class="text-xs text-ink-muted">Nacimiento</dt><dd class="text-ink">{{ fecha(c.fechaNacimiento) }}@if (c.edad !== null) { ({{ c.edad }} años) }</dd></div>
+          <div><dt class="text-xs text-ink-muted">País de residencia</dt><dd class="text-ink">{{ c.paisResidencia || '—' }}</dd></div>
           <div><dt class="text-xs text-ink-muted">Lugar de nacimiento / nacionalidad</dt><dd class="text-ink">{{ c.lugarNacimiento || '—' }} / {{ c.nacionalidad || '—' }}</dd></div>
           <div><dt class="text-xs text-ink-muted">Estado civil</dt><dd class="text-ink">{{ c.estadoCivil ? civilLabels[c.estadoCivil] : '—' }}</dd></div>
           <div><dt class="text-xs text-ink-muted">Ocupación</dt><dd class="text-ink">{{ c.ocupacion || '—' }}</dd></div>

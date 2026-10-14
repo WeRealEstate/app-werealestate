@@ -15,6 +15,10 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '8.0.10', fecha: '2026-10-14', cambios: [
+    "We Forms: nuevo tipo de pregunta 'País' (lista de países con buscador, México primero). La primera pregunta de ese tipo llena el país de residencia del cliente; si el cliente ya existe y ya tiene país, no se cambia.",
+    "Clientes: nuevo campo 'País de residencia' (se elige de la lista) en la ficha y en el formulario del cliente.",
+  ] },
   { version: '8.0.9', fecha: '2026-10-14', cambios: [
     "Vista previa al compartir links: el cotizador se ve como 'We Real Estate | Cotizador asesores', el plano de Samai como 'We Real Estate | Plano Samai', el de Nanuu como 'We Real Estate | Plano Nanuu' y el precontrato como 'We Real Estate | Precontrato'; los planos muestran la portada de su desarrollo.",
   ] },

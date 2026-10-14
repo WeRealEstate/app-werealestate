@@ -17,6 +17,7 @@ import { AportacionesSelectorComponent } from '../../../shared/aportaciones-sele
 import { CorreoInputDirective } from '../../../shared/correo-input/correo-input.directive';
 import { MonedaInputDirective } from '../../../shared/moneda-input/moneda-input.directive';
 import { DesarrolloLoaderComponent, DesarrolloLoader } from '../../../shared/desarrollo-loader/desarrollo-loader.component';
+import { PaisSelectorComponent } from '../../../shared/pais-selector/pais-selector.component';
 import { PinPublicoComponent } from '../../../shared/pin-publico/pin-publico.component';
 
 const TIPOS_CON_ENGANCHE: TipoPagoForm[] = ['downpayment', 'initial', 'annualities'];
@@ -33,7 +34,7 @@ type Etapa = 'pin' | 'cargando' | 'listo' | 'cerrado' | 'error' | 'enviado';
 @Component({
   selector: 'app-we-form-publico',
   standalone: true,
-  imports: [FormsModule, DecimalPipe, MonedaInputDirective, CorreoInputDirective, AportacionesSelectorComponent, PinPublicoComponent, DesarrolloLoaderComponent],
+  imports: [FormsModule, DecimalPipe, PaisSelectorComponent, MonedaInputDirective, CorreoInputDirective, AportacionesSelectorComponent, PinPublicoComponent, DesarrolloLoaderComponent],
   templateUrl: './we-form-publico.component.html',
 })
 export class WeFormPublicoComponent {

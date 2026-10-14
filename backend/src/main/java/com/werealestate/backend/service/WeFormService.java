@@ -219,7 +219,7 @@ public class WeFormService {
         java.math.BigDecimal max = null;
         java.math.BigDecimal promedio = null;
         switch (tipo) {
-            case OPCION_MULTIPLE, DESPLEGABLE, TIPO_PAGO, ASESOR ->
+            case OPCION_MULTIPLE, DESPLEGABLE, TIPO_PAGO, ASESOR, PAIS ->
                     valores.forEach(v -> conteos.merge(v.trim(), 1L, Long::sum));
             case CASILLAS -> valores.forEach(v -> {
                 for (String parte : v.split(", ")) conteos.merge(parte.trim(), 1L, Long::sum);

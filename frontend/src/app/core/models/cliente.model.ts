@@ -72,6 +72,7 @@ export interface Cliente {
   rfc: string | null;
   lugarNacimiento: string | null;
   nacionalidad: string | null;
+  paisResidencia: string | null;
   estadoCivil: EstadoCivil | null;
   ocupacion: string | null;
   calle: string | null;
@@ -111,6 +112,7 @@ export interface ClienteRequest {
   rfc: string | null;
   lugarNacimiento: string | null;
   nacionalidad: string | null;
+  paisResidencia: string | null;
   estadoCivil: EstadoCivil | null;
   ocupacion: string | null;
   calle: string | null;

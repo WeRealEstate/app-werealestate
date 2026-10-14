@@ -39,5 +39,6 @@ public record ClienteRequest(
         @Size(max = 1000) String notas,
         UbicacionDocumento expedienteUbicacion,
         @Size(max = 500) String expedienteDriveUrl,
-        Boolean activo) {
+        Boolean activo,
+        @Size(max = 80) String paisResidencia) {
 }

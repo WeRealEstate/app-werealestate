@@ -14,6 +14,7 @@ export type TipoPreguntaForm =
   | 'CORREO'
   | 'ARCHIVO'
   | 'TITULO'
+  | 'PAIS'
   | 'ASESOR'
   | 'LOTES'
   | 'TIPO_PAGO'
@@ -37,6 +38,7 @@ export const TIPOS_PREGUNTA_PROPIOS: { tipo: TipoPreguntaForm; etiqueta: string 
   { tipo: 'TELEFONO', etiqueta: 'Teléfono' },
   { tipo: 'CORREO', etiqueta: 'Correo' },
   { tipo: 'ARCHIVO', etiqueta: 'Archivo (imagen o PDF, máx. 2 MB)' },
+  { tipo: 'PAIS', etiqueta: 'País (lista con buscador)' },
   { tipo: 'TITULO', etiqueta: 'Sección / título' },
 ];
 
@@ -52,6 +54,7 @@ export const TIPO_PREGUNTA_ETIQUETA: Record<TipoPreguntaForm, string> = {
   CORREO: 'Correo',
   ARCHIVO: 'Archivo',
   TITULO: 'Sección',
+  PAIS: 'País',
   ASESOR: 'Asesor (automático)',
   LOTES: 'Lotes disponibles',
   TIPO_PAGO: 'Tipo de pago',

@@ -13,6 +13,7 @@ import com.werealestate.backend.exception.ValidationException;
 import com.werealestate.backend.model.DestinoPregunta;
 import com.werealestate.backend.model.EstadoWeForm;
 import com.werealestate.backend.model.Lote;
+import com.werealestate.backend.model.Paises;
 import com.werealestate.backend.model.TipoPreguntaForm;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.model.Venta;
@@ -281,7 +282,14 @@ public class WeFormPublicoService {
         }
 
         // 4) Cliente: por CURP (vincula sin duplicar) o nuevo.
-        ClienteRequest datosCliente = datosCliente(porDestino);
+        // El país de residencia del cliente sale de la primera pregunta tipo País (por orden) que se contestó.
+        String paisResidencia = preguntas.stream()
+                .filter(p -> p.getTipo() == TipoPreguntaForm.PAIS)
+                .map(p -> textoPorPregunta.get(p.getId()))
+                .filter(t -> t != null && !t.isBlank())
+                .findFirst()
+                .orElse(null);
+        ClienteRequest datosCliente = datosCliente(porDestino, paisResidencia);
         ClienteService.ClienteResuelto resuelto =
                 clienteService.resolverDesdePrecontrato(datosCliente, asesor.usuario(), asesor.externo());
 
@@ -373,6 +381,11 @@ public class WeFormPublicoService {
                 if (!CORREO.matcher(t).matches()) throw new ValidationException(titulo + ": el correo no es válido");
                 yield t;
             }
+            case PAIS -> {
+                String pais = Paises.canonico(v.asText());
+                if (pais == null) throw new ValidationException(titulo + ": elige un país de la lista");
+                yield pais;
+            }
             case OPCION_MULTIPLE, DESPLEGABLE -> {
                 String t = v.asText().trim();
                 if (!p.opcionesLista().contains(t)) throw new ValidationException(titulo + ": elige una de las opciones");
@@ -452,7 +465,7 @@ public class WeFormPublicoService {
         return lista;
     }
 
-    private static ClienteRequest datosCliente(Map<DestinoPregunta, JsonNode> d) {
+    private static ClienteRequest datosCliente(Map<DestinoPregunta, JsonNode> d, String paisResidencia) {
         LocalDate nacimiento;
         try {
             nacimiento = LocalDate.parse(texto(d, DestinoPregunta.FECHA_NACIMIENTO));
@@ -465,7 +478,8 @@ public class WeFormPublicoService {
                 minusculas(texto(d, DestinoPregunta.CORREO)), texto(d, DestinoPregunta.CURP), texto(d, DestinoPregunta.RFC),
                 null, null, null, null, texto(d, DestinoPregunta.CALLE), texto(d, DestinoPregunta.COLONIA),
                 texto(d, DestinoPregunta.MUNICIPIO), texto(d, DestinoPregunta.ESTADO),
-                texto(d, DestinoPregunta.CODIGO_POSTAL), null, null, null, null, null, null, null, null, null, null);
+                texto(d, DestinoPregunta.CODIGO_POSTAL), null, null, null, null, null, null, null, null, null, null,
+                paisResidencia);
     }
 
     private static String minusculas(String t) {

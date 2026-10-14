@@ -12,6 +12,7 @@ import com.werealestate.backend.model.AsesorExterno;
 import com.werealestate.backend.model.FuenteCliente;
 import com.werealestate.backend.model.Cliente;
 import com.werealestate.backend.model.PagoVenta;
+import com.werealestate.backend.model.Paises;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.UbicacionDocumento;
 import com.werealestate.backend.model.Usuario;
@@ -232,6 +233,9 @@ public class ClienteService {
                     existente.getFuente(), existente.getFuenteDetalle(),
                     existente.getCaptadoPorUsuario(), existente.getCaptadoPorAsesor(), existente.getNotas(),
                     existente.getExpedienteUbicacion(), existente.getExpedienteDriveUrl());
+            if (existente.getPaisResidencia() == null || existente.getPaisResidencia().isBlank()) {
+                existente.setPaisResidencia(paisValido(r.paisResidencia()));
+            }
             return new ClienteResuelto(clienteRepository.save(existente), false);
         }
 
@@ -243,6 +247,7 @@ public class ClienteService {
                 limpio(r.calle()), limpio(r.colonia()), limpio(r.municipio()), limpio(r.estado()),
                 limpio(r.codigoPostal()), null, null,
                 FuenteCliente.PRECONTRATO, null, captadoUsuario, captadoAsesor, null, null, null);
+        c.setPaisResidencia(paisValido(r.paisResidencia()));
         return new ClienteResuelto(clienteRepository.save(c), true);
     }
 
@@ -318,6 +323,16 @@ public class ClienteService {
                 limpio(r.codigoPostal()), limpio(r.beneficiarioNombre()), limpio(r.beneficiarioParentesco()),
                 r.fuente(), limpio(r.fuenteDetalle()), captadoUsuario, captadoAsesor, limpio(r.notas()),
                 ubicacion, url);
+        c.setPaisResidencia(paisValido(r.paisResidencia()));
+    }
+
+    /** El país de la lista que corresponde al texto (null si viene vacío); cualquier otro texto se rechaza. */
+    private static String paisValido(String texto) {
+        String limpio = limpio(texto);
+        if (limpio == null) return null;
+        String canonico = Paises.canonico(limpio);
+        if (canonico == null) throw new ValidationException("Elige un país de la lista");
+        return canonico;
     }
 
     /** Avisa si ya existe alguien con el mismo CURP, el mismo nombre y fecha de nacimiento, o el mismo

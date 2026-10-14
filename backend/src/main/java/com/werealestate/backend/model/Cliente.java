@@ -61,6 +61,10 @@ public class Cliente {
     @Column(length = 80)
     private String nacionalidad;
 
+    /** País de residencia, uno de los de Paises (null = sin dato). */
+    @Column(name = "pais_residencia", length = 80)
+    private String paisResidencia;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "estado_civil", length = 20)
     private EstadoCivil estadoCivil;
@@ -222,6 +226,8 @@ public class Cliente {
     public String getRfc() { return rfc; }
     public String getLugarNacimiento() { return lugarNacimiento; }
     public String getNacionalidad() { return nacionalidad; }
+    public String getPaisResidencia() { return paisResidencia; }
+    public void setPaisResidencia(String paisResidencia) { this.paisResidencia = paisResidencia; }
     public EstadoCivil getEstadoCivil() { return estadoCivil; }
     public String getOcupacion() { return ocupacion; }
     public String getCalle() { return calle; }

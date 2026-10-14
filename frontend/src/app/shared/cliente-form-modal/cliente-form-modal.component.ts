@@ -19,12 +19,13 @@ import { AsesoresExternosService } from '../../core/services/asesores-externos.s
 import { ClientesService } from '../../core/services/clientes.service';
 import { UsuariosService } from '../../core/services/usuarios.service';
 import { CorreoInputDirective } from '../correo-input/correo-input.directive';
+import { PaisSelectorComponent } from '../pais-selector/pais-selector.component';
 import { curpFormatoValido, datosDeCurp, edadDe, fechaCorta, rfcFormatoValido } from '../../core/utils/identidad';
 
 /** Alta y edición de un cliente (ficha completa). Se usa en /panel/clientes, en su ficha y en el selector de la venta. */
 @Component({
   selector: 'app-cliente-form-modal',
-  imports: [CorreoInputDirective, ReactiveFormsModule, LucideX],
+  imports: [CorreoInputDirective, PaisSelectorComponent, ReactiveFormsModule, LucideX],
   templateUrl: './cliente-form-modal.component.html',
 })
 export class ClienteFormModalComponent implements OnInit {
@@ -70,6 +71,7 @@ export class ClienteFormModalComponent implements OnInit {
     rfc: this.fb.control('', { nonNullable: true, validators: [Validators.maxLength(13)] }),
     lugarNacimiento: this.fb.control('', { nonNullable: true }),
     nacionalidad: this.fb.control('', { nonNullable: true }),
+    paisResidencia: this.fb.control('', { nonNullable: true }),
     estadoCivil: this.fb.control<EstadoCivil | ''>('', { nonNullable: true }),
     ocupacion: this.fb.control('', { nonNullable: true }),
     calle: this.fb.control('', { nonNullable: true }),
@@ -165,6 +167,7 @@ export class ClienteFormModalComponent implements OnInit {
         rfc: c.rfc ?? '',
         lugarNacimiento: c.lugarNacimiento ?? '',
         nacionalidad: c.nacionalidad ?? '',
+        paisResidencia: c.paisResidencia ?? '',
         estadoCivil: c.estadoCivil ?? '',
         ocupacion: c.ocupacion ?? '',
         calle: c.calle ?? '',
@@ -211,6 +214,7 @@ export class ClienteFormModalComponent implements OnInit {
       rfc: texto(v.rfc)?.toUpperCase() ?? null,
       lugarNacimiento: texto(v.lugarNacimiento),
       nacionalidad: texto(v.nacionalidad),
+      paisResidencia: texto(v.paisResidencia),
       estadoCivil: v.estadoCivil || null,
       ocupacion: texto(v.ocupacion),
       calle: texto(v.calle),
