@@ -354,7 +354,7 @@
         >
           {{ generandoPdf() ? 'Generando PDF…' : 'Descargar PDF' }}
         </button>
-        <!-- We Forms: el precontrato se llena en otra pestaña (pide el PIN de nuevo: el PIN no viaja en el enlace). -->
+        <!-- We Forms: el precontrato se llena en otra pestaña; el PIN no viaja en el enlace, pero este dispositivo ya lo recuerda. -->
         <a
           [href]="'/we-forms?proyecto=' + proyecto"
           target="_blank"

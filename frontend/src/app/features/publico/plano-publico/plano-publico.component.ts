@@ -18,7 +18,7 @@ import { colorDeBarra, fondoDePagina } from '../../../core/utils/pagina';
 import { DetectorDeRueda } from '../../../core/utils/rueda';
 import { leerImagenParaPdf } from '../../../core/utils/imagen-pdf';
 import { ToastService } from '../../../core/services/toast.service';
-import { DesarrolloLoaderComponent } from '../../../shared/desarrollo-loader/desarrollo-loader.component';
+import { WeFormsPublicoService } from '../../../core/services/we-forms-publico.service';import { DesarrolloLoaderComponent } from '../../../shared/desarrollo-loader/desarrollo-loader.component';
 import { ToastContainerComponent } from '../../../shared/toast-container/toast-container.component';
 
 type ProyectoPublico = 'samai' | 'nanuu';
@@ -90,6 +90,7 @@ export class PlanoPublicoComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly lotesService = inject(LotesService);
   private readonly toast = inject(ToastService);
+  private readonly weFormsPublico = inject(WeFormsPublicoService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
 
@@ -375,6 +376,8 @@ export class PlanoPublicoComponent {
       const registrado = await this.lotesService.verificarAsesorPublico(nombre, this.proyecto);
       this.asesorVerificado.set(registrado);
       guardarAsesor(this.proyecto, registrado);
+      // El mismo PIN sirve en el precontrato de We Forms: se recuerda para no pedirlo otra vez.
+      this.weFormsPublico.guardarPin(nombre);
       this.mostrarAcceso.set(false);
       this.toast.success(`Bienvenido, ${registrado}.`);
     } catch (e) {
@@ -396,6 +399,7 @@ export class PlanoPublicoComponent {
   cerrarSesionAsesor(): void {
     this.asesorVerificado.set(null);
     guardarAsesor(this.proyecto, null);
+    this.weFormsPublico.guardarPin(null);
     this.mostrarApartar.set(false);
   }
 
