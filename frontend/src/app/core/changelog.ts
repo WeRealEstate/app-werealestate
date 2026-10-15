@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '8.0.23', fecha: '2026-10-15', cambios: [
+    "Plano público: los botones de arriba a la derecha (asesor, Descargar PDF, Registrar venta) y los de selección de lotes abajo a la izquierda ahora son bastante más grandes y fáciles de tocar. En celular, 'Seleccionar varios' queda sobre los controles de zoom para no encimarse.",
+  ] },
   { version: '8.0.22', fecha: '2026-10-15', cambios: [
     "Plano (interno y público): ahora se pueden apartar varios lotes a la vez (hasta 5). Botón 'Seleccionar varios' abajo a la izquierda del plano: tocas los lotes disponibles (se marcan en azul) y 'Apartar N lotes' pide una sola vez el cliente, la nota y (en el panel) el asesor. Es todo o nada: si algún lote ya no está disponible no se aparta ninguno y el aviso dice cuál.",
   ] },
