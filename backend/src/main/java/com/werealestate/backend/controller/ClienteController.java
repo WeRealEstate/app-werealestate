@@ -5,7 +5,10 @@ import com.werealestate.backend.dto.ClienteListaDto;
 import com.werealestate.backend.dto.ClienteNumeroRequest;
 import com.werealestate.backend.dto.ClienteRequest;
 import com.werealestate.backend.dto.NumeracionClienteDto;
+import com.werealestate.backend.dto.NumeroContratoRequest;
+import com.werealestate.backend.dto.VentaDto;
 import com.werealestate.backend.service.ClienteService;
+import com.werealestate.backend.service.VentaService;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,9 +25,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class ClienteController {
 
     private final ClienteService clienteService;
+    private final VentaService ventaService;
 
-    public ClienteController(ClienteService clienteService) {
+    public ClienteController(ClienteService clienteService, VentaService ventaService) {
         this.clienteService = clienteService;
+        this.ventaService = ventaService;
     }
 
     @GetMapping
@@ -54,6 +59,13 @@ public class ClienteController {
     @PostMapping
     public ClienteDto crear(@Valid @RequestBody ClienteRequest request) {
         return clienteService.crear(request);
+    }
+
+    /** El número de contrato de una de las ventas del cliente, editable desde su detalle. Va bajo /api/clientes (y
+     * no /api/ventas) para que lo pueda usar quien tenga el módulo Clientes aunque no tenga el de Ventas. */
+    @PutMapping("/ventas/{ventaId}/numero-contrato")
+    public VentaDto numeroContratoDeVenta(@PathVariable Long ventaId, @Valid @RequestBody NumeroContratoRequest request) {
+        return ventaService.registrarNumeroContrato(ventaId, request);
     }
 
     @PutMapping("/{id}/numero")

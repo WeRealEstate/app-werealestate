@@ -198,6 +198,18 @@ public class Venta {
         return contratoDriveUrl;
     }
 
+    /** Número de contrato (opcional, texto libre; no se repite entre ventas, ver V65). */
+    @jakarta.persistence.Column(name = "numero_contrato", length = 50)
+    private String numeroContrato;
+
+    public String getNumeroContrato() {
+        return numeroContrato;
+    }
+
+    public void setNumeroContrato(String numeroContrato) {
+        this.numeroContrato = numeroContrato;
+    }
+
     public void registrarContrato(boolean firmado, LocalDate fechaFirma, MedioFirma medio, String driveUrl) {
         this.contratoFirmado = firmado;
         this.contratoFechaFirma = firmado ? fechaFirma : null;

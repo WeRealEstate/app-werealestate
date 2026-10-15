@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LucideExternalLink, LucidePencil } from '@lucide/angular';
 import { UBICACION_DOCUMENTO_LABELS } from '../../../../core/models/asesor-externo.model';
-import { Cliente, ESTADO_CIVIL_LABELS, FUENTE_CLIENTE_LABELS, NumeracionCliente } from '../../../../core/models/cliente.model';
+import { Cliente, ClienteVenta, ESTADO_CIVIL_LABELS, FUENTE_CLIENTE_LABELS, NumeracionCliente } from '../../../../core/models/cliente.model';
 import { ClientesService } from '../../../../core/services/clientes.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { ClienteFormModalComponent } from '../../../../shared/cliente-form-modal/cliente-form-modal.component';
@@ -79,6 +79,48 @@ export class ClienteDetalleComponent {
       );
     } finally {
       this.guardandoNumero.set(false);
+    }
+  }
+
+  // --- Número de contrato de cada venta: se edita con el lápiz de su fila (opcional, no se repite entre ventas).
+  readonly editandoContratoDe = signal<number | null>(null);
+  readonly contratoBorrador = signal('');
+  readonly guardandoContrato = signal(false);
+  readonly errorContrato = signal<string | null>(null);
+
+  editarContrato(v: ClienteVenta): void {
+    this.contratoBorrador.set(v.numeroContrato ?? '');
+    this.errorContrato.set(null);
+    this.editandoContratoDe.set(v.ventaId);
+    setTimeout(() => document.querySelector<HTMLInputElement>('[data-testid="contrato-input"]')?.focus());
+  }
+
+  cancelarContrato(): void {
+    if (!this.guardandoContrato()) this.editandoContratoDe.set(null);
+  }
+
+  async guardarContrato(v: ClienteVenta): Promise<void> {
+    if (this.guardandoContrato()) return;
+    const nuevo = this.contratoBorrador().trim() || null;
+    if (nuevo === (v.numeroContrato ?? null)) {
+      this.editandoContratoDe.set(null);
+      return;
+    }
+    this.guardandoContrato.set(true);
+    this.errorContrato.set(null);
+    try {
+      const venta = await this.clientesService.guardarNumeroContratoDeVenta(v.ventaId, nuevo);
+      this.cliente.update((c) =>
+        c ? { ...c, ventas: c.ventas.map((x) => (x.ventaId === v.ventaId ? { ...x, numeroContrato: venta.numeroContrato } : x)) } : c,
+      );
+      this.editandoContratoDe.set(null);
+      this.toast.success(nuevo ? `Contrato ${nuevo} guardado en la venta #${v.numero}.` : `Se quitó el número de contrato de la venta #${v.numero}.`);
+    } catch (e) {
+      this.errorContrato.set(
+        e instanceof HttpErrorResponse && typeof e.error?.message === 'string' ? e.error.message : 'No se pudo guardar el número de contrato.',
+      );
+    } finally {
+      this.guardandoContrato.set(false);
     }
   }
 

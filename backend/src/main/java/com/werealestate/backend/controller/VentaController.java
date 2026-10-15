@@ -3,6 +3,7 @@ package com.werealestate.backend.controller;
 import com.werealestate.backend.dto.AplicarDepositoRequest;
 import com.werealestate.backend.dto.ContadoresVentasDto;
 import com.werealestate.backend.dto.NumeracionVentaDto;
+import com.werealestate.backend.dto.NumeroContratoRequest;
 import com.werealestate.backend.dto.PaginaDto;
 import com.werealestate.backend.dto.PagoVentaCreateRequest;
 import com.werealestate.backend.dto.PagoVentaDto;
@@ -120,6 +121,12 @@ public class VentaController {
     public ResponseEntity<Void> eliminar(@PathVariable Long id, @Valid @RequestBody VentaEliminarRequest request) {
         ventaService.eliminar(id, request);
         return ResponseEntity.noContent().build();
+    }
+
+    /** Número de contrato de la venta (opcional, único). Lo editan admin y administración. */
+    @PutMapping("/{id}/numero-contrato")
+    public VentaDto numeroContrato(@PathVariable Long id, @Valid @RequestBody NumeroContratoRequest request) {
+        return ventaService.registrarNumeroContrato(id, request);
     }
 
     @PutMapping("/{id}")

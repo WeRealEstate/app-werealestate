@@ -40,6 +40,27 @@ import { VentasService } from '../../core/services/ventas.service';
         </a>
       }
 
+      <form (ngSubmit)="guardarNumero()" class="mt-4 flex flex-wrap items-end gap-3" data-testid="numero-contrato-form">
+        <div class="min-w-[14rem] flex-1">
+          <label for="contrato-numero" class="mb-1 block text-xs font-medium text-ink-muted">Número de contrato (opcional)</label>
+          <input
+            id="contrato-numero" name="numeroContrato" type="text" maxlength="50" autocomplete="off" placeholder="Ej. SAM-2026-014"
+            data-testid="numero-contrato-input"
+            [ngModel]="numeroContrato()" (ngModelChange)="numeroContrato.set($event); errorNumero.set(null)"
+            class="block w-full rounded-lg border border-border px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+          />
+        </div>
+        <button
+          type="submit" [disabled]="guardandoNumero() || !cambioNumero()" data-testid="guardar-numero-contrato"
+          class="rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink hover:border-we-primary disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
+        >
+          {{ guardandoNumero() ? 'Guardando…' : 'Guardar número' }}
+        </button>
+      </form>
+      @if (errorNumero()) {
+        <p class="mt-2 text-xs text-red-600 dark:text-red-400" role="alert" data-testid="error-numero-contrato">{{ errorNumero() }}</p>
+      }
+
       <form (ngSubmit)="guardar()" class="mt-4 space-y-4">
         <div class="flex flex-wrap items-end gap-4">
           <label class="flex items-center gap-2.5 text-sm text-ink cursor-pointer">
@@ -110,6 +131,9 @@ export class ContratoVentaComponent {
   readonly driveUrl = signal('');
   readonly guardando = signal(false);
   readonly error = signal<string | null>(null);
+  readonly numeroContrato = signal('');
+  readonly guardandoNumero = signal(false);
+  readonly errorNumero = signal<string | null>(null);
 
   constructor() {
     // Se reinicia con lo guardado cada vez que la venta se vuelve a cargar.
@@ -119,6 +143,7 @@ export class ContratoVentaComponent {
       this.fechaFirma.set(v.contratoFechaFirma ?? '');
       this.medio.set(v.contratoMedio ?? '');
       this.driveUrl.set(v.contratoDriveUrl ?? '');
+      this.numeroContrato.set(v.numeroContrato ?? '');
     });
   }
 
@@ -127,6 +152,30 @@ export class ContratoVentaComponent {
     if (this.driveUrl().trim() !== (v.contratoDriveUrl ?? '')) return true;
     if (this.firmado() !== v.contratoFirmado) return true;
     return this.firmado() && (this.fechaFirma() !== (v.contratoFechaFirma ?? '') || this.medio() !== (v.contratoMedio ?? ''));
+  }
+
+  cambioNumero(): boolean {
+    return this.numeroContrato().trim() !== (this.venta().numeroContrato ?? '');
+  }
+
+  /** El número de contrato se guarda aparte de la firma: es opcional y no depende de que ya esté firmado. */
+  async guardarNumero(): Promise<void> {
+    if (this.guardandoNumero() || !this.cambioNumero()) return;
+    this.guardandoNumero.set(true);
+    this.errorNumero.set(null);
+    try {
+      await this.ventasService.guardarNumeroContrato(this.venta().id, this.numeroContrato().trim() || null);
+      this.toast.success('Número de contrato guardado.');
+      this.guardado.emit();
+    } catch (e) {
+      this.errorNumero.set(
+        e instanceof HttpErrorResponse && typeof e.error?.message === 'string'
+          ? e.error.message
+          : 'No se pudo guardar el número de contrato.',
+      );
+    } finally {
+      this.guardandoNumero.set(false);
+    }
   }
 
   alternar(valor: boolean): void {

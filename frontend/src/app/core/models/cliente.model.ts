@@ -54,6 +54,8 @@ export interface ClienteVenta {
   saldo: number;
   /** true si es copropietario de esa venta (no el cliente principal). */
   copropietario: boolean;
+  /** Número de contrato de esa venta (null = sin número). */
+  numeroContrato: string | null;
 }
 
 export interface Cliente {

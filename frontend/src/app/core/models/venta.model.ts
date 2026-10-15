@@ -71,6 +71,8 @@ export interface Venta {
   /** Cómo se firmó (solo con el contrato firmado) y enlace opcional a su carpeta de Drive. */
   contratoMedio: MedioFirma | null;
   contratoDriveUrl: string | null;
+  /** Número de contrato (opcional; no se repite entre ventas). */
+  numeroContrato: string | null;
   fechaCreacion: string;
   /** Se calculan a partir de sus lotes y sus pagos (ver PagoVenta), nunca se capturan a mano. */
   precioVenta: number;

@@ -65,7 +65,9 @@ public record ClienteDto(
             BigDecimal abonado,
             BigDecimal saldo,
             // true si es copropietario de esa venta (no el cliente principal).
-            boolean copropietario) {
+            boolean copropietario,
+            // Número de contrato de esa venta (null = sin número).
+            String numeroContrato) {
     }
 
     public static ClienteDto from(Cliente c, List<ClienteVentaDto> ventas) {

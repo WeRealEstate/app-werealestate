@@ -307,6 +307,32 @@ public class VentaService {
         return url;
     }
 
+    /** Pone, cambia o quita (vacío) el número de contrato de la venta. Es texto libre pero no puede repetirse en
+     * otra venta (sin importar mayúsculas). Lo pueden usar admin y administración, igual que el resto de Ventas. */
+    public VentaDto registrarNumeroContrato(Long ventaId, com.werealestate.backend.dto.NumeroContratoRequest request) {
+        exigirAdminOLider();
+        Venta venta = obtenerEntidad(ventaId);
+        String numero = request.numeroContrato() == null || request.numeroContrato().isBlank()
+                ? null
+                : request.numeroContrato().trim();
+        if (numero != null) {
+            ventaRepository.findFirstByNumeroContratoIgnoreCase(numero)
+                    .filter(otra -> !otra.getId().equals(ventaId))
+                    .ifPresent(otra -> {
+                        throw new ConflictException(
+                                "El número de contrato " + numero + " ya lo tiene la venta #" + otra.getNumero());
+                    });
+        }
+        venta.setNumeroContrato(numero);
+        try {
+            ventaRepository.saveAndFlush(venta);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            // Dos personas guardando el mismo número a la vez: lo frena el índice único.
+            throw new ConflictException("Ese número de contrato ya lo tiene otra venta");
+        }
+        return toDto(venta);
+    }
+
     public VentaDto obtener(Long id) {
         exigirAdminOLider();
         return toDto(obtenerEntidad(id));

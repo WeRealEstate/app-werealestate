@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '8.0.15', fecha: '2026-10-15', cambios: [
+    "Ventas: nuevo campo opcional 'Número de contrato' en el bloque Contrato del detalle de la venta (texto libre, no se puede repetir en otra venta). También aparece en las compras del detalle del cliente, donde se edita con el lápiz de cada venta.",
+  ] },
   { version: '8.0.14', fecha: '2026-10-15', cambios: [
     "Corregido: al iniciar sesión como administrador o Administración el panel te regresaba al login (las notificaciones fallaban cuando un movimiento de lote no tenía nota).",
   ] },

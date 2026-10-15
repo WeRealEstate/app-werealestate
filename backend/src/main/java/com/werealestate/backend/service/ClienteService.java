@@ -457,7 +457,8 @@ public class ClienteService {
                                 precio,
                                 abonado,
                                 precio.subtract(abonado).max(BigDecimal.ZERO),
-                                copropiedades.contains(clienteId + ":" + v.getId()));
+                                copropiedades.contains(clienteId + ":" + v.getId()),
+                                v.getNumeroContrato());
                     })
                     .toList();
         }

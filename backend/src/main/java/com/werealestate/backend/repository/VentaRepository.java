@@ -12,6 +12,9 @@ public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecific
 
     Optional<Venta> findByNumero(Long numero);
 
+    /** La venta que ya lleva ese número de contrato (sin importar mayúsculas), si hay alguna. */
+    Optional<Venta> findFirstByNumeroContratoIgnoreCase(String numeroContrato);
+
     /** Serializa el reacomodo de números entre transacciones (dos ventas registradas a la vez). El
      * candado se suelta solo al terminar la transacción. */
     @Query(value = "select cast(pg_advisory_xact_lock(39001) as text)", nativeQuery = true)

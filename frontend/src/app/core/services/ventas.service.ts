@@ -97,6 +97,11 @@ export class VentasService {
     return firstValueFrom(this.http.post<void>(`${this.baseUrl}/${id}/eliminar`, { password, liberarLotes }));
   }
 
+  /** Pone, cambia o quita (null) el número de contrato de la venta; no puede repetirse en otra venta. */
+  guardarNumeroContrato(ventaId: number, numeroContrato: string | null): Promise<Venta> {
+    return firstValueFrom(this.http.put<Venta>(`${this.baseUrl}/${ventaId}/numero-contrato`, { numeroContrato }));
+  }
+
   listarPagos(ventaId: number): Promise<PagoVenta[]> {
     return firstValueFrom(this.http.get<PagoVenta[]>(`${this.baseUrl}/${ventaId}/pagos`));
   }

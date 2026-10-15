@@ -35,6 +35,8 @@ public record VentaDto(
         // FISICO o DOCUSIGN (solo con el contrato firmado) y enlace opcional a la carpeta de Drive.
         com.werealestate.backend.model.MedioFirma contratoMedio,
         String contratoDriveUrl,
+        // Número de contrato (opcional, único entre ventas).
+        String numeroContrato,
         LocalDateTime fechaCreacion,
         // Se calculan a partir de sus lotes y sus pagos (ver VentaService), nunca se guardan directo.
         BigDecimal precioVenta,
@@ -75,6 +77,7 @@ public record VentaDto(
                 venta.getContratoFechaFirma(),
                 venta.getContratoMedio(),
                 venta.getContratoDriveUrl(),
+                venta.getNumeroContrato(),
                 venta.getFechaCreacion(),
                 precioVenta,
                 totalAbonado,

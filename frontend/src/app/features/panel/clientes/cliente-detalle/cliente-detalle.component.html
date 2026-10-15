@@ -55,6 +55,7 @@
               <tr>
                 <th class="py-2 pr-3 font-semibold">Venta</th>
                 <th class="py-2 pr-3 font-semibold">Fecha</th>
+                <th class="py-2 pr-3 font-semibold">N.º de contrato</th>
                 <th class="py-2 pr-3 font-semibold">Desarrollo y lotes</th>
                 <th class="py-2 pr-3 text-right font-semibold">Precio</th>
                 <th class="py-2 pr-3 text-right font-semibold">Abonado</th>
@@ -66,6 +67,31 @@
                 <tr>
                   <td class="py-2 pr-3"><a [routerLink]="['/panel/ventas', v.numero]" class="font-medium text-we-primary hover:underline">#{{ v.numero }}</a>@if (v.copropietario) { <span class="ml-1 rounded-full bg-surface-2 px-1.5 py-0.5 text-[11px] font-semibold text-ink-muted">Copropietario</span> }</td>
                   <td class="py-2 pr-3 text-ink-muted">{{ fecha(v.fechaVenta) }}</td>
+                  <td class="py-2 pr-3" [attr.data-testid]="'contrato-venta-' + v.ventaId">
+                    @if (editandoContratoDe() === v.ventaId) {
+                      <form (submit)="$event.preventDefault(); guardarContrato(v)" class="flex items-center gap-1">
+                        <input
+                          type="text" maxlength="50" autocomplete="off" placeholder="Sin número" data-testid="contrato-input"
+                          [attr.aria-label]="'Número de contrato de la venta #' + v.numero"
+                          [ngModel]="contratoBorrador()" [ngModelOptions]="{ standalone: true }"
+                          (ngModelChange)="contratoBorrador.set($event); errorContrato.set(null)" (keydown.escape)="cancelarContrato()"
+                          class="w-36 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+                        />
+                        <button type="submit" [disabled]="guardandoContrato()" data-testid="contrato-guardar" class="rounded-lg bg-we-primary px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
+                          {{ guardandoContrato() ? '…' : 'Guardar' }}
+                        </button>
+                        <button type="button" (click)="cancelarContrato()" [disabled]="guardandoContrato()" class="rounded-lg px-2 py-1.5 text-xs font-medium text-ink-muted hover:bg-surface-2">Cancelar</button>
+                      </form>
+                      @if (errorContrato(); as e) {
+                        <p class="mt-1 max-w-xs text-xs text-red-600 dark:text-red-400" role="alert" data-testid="contrato-error">{{ e }}</p>
+                      }
+                    } @else {
+                      <span class="text-ink">{{ v.numeroContrato || '—' }}</span>
+                      <button type="button" (click)="editarContrato(v)" data-testid="contrato-editar" class="ml-0.5 inline-flex align-middle rounded p-1 text-ink-muted hover:bg-surface-2 hover:text-ink" [attr.aria-label]="'Editar el número de contrato de la venta #' + v.numero" title="Editar el número de contrato">
+                        <svg lucidePencil [size]="14" aria-hidden="true"></svg>
+                      </button>
+                    }
+                  </td>
                   <td class="py-2 pr-3 text-ink">{{ v.desarrollos.join(', ') }} · {{ v.lotes.join(', ') }}</td>
                   <td class="py-2 pr-3 text-right text-ink">${{ money(v.precio) }}</td>
                   <td class="py-2 pr-3 text-right text-ink">${{ money(v.abonado) }}</td>

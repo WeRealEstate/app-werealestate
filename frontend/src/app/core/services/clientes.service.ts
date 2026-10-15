@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Cliente, ClienteLista, ClienteRequest, NumeracionCliente } from '../models/cliente.model';
+import { Venta } from '../models/venta.model';
 
 @Injectable({ providedIn: 'root' })
 export class ClientesService {
@@ -27,6 +28,12 @@ export class ClientesService {
     let params = new HttpParams().set('excluirId', excluirId);
     if (numero !== null) params = params.set('numero', numero);
     return firstValueFrom(this.http.get<NumeracionCliente>(`${this.baseUrl}/numeracion`, { params }));
+  }
+
+  /** Número de contrato de una venta del cliente (desde su detalle); mismo efecto que en el detalle de la venta,
+   * pero por una ruta que exige el módulo Clientes en vez del de Ventas. */
+  guardarNumeroContratoDeVenta(ventaId: number, numeroContrato: string | null): Promise<Venta> {
+    return firstValueFrom(this.http.put<Venta>(`${this.baseUrl}/ventas/${ventaId}/numero-contrato`, { numeroContrato }));
   }
 
   cambiarNumero(id: number, numero: number): Promise<Cliente> {
