@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '8.0.16', fecha: '2026-10-15', cambios: [
+    "Ventas (celular): en el detalle de la venta el botón 'Eliminar venta' ya no se sale de la pantalla (queda debajo de 'Modificar venta') y el nombre del cliente se ve más chico.",
+  ] },
   { version: '8.0.15', fecha: '2026-10-15', cambios: [
     "Ventas: nuevo campo opcional 'Número de contrato' en el bloque Contrato del detalle de la venta (texto libre, no se puede repetir en otra venta). También aparece en las compras del detalle del cliente, donde se edita con el lápiz de cada venta.",
   ] },
