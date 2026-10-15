@@ -1,5 +1,5 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, DestroyRef, effect, ElementRef, HostListener, Injector, ViewChild, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, effect, ElementRef, HostListener, Injector, OnDestroy, ViewChild, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -86,7 +86,7 @@ function guardarAsesor(proyecto: string, nombre: string | null): void {
   imports: [FormsModule, DecimalPipe, RouterLink, ToastContainerComponent, DesarrolloLoaderComponent],
   templateUrl: './plano-publico.component.html',
 })
-export class PlanoPublicoComponent {
+export class PlanoPublicoComponent implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly lotesService = inject(LotesService);
   private readonly toast = inject(ToastService);
@@ -95,6 +95,33 @@ export class PlanoPublicoComponent {
   private readonly injector = inject(Injector);
 
   @ViewChild('contenedorPlano') private readonly contenedorPlano?: ElementRef<HTMLElement>;
+  @ViewChild('raizPlano') private readonly raizPlano?: ElementRef<HTMLElement>;
+
+  // --- Pantalla completa del navegador (oculta la barra de direcciones y las pestañas). Se pide para toda la
+  // página, no solo para el mapa, porque en pantalla completa solo se ve ese elemento: así la leyenda, los
+  // botones del asesor, las fichas de lote y los avisos siguen apareciendo. El botón solo se ofrece donde el
+  // navegador la permite (en iPhone no existe). ---
+  readonly puedePantallaCompleta = typeof document !== 'undefined' && document.fullscreenEnabled === true;
+  readonly pantallaCompleta = signal(false);
+
+  async alternarPantallaCompleta(): Promise<void> {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen().catch(() => undefined);
+      return;
+    }
+    await this.raizPlano?.nativeElement.requestFullscreen().catch(() => undefined);
+  }
+
+  /** Entrar o salir (también con Esc) cambia el tamaño visible: el plano se vuelve a ajustar a la pantalla. */
+  @HostListener('document:fullscreenchange')
+  alCambiarPantallaCompleta(): void {
+    this.pantallaCompleta.set(!!document.fullscreenElement && document.fullscreenElement === this.raizPlano?.nativeElement);
+    this.ajustarZoomParaVerCompleto();
+  }
+
+  ngOnDestroy(): void {
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
+  }
 
   /** Fijo por la ruta (/samai o /aldea-nanuu, ver app.routes.ts) — a diferencia del panel, esta
    * página nunca cotiza más de un desarrollo, así que el HTML lo usa directo para armar el link a
