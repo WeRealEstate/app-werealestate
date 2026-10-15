@@ -217,6 +217,20 @@
                 }
               }
 
+              <!-- Lotes elegidos para apartar varios: relleno y borde azul encima de su color de estado. -->
+              @for (lote of lotesSeleccionados(); track lote.id) {
+                @if (tienePoligono(lote)) {
+                  <polygon
+                    [attr.points]="puntosSvg(lote.mapaPoligono!)"
+                    class="pointer-events-none"
+                    fill="rgba(39, 64, 184, 0.35)"
+                    stroke="#2740b8"
+                    [attr.stroke-width]="2.4 / zoom()"
+                    vector-effect="non-scaling-stroke"
+                  />
+                }
+              }
+
               <!-- Polígono a medio dibujar: vértices ya puestos + tramo recto hasta el cursor, para
                    ver por dónde va a pasar exactamente la línea antes de hacer clic. -->
               @if (puntosLineaTrazando().length > 1) {
@@ -271,6 +285,46 @@
               }
             }
           </div>
+
+          <!-- Apartar varios lotes: botón de modo selección abajo a la izquierda; con lotes elegidos aparece
+               "Apartar N". Va dentro del mapa (no en el encabezado) para que también funcione en pantalla completa. -->
+          @if (!modoEdicion()) {
+            <div
+              class="absolute bottom-3 left-3 flex max-w-[calc(100%-9.5rem)] flex-wrap items-center gap-2"
+              (click)="$event.stopPropagation()"
+              (pointerdown)="$event.stopPropagation()"
+            >
+              <button
+                type="button"
+                (click)="alternarModoSeleccion()"
+                data-testid="seleccionar-varios"
+                class="rounded-lg px-3 py-2 text-xs font-semibold shadow-lg backdrop-blur transition-transform duration-150 active:scale-[0.97]"
+                [class.bg-we-primary]="modoSeleccion()"
+                [class.text-white]="modoSeleccion()"
+                [class.border]="!modoSeleccion()"
+                [class.border-border]="!modoSeleccion()"
+                [class.bg-surface/95]="!modoSeleccion()"
+                [class.text-ink]="!modoSeleccion()"
+              >
+                {{ modoSeleccion() ? 'Cancelar selección' : 'Seleccionar varios' }}
+              </button>
+              @if (modoSeleccion()) {
+                <span class="rounded-lg border border-border bg-surface/95 px-3 py-2 text-xs text-ink shadow-lg backdrop-blur" data-testid="contador-seleccion">
+                  {{ seleccion().length }} de {{ maxSeleccion }} elegidos
+                </span>
+                @if (seleccion().length > 0) {
+                  <button
+                    type="button"
+                    (click)="mostrarApartarVarios.set(true)"
+                    data-testid="apartar-seleccion"
+                    class="rounded-lg bg-we-primary px-3 py-2 text-xs font-semibold text-white shadow-lg transition-transform duration-150 hover:bg-we-primary/90 active:scale-[0.97]"
+                  >
+                    Apartar {{ seleccion().length }} {{ seleccion().length === 1 ? 'lote' : 'lotes' }}
+                  </button>
+                }
+              }
+            </div>
+          }
 
           <!-- Controles de zoom del plano (no del navegador): esquina inferior derecha, estilo mapa.
                stopPropagation en click/pointerdown evita que un clic aquí burbujee al contenedor y
@@ -517,5 +571,9 @@
 
   @if (loteInfo(); as li) {
     <app-lote-info-modal [lote]="li" (cerrar)="cerrarInfoLote()" />
+  }
+
+  @if (mostrarApartarVarios()) {
+    <app-apartar-varios-modal [lotes]="lotesSeleccionados()" (apartados)="onApartadosVarios($event)" (cancelado)="mostrarApartarVarios.set(false)" />
   }
 </div>

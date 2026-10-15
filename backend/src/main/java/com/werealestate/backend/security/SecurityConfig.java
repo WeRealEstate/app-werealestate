@@ -88,6 +88,7 @@ public class SecurityConfig {
                         // (ver LoteService). /uploads/** tiene su propia cadena arriba.
                         .requestMatchers(HttpMethod.GET, "/api/lotes/publico").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/lotes/publico/*/estado").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/lotes/publico/apartar-varios").permitAll()
                         // Botón "Asesor" de /samai y /aldea-nanuu: confirma que el nombre existe.
                         .requestMatchers(HttpMethod.POST, "/api/lotes/publico/verificar-asesor").permitAll()
                         // We Forms: el link público del registro de venta (cada petición exige el PIN del asesor).

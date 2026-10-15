@@ -1,6 +1,8 @@
 package com.werealestate.backend.controller;
 
 import com.werealestate.backend.dto.ActualizarPoligonoMapaRequest;
+import com.werealestate.backend.dto.ApartarVariosPublicoRequest;
+import com.werealestate.backend.dto.ApartarVariosRequest;
 import com.werealestate.backend.dto.CambiarEstadoLotePublicoRequest;
 import com.werealestate.backend.dto.CambiarEstadoLoteRequest;
 import com.werealestate.backend.dto.LimpiarMapaRequest;
@@ -64,6 +66,12 @@ public class LoteController {
         return loteService.listarPublicoPorProyecto(proyecto);
     }
 
+    /** Apartar varios lotes a la vez desde el plano público (todo o nada, máximo 5). */
+    @PutMapping("/publico/apartar-varios")
+    public List<LoteDto> apartarVariosPublico(@Valid @RequestBody ApartarVariosPublicoRequest request) {
+        return loteService.apartarVariosPublico(request);
+    }
+
     @PutMapping("/publico/{id}/estado")
     public LoteDto cambiarEstadoPublico(
             @PathVariable Long id, @Valid @RequestBody CambiarEstadoLotePublicoRequest request) {
@@ -125,6 +133,12 @@ public class LoteController {
     @PutMapping("/{id}")
     public LoteDto actualizar(@PathVariable Long id, @Valid @RequestBody LoteUpdateRequest request) {
         return loteService.actualizar(id, request);
+    }
+
+    /** Apartar varios lotes a la vez desde el plano interno (todo o nada, máximo 5). */
+    @PutMapping("/apartar-varios")
+    public List<LoteDto> apartarVarios(@Valid @RequestBody ApartarVariosRequest request) {
+        return loteService.apartarVarios(request);
     }
 
     @PutMapping("/{id}/estado")

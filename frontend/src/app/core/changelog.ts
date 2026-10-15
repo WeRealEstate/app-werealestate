@@ -15,6 +15,12 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '8.0.22', fecha: '2026-10-15', cambios: [
+    "Plano (interno y público): ahora se pueden apartar varios lotes a la vez (hasta 5). Botón 'Seleccionar varios' abajo a la izquierda del plano: tocas los lotes disponibles (se marcan en azul) y 'Apartar N lotes' pide una sola vez el cliente, la nota y (en el panel) el asesor. Es todo o nada: si algún lote ya no está disponible no se aparta ninguno y el aviso dice cuál.",
+  ] },
+  { version: '8.0.21', fecha: '2026-10-15', cambios: [
+    "Íconos: Cotizador ahora lleva una calculadora y Ventas una insignia con signo de pesos; las tarjetas de Inicio, las pestañas de Finanzas y los avisos de la campana (un ícono por tipo de aviso) también tienen su ícono.",
+  ] },
   { version: '8.0.20', fecha: '2026-10-15', cambios: [
     "Menú: Usuarios, Asesores externos y Comunidades We ya no comparten el mismo ícono; cada uno tiene el suyo (persona con engrane, apretón de manos y grupo de personas).",
   ] },

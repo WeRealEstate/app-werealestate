@@ -19,6 +19,9 @@ export const ESTADO_LOTE_LABELS: Record<EstadoLote, string> = {
 
 /** Un asesor no puede establecer estos (ni sacar un lote de aquí); un admin o un líder de área sí
  * pueden, con control total. El nombre queda por compatibilidad, aunque ya no es "solo admin". */
+/** Cuántos lotes se pueden apartar a la vez desde el plano (el servidor aplica el mismo tope). */
+export const MAX_LOTES_APARTADO_MULTIPLE = 5;
+
 export const ESTADOS_LOTE_SOLO_ADMIN: ReadonlySet<EstadoLote> = new Set([
   'APARTADO_CON_DINERO',
   'EN_PROCESO_DE_FIRMA',

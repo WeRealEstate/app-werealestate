@@ -15,6 +15,7 @@ import {
   Lote,
   PlanoDesarrollo,
   PuntoMapa,
+  MAX_LOTES_APARTADO_MULTIPLE,
 } from '../../../core/models/lote.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
@@ -22,6 +23,7 @@ import { LotesService } from '../../../core/services/lotes.service';
 import { PdfService } from '../../../core/services/pdf-cotizacion.service';
 import { DetectorDeRueda } from '../../../core/utils/rueda';
 import { ToastService } from '../../../core/services/toast.service';
+import { ApartarVariosModalComponent } from '../../../shared/apartar-varios-modal/apartar-varios-modal.component';
 import { LoteCambioEstadoModalComponent } from '../../../shared/lote-cambio-estado-modal/lote-cambio-estado-modal.component';
 import { LoteInfoModalComponent } from '../../../shared/lote-info-modal/lote-info-modal.component';
 import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
@@ -76,7 +78,7 @@ const NOMBRE_DESARROLLO_A_PROYECTO: Record<string, 'samai' | 'nanuu'> = {
 @Component({
   selector: 'app-plano',
   standalone: true,
-  imports: [WeLoaderComponent, FormsModule, DecimalPipe, DatePipe, LoteCambioEstadoModalComponent, LoteInfoModalComponent],
+  imports: [WeLoaderComponent, FormsModule, DecimalPipe, DatePipe, LoteCambioEstadoModalComponent, LoteInfoModalComponent, ApartarVariosModalComponent],
   templateUrl: './plano.component.html',
 })
 export class PlanoComponent implements OnDestroy {
@@ -95,6 +97,49 @@ export class PlanoComponent implements OnDestroy {
   // estado, que viven dentro, siguen apareciendo. En ella se esconden el encabezado, las herramientas de
   // admin y la leyenda; queda el plano, el zoom y el botón para salir. ---
   readonly pantallaCompleta = signal(false);
+
+  // --- Apartar varios lotes a la vez: un botón activa el "modo selección" (tocar un lote lo marca en vez de
+  // abrir su ficha), solo se pueden marcar lotes Disponibles, hasta MAX_LOTES_APARTADO_MULTIPLE, y se apartan
+  // todos juntos con los mismos datos (todo o nada). ---
+  readonly modoSeleccion = signal(false);
+  readonly seleccion = signal<number[]>([]);
+  readonly mostrarApartarVarios = signal(false);
+  readonly maxSeleccion = MAX_LOTES_APARTADO_MULTIPLE;
+  readonly lotesSeleccionados = computed(() => {
+    const lotes = this.plano()?.lotes ?? [];
+    return this.seleccion()
+      .map((id) => lotes.find((l) => l.id === id))
+      .filter((l): l is Lote => !!l);
+  });
+
+  alternarModoSeleccion(): void {
+    this.modoSeleccion.update((v) => !v);
+    this.seleccion.set([]);
+    this.loteActivo.set(null);
+  }
+
+  private alternarSeleccion(lote: Lote): void {
+    if (this.seleccion().includes(lote.id)) {
+      this.seleccion.update((ids) => ids.filter((id) => id !== lote.id));
+      return;
+    }
+    if (lote.estado !== 'DISPONIBLE') {
+      this.toast.error('Solo se pueden elegir lotes disponibles.');
+      return;
+    }
+    if (this.seleccion().length >= MAX_LOTES_APARTADO_MULTIPLE) {
+      this.toast.error(`Máximo ${MAX_LOTES_APARTADO_MULTIPLE} lotes a la vez.`);
+      return;
+    }
+    this.seleccion.update((ids) => [...ids, lote.id]);
+  }
+
+  onApartadosVarios(lotes: Lote[]): void {
+    lotes.forEach((l) => this.aplicarLoteActualizado(l));
+    this.mostrarApartarVarios.set(false);
+    this.modoSeleccion.set(false);
+    this.seleccion.set([]);
+  }
   /** Ancho/alto de la imagen del plano: en pantalla completa el contenedor se ajusta a ella para que
    * #contenedorPlano mida exactamente lo que la imagen (ver el comentario de la plantilla sobre bordes). */
   readonly relacionAspecto = signal(1.5);
@@ -282,6 +327,8 @@ export class PlanoComponent implements OnDestroy {
 
   onDesarrolloChange(valor: string): void {
     this.desarrolloId.set(valor === '' ? null : +valor);
+    this.modoSeleccion.set(false);
+    this.seleccion.set([]);
     this.loteActivo.set(null);
     this.loteAUbicarId.set(null);
     this.puntosEnProgreso.set([]);
@@ -516,6 +563,10 @@ export class PlanoComponent implements OnDestroy {
     event.stopPropagation();
     if (this.ultimoGestoFuePan) {
       this.ultimoGestoFuePan = false;
+      return;
+    }
+    if (this.modoSeleccion() && !this.modoEdicion()) {
+      this.alternarSeleccion(lote);
       return;
     }
     if (this.modoEdicion()) {

@@ -84,6 +84,32 @@ export class LotesService {
     );
   }
 
+  /** Apartar varios lotes a la vez (estado Apartado simple) desde el plano interno: todos con los mismos datos,
+   * todo o nada, máximo 5. Admin y administración mandan además el asesor al que pertenece el apartado. */
+  apartarVarios(
+    loteIds: number[],
+    nombreCliente: string,
+    nota?: string,
+    asesor?: { usuarioAsesorId: number | null; asesorExternoId: number | null } | null,
+  ): Promise<Lote[]> {
+    return firstValueFrom(
+      this.http.put<Lote[]>(`${this.baseUrl}/apartar-varios`, {
+        loteIds,
+        nombreCliente,
+        nota: nota ?? null,
+        usuarioAsesorId: asesor?.usuarioAsesorId ?? null,
+        asesorExternoId: asesor?.asesorExternoId ?? null,
+      }),
+    );
+  }
+
+  /** Lo mismo desde el plano público (sin sesión): nombreAsesor y nombreCliente obligatorios. */
+  apartarVariosPublico(loteIds: number[], nombreAsesor: string, nombreCliente: string, nota?: string): Promise<Lote[]> {
+    return firstValueFrom(
+      this.http.put<Lote[]>(`${this.baseUrl}/publico/apartar-varios`, { loteIds, nombreAsesor, nombreCliente, nota: nota ?? null }),
+    );
+  }
+
   buscarMovimientos(params: BuscarMovimientosParams): Promise<Pagina<MovimientoLote>> {
     let httpParams = new HttpParams().set('pagina', params.pagina).set('tamano', params.tamano);
     if (params.manzana) httpParams = httpParams.set('manzana', params.manzana);

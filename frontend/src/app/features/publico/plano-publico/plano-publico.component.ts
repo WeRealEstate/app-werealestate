@@ -11,6 +11,7 @@ import {
   ESTADOS_LOTE_SOLO_ADMIN,
   EstadoLote,
   Lote,
+  MAX_LOTES_APARTADO_MULTIPLE,
   PuntoMapa,
 } from '../../../core/models/lote.model';
 import { LotesService } from '../../../core/services/lotes.service';
@@ -168,6 +169,83 @@ export class PlanoPublicoComponent implements OnDestroy {
         titulo: `MZ ${lote.manzana} - Lote ${lote.numeroLote}`,
       })),
   );
+
+  // --- Apartar varios lotes a la vez (solo con asesor verificado): el botón "Seleccionar varios" activa un modo
+  // donde tocar un lote lo marca en vez de abrir su ficha; solo se marcan los Disponibles, hasta
+  // MAX_LOTES_APARTADO_MULTIPLE, y se apartan juntos con el mismo cliente (todo o nada). ---
+  readonly modoSeleccion = signal(false);
+  readonly seleccion = signal<number[]>([]);
+  readonly mostrarApartarVarios = signal(false);
+  readonly maxSeleccion = MAX_LOTES_APARTADO_MULTIPLE;
+  /** El modo solo vale mientras haya un asesor verificado (si sale, se ignora aunque siga marcado). */
+  readonly seleccionActiva = computed(() => this.modoSeleccion() && !!this.asesorVerificado());
+  readonly lotesSeleccionados = computed(() =>
+    this.seleccion()
+      .map((id) => this.lotes().find((l) => l.id === id))
+      .filter((l): l is Lote => !!l),
+  );
+  readonly poligonosSeleccionados = computed(() => this.poligonos().filter((p) => this.seleccion().includes(p.lote.id)));
+
+  alternarModoSeleccion(): void {
+    this.modoSeleccion.update((v) => !v);
+    this.seleccion.set([]);
+    this.loteActivo.set(null);
+  }
+
+  private alternarSeleccion(lote: Lote): void {
+    if (this.seleccion().includes(lote.id)) {
+      this.seleccion.update((ids) => ids.filter((id) => id !== lote.id));
+      return;
+    }
+    if (!this.puedeApartar(lote)) {
+      this.toast.error('Solo se pueden elegir lotes disponibles.');
+      return;
+    }
+    if (this.seleccion().length >= MAX_LOTES_APARTADO_MULTIPLE) {
+      this.toast.error(`Máximo ${MAX_LOTES_APARTADO_MULTIPLE} lotes a la vez.`);
+      return;
+    }
+    this.seleccion.update((ids) => [...ids, lote.id]);
+  }
+
+  abrirApartarVarios(): void {
+    this.mostrarApartarVarios.set(true);
+    this.nombreAsesorInput.set(this.asesorVerificado() ?? '');
+    this.nombreClienteInput.set('');
+    this.notaInput.set('');
+  }
+
+  cancelarApartarVarios(): void {
+    if (!this.isApartando()) this.mostrarApartarVarios.set(false);
+  }
+
+  async confirmarApartarVarios(): Promise<void> {
+    const ids = this.seleccion();
+    if (ids.length === 0 || this.nombreAsesorInvalido() || this.nombreClienteInvalido() || this.isApartando()) return;
+
+    this.isApartando.set(true);
+    try {
+      const apartados = await this.lotesService.apartarVariosPublico(
+        ids,
+        this.nombreAsesorInput().trim(),
+        this.nombreClienteInput().trim(),
+        this.notaInput().trim() || undefined,
+      );
+      this.lotes.update((lista) => lista.map((l) => apartados.find((a) => a.id === l.id) ?? l));
+      this.toast.success(apartados.length === 1 ? 'Lote apartado.' : `${apartados.length} lotes apartados.`);
+      this.mostrarApartarVarios.set(false);
+      this.modoSeleccion.set(false);
+      this.seleccion.set([]);
+    } catch (error) {
+      this.toast.error(
+        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+          ? error.error.message
+          : 'No se pudieron apartar los lotes. Intenta de nuevo.',
+      );
+    } finally {
+      this.isApartando.set(false);
+    }
+  }
 
   /** true solo durante un gesto (arrastre, pellizco, rueda): el navegador promueve el plano a su propia
    * capa de GPU para moverlo sin repintar. Se quita al terminar para que vuelva a rasterizar nítido
@@ -338,6 +416,10 @@ export class PlanoPublicoComponent implements OnDestroy {
     event.stopPropagation();
     if (this.ultimoGestoFuePan) {
       this.ultimoGestoFuePan = false;
+      return;
+    }
+    if (this.seleccionActiva()) {
+      this.alternarSeleccion(lote);
       return;
     }
     this.loteActivo.set(this.loteActivo()?.id === lote.id ? null : lote);
@@ -692,7 +774,7 @@ export class PlanoPublicoComponent implements OnDestroy {
   onTecla(event: KeyboardEvent): void {
     if (event.ctrlKey || event.metaKey || event.altKey) return;
     if (event.target instanceof Element && event.target.closest('input, textarea, select, [contenteditable]')) return;
-    if (this.mostrarApartar() || this.mostrarAcceso() || this.loteActivo()) return;
+    if (this.mostrarApartar() || this.mostrarApartarVarios() || this.mostrarAcceso() || this.loteActivo()) return;
 
     const paso = event.shiftKey ? PASO_TECLADO_PX * 3 : PASO_TECLADO_PX;
     switch (event.key) {

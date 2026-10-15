@@ -60,6 +60,17 @@
               <title>{{ p.titulo }}</title>
             </polygon>
           }
+          <!-- Lotes elegidos para apartar varios: relleno y borde azul encima de su color de estado. -->
+          @for (p of poligonosSeleccionados(); track p.lote.id) {
+            <polygon
+              [attr.points]="p.puntos"
+              class="pointer-events-none"
+              fill="rgba(39, 64, 184, 0.35)"
+              stroke="#2740b8"
+              [attr.stroke-width]="2.4 / zoomTrazo()"
+              vector-effect="non-scaling-stroke"
+            />
+          }
         </svg>
       </div>
 
@@ -114,6 +125,48 @@
           </ul>
         </div>
       </div>
+
+      <!-- Apartar varios lotes: solo con asesor verificado. Abajo a la izquierda; con lotes elegidos aparece
+           "Apartar N". -->
+      @if (asesorVerificado()) {
+        <div
+          class="plano-ui absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] flex max-w-[calc(100%-9rem)] flex-wrap items-center gap-2"
+          [class.plano-ui-in]="imagenLista()"
+          style="--d: 1.5s"
+          (click)="$event.stopPropagation()"
+          (pointerdown)="$event.stopPropagation()"
+        >
+          <button
+            type="button"
+            (click)="alternarModoSeleccion()"
+            data-testid="seleccionar-varios"
+            class="rounded-lg px-3 py-2 text-xs font-semibold shadow-lg backdrop-blur active:scale-[0.97] transition-transform duration-150"
+            [class.bg-we-primary]="modoSeleccion()"
+            [class.text-white]="modoSeleccion()"
+            [class.border]="!modoSeleccion()"
+            [class.border-border]="!modoSeleccion()"
+            [class.bg-surface/95]="!modoSeleccion()"
+            [class.text-ink]="!modoSeleccion()"
+          >
+            {{ modoSeleccion() ? 'Cancelar selección' : 'Seleccionar varios' }}
+          </button>
+          @if (modoSeleccion()) {
+            <span class="rounded-lg border border-border bg-surface/95 px-3 py-2 text-xs text-ink shadow-lg backdrop-blur" data-testid="contador-seleccion">
+              {{ seleccion().length }} de {{ maxSeleccion }} elegidos
+            </span>
+            @if (seleccion().length > 0) {
+              <button
+                type="button"
+                (click)="abrirApartarVarios()"
+                data-testid="apartar-seleccion"
+                class="rounded-lg bg-we-primary px-3 py-2 text-xs font-semibold text-white shadow-lg hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150"
+              >
+                Apartar {{ seleccion().length }} {{ seleccion().length === 1 ? 'lote' : 'lotes' }}
+              </button>
+            }
+          }
+        </div>
+      }
 
       <!-- Controles de zoom del plano (no del navegador): esquina inferior derecha, estilo mapa. -->
       <div
@@ -236,6 +289,68 @@
             }
           </div>
         }
+      </div>
+    </div>
+  }
+
+  <!-- Modal "Apartar varios lotes": mismos datos para todos (asesor verificado, cliente y nota opcional); todo o nada. -->
+  @if (mostrarApartarVarios()) {
+    <button type="button" (click)="cancelarApartarVarios()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="apartar-varios-titulo">
+      <div class="modal-panel-enter max-h-[90dvh] w-full max-w-sm overflow-y-auto rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <h2 id="apartar-varios-titulo" class="font-heading text-lg font-semibold text-ink">
+          Apartar {{ lotesSeleccionados().length }} {{ lotesSeleccionados().length === 1 ? 'lote' : 'lotes' }}
+        </h2>
+        <ul class="mt-2 flex flex-wrap gap-1.5" data-testid="lotes-a-apartar">
+          @for (l of lotesSeleccionados(); track l.id) {
+            <li class="rounded-full bg-surface-2 px-2.5 py-1 text-xs font-medium text-ink">Mz {{ l.manzana }} · Lote {{ l.numeroLote }}</li>
+          }
+        </ul>
+        <p class="mt-2 text-xs text-ink-muted">Todos se apartan a tu nombre como asesor y con el mismo cliente; si alguno ya no está disponible, no se aparta ninguno.</p>
+
+        <div class="mt-4">
+          <label class="mb-1.5 block text-sm font-medium text-ink">Nombre del asesor *</label>
+          <input
+            type="text" [ngModel]="nombreAsesorInput()" (ngModelChange)="nombreAsesorInput.set($event)" readonly
+            class="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition-all
+                   focus:border-we-primary focus:ring-2 focus:ring-we-primary/50"
+          />
+          <p class="mt-1.5 text-xs text-ink-muted">Asesor verificado: estos apartados quedarán registrados a su nombre.</p>
+        </div>
+
+        <div class="mt-4">
+          <label class="mb-1.5 block text-sm font-medium text-ink">Nombre del cliente *</label>
+          <input
+            type="text" autocomplete="off" placeholder="Ej. Hernesto Montesinos Alba"
+            [ngModel]="nombreClienteInput()" (ngModelChange)="nombreClienteInput.set($event)"
+            class="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition-all
+                   focus:border-we-primary focus:ring-2 focus:ring-we-primary/50"
+          />
+        </div>
+
+        <div class="mt-4">
+          <div class="mb-1.5 flex items-center justify-between">
+            <label class="block text-sm font-medium text-ink">Nota (opcional)</label>
+            <span class="text-xs text-ink-muted">{{ notaInput().length }}/{{ notaMaxLength }}</span>
+          </div>
+          <textarea
+            [ngModel]="notaInput()" (ngModelChange)="notaInput.set($event)" [maxlength]="notaMaxLength" rows="3"
+            placeholder="Ej. Cliente confirma pago del enganche la próxima semana."
+            class="w-full resize-none rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition-all
+                   focus:border-we-primary focus:ring-2 focus:ring-we-primary/50"
+          ></textarea>
+        </div>
+
+        <div class="flex justify-end gap-2.5 pt-5">
+          <button type="button" (click)="cancelarApartarVarios()" [disabled]="isApartando()"
+            class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary active:scale-[0.97] transition-transform duration-150">
+            Cancelar
+          </button>
+          <button type="button" (click)="confirmarApartarVarios()" [disabled]="nombreAsesorInvalido() || nombreClienteInvalido() || isApartando()" data-testid="confirmar-apartar-varios"
+            class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150 disabled:opacity-60 disabled:cursor-not-allowed">
+            {{ isApartando() ? 'Apartando…' : 'Apartar ' + lotesSeleccionados().length + (lotesSeleccionados().length === 1 ? ' lote' : ' lotes') }}
+          </button>
+        </div>
       </div>
     </div>
   }

@@ -1,6 +1,8 @@
 package com.werealestate.backend.service;
 
 import com.werealestate.backend.dto.ActualizarPoligonoMapaRequest;
+import com.werealestate.backend.dto.ApartarVariosPublicoRequest;
+import com.werealestate.backend.dto.ApartarVariosRequest;
 import com.werealestate.backend.dto.CambiarEstadoLotePublicoRequest;
 import com.werealestate.backend.dto.CambiarEstadoLoteRequest;
 import com.werealestate.backend.dto.LoteCreateRequest;
@@ -282,6 +284,66 @@ public class LoteService {
 
         cambiarEstadoConHistorial(lote, request.estado(), sistema, nombreAsesor, nombreCliente, null, nota);
         return LoteDto.from(lote);
+    }
+
+    /** Tope de lotes en un apartado múltiple (el plano interno y el público). */
+    public static final int MAX_LOTES_APARTADO_MULTIPLE = 5;
+
+    /** Aparta varios lotes a la vez (estado APARTADO simple) con los mismos datos, desde el plano interno. Cada
+     * lote pasa por {@link #cambiarEstado}, así que valen las mismas reglas de rol (nota obligatoria para admin y
+     * administración, asesor al que pertenece el apartado) y queda su movimiento en el historial. Todo o nada: se
+     * revisa primero que todos estén disponibles y, si algo falla después, la transacción deshace lo demás. */
+    public List<LoteDto> apartarVarios(ApartarVariosRequest request) {
+        String cliente = request.nombreCliente() == null ? "" : request.nombreCliente().trim();
+        if (cliente.isEmpty()) {
+            throw new ValidationException("El nombre del cliente es obligatorio para apartar");
+        }
+        List<Lote> lotes = lotesDisponiblesParaApartar(request.loteIds());
+        List<LoteDto> apartados = new ArrayList<>();
+        for (Lote lote : lotes) {
+            apartados.add(cambiarEstado(
+                    lote.getId(),
+                    new CambiarEstadoLoteRequest(
+                            EstadoLote.APARTADO, null, request.nota(), cliente, null,
+                            request.usuarioAsesorId(), request.asesorExternoId())));
+        }
+        return apartados;
+    }
+
+    /** Lo mismo desde el plano público (sin sesión): cada lote pasa por {@link #cambiarEstadoPublico}. */
+    public List<LoteDto> apartarVariosPublico(ApartarVariosPublicoRequest request) {
+        List<Lote> lotes = lotesDisponiblesParaApartar(request.loteIds());
+        List<LoteDto> apartados = new ArrayList<>();
+        for (Lote lote : lotes) {
+            apartados.add(cambiarEstadoPublico(
+                    lote.getId(),
+                    new CambiarEstadoLotePublicoRequest(
+                            EstadoLote.APARTADO, request.nombreAsesor(), request.nombreCliente(), request.nota())));
+        }
+        return apartados;
+    }
+
+    /** Los lotes pedidos, en el mismo orden, si hay entre 1 y el tope, sin repetir y todos DISPONIBLES. */
+    private List<Lote> lotesDisponiblesParaApartar(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            throw new ValidationException("Elige al menos un lote");
+        }
+        if (ids.size() > MAX_LOTES_APARTADO_MULTIPLE) {
+            throw new ValidationException("Máximo " + MAX_LOTES_APARTADO_MULTIPLE + " lotes por apartado");
+        }
+        if (new HashSet<>(ids).size() != ids.size()) {
+            throw new ValidationException("Hay un lote repetido");
+        }
+        List<Lote> lotes = new ArrayList<>();
+        for (Long id : ids) {
+            Lote lote = obtenerEntidad(id);
+            if (lote.getEstado() != EstadoLote.DISPONIBLE) {
+                throw new ConflictException(
+                        "El lote Mz " + lote.getManzana() + " / Lote " + lote.getNumeroLote() + " ya no está disponible");
+            }
+            lotes.add(lote);
+        }
+        return lotes;
     }
 
     /** Historial de movimientos de todos los lotes (quién cambió qué y cuándo), para /panel/lotes.
