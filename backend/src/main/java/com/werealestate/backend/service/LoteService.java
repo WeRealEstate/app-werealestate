@@ -66,7 +66,13 @@ public class LoteService {
     /** Nota que queda en el historial del lote al pasar a "En proceso de firma" desde We Forms. */
     public static final String NOTA_REGISTRO_VENTA = "Registro de venta We Forms";
     /** Texto que tenía esa nota antes de cambiar el nombre: en el historial ya guardado sigue apareciendo así. */
-    public static final Set<String> NOTAS_REGISTRO_VENTA = Set.of(NOTA_REGISTRO_VENTA, "Precontrato We Forms");
+    private static final Set<String> NOTAS_REGISTRO_VENTA = Set.of(NOTA_REGISTRO_VENTA, "Precontrato We Forms");
+
+    /** Si la nota de un movimiento es la de un registro de venta de We Forms (la actual o la anterior). Acepta null:
+     * la mayoría de los movimientos no llevan nota, y Set.of(...).contains(null) lanzaría NullPointerException. */
+    public static boolean esNotaDeRegistroDeVenta(String nota) {
+        return nota != null && NOTAS_REGISTRO_VENTA.contains(nota);
+    }
 
     private static final Set<EstadoLote> ESTADOS_APARTADO =
             Set.of(EstadoLote.APARTADO, EstadoLote.APARTADO_A_PLAZO, EstadoLote.APARTADO_CON_DINERO);

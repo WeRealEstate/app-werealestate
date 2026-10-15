@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '8.0.14', fecha: '2026-10-15', cambios: [
+    "Corregido: al iniciar sesión como administrador o Administración el panel te regresaba al login (las notificaciones fallaban cuando un movimiento de lote no tenía nota).",
+  ] },
   { version: '8.0.13', fecha: '2026-10-15', cambios: [
     "Ventas: Administración también puede eliminar una venta (con su contraseña y la misma cuenta regresiva de 10 s que el administrador).",
   ] },
