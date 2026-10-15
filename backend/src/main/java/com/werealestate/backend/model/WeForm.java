@@ -13,7 +13,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 
-/** Un formulario de We Forms (hoy: el precontrato de un desarrollo) con su link público (slug). */
+/** Un formulario de We Forms (hoy: el registro de venta de un desarrollo) con su link público (slug). */
 @Entity
 @Table(name = "we_form")
 public class WeForm {

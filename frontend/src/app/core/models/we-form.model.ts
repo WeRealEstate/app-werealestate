@@ -1,4 +1,4 @@
-/** We Forms: formularios de precontrato (panel) y su link público. Ver backend WeFormDtos. */
+/** We Forms: formularios de registro de venta (panel) y su link público. Ver backend WeFormDtos. */
 
 export type EstadoWeForm = 'ACTIVO' | 'CERRADO';
 

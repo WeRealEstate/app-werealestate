@@ -4,7 +4,7 @@
 
   @if (formularios(); as lista) {
     <div class="w-full max-w-lg">
-      <h1 class="font-heading text-xl font-semibold text-ink">Precontratos · {{ nombreProyecto }}</h1>
+      <h1 class="font-heading text-xl font-semibold text-ink">Registrar venta · {{ nombreProyecto }}</h1>
       <p class="mt-1 text-sm text-ink-muted">Elige el formulario que vas a llenar.</p>
       <button type="button" (click)="salir()" data-testid="cambiar-asesor" class="mt-1 text-xs text-ink-muted underline underline-offset-2 hover:text-ink">Cambiar de asesor</button>
       @if (lista.length === 0) {
@@ -24,8 +24,8 @@
       }
     </div>
   } @else if (entrandoSolo()) {
-    <app-desarrollo-loader [desarrollo]="proyecto" modo="bloque" texto="Cargando precontratos" />
+    <app-desarrollo-loader [desarrollo]="proyecto" modo="bloque" texto="Cargando formularios" />
   } @else {
-    <app-pin-publico [error]="error()" [cargando]="verificando()" texto="Escribe tu PIN de asesor para ver los precontratos." (entrar)="entrar($event)" />
+    <app-pin-publico [error]="error()" [cargando]="verificando()" texto="Escribe tu PIN de asesor para registrar una venta." (entrar)="entrar($event)" />
   }
 </div>

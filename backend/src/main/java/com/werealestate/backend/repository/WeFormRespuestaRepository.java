@@ -18,13 +18,13 @@ public interface WeFormRespuestaRepository extends JpaRepository<WeFormRespuesta
 
     long countByFormId(Long formId);
 
-    /** Serializa los envíos de precontratos (dos asesores tomando el mismo lote a la vez). Se suelta al terminar la transacción. */
+    /** Serializa los envíos de registros de venta (dos asesores tomando el mismo lote a la vez). Se suelta al terminar la transacción. */
     @Query(value = "select cast(pg_advisory_xact_lock(39002) as text)", nativeQuery = true)
     String bloquearEnvios();
 
     boolean existsByVentaId(Long ventaId);
 
-    /** Al eliminar una venta, el precontrato (y sus documentos) se conserva pero ya no apunta a ella. */
+    /** Al eliminar una venta, el registro de venta (y sus documentos) se conserva pero ya no apunta a ella. */
     @Modifying(flushAutomatically = true)
     @Query("update WeFormRespuesta r set r.venta = null where r.venta.id = :ventaId")
     void desvincularVenta(@Param("ventaId") Long ventaId);

@@ -56,7 +56,7 @@ export class VentasService {
     return firstValueFrom(this.http.get<NumeracionVenta>(`${this.baseUrl}/numeracion`, { params }));
   }
 
-  /** Aplica el depósito pendiente de una venta que nació de un precontrato (We Forms). */
+  /** Aplica el depósito pendiente de una venta que nació de un registro de venta (We Forms). */
   aplicarDeposito(id: number, request: AplicarDepositoRequest): Promise<Venta> {
     return firstValueFrom(this.http.post<Venta>(`${this.baseUrl}/${id}/aplicar-deposito`, request));
   }
@@ -91,7 +91,7 @@ export class VentasService {
     return firstValueFrom(this.http.put<Venta>(`${this.baseUrl}/${id}`, request));
   }
 
-  /** Elimina la venta por completo (solo admin): exige su contraseña. liberarLotes: los lotes que sigan
+  /** Elimina la venta por completo (admin y administración): exige su contraseña. liberarLotes: los lotes que sigan
    * VENDIDO vuelven a DISPONIBLE. La comisión de la venta se queda en el historial de Finanzas. */
   eliminar(id: number, password: string, liberarLotes: boolean): Promise<void> {
     return firstValueFrom(this.http.post<void>(`${this.baseUrl}/${id}/eliminar`, { password, liberarLotes }));

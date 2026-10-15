@@ -270,12 +270,12 @@ export const routes: Routes = [
   },
   {
     path: 'we-forms',
-    title: 'We Real Estate | Precontrato',
+    title: 'We Real Estate | Registrar venta',
     loadComponent: () => import('./features/publico/we-forms-publico/we-forms-publico-lista.component').then((m) => m.WeFormsPublicoListaComponent),
   },
   {
     path: 'we-forms/:slug',
-    title: 'We Real Estate | Precontrato',
+    title: 'We Real Estate | Registrar venta',
     loadComponent: () => import('./features/publico/we-forms-publico/we-form-publico.component').then((m) => m.WeFormPublicoComponent),
   },
   { path: '**', redirectTo: 'login' },

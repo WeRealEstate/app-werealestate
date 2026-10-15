@@ -80,7 +80,7 @@ export class NotificationBellComponent {
   rutaDeNotificacion(n: Notificacion): string[] {
     if (n.leadId !== null) return ['/panel/leads', String(n.leadId)];
     if (n.eventoId !== null) return ['/panel/calendario'];
-    if (n.tipo === 'PRECONTRATO_NUEVO') return ['/panel/we-forms'];
+    if (n.tipo === 'REGISTRO_VENTA_NUEVO') return ['/panel/we-forms'];
     if (n.movimientoId !== null) return ['/panel/lotes'];
     if (n.ventaId !== null) return ['/panel/ventas'];
     return ['/panel/equipo'];

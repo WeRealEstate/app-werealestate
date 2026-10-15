@@ -32,7 +32,7 @@ const MAX_ARCHIVO_BYTES = 2 * 1024 * 1024;
 
 type Etapa = 'pin' | 'cargando' | 'listo' | 'cerrado' | 'error' | 'enviado';
 
-/** /we-forms/:slug: el precontrato que llena el asesor (con su PIN). Al enviarlo se crea el cliente y la venta. */
+/** /we-forms/:slug: el registro de venta que llena el asesor (con su PIN). Al enviarlo se crea el cliente y la venta. */
 @Component({
   selector: 'app-we-form-publico',
   standalone: true,
@@ -380,7 +380,7 @@ export class WeFormPublicoComponent {
     } catch (e) {
       const status = e instanceof HttpErrorResponse ? e.status : 0;
       this.errorEnvio.set(
-        e instanceof HttpErrorResponse && typeof e.error?.message === 'string' ? e.error.message : 'No se pudo enviar el precontrato. Intenta de nuevo.',
+        e instanceof HttpErrorResponse && typeof e.error?.message === 'string' ? e.error.message : 'No se pudo registrar la venta. Intenta de nuevo.',
       );
       if (status === 409) {
         // Un lote ya no está disponible: se refresca la lista conservando todo lo demás.
@@ -405,7 +405,7 @@ export class WeFormPublicoComponent {
     }
   }
 
-  async nuevoPrecontrato(): Promise<void> {
+  async nuevoRegistroDeVenta(): Promise<void> {
     const pin = this.service.pin();
     this.valores.set({});
     this.archivos.set(new Map());

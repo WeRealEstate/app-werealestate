@@ -48,6 +48,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class NotificacionService {
 
     private static final int DIAS_AVISOS_LOTES = 7;
+    static final String TIPO_REGISTRO_VENTA = "REGISTRO_VENTA_NUEVO";
+    /** Nombre que tenía este aviso antes de llamarse "registro de venta": lo ya leído o enviado con él sigue contando. */
+    static final String TIPO_REGISTRO_VENTA_ANTERIOR = "PRECONTRATO_NUEVO";
     private static final Set<EstadoLote> ESTADOS_APARTADO =
             Set.of(EstadoLote.APARTADO, EstadoLote.APARTADO_A_PLAZO, EstadoLote.APARTADO_CON_DINERO);
     private static final List<EstadoLead> CERRADOS = List.of(EstadoLead.CERRADO_GANADO, EstadoLead.CERRADO_PERDIDO);
@@ -175,7 +178,7 @@ public class NotificacionService {
             agregarAvisosDeLotes(actual, leidas, notificaciones);
             agregarAvisosDeVentas(actual, leidas, notificaciones);
         }
-        agregarAvisosDePrecontratos(actual, leidas, notificaciones);
+        agregarAvisosDeRegistrosDeVenta(actual, leidas, notificaciones);
 
         return notificaciones;
     }
@@ -191,8 +194,8 @@ public class NotificacionService {
             boolean apartado = m.getEstadoAnterior() == EstadoLote.DISPONIBLE && ESTADOS_APARTADO.contains(m.getEstadoNuevo());
             boolean desapartado = ESTADOS_APARTADO.contains(m.getEstadoAnterior()) && m.getEstadoNuevo() == EstadoLote.DISPONIBLE;
             if (m.getEstadoAnterior() == m.getEstadoNuevo()) continue;
-            // El aviso del precontrato (ver agregarAvisosDePrecontratos) ya cuenta este cambio de lote.
-            if ("Precontrato We Forms".equals(m.getNota())) continue;
+            // El aviso del registro de venta (ver agregarAvisosDeRegistrosDeVenta) ya cuenta este cambio de lote.
+            if (LoteService.NOTAS_REGISTRO_VENTA.contains(m.getNota())) continue;
             boolean otroCambio = !apartado && !desapartado;
             // Los cambios "de otro tipo" son avisos nuevos: solo el último día, para no soltar de golpe el historial.
             if (otroCambio && m.getFecha().isBefore(LocalDateTime.now().minusDays(1))) continue;
@@ -248,7 +251,7 @@ public class NotificacionService {
         }
         LocalDateTime desde = LocalDateTime.now().minusDays(DIAS_AVISOS_LOTES);
         for (Venta v : ventaRepository.recientesDeOtros(desde, actual.getId())) {
-            // Una venta que nació de un precontrato se avisa como precontrato (ver agregarAvisosDePrecontratos).
+            // Una venta que nació de un registro de venta se avisa como tal (ver agregarAvisosDeRegistrosDeVenta).
             if (respuestaRepository.existsByVentaId(v.getId())) continue;
             String firma = v.getFechaCreacion().toString();
             if (leidas.contains(clave("VENTA_NUEVA", v.getId(), firma))) continue;
@@ -268,23 +271,24 @@ public class NotificacionService {
         }
     }
 
-    /** Aviso de cada precontrato de We Forms enviado en los últimos días (admin y quien tenga el módulo We
-     * Forms). Reemplaza al aviso de venta nueva y de cambio de lote que ese mismo precontrato generaría. */
-    private void agregarAvisosDePrecontratos(Usuario actual, Set<String> leidas, List<NotificacionDto> notificaciones) {
+    /** Aviso de cada registro de venta de We Forms enviado en los últimos días (admin y quien tenga el módulo We
+     * Forms). Reemplaza al aviso de venta nueva y de cambio de lote que ese mismo registro de venta generaría. */
+    private void agregarAvisosDeRegistrosDeVenta(Usuario actual, Set<String> leidas, List<NotificacionDto> notificaciones) {
         if (actual.getRol() != Role.ADMIN && !ModulosAcceso.efectivos(actual).contains(Modulo.WE_FORMS)) {
             return;
         }
         LocalDateTime desde = LocalDateTime.now().minusDays(DIAS_AVISOS_LOTES);
         for (WeFormRespuesta r : respuestaRepository.recientes(desde)) {
             String firma = r.getFechaEnvio().toString();
-            if (leidas.contains(clave("PRECONTRATO_NUEVO", r.getId(), firma))) continue;
+            if (leidas.contains(clave(TIPO_REGISTRO_VENTA, r.getId(), firma))
+                    || leidas.contains(clave(TIPO_REGISTRO_VENTA_ANTERIOR, r.getId(), firma))) continue;
             Venta v = r.getVenta();
             String lotes = v == null ? "" : ventaLoteRepository.findByVentaId(v.getId()).stream()
                     .map(vl -> "Mz " + vl.getLote().getManzana() + " Lote " + vl.getLote().getNumeroLote())
                     .collect(java.util.stream.Collectors.joining(", "));
             String cliente = r.getCliente() != null ? r.getCliente().nombreCompleto() : "un cliente";
-            notificaciones.add(NotificacionDto.precontratoNuevo(
-                    "Nuevo precontrato de " + r.getAsesorNombre() + ": " + cliente + (r.isClienteNuevo() ? " (cliente nuevo)" : "")
+            notificaciones.add(NotificacionDto.registroVentaNuevo(
+                    "Nueva venta registrada por " + r.getAsesorNombre() + ": " + cliente + (r.isClienteNuevo() ? " (cliente nuevo)" : "")
                             + (lotes.isEmpty() ? "" : " · " + lotes)
                             + (v != null ? " · venta #" + v.getNumero() : "") + ".",
                     r.getId(),

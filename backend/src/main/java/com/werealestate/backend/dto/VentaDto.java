@@ -40,7 +40,7 @@ public record VentaDto(
         BigDecimal precioVenta,
         BigDecimal totalAbonado,
         BigDecimal saldoPendiente,
-        // Venta que nació de un precontrato: su fecha es la del envío y administración la confirma.
+        // Venta que nació de un registro de venta: su fecha es la del envío y administración la confirma.
         boolean fechaProvisional,
         // Dinero apartado del lote que aún no se aplica a la venta (null = nada pendiente).
         BigDecimal depositoPendiente) {

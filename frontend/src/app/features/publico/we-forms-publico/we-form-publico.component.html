@@ -8,11 +8,11 @@
 
   @switch (etapa()) {
     @case ('pin') {
-      <app-pin-publico [error]="errorPin()" [cargando]="verificando()" texto="Escribe tu PIN de asesor para llenar el precontrato." (entrar)="cargar($event)" />
+      <app-pin-publico [error]="errorPin()" [cargando]="verificando()" texto="Escribe tu PIN de asesor para registrar la venta." (entrar)="cargar($event)" />
     }
     @case ('cargando') {
       @if (proyecto(); as p) {
-        <app-desarrollo-loader [desarrollo]="p" modo="bloque" texto="Cargando el precontrato" />
+        <app-desarrollo-loader [desarrollo]="p" modo="bloque" texto="Cargando el formulario" />
       } @else {
         <p class="mt-10 text-sm text-ink-muted">Cargando…</p>
       }
@@ -33,13 +33,13 @@
       @if (resultado(); as r) {
         <div class="mt-6 w-full max-w-md rounded-xl border border-border bg-surface p-6 text-center shadow-sm" data-testid="form-enviado">
           <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-2xl text-green-700 dark:bg-green-500/15 dark:text-green-300">✓</div>
-          <h1 class="mt-3 font-heading text-xl font-semibold text-ink">Precontrato enviado</h1>
+          <h1 class="mt-3 font-heading text-xl font-semibold text-ink">Venta registrada</h1>
           <p class="mt-2 text-sm text-ink">
             {{ r.clienteNombre }} {{ r.clienteNuevo ? 'quedó registrado como cliente nuevo' : 'ya estaba registrado y se vinculó a esta venta' }}.
           </p>
           <p class="mt-1 text-sm text-ink-muted">Se creó la <span class="font-semibold text-ink">venta #{{ r.ventaNumero }}</span> y los lotes quedaron en proceso de firma. Administración la revisará.</p>
-          <button type="button" (click)="nuevoPrecontrato()" class="mt-5 w-full rounded-lg bg-we-primary px-4 py-3 text-sm font-semibold text-white hover:bg-we-primary/90 min-h-[44px]">
-            Llenar otro precontrato
+          <button type="button" (click)="nuevoRegistroDeVenta()" class="mt-5 w-full rounded-lg bg-we-primary px-4 py-3 text-sm font-semibold text-white hover:bg-we-primary/90 min-h-[44px]">
+            Registrar otra venta
           </button>
         </div>
       }
@@ -208,7 +208,7 @@
           </div>
 
           @if (lotesElegidos().length > 0) {
-            <div class="mt-4 rounded-xl border border-we-primary/30 bg-we-primary/5 p-4" data-testid="resumen-precontrato">
+            <div class="mt-4 rounded-xl border border-we-primary/30 bg-we-primary/5 p-4" data-testid="resumen-registro-venta">
               <p class="text-sm font-semibold text-ink">Resumen</p>
               <dl class="mt-2 grid gap-y-1.5 text-sm">
                 <div class="flex justify-between gap-3"><dt class="text-ink-muted">Total de inversión</dt><dd class="font-semibold text-ink">${{ precioTotal() | number: '1.2-2' }}</dd></div>
@@ -225,9 +225,9 @@
           @if (errorEnvio(); as e) {
             <div class="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-300" role="alert" data-testid="error-envio">{{ e }}</div>
           }
-          <button type="button" (click)="enviar()" [disabled]="enviando()" data-testid="enviar-precontrato"
+          <button type="button" (click)="enviar()" [disabled]="enviando()" data-testid="registrar-venta"
             class="mt-4 w-full rounded-lg bg-we-primary px-4 py-3.5 text-sm font-semibold text-white hover:bg-we-primary/90 active:scale-[0.99] transition-transform duration-150 disabled:opacity-60 disabled:cursor-not-allowed min-h-[48px]">
-            {{ enviando() ? 'Enviando…' : 'Enviar precontrato' }}
+            {{ enviando() ? 'Enviando…' : 'Registrar venta' }}
           </button>
           <p class="mt-3 pb-6 text-center text-xs text-ink-muted">Al enviarlo se crea el cliente y la venta, y los lotes pasan a "En proceso de firma".</p>
         </div>

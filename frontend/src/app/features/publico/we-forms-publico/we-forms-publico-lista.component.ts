@@ -6,7 +6,7 @@ import { WeFormsPublicoService } from '../../../core/services/we-forms-publico.s
 import { DesarrolloLoaderComponent } from '../../../shared/desarrollo-loader/desarrollo-loader.component';
 import { PinPublicoComponent } from '../../../shared/pin-publico/pin-publico.component';
 
-/** /we-forms?proyecto=samai: a donde lleva el botón "Precontrato" del plano. Pide el PIN y muestra los
+/** /we-forms?proyecto=samai: a donde lleva el botón "Registrar venta" del plano. Pide el PIN y muestra los
  * formularios activos de ese desarrollo para elegir. */
 @Component({
   selector: 'app-we-forms-publico-lista',

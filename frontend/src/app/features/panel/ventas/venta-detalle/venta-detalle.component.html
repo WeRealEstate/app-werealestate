@@ -43,7 +43,7 @@
             <svg lucidePencil [size]="14" aria-hidden="true"></svg>
             Modificar venta
           </button>
-          @if (esAdmin()) {
+          @if (puedeEliminar()) {
             <button
               type="button"
               (click)="abrirEliminar()"
@@ -72,12 +72,12 @@
     </div>
 
     @if (v.fechaProvisional || v.depositoPendiente) {
-      <div class="mt-6 space-y-3" data-testid="avisos-precontrato">
+      <div class="mt-6 space-y-3" data-testid="avisos-registro-venta">
         @if (v.fechaProvisional) {
           <div class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200" data-testid="aviso-fecha-provisional">
             <p class="font-semibold">Fecha de venta provisional</p>
             <p class="mt-0.5">
-              Esta venta nació de un precontrato (We Forms): su fecha ({{ v.fechaVenta }}) es la del día en que se envió. Corrígela en «Modificar venta» cuando se firme, o márcala como definitiva ahí mismo.
+              Esta venta se registró desde We Forms: su fecha ({{ v.fechaVenta }}) es la del día en que se envió. Corrígela en «Modificar venta» cuando se firme, o márcala como definitiva ahí mismo.
             </p>
           </div>
         }

@@ -16,7 +16,7 @@ export const FUENTE_CLIENTE_LABELS: Record<FuenteCliente, string> = {
   EVENTO: 'Evento',
   ESPECTACULAR: 'Espectacular',
   OTRO: 'Otro',
-  PRECONTRATO: 'Precontrato We Forms',
+  PRECONTRATO: 'Registro de venta We Forms',
 };
 
 /** Una fila de la lista de clientes y del buscador de la venta. */

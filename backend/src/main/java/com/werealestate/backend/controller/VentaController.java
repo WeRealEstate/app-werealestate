@@ -76,7 +76,7 @@ public class VentaController {
         return ventaService.obtenerPorNumero(numero);
     }
 
-    /** Aplica el depósito pendiente de una venta que nació de un precontrato (We Forms). */
+    /** Aplica el depósito pendiente de una venta que nació de un registro de venta (We Forms). */
     @PostMapping("/{id}/aplicar-deposito")
     public VentaDto aplicarDeposito(@PathVariable Long id, @Valid @RequestBody AplicarDepositoRequest request) {
         return ventaService.aplicarDeposito(id, request);
@@ -114,7 +114,7 @@ public class VentaController {
     }
 
     /** Temporal: modifica los datos capturados de una venta (cliente, fechas, términos). */
-    /** Elimina la venta por completo (solo admin, con su contraseña). POST y no DELETE porque lleva
+    /** Elimina la venta por completo (admin y administración, con su contraseña). POST y no DELETE porque lleva
      * cuerpo (la contraseña). */
     @PostMapping("/{id}/eliminar")
     public ResponseEntity<Void> eliminar(@PathVariable Long id, @Valid @RequestBody VentaEliminarRequest request) {

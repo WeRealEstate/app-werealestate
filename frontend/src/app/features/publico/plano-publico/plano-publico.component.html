@@ -354,15 +354,15 @@
         >
           {{ generandoPdf() ? 'Generando PDF…' : 'Descargar PDF' }}
         </button>
-        <!-- We Forms: el precontrato se llena en otra pestaña; el PIN no viaja en el enlace, pero este dispositivo ya lo recuerda. -->
+        <!-- We Forms: el registro de venta se llena en otra pestaña; el PIN no viaja en el enlace, pero este dispositivo ya lo recuerda. -->
         <a
           [href]="'/we-forms?proyecto=' + proyecto"
           target="_blank"
           rel="noopener"
-          data-testid="precontrato"
+          data-testid="registrar-venta"
           class="rounded-md border border-gray-400/60 bg-black/50 px-2.5 py-1.5 text-xs font-medium text-white/80 hover:bg-black/70"
         >
-          Precontrato
+          Registrar venta
         </a>
       } @else {
         <button

@@ -185,11 +185,11 @@ public class ClienteService {
         return fin;
     }
 
-    /** El cliente de un precontrato de We Forms (sin sesión: ya se validó el PIN del asesor). La CURP manda:
+    /** El cliente de un registro de venta de We Forms (sin sesión: ya se validó el PIN del asesor). La CURP manda:
      * si ya existe un cliente con esa CURP es la misma persona y se vincula SIN tocar sus datos (solo se
      * rellenan los campos que tenga vacíos); si no, se crea uno nuevo aunque haya otro con el mismo nombre
      * o teléfono (pueden ser personas distintas). Nunca se vincula por nombre. */
-    public ClienteResuelto resolverDesdePrecontrato(
+    public ClienteResuelto resolverDesdeRegistroDeVenta(
             ClienteRequest r, Usuario captadoUsuario, AsesorExterno captadoAsesor) {
         String nombre = limpio(r.nombre());
         String paterno = limpio(r.apellidoPaterno());
@@ -254,7 +254,7 @@ public class ClienteService {
         return new ClienteResuelto(clienteRepository.save(c), true);
     }
 
-    /** El cliente que resultó de un precontrato y si se acaba de crear (false = ya existía con esa CURP). */
+    /** El cliente que resultó de un registro de venta y si se acaba de crear (false = ya existía con esa CURP). */
     public record ClienteResuelto(Cliente cliente, boolean nuevo) {
     }
 

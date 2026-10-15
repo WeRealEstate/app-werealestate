@@ -63,6 +63,11 @@ public class LoteService {
             EstadoLote.EN_PROCESO_DE_FIRMA,
             EstadoLote.VENDIDO);
 
+    /** Nota que queda en el historial del lote al pasar a "En proceso de firma" desde We Forms. */
+    public static final String NOTA_REGISTRO_VENTA = "Registro de venta We Forms";
+    /** Texto que tenía esa nota antes de cambiar el nombre: en el historial ya guardado sigue apareciendo así. */
+    public static final Set<String> NOTAS_REGISTRO_VENTA = Set.of(NOTA_REGISTRO_VENTA, "Precontrato We Forms");
+
     private static final Set<EstadoLote> ESTADOS_APARTADO =
             Set.of(EstadoLote.APARTADO, EstadoLote.APARTADO_A_PLAZO, EstadoLote.APARTADO_CON_DINERO);
 
@@ -413,7 +418,7 @@ public class LoteService {
         BigDecimal montoApartado =
                 request.estado() == EstadoLote.APARTADO_CON_DINERO ? request.montoApartado() : null;
         // Un apartado que pone administración debe quedar a nombre del asesor al que pertenece: así
-        // ese asesor lo ve (y solo él) al armar un precontrato en We Forms.
+        // ese asesor lo ve (y solo él) al armar un registro de venta en We Forms.
         String nombreAsesor = null;
         if (ESTADOS_APARTADO.contains(request.estado())
                 && (actual.getRol() == Role.ADMIN || actual.getRol() == Role.LIDER_AREA)) {
@@ -521,14 +526,14 @@ public class LoteService {
         cambiarEstadoConHistorial(lote, EstadoLote.DISPONIBLE, actual, null, null, null, "Venta eliminada");
     }
 
-    /** El lote pasa a EN_PROCESO_DE_FIRMA a raíz de un precontrato de We Forms (ver VentaService.
-     * crearDesdePrecontrato), sin sesión: el cambio queda en el historial a nombre del usuario de sistema.
+    /** El lote pasa a EN_PROCESO_DE_FIRMA a raíz de un registro de venta de We Forms (ver VentaService.
+     * crearDesdeRegistroDeVenta), sin sesión: el cambio queda en el historial a nombre del usuario de sistema.
      * A diferencia de marcarVendido, el dinero con el que estuviera apartado NO se borra: queda pendiente
      * de aplicar en la venta (ver Venta.depositoPendiente) y lo limpia {@link #limpiarMontoApartado}. */
     public void marcarEnProcesoDeFirma(Long id, String cliente, String asesor, Usuario actor) {
         Lote lote = obtenerEntidad(id);
         cambiarEstadoConHistorial(
-                lote, EstadoLote.EN_PROCESO_DE_FIRMA, actor, asesor, cliente, null, "Precontrato We Forms");
+                lote, EstadoLote.EN_PROCESO_DE_FIRMA, actor, asesor, cliente, null, NOTA_REGISTRO_VENTA);
         lote.setFechaExpiraApartado(null);
     }
 
@@ -537,20 +542,20 @@ public class LoteService {
         obtenerEntidad(id).setMontoApartado(null);
     }
 
-    /** Lotes que un asesor puede poner en un precontrato: los disponibles del desarrollo y los que ÉL mismo
+    /** Lotes que un asesor puede poner en un registro de venta: los disponibles del desarrollo y los que ÉL mismo
      * apartó (quien aparece en el último cambio a su estado actual). Un apartado que alguien más hizo, o
      * uno sin asesor atribuido (por ejemplo, fijado por administración), no se ofrece. */
     @Transactional(readOnly = true)
-    public List<LoteDto> listarParaPrecontrato(Long desarrolloId, Long asesorUsuarioId, String asesorNombre) {
+    public List<LoteDto> listarParaRegistroDeVenta(Long desarrolloId, Long asesorUsuarioId, String asesorNombre) {
         return loteRepository.findByDesarrolloId(desarrolloId).stream()
-                .filter(l -> puedeTomarParaPrecontrato(l, asesorUsuarioId, asesorNombre))
+                .filter(l -> puedeTomarParaRegistroDeVenta(l, asesorUsuarioId, asesorNombre))
                 .sorted(ORDEN_NATURAL_LOTES)
                 .map(LoteDto::from)
                 .toList();
     }
 
-    /** Regla de {@link #listarParaPrecontrato}, y que no tenga ya una venta. */
-    public boolean puedeTomarParaPrecontrato(Lote lote, Long asesorUsuarioId, String asesorNombre) {
+    /** Regla de {@link #listarParaRegistroDeVenta}, y que no tenga ya una venta. */
+    public boolean puedeTomarParaRegistroDeVenta(Lote lote, Long asesorUsuarioId, String asesorNombre) {
         if (ventaLoteRepository.existsByLoteId(lote.getId())) return false;
         EstadoLote estado = lote.getEstado();
         if (estado == EstadoLote.DISPONIBLE) return true;

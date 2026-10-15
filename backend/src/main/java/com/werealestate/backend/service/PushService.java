@@ -122,7 +122,8 @@ public class PushService {
     public void enviarPendientes(Usuario usuario) {
         List<NotificacionDto> nuevas = notificacionService.listarPara(usuario).stream()
                 .filter(n -> jdbc.queryForObject(
-                                "select count(*) from push_enviada where usuario_id = ? and clave = ?", Integer.class, usuario.getId(), claveDe(n))
+                                "select count(*) from push_enviada where usuario_id = ? and (clave = ? or clave = ?)",
+                                Integer.class, usuario.getId(), claveDe(n), claveAnteriorDe(n))
                         == 0)
                 .toList();
         if (nuevas.isEmpty()) return;
@@ -181,6 +182,13 @@ public class PushService {
     private static String claveDe(NotificacionDto n) {
         Long id = n.leadId() != null ? n.leadId() : n.tareaId() != null ? n.tareaId() : n.eventoId() != null ? n.eventoId() : n.movimientoId() != null ? n.movimientoId() : n.ventaId();
         return NotificacionService.clave(n.tipo(), id, n.firma());
+    }
+
+    /** La clave que tenía el aviso antes de renombrarlo (solo cambia el de registro de venta); igual a la actual si no aplica. */
+    private static String claveAnteriorDe(NotificacionDto n) {
+        if (!NotificacionService.TIPO_REGISTRO_VENTA.equals(n.tipo())) return claveDe(n);
+        Long id = n.movimientoId();
+        return NotificacionService.clave(NotificacionService.TIPO_REGISTRO_VENTA_ANTERIOR, id, n.firma());
     }
 
     private static String titulo(NotificacionDto n) {

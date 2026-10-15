@@ -37,7 +37,7 @@ public class WeFormPublicoController {
         this.objectMapper = objectMapper;
     }
 
-    /** Formularios activos del desarrollo de un plano (para elegir desde el botón "Precontrato"). */
+    /** Formularios activos del desarrollo de un plano (para elegir desde el botón "Registrar venta"). */
     @GetMapping("/formularios")
     public List<WeFormDtos.PublicoLista> listar(
             @RequestParam String proyecto, @RequestHeader("X-Asesor-Pin") String pin, HttpServletRequest http) {

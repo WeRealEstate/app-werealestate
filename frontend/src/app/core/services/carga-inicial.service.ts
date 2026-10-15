@@ -64,7 +64,7 @@ export class CargaInicialService {
   private ocultar(): void {
     if (this.terminado) return;
     this.terminado = true;
-    // El primer pantallazo es el de We o, en el plano público y los precontratos de un desarrollo, el
+    // El primer pantallazo es el de We o, en el plano público y los registros de venta de un desarrollo, el
     // de ese desarrollo (#dev-splash, ver index.html).
     const desarrollo = document.getElementById('dev-splash');
     const we = document.getElementById('we-splash');

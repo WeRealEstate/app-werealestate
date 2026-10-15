@@ -77,20 +77,23 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
   readonly edicionPrimeraMensualidadMesVenta = signal(false);
   /** Número de venta en la edición: arranca con el actual; si se cambia, el servidor recorre las consecutivas. */
   readonly numeroEdicion = signal<number | null>(null);
-  /** Venta de precontrato: marcar la fecha de venta como definitiva al guardar (cambiarla también la confirma). */
+  /** Venta registrada desde We Forms: marcar la fecha de venta como definitiva al guardar (cambiarla también la confirma). */
   readonly confirmarFechaEdicion = signal(false);
 
-  // --- Depósito pendiente de aplicar (venta que nació de un precontrato con un lote apartado con dinero) ---
+  // --- Depósito pendiente de aplicar (venta que nació de un registro de venta con un lote apartado con dinero) ---
   readonly mostrarDeposito = signal(false);
   readonly depositoModo = signal<'SALDO' | 'MENSUALIDAD'>('SALDO');
   readonly depositoFolio = signal('');
   readonly aplicandoDeposito = signal(false);
   readonly errorDeposito = signal<string | null>(null);
 
-  // --- Eliminar venta: solo admin. Estilo "permiso peligroso" de Android: el botón de confirmar se
+  // --- Eliminar venta: admin y administración. Estilo "permiso peligroso" de Android: el botón de confirmar se
   // habilita hasta que termina una cuenta regresiva de 10 s, y además pide la contraseña (que valida
   // el servidor). ---
-  readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
+  readonly puedeEliminar = computed(() => {
+    const rol = this.auth.currentUser()?.rol;
+    return rol === 'ADMIN' || rol === 'LIDER_AREA';
+  });
   readonly mostrarEliminar = signal(false);
   readonly segundosEliminar = signal(0);
   readonly passwordEliminar = signal('');

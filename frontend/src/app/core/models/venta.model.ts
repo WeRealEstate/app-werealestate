@@ -76,7 +76,7 @@ export interface Venta {
   precioVenta: number;
   totalAbonado: number;
   saldoPendiente: number;
-  /** Nació de un precontrato (We Forms): su fecha es la del envío y administración la confirma. */
+  /** Nació de un registro de venta (We Forms): su fecha es la del envío y administración la confirma. */
   fechaProvisional: boolean;
   /** Dinero con el que ya estaba apartado el lote y que aún no se aplica a la venta (null = nada pendiente). */
   depositoPendiente: number | null;

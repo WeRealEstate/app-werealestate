@@ -97,11 +97,11 @@ public class Venta {
     @JoinColumn(name = "registrada_por_id")
     private Usuario registradaPor;
 
-    /** La venta nació de un precontrato (We Forms) y su fecha es la del día de envío, a confirmar. */
+    /** La venta nació de un registro de venta (We Forms) y su fecha es la del día de envío, a confirmar. */
     @Column(name = "fecha_provisional", nullable = false)
     private boolean fechaProvisional;
 
-    /** Dinero con el que ya estaba apartado el lote al crear la venta desde un precontrato y que aún no
+    /** Dinero con el que ya estaba apartado el lote al crear la venta desde un registro de venta y que aún no
      * se aplica (null = nada pendiente). */
     @Column(name = "deposito_pendiente", precision = 14, scale = 2)
     private java.math.BigDecimal depositoPendiente;

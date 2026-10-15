@@ -8,7 +8,7 @@ import { ToastService } from '../../../core/services/toast.service';
 import { WeFormsService } from '../../../core/services/we-forms.service';
 import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 
-/** We Forms: lista de formularios (precontratos), cada uno con su link público. */
+/** We Forms: lista de formularios (registros de venta), cada uno con su link público. */
 @Component({
   selector: 'app-we-forms-list',
   standalone: true,

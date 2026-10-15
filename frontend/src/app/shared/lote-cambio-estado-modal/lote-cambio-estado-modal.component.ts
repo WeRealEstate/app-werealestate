@@ -34,7 +34,7 @@ const ESTADOS_REQUIEREN_CLIENTE: EstadoLote[] = [
 ];
 
 /** Estados de apartado: al ponerlos desde el panel hay que decir a qué asesor pertenecen, para que
- * ese asesor pueda usar el lote en su precontrato de We Forms. */
+ * ese asesor pueda usar el lote en su registro de venta de We Forms. */
 const ESTADOS_APARTADO: EstadoLote[] = ['APARTADO', 'APARTADO_A_PLAZO', 'APARTADO_CON_DINERO'];
 
 /** Modal que un admin o líder de área confirma al mover un lote a otro estado (un asesor nunca pasa

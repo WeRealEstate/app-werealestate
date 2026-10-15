@@ -7,6 +7,6 @@ public enum FuenteCliente {
     EVENTO,
     ESPECTACULAR,
     OTRO,
-    /** Cliente creado desde un precontrato de We Forms. */
+    /** Cliente creado desde un registro de venta de We Forms. */
     PRECONTRATO
 }

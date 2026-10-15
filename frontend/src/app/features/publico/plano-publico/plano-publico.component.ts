@@ -376,7 +376,7 @@ export class PlanoPublicoComponent {
       const registrado = await this.lotesService.verificarAsesorPublico(nombre, this.proyecto);
       this.asesorVerificado.set(registrado);
       guardarAsesor(this.proyecto, registrado);
-      // El mismo PIN sirve en el precontrato de We Forms: se recuerda para no pedirlo otra vez.
+      // El mismo PIN sirve en el registro de venta de We Forms: se recuerda para no pedirlo otra vez.
       this.weFormsPublico.guardarPin(nombre);
       this.mostrarAcceso.set(false);
       this.toast.success(`Bienvenido, ${registrado}.`);

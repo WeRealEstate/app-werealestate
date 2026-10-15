@@ -15,6 +15,12 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '8.0.13', fecha: '2026-10-15', cambios: [
+    "Ventas: Administración también puede eliminar una venta (con su contraseña y la misma cuenta regresiva de 10 s que el administrador).",
+  ] },
+  { version: '8.0.12', fecha: '2026-10-14', cambios: [
+    "We Forms: donde decía 'precontrato' ahora dice 'Registrar venta' (botón del plano, pantallas del formulario, título de la pestaña y de la vista previa del link, avisos y mensajes).",
+  ] },
   { version: '8.0.11', fecha: '2026-10-14', cambios: [
     "We Forms y Clientes: si el país de residencia es México, el Estado se elige de la lista de los 32 estados (con buscador); con otro país sigue siendo texto libre. Si cambian el país a México y ya habían escrito un estado que no está en la lista, se borra para que elijan uno.",
   ] },

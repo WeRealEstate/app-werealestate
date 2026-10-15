@@ -43,7 +43,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * We Forms, lado del panel: crear formularios (hoy, el precontrato de un desarrollo), armar sus preguntas
+ * We Forms, lado del panel: crear formularios (hoy, el registro de venta de un desarrollo), armar sus preguntas
  * y ver las respuestas. Solo un admin o personal de administración con el módulo We Forms activo.
  * Nada se borra: un formulario se cierra y una pregunta propia se archiva (sus respuestas viejas se
  * conservan tal como se contestaron).

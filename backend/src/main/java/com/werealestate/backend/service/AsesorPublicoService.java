@@ -60,7 +60,7 @@ public class AsesorPublicoService {
                 : new Resultado(motivo, null);
     }
 
-    /** Quién es el asesor de un PIN, completo (para registrar a su nombre un precontrato de We Forms). */
+    /** Quién es el asesor de un PIN, completo (para registrar a su nombre un registro de venta de We Forms). */
     public record Identificado(Motivo motivo, Usuario usuario, AsesorExterno externo) {
         public String nombre() {
             return usuario != null ? usuario.getNombre() : externo != null ? externo.getNombre() : null;

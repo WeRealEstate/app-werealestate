@@ -117,7 +117,7 @@ public class WeFormPublicoService {
         return WeFormService.proyectoDe(formularioPorSlug(slug));
     }
 
-    /** Formularios activos de un desarrollo, para elegir desde el botón "Precontrato" del plano. */
+    /** Formularios activos de un desarrollo, para elegir desde el botón "Registrar venta" del plano. */
     @Transactional(readOnly = true)
     public List<WeFormDtos.PublicoLista> listarActivos(String proyecto) {
         String nombreDesarrollo = WeFormService.PROYECTO_POR_DESARROLLO.entrySet().stream()
@@ -148,7 +148,7 @@ public class WeFormPublicoService {
                 .toList();
         Long usuarioId = asesor.usuario() != null ? asesor.usuario().getId() : null;
         List<WeFormDtos.LotePublico> lotes = loteService
-                .listarParaPrecontrato(form.getDesarrollo().getId(), usuarioId, asesor.nombre()).stream()
+                .listarParaRegistroDeVenta(form.getDesarrollo().getId(), usuarioId, asesor.nombre()).stream()
                 .map(l -> new WeFormDtos.LotePublico(
                         l.id(), l.manzana(), l.numeroLote(), l.superficie(), l.precio(), l.estado().name()))
                 .toList();
@@ -221,14 +221,14 @@ public class WeFormPublicoService {
         for (JsonNode n : lotesNode) {
             if (!n.canConvertToLong() || !loteIds.add(n.asLong())) throw new ValidationException("Hay un lote repetido o no válido");
         }
-        if (loteIds.size() > 20) throw new ValidationException("Máximo 20 lotes por precontrato");
+        if (loteIds.size() > 20) throw new ValidationException("Máximo 20 lotes por venta");
         Long usuarioAsesorId = asesor.usuario() != null ? asesor.usuario().getId() : null;
         List<Lote> lotes = new ArrayList<>();
         for (Long id : loteIds) {
             Lote lote = loteRepository.findById(id)
                     .filter(l -> l.getDesarrollo().getId().equals(form.getDesarrollo().getId()))
                     .orElseThrow(() -> new ValidationException("Uno de los lotes no pertenece a este desarrollo"));
-            if (!loteService.puedeTomarParaPrecontrato(lote, usuarioAsesorId, asesor.nombre())) {
+            if (!loteService.puedeTomarParaRegistroDeVenta(lote, usuarioAsesorId, asesor.nombre())) {
                 throw new ConflictException("El lote Mz " + lote.getManzana() + " / " + lote.getNumeroLote()
                         + " ya no está disponible. Elige otro y vuelve a enviar.");
             }
@@ -305,7 +305,7 @@ public class WeFormPublicoService {
         }
         ClienteRequest datosCliente = datosCliente(porDestino, paisResidencia, estadoCliente);
         ClienteService.ClienteResuelto resuelto =
-                clienteService.resolverDesdePrecontrato(datosCliente, asesor.usuario(), asesor.externo());
+                clienteService.resolverDesdeRegistroDeVenta(datosCliente, asesor.usuario(), asesor.externo());
 
         // 5) Venta (con sus lotes en "En proceso de firma").
         Usuario sistema = usuarioRepository.findByEmail(EMAIL_USUARIO_PUBLICO)
@@ -317,9 +317,9 @@ public class WeFormPublicoService {
                 asesor.usuario() != null ? asesor.usuario().getId() : null,
                 asesor.externo() != null ? asesor.externo().getId() : null,
                 formaPago, LocalDate.now(), mensualidad, plazo, engancheLabel, enganche, diaPago, false,
-                "Generada desde el precontrato «" + form.getNombre() + "» (We Forms).", false, aportaciones,
+                "Registrada desde el formulario «" + form.getNombre() + "» (We Forms).", false, aportaciones,
                 false, null, null, null, null, null, null, null);
-        Venta venta = ventaService.crearDesdePrecontrato(ventaRequest, sistema);
+        Venta venta = ventaService.crearDesdeRegistroDeVenta(ventaRequest, sistema);
 
         // 6) La respuesta, con cada pregunta tal como se contestó.
         WeFormRespuesta respuesta = respuestaRepository.save(new WeFormRespuesta(
@@ -342,7 +342,7 @@ public class WeFormPublicoService {
             }
         } catch (IOException e) {
             borrar(escritos);
-            throw new UncheckedIOException("No se pudo guardar un archivo del precontrato", e);
+            throw new UncheckedIOException("No se pudo guardar un archivo del registro de venta", e);
         } catch (RuntimeException e) {
             borrar(escritos);
             throw e;
@@ -542,7 +542,7 @@ public class WeFormPublicoService {
             try {
                 Files.deleteIfExists(p);
             } catch (IOException ignorado) {
-                // sin acción: lo importante es no dejar el precontrato a medias
+                // sin acción: lo importante es no dejar el registro de venta a medias
             }
         }
     }

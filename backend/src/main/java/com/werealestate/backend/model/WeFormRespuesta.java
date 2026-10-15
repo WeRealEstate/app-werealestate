@@ -11,7 +11,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 
-/** Un precontrato enviado: quién lo llenó, qué cliente y qué venta resultaron. */
+/** Un registro de venta enviado: quién lo llenó, qué cliente y qué venta resultaron. */
 @Entity
 @Table(name = "we_form_respuesta")
 public class WeFormRespuesta {

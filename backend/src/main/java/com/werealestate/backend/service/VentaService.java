@@ -135,15 +135,15 @@ public class VentaService {
         return toDto(crearVenta(request, currentUserProvider.getUsuarioActual(), false));
     }
 
-    /** La venta que nace de un precontrato de We Forms (ver WeFormPublicoService): sin sesión, a nombre
+    /** La venta que nace de un registro de venta de We Forms (ver WeFormPublicoService): sin sesión, a nombre
      * del usuario de sistema; los lotes pasan a "En proceso de firma" (no a Vendido), la fecha queda
      * como provisional y el dinero con el que estuvieran apartados queda pendiente de aplicar. Quien la
      * llama ya validó el PIN del asesor, el cliente y que los lotes se puedan tomar. */
-    public Venta crearDesdePrecontrato(VentaCreateRequest request, Usuario sistema) {
+    public Venta crearDesdeRegistroDeVenta(VentaCreateRequest request, Usuario sistema) {
         return crearVenta(request, sistema, true);
     }
 
-    private Venta crearVenta(VentaCreateRequest request, Usuario registradaPor, boolean precontrato) {
+    private Venta crearVenta(VentaCreateRequest request, Usuario registradaPor, boolean registroDeVenta) {
         // Primero el número (puede recorrer otras ventas y vacía el contexto de persistencia): todavía
         // no se ha cargado nada de esta operación.
         long numeroVenta = reservarNumero(request.numero(), 0L);
@@ -210,14 +210,14 @@ public class VentaService {
                     .orElseThrow(() -> new ResourceNotFoundException("Lote no encontrado"));
             ventaLoteRepository.save(new VentaLote(venta, lote, item.precio()));
 
-            if (precontrato) {
+            if (registroDeVenta) {
                 if (lote.getMontoApartado() != null) depositoPendiente = depositoPendiente.add(lote.getMontoApartado());
                 loteService.marcarEnProcesoDeFirma(lote.getId(), cliente, asesor.nombre(), registradaPor);
             } else if (request.marcarLoteVendido()) {
                 loteService.marcarVendido(lote.getId(), cliente, asesor.nombre());
             }
         }
-        if (precontrato) {
+        if (registroDeVenta) {
             venta.setFechaProvisional(true);
             venta.setDepositoPendiente(depositoPendiente.signum() > 0 ? depositoPendiente : null);
         }
@@ -333,7 +333,7 @@ public class VentaService {
                 : request.engancheLabel().trim();
         String notas = request.notas() == null || request.notas().isBlank() ? null : request.notas().trim();
 
-        // Una venta de precontrato con fecha provisional deja de serlo al cambiar la fecha o al confirmarla.
+        // Una venta registrada desde We Forms con fecha provisional deja de serlo al cambiar la fecha o al confirmarla.
         boolean fechaCambio = !request.fechaVenta().equals(venta.getFechaVenta());
         if (venta.isFechaProvisional() && (fechaCambio || Boolean.TRUE.equals(request.confirmarFecha()))) {
             venta.setFechaProvisional(false);
@@ -376,7 +376,7 @@ public class VentaService {
         return toDto(obtenerEntidad(id));
     }
 
-    /** Aplica el dinero con el que ya estaba apartado el lote de una venta que nació de un precontrato
+    /** Aplica el dinero con el que ya estaba apartado el lote de una venta que nació de un registro de venta
      * (ver Venta.depositoPendiente): SALDO lo registra como abono de tipo apartado (con su folio) y baja lo
      * que falta por pagar; MENSUALIDAD baja la mensualidad (mismo plazo, pago más bajo), igual que al
      * registrar una venta con depósito. Después el depósito ya no está pendiente. */
@@ -423,16 +423,16 @@ public class VentaService {
     }
 
     /**
-     * Elimina una venta por completo. Es destructivo, así que es exclusivo de admin y exige su
-     * contraseña. Se borran la venta, sus lotes (la relación, no los lotes), sus abonos y sus
+     * Elimina una venta por completo. Es destructivo, así que es exclusivo de admin y de
+     * administración (líder de área) y exige la contraseña de quien la elimina. Se borran la venta, sus lotes (la relación, no los lotes), sus abonos y sus
      * aportaciones; los lotes que sigan VENDIDO vuelven a DISPONIBLE si se pide; la comisión se queda
      * en el historial como "venta eliminada" (y lo ya ganado sigue pudiéndose entregar); y se
      * ventas con número mayor bajan 1 para no dejar hueco (si eliminas la 4, la 5 pasa a 4, y así).
      */
     public void eliminar(Long id, VentaEliminarRequest request) {
         Usuario actual = currentUserProvider.getUsuarioActual();
-        if (actual.getRol() != Role.ADMIN) {
-            throw new ForbiddenOperationException("Solo un administrador puede eliminar una venta");
+        if (actual.getRol() != Role.ADMIN && actual.getRol() != Role.LIDER_AREA) {
+            throw new ForbiddenOperationException("Solo un administrador o personal de administración puede eliminar una venta");
         }
         if (!passwordEncoder.matches(request.password(), actual.getPassword())) {
             throw new ForbiddenOperationException("Contraseña incorrecta");
@@ -442,7 +442,7 @@ public class VentaService {
         long numeroEliminado = venta.getNumero();
 
         comisionService.desvincularVenta(venta);
-        // El precontrato de We Forms que originó la venta se conserva, solo deja de apuntar a ella.
+        // El registro de venta de We Forms que originó la venta se conserva, solo deja de apuntar a ella.
         weFormRespuestaRepository.desvincularVenta(id);
 
         List<VentaLote> lotes = ventaLoteRepository.findByVentaId(id);

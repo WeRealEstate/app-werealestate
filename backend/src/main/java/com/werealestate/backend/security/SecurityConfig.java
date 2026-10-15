@@ -84,7 +84,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/lotes/publico/*/estado").permitAll()
                         // Botón "Asesor" de /samai y /aldea-nanuu: confirma que el nombre existe.
                         .requestMatchers(HttpMethod.POST, "/api/lotes/publico/verificar-asesor").permitAll()
-                        // We Forms: el link público del precontrato (cada petición exige el PIN del asesor).
+                        // We Forms: el link público del registro de venta (cada petición exige el PIN del asesor).
                         .requestMatchers(HttpMethod.GET, "/api/forms-publico/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/forms-publico/**").permitAll()
                         .anyRequest().authenticated())
