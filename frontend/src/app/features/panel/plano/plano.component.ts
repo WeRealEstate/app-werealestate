@@ -1,5 +1,5 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { Component, ElementRef, HostListener, ViewChild, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, OnDestroy, ViewChild, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
@@ -58,6 +58,9 @@ const ESTADOS_TODOS: EstadoLote[] = [
   'VENDIDO',
 ];
 
+/** Cuánto se espera a que el navegador conceda la pantalla completa real antes de usar el respaldo. */
+const PLAZO_PANTALLA_COMPLETA_MS = 800;
+
 /** 'SAMAI Campestre'/'Aldea Nanuu' son los únicos desarrollos que el Cotizador sabe cotizar (ver
  * PROJECTS_CONFIG); cualquier otro (p. ej. "Otro") no tiene un botón "Cotizar" en el Plano. */
 const NOMBRE_DESARROLLO_A_PROYECTO: Record<string, 'samai' | 'nanuu'> = {
@@ -76,7 +79,7 @@ const NOMBRE_DESARROLLO_A_PROYECTO: Record<string, 'samai' | 'nanuu'> = {
   imports: [WeLoaderComponent, FormsModule, DecimalPipe, DatePipe, LoteCambioEstadoModalComponent, LoteInfoModalComponent],
   templateUrl: './plano.component.html',
 })
-export class PlanoComponent {
+export class PlanoComponent implements OnDestroy {
   private readonly lotesService = inject(LotesService);
   private readonly leadsService = inject(LeadsService);
   private readonly auth = inject(AuthService);
@@ -85,6 +88,117 @@ export class PlanoComponent {
   private readonly pdfService = inject(PdfService);
 
   @ViewChild('contenedorPlano') private readonly contenedorPlano?: ElementRef<HTMLElement>;
+  @ViewChild('raizPlano') private readonly raizPlano?: ElementRef<HTMLElement>;
+
+  // --- Pantalla completa. Se pide para toda la página del plano (no solo para el mapa) porque con la
+  // pantalla completa real del navegador solo se ve ese elemento: así las fichas de lote y el cambio de
+  // estado, que viven dentro, siguen apareciendo. En ella se esconden el encabezado, las herramientas de
+  // admin y la leyenda; queda el plano, el zoom y el botón para salir. ---
+  readonly pantallaCompleta = signal(false);
+  /** Ancho/alto de la imagen del plano: en pantalla completa el contenedor se ajusta a ella para que
+   * #contenedorPlano mida exactamente lo que la imagen (ver el comentario de la plantilla sobre bordes). */
+  readonly relacionAspecto = signal(1.5);
+  readonly anchoPantallaCompleta = computed(() => `min(100vw, calc(100dvh * ${this.relacionAspecto()}))`);
+  /** true si la pantalla completa es la real del navegador; false = respaldo que solo cubre la ventana
+   * (navegadores que no la permiten, como Safari en iPhone). */
+  private pantallaCompletaDelNavegador = false;
+
+  alCargarImagen(evento: Event): void {
+    const img = evento.target as HTMLImageElement;
+    if (img.naturalWidth > 0 && img.naturalHeight > 0) this.relacionAspecto.set(img.naturalWidth / img.naturalHeight);
+  }
+
+  async alternarPantallaCompleta(): Promise<void> {
+    if (this.pantallaCompleta()) {
+      await this.salirPantallaCompleta();
+      return;
+    }
+    const raiz = this.raizPlano?.nativeElement;
+    if (!raiz) return;
+    this.restablecerZoom();
+    if (document.fullscreenEnabled && raiz.requestFullscreen) {
+      // Hay navegadores incrustados (visores dentro de otras apps) donde la petición ni se concede ni se
+      // rechaza: sin el plazo, el botón parecería muerto. Si pasa, se usa el respaldo.
+      const resultado = await Promise.race([
+        raiz.requestFullscreen().then(
+          () => 'ok' as const,
+          () => 'rechazada' as const,
+        ),
+        new Promise<'plazo'>((resolver) => setTimeout(() => resolver('plazo'), PLAZO_PANTALLA_COMPLETA_MS)),
+      ]);
+      if (resultado === 'ok') {
+        this.pantallaCompletaDelNavegador = true;
+        this.pantallaCompleta.set(true);
+        return;
+      }
+    }
+    this.pantallaCompletaDelNavegador = false;
+    this.pantallaCompleta.set(true);
+    this.subirALaCapaSuperior(raiz);
+  }
+
+  /** En el respaldo la página es un contenedor fijo, pero la barra lateral del panel queda por encima (vive
+   * fuera del contexto de apilamiento de esta página y ningún z-index lo arregla). Un popover "manual" va a
+   * la capa superior del navegador, por encima de todo, sin ser pantalla completa ni cerrarse al hacer clic
+   * afuera. Si el navegador no lo soporta, queda solo el contenedor fijo. */
+  private respaldoEnCapaSuperior = false;
+
+  private subirALaCapaSuperior(raiz: HTMLElement): void {
+    if (typeof raiz.showPopover !== 'function') return;
+    try {
+      raiz.setAttribute('popover', 'manual');
+      raiz.showPopover();
+      this.respaldoEnCapaSuperior = true;
+    } catch {
+      raiz.removeAttribute('popover');
+    }
+  }
+
+  private bajarDeLaCapaSuperior(): void {
+    const raiz = this.raizPlano?.nativeElement;
+    if (!raiz || !this.respaldoEnCapaSuperior) return;
+    this.respaldoEnCapaSuperior = false;
+    try {
+      raiz.hidePopover();
+    } catch {
+      // ya estaba cerrado
+    }
+    raiz.removeAttribute('popover');
+  }
+
+  async salirPantallaCompleta(): Promise<void> {
+    if (document.fullscreenElement) {
+      try {
+        await document.exitFullscreen();
+      } catch {
+        // ya no estaba en pantalla completa
+      }
+    }
+    this.bajarDeLaCapaSuperior();
+    this.pantallaCompletaDelNavegador = false;
+    this.pantallaCompleta.set(false);
+    this.restablecerZoom();
+  }
+
+  /** Con Esc (o el gesto del navegador) la pantalla completa real se cierra sola: se actualiza la vista. */
+  @HostListener('document:fullscreenchange')
+  alCambiarPantallaCompleta(): void {
+    if (document.fullscreenElement && document.fullscreenElement === this.raizPlano?.nativeElement) {
+      // La pantalla completa real llegó (incluso tarde, ya con el respaldo puesto).
+      this.bajarDeLaCapaSuperior();
+      this.pantallaCompletaDelNavegador = true;
+      this.pantallaCompleta.set(true);
+    } else if (this.pantallaCompletaDelNavegador && !document.fullscreenElement) {
+      this.pantallaCompletaDelNavegador = false;
+      this.pantallaCompleta.set(false);
+      this.restablecerZoom();
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.bajarDeLaCapaSuperior();
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
+  }
 
   readonly estadoLabels = ESTADO_LOTE_LABELS;
   readonly badgeClases = ESTADO_LOTE_BADGE_CLASSES;
@@ -353,6 +467,13 @@ export class PlanoComponent {
 
   @HostListener('document:keydown.escape')
   onEscapeKey(): void {
+    // En el respaldo (sin pantalla completa real) el navegador no cierra nada con Esc: se cierra aquí.
+    if (this.pantallaCompleta() && !this.pantallaCompletaDelNavegador) {
+      this.bajarDeLaCapaSuperior();
+      this.pantallaCompleta.set(false);
+      this.restablecerZoom();
+      return;
+    }
     if (this.modoEdicion() && this.puntosEnProgreso().length > 0) {
       this.quitarUltimoPunto();
     }

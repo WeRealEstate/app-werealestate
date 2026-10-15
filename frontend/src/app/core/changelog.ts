@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '8.0.17', fecha: '2026-10-15', cambios: [
+    "Plano interno: modo pantalla completa. Botón junto al zoom del plano (se ve el plano, el zoom y el botón 'Salir'; Esc también sale). Al tocar un lote se abre su ficha igual que siempre.",
+  ] },
   { version: '8.0.16', fecha: '2026-10-15', cambios: [
     "Ventas (celular): en el detalle de la venta el botón 'Eliminar venta' ya no se sale de la pantalla (queda debajo de 'Modificar venta') y el nombre del cliente se ve más chico.",
   ] },
