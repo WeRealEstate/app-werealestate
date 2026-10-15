@@ -13,7 +13,7 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { VentasService } from '../../../../core/services/ventas.service';
 import { UsuariosService } from '../../../../core/services/usuarios.service';
 import { AsesoresExternosService } from '../../../../core/services/asesores-externos.service';
-import { PagoVenta, ReciboHistorial, Venta } from '../../../../core/models/venta.model';
+import { MODALIDAD_PAGO_LABELS, ModalidadPago, PagoVenta, ReciboHistorial, Venta } from '../../../../core/models/venta.model';
 import { ReciboFormComponent } from '../../../../shared/recibo-form/recibo-form.component';
 import { ContratoVentaComponent } from '../../../../shared/contrato-venta/contrato-venta.component';
 import { RecibosVentaComponent } from '../../../../shared/recibos-venta/recibos-venta.component';
@@ -58,6 +58,7 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
 
   /** Temporal: permite modificar los datos capturados de la venta (no sus lotes/precios). Se va a
    * quitar más adelante — avisan cuándo. */
+  readonly modalidadLabels = MODALIDAD_PAGO_LABELS;
   readonly editando = signal(false);
   readonly isSavingEdicion = signal(false);
   readonly errorEdicion = signal<string | null>(null);
@@ -65,6 +66,7 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
     asesor: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
     fechaVenta: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
     formaPago: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
+    modalidadPago: this.fb.control<ModalidadPago | ''>('', { nonNullable: true }),
     mensualidad: this.fb.control<number | null>(null, { validators: [Validators.min(1)] }),
     plazoMeses: this.fb.control<number | null>(null, { validators: [Validators.min(1)] }),
     engancheLabel: this.fb.control(''),
@@ -225,6 +227,7 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
       asesor: asesorSeleccionDe(v.asesor),
       fechaVenta: v.fechaVenta,
       formaPago: v.formaPago,
+      modalidadPago: v.modalidadPago ?? '',
       mensualidad: v.mensualidad,
       plazoMeses: v.plazoMeses,
       engancheLabel: v.engancheLabel ?? '',
@@ -310,6 +313,7 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
         ...parseAsesorSeleccion(v.asesor),
         fechaVenta: v.fechaVenta,
         formaPago: v.formaPago,
+        modalidadPago: v.modalidadPago || null,
         mensualidad: v.mensualidad,
         plazoMeses: v.plazoMeses,
         engancheLabel: v.engancheLabel?.trim() || null,

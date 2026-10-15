@@ -60,5 +60,7 @@ public record VentaCreateRequest(
         // con su propia comisión en % (null = 5%, máximo 10%).
         Long coasesorUsuarioId,
         Long coasesorExternoId,
-        BigDecimal coasesorComisionPorcentaje) {
+        BigDecimal coasesorComisionPorcentaje,
+        // Efectivo o transferencia (opcional; null = sin definir).
+        com.werealestate.backend.model.ModalidadPago modalidadPago) {
 }

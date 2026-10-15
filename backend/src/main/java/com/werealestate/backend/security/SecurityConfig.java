@@ -1,5 +1,6 @@
 package com.werealestate.backend.security;
 
+import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -69,6 +70,11 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // Cuando un controlador falla (500) o la petición viene mal formada (400), el contenedor reenvía a
+                        // /error con un "despacho de error" que el filtro JWT no vuelve a autenticar: sin esta línea
+                        // ese despacho se evaluaba como anónimo y el cliente recibía 401 en vez del error real, y la app
+                        // lo tomaba por sesión vencida y cerraba sesión.
+                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         // Únicos endpoints públicos además del login, ambos para /cotizador-publico
                         // (sin sesión): consultar las promociones vigentes y registrar la cotización

@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { LucideSnowflake, LucideUserCog, LucideUsers } from '@lucide/angular';
 import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
 import { AsignarTareasComponent } from '../../../shared/asignar-tareas/asignar-tareas.component';
@@ -9,7 +10,7 @@ import { AdminTareasComponent } from './admin-tareas/admin-tareas.component';
 @Component({
   selector: 'app-admin-panel',
   standalone: true,
-  imports: [RouterLink, AsignarTareasComponent, DesempenoGeneralComponent, AdminTareasComponent],
+  imports: [RouterLink, LucideUsers, LucideSnowflake, LucideUserCog, AsignarTareasComponent, DesempenoGeneralComponent, AdminTareasComponent],
   templateUrl: './admin-panel.component.html',
 })
 export class AdminPanelComponent {

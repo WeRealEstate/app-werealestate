@@ -190,6 +190,7 @@ public class VentaService {
                 request.mensualidad(), request.plazoMeses(), engancheLabel, request.enganche(),
                 request.diaPago(), Boolean.TRUE.equals(request.primeraMensualidadMesVenta()), notas);
         venta.setNumero(numeroVenta);
+        venta.setModalidadPago(request.modalidadPago());
         venta.ligarCliente(clienteRef);
         venta.setRegistradaPor(registradaPor);
         boolean contratoFirmado = Boolean.TRUE.equals(request.contratoFirmado());
@@ -365,6 +366,7 @@ public class VentaService {
             venta.setFechaProvisional(false);
         }
 
+        venta.setModalidadPago(request.modalidadPago());
         venta.actualizar(
                 venta.getCliente(),
                 asesor.usuario(),

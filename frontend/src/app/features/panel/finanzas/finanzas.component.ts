@@ -1,3 +1,4 @@
+import { LucideHandCoins, LucideLandmark, LucideTrendingUp, LucideWallet } from '@lucide/angular';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -34,7 +35,7 @@ const ESTADOS: EstadoComision[] = ['PENDIENTE', 'ACUMULANDO', 'PARCIAL', 'PAGADA
 @Component({
   selector: 'app-finanzas',
   standalone: true,
-  imports: [MonedaInputDirective, WeLoaderComponent, SkeletonKpisComponent, FormsModule, RouterLink, FinanzasIngresosComponent, FinanzasValorComponent, GastosListComponent],
+  imports: [LucideHandCoins, LucideTrendingUp, LucideLandmark, LucideWallet, MonedaInputDirective, WeLoaderComponent, SkeletonKpisComponent, FormsModule, RouterLink, FinanzasIngresosComponent, FinanzasValorComponent, GastosListComponent],
   templateUrl: './finanzas.component.html',
 })
 export class FinanzasComponent {

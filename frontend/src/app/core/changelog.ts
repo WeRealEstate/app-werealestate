@@ -15,6 +15,14 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '8.0.20', fecha: '2026-10-15', cambios: [
+    "Menú: Usuarios, Asesores externos y Comunidades We ya no comparten el mismo ícono; cada uno tiene el suyo (persona con engrane, apretón de manos y grupo de personas).",
+  ] },
+  { version: '8.0.19', fecha: '2026-10-15', cambios: [
+    "Ventas: nueva 'Modalidad de pago' (Efectivo o Transferencia, una sola; opcional). Se elige al registrar la venta, se ve en el detalle y se cambia desde 'Modificar venta'; las ventas anteriores quedan 'Sin definir'.",
+    "Ventas: el contrato firmado ahora puede ser en físico, por DocuSign o de ambas formas ('Ambos (físico y DocuSign)').",
+    "Corregido: cuando el servidor fallaba o recibía una petición mal formada, la app lo confundía con una sesión vencida y te sacaba al login; ahora se ve el error real y solo se cierra sesión si de verdad venció.",
+  ] },
   { version: '8.0.18', fecha: '2026-10-15', cambios: [
     "Plano público (/samai y /aldea-nanuu): modo pantalla completa, con el botón junto al zoom. Oculta la barra del navegador; la leyenda, los botones del asesor y las fichas de lote siguen igual. No aparece en navegadores que no lo permiten (iPhone).",
   ] },

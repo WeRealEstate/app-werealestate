@@ -33,5 +33,7 @@ public record VentaUpdateRequest(
         Boolean primeraMensualidadMesVenta,
         @Size(max = 1000) String notas,
         // true = la fecha de venta ya es la definitiva (quita la marca de "fecha provisional"); cambiarla también la quita.
-        Boolean confirmarFecha) {
+        Boolean confirmarFecha,
+        // Efectivo o transferencia; null = sin definir (quita la que tuviera).
+        com.werealestate.backend.model.ModalidadPago modalidadPago) {
 }

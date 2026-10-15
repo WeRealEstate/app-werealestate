@@ -198,6 +198,19 @@ public class Venta {
         return contratoDriveUrl;
     }
 
+    /** Modalidad de pago: efectivo o transferencia, una sola (null = sin definir, ver V66). */
+    @jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
+    @jakarta.persistence.Column(name = "modalidad_pago", length = 20)
+    private ModalidadPago modalidadPago;
+
+    public ModalidadPago getModalidadPago() {
+        return modalidadPago;
+    }
+
+    public void setModalidadPago(ModalidadPago modalidadPago) {
+        this.modalidadPago = modalidadPago;
+    }
+
     /** Número de contrato (opcional, texto libre; no se repite entre ventas, ver V65). */
     @jakarta.persistence.Column(name = "numero_contrato", length = 50)
     private String numeroContrato;

@@ -37,6 +37,8 @@ public record VentaDto(
         String contratoDriveUrl,
         // Número de contrato (opcional, único entre ventas).
         String numeroContrato,
+        // Efectivo o transferencia (null = sin definir).
+        com.werealestate.backend.model.ModalidadPago modalidadPago,
         LocalDateTime fechaCreacion,
         // Se calculan a partir de sus lotes y sus pagos (ver VentaService), nunca se guardan directo.
         BigDecimal precioVenta,
@@ -78,6 +80,7 @@ public record VentaDto(
                 venta.getContratoMedio(),
                 venta.getContratoDriveUrl(),
                 venta.getNumeroContrato(),
+                venta.getModalidadPago(),
                 venta.getFechaCreacion(),
                 precioVenta,
                 totalAbonado,

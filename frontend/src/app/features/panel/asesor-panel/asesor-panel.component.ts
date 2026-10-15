@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { LucideClock, LucideUsers } from '@lucide/angular';
+import { LucideUserPlus, LucideUsers } from '@lucide/angular';
 import { KeyValuePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
@@ -12,7 +12,7 @@ import { AsignarTareasComponent } from '../../../shared/asignar-tareas/asignar-t
 @Component({
   selector: 'app-asesor-panel',
   standalone: true,
-  imports: [RouterLink, KeyValuePipe, AsignarTareasComponent, LucideUsers, LucideClock],
+  imports: [RouterLink, KeyValuePipe, AsignarTareasComponent, LucideUsers, LucideUserPlus],
   templateUrl: './asesor-panel.component.html',
 })
 export class AsesorPanelComponent {

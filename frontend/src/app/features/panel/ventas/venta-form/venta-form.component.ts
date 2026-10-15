@@ -11,7 +11,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Desarrollo, UsuarioResumen } from '../../../../core/models/lead.model';
 import { ESTADO_LOTE_LABELS, Lote } from '../../../../core/models/lote.model';
 import { AsesorExterno } from '../../../../core/models/asesor-externo.model';
-import { MedioFirma } from '../../../../core/models/venta.model';
+import { MedioFirma, ModalidadPago } from '../../../../core/models/venta.model';
 import { AsesoresExternosService } from '../../../../core/services/asesores-externos.service';
 import { LeadsService } from '../../../../core/services/leads.service';
 import { LotesService } from '../../../../core/services/lotes.service';
@@ -224,6 +224,8 @@ export class VentaFormComponent {
     desarrolloId: this.fb.control<number | null>(null, { validators: [Validators.required] }),
     asesor: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
     formaPago: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
+    // Opcional: efectivo o transferencia ('' = sin definir).
+    modalidadPago: this.fb.control<ModalidadPago | ''>('', { nonNullable: true }),
     fechaVenta: this.fb.control(new Date().toISOString().slice(0, 10), { nonNullable: true, validators: [Validators.required] }),
     // Opcionales: una venta de contado no los necesita.
     mensualidad: this.fb.control<number | null>(null, { validators: [Validators.min(1)] }),
@@ -511,6 +513,7 @@ export class VentaFormComponent {
         copropietariosIds: idsCopropietarios(this.copropietarios()),
         ...parseAsesorSeleccion(v.asesor),
         formaPago: v.formaPago,
+        modalidadPago: v.modalidadPago || null,
         fechaVenta: v.fechaVenta,
         mensualidad: v.mensualidad,
         plazoMeses: v.plazoMeses,

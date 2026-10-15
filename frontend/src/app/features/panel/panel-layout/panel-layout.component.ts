@@ -3,7 +3,8 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import {
   LucideCalendar,
   LucideHandCoins,
-  LucideChartLine,
+  LucideHandshake,
+  LucideBadgeDollarSign,
   LucideClipboardList,
   LucideContactRound,
   LucideHouse,
@@ -11,9 +12,11 @@ import {
   LucideLandPlot,
   LucideMap,
   LucideMenu,
-  LucideReceipt,
+  LucideCalculator,
   LucideUser,
+  LucideUserCog,
   LucideUsers,
+  LucideUsersRound,
   LucideWallet,
 } from '@lucide/angular';
 import { VERSION_ACTUAL } from '../../../core/changelog';
@@ -32,16 +35,16 @@ interface NavItem {
   modulo?: Modulo;
   /** Alternativa: el item también se muestra a quien tenga este otro módulo (Finanzas incluye la pestaña Gastos). */
   tambienConModulo?: Modulo;
-  icon: 'home' | 'leads' | 'usuarios' | 'calendario' | 'pipeline' | 'cotizador' | 'lotes' | 'plano' | 'ventas' | 'clientes' | 'finanzas' | 'gastos' | 'forms';
+  icon: 'home' | 'leads' | 'usuarios' | 'asesores' | 'comunidades' | 'calendario' | 'pipeline' | 'cotizador' | 'lotes' | 'plano' | 'ventas' | 'clientes' | 'finanzas' | 'gastos' | 'forms';
 }
 
 const ASESORES_EXTERNOS_NAV_ITEM: NavItem = {
   label: 'Asesores externos',
   route: '/panel/asesores-externos',
   modulo: 'ASESORES_EXTERNOS',
-  icon: 'usuarios',
+  icon: 'asesores',
 };
-const TEAMS_NAV_ITEM: NavItem = { label: 'Comunidades We', route: '/panel/teams', modulo: 'COMUNIDADES', icon: 'usuarios' };
+const TEAMS_NAV_ITEM: NavItem = { label: 'Comunidades We', route: '/panel/teams', modulo: 'COMUNIDADES', icon: 'comunidades' };
 const WE_FORMS_NAV_ITEM: NavItem = { label: 'We Forms', route: '/panel/we-forms', modulo: 'WE_FORMS', icon: 'forms' };
 
 /** {@code label: null} agrupa items sin encabezado visible (Inicio, siempre arriba y suelto). */
@@ -145,13 +148,16 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
     LucideCalendar,
     LucideHandCoins,
     LucideKanban,
-    LucideReceipt,
+    LucideCalculator,
     LucideLandPlot,
     LucideMap,
-    LucideChartLine,
+    LucideBadgeDollarSign,
     LucideContactRound,
     LucideClipboardList,
     LucideUser,
+    LucideUserCog,
+    LucideUsersRound,
+    LucideHandshake,
     LucideMenu,
     LucideWallet,
   ],

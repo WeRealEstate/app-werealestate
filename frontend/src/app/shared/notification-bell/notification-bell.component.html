@@ -39,15 +39,28 @@
               (click)="alNavegar($index)"
               class="group flex items-start gap-2.5 border-b border-border px-4 py-3 text-sm last:border-b-0 hover:bg-surface-2 transition-colors duration-150"
             >
+              <!-- Un ícono por tipo de aviso, con el mismo color que antes tenía su puntito. -->
               <span
-                class="mt-1 h-2 w-2 shrink-0 rounded-full"
-                [class.bg-amber-500]="n.tipo === 'SEGUIMIENTO_PENDIENTE' || n.tipo === 'LOTE_APARTADO'"
-                [class.bg-we-blue-light]="n.tipo === 'TAREA_PENDIENTE'"
-                [class.bg-purple-500]="n.tipo === 'EVENTO_PENDIENTE'"
-                [class.bg-green-500]="n.tipo === 'LOTE_DESAPARTADO' || n.tipo === 'VENTA_NUEVA' || n.tipo === 'REGISTRO_VENTA_NUEVO'"
-                [class.bg-sky-500]="n.tipo === 'LOTE_ESTADO'"
+                class="mt-0.5 shrink-0"
+                [class.text-amber-500]="n.tipo === 'SEGUIMIENTO_PENDIENTE' || n.tipo === 'LOTE_APARTADO'"
+                [class.text-we-blue-light]="n.tipo === 'TAREA_PENDIENTE'"
+                [class.text-purple-500]="n.tipo === 'EVENTO_PENDIENTE'"
+                [class.text-green-500]="n.tipo === 'LOTE_DESAPARTADO' || n.tipo === 'VENTA_NUEVA' || n.tipo === 'REGISTRO_VENTA_NUEVO'"
+                [class.text-sky-500]="n.tipo === 'LOTE_ESTADO'"
                 aria-hidden="true"
-              ></span>
+              >
+                @switch (n.tipo) {
+                  @case ('SEGUIMIENTO_PENDIENTE') { <svg lucidePhoneCall [size]="16"></svg> }
+                  @case ('TAREA_PENDIENTE') { <svg lucideListTodo [size]="16"></svg> }
+                  @case ('EVENTO_PENDIENTE') { <svg lucideCalendarClock [size]="16"></svg> }
+                  @case ('LOTE_APARTADO') { <svg lucideBookmark [size]="16"></svg> }
+                  @case ('LOTE_DESAPARTADO') { <svg lucideUnlock [size]="16"></svg> }
+                  @case ('LOTE_ESTADO') { <svg lucideRefreshCw [size]="16"></svg> }
+                  @case ('VENTA_NUEVA') { <svg lucideBadgeDollarSign [size]="16"></svg> }
+                  @case ('REGISTRO_VENTA_NUEVO') { <svg lucideClipboardCheck [size]="16"></svg> }
+                  @default { <svg lucideBell [size]="16"></svg> }
+                }
+              </span>
               <span class="flex-1 text-ink">{{ n.mensaje }}</span>
               <button
                 type="button"

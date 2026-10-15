@@ -30,12 +30,22 @@ export interface VentaAportacion {
   monto: number;
 }
 
-/** Cómo se firmó el contrato. */
-export type MedioFirma = 'FISICO' | 'DOCUSIGN';
+/** Cómo se firmó el contrato: en físico, por DocuSign o de ambas formas. */
+export type MedioFirma = 'FISICO' | 'DOCUSIGN' | 'AMBOS';
 
 export const MEDIO_FIRMA_LABELS: Record<MedioFirma, string> = {
   FISICO: 'En físico',
   DOCUSIGN: 'DocuSign',
+  AMBOS: 'Ambos (físico y DocuSign)',
+};
+
+/** Cómo paga el cliente: en efectivo o por transferencia, una sola (null = sin definir). No es la "forma de
+ * pago", que describe el esquema (p. ej. "Sin enganche · 60 MSI"). */
+export type ModalidadPago = 'EFECTIVO' | 'TRANSFERENCIA';
+
+export const MODALIDAD_PAGO_LABELS: Record<ModalidadPago, string> = {
+  EFECTIVO: 'Efectivo',
+  TRANSFERENCIA: 'Transferencia',
 };
 
 export interface Venta {
@@ -71,6 +81,8 @@ export interface Venta {
   /** Cómo se firmó (solo con el contrato firmado) y enlace opcional a su carpeta de Drive. */
   contratoMedio: MedioFirma | null;
   contratoDriveUrl: string | null;
+  /** Efectivo o transferencia (null = sin definir). */
+  modalidadPago: ModalidadPago | null;
   /** Número de contrato (opcional; no se repite entre ventas). */
   numeroContrato: string | null;
   fechaCreacion: string;
@@ -118,6 +130,8 @@ export interface VentaCreateRequest {
   /** Obligatorio con firmado = true. */
   contratoMedio?: MedioFirma | null;
   contratoDriveUrl?: string | null;
+  /** Efectivo o transferencia (omitido o null = sin definir). */
+  modalidadPago?: ModalidadPago | null;
   /** Comisión del asesor en % del valor de la venta (omitido = 5; máximo 10). */
   comisionPorcentaje?: number | null;
   /** Copropietario de la venta (un segundo asesor, interno o externo) con su propia comisión en % (omitido = 5; máximo 10). */
@@ -149,6 +163,8 @@ export interface VentaUpdateRequest {
   diaPago: number;
   primeraMensualidadMesVenta: boolean;
   notas: string | null;
+  /** Efectivo o transferencia; null = sin definir (quita la que tuviera). */
+  modalidadPago?: ModalidadPago | null;
 }
 
 /** Para qué es una línea de un recibo. Los abonos anteriores a que existieran los tipos no lo

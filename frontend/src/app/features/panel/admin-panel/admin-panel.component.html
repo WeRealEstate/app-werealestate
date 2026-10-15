@@ -10,6 +10,9 @@
       [queryParams]="{ asesorId: 'todos' }"
       class="stagger-item rounded-xl border border-border bg-surface p-5 hover:border-we-primary hover:-translate-y-0.5 active:scale-[0.98] active:translate-y-0 transition-[color,background-color,border-color,transform] duration-150"
     >
+      <div class="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-we-primary/10 text-we-blue-light" aria-hidden="true">
+        <svg lucideUsers [size]="18"></svg>
+      </div>
       <h2 class="font-heading font-semibold text-ink text-sm">Leads de todos los asesores</h2>
       <p class="mt-1 text-xs text-ink-muted">Visibilidad completa por asesor y desarrollo.</p>
     </a>
@@ -19,6 +22,9 @@
       [queryParams]="{ frios: 1 }"
       class="stagger-item rounded-xl border border-red-200 bg-red-50/60 p-5 hover:border-red-400 hover:-translate-y-0.5 active:scale-[0.98] active:translate-y-0 transition-[color,background-color,border-color,transform] duration-150 dark:border-red-500/25 dark:bg-red-500/10 dark:hover:border-red-500/50"
     >
+      <div class="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-red-100 text-red-600 dark:bg-red-500/15 dark:text-red-300" aria-hidden="true">
+        <svg lucideSnowflake [size]="18"></svg>
+      </div>
       <div class="flex items-center justify-between gap-2">
         <h2 class="font-heading font-semibold text-ink text-sm">Alertas de leads fríos</h2>
         @if (totalFrios(); as total) {
@@ -31,6 +37,9 @@
     </a>
 
     <a routerLink="/panel/usuarios" class="stagger-item rounded-xl border border-border bg-surface p-5 hover:border-we-primary hover:-translate-y-0.5 active:scale-[0.98] active:translate-y-0 transition-[color,background-color,border-color,transform] duration-150">
+      <div class="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-we-primary/10 text-we-blue-light" aria-hidden="true">
+        <svg lucideUserCog [size]="18"></svg>
+      </div>
       <h2 class="font-heading font-semibold text-ink text-sm">Gestión de usuarios</h2>
       <p class="mt-1 text-xs text-ink-muted">Da de alta asesores y administra roles y accesos.</p>
     </a>

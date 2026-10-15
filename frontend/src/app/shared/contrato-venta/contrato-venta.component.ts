@@ -90,6 +90,7 @@ import { VentasService } from '../../core/services/ventas.service';
                 <option value="">Selecciona…</option>
                 <option value="FISICO">En físico</option>
                 <option value="DOCUSIGN">DocuSign</option>
+                <option value="AMBOS">Ambos (físico y DocuSign)</option>
               </select>
             </div>
           }

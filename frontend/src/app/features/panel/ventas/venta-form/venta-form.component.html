@@ -519,6 +519,21 @@
     </div>
 
     <div>
+      <label for="modalidadPago" class="block text-sm font-medium text-ink mb-1.5">Modalidad de pago (opcional)</label>
+      <select
+        id="modalidadPago"
+        formControlName="modalidadPago"
+        class="block w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink
+               focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+      >
+        <option value="">Sin definir</option>
+        <option value="EFECTIVO">Efectivo</option>
+        <option value="TRANSFERENCIA">Transferencia</option>
+      </select>
+      <p class="mt-1.5 text-xs text-ink-muted">Una sola: efectivo o transferencia. Se puede cambiar después en «Modificar venta».</p>
+    </div>
+
+    <div>
       <label for="notas" class="block text-sm font-medium text-ink mb-1.5">Notas</label>
       <textarea
         id="notas"
@@ -565,6 +580,7 @@
               <option value="">Selecciona…</option>
               <option value="FISICO">En físico</option>
               <option value="DOCUSIGN">DocuSign</option>
+              <option value="AMBOS">Ambos (físico y DocuSign)</option>
             </select>
           </div>
         </div>
