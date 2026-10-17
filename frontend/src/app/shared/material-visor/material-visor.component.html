@@ -1,0 +1,64 @@
+<button type="button" (click)="cerrar.emit()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-[60] bg-black/70"></button>
+<div class="pointer-events-none fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4" role="dialog" aria-modal="true" aria-label="Vista previa del material" data-testid="material-visor">
+  @if (actual; as m) {
+    <div class="modal-panel-enter pointer-events-auto flex max-h-[96dvh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-lg">
+      <div class="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+        <div class="min-w-0">
+          <h2 class="truncate font-heading text-base font-semibold text-ink">{{ m.titulo }}</h2>
+          <p class="text-xs text-ink-muted">{{ etiquetaCategoria(m.categoria) }} · {{ indice() + 1 }} de {{ items().length }}</p>
+        </div>
+        <button type="button" (click)="cerrar.emit()" aria-label="Cerrar" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2">
+          <svg lucideX [size]="20" aria-hidden="true"></svg>
+        </button>
+      </div>
+
+      <div class="relative flex min-h-[40dvh] flex-1 items-center justify-center overflow-auto bg-black/80">
+        @if (cargando()) {
+          <app-we-loader texto="Cargando vista previa…" />
+        } @else if (error()) {
+          <p class="px-6 text-center text-sm text-white">No se pudo cargar la vista previa. Intenta de nuevo o descarga el archivo.</p>
+        } @else if (tipo === 'imagen' && url(); as src) {
+          <img [src]="src" [alt]="m.titulo" class="max-h-[62dvh] max-w-full object-contain" data-testid="visor-imagen" />
+        } @else if (tipo === 'video' && url(); as src) {
+          <video [src]="src" controls playsinline class="max-h-[62dvh] max-w-full" data-testid="visor-video"></video>
+        } @else if (tipo === 'pdf' && urlSegura(); as src) {
+          <iframe [src]="src" title="Vista previa del PDF" class="h-[62dvh] w-full bg-white" data-testid="visor-pdf"></iframe>
+        } @else if (tipo === 'texto') {
+          <p class="max-h-[62dvh] w-full overflow-y-auto whitespace-pre-line bg-surface p-6 text-base text-ink" data-testid="visor-texto">{{ m.texto }}</p>
+        }
+        @if (indice() > 0) {
+          <button type="button" (click)="anterior()" aria-label="Anterior" class="absolute left-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80">
+            <svg lucideChevronLeft [size]="22" aria-hidden="true"></svg>
+          </button>
+        }
+        @if (indice() < items().length - 1) {
+          <button type="button" (click)="siguiente()" aria-label="Siguiente" class="absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80">
+            <svg lucideChevronRight [size]="22" aria-hidden="true"></svg>
+          </button>
+        }
+      </div>
+
+      <div class="max-h-[30dvh] overflow-y-auto border-t border-border px-4 py-3">
+        @if (m.descripcion) {
+          <p class="text-sm text-ink-muted">{{ m.descripcion }}</p>
+        }
+        @if (m.texto && tipo !== 'texto') {
+          <p class="mt-2 max-h-28 overflow-y-auto whitespace-pre-line rounded-lg bg-surface-2 p-3 text-sm text-ink">{{ m.texto }}</p>
+        }
+        <div class="mt-3 flex flex-wrap items-center gap-2">
+          @if (m.texto) {
+            <button type="button" (click)="copiar.emit(m)" class="inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-we-primary px-4 py-2 text-sm font-semibold text-white hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150">
+              <svg lucideCopy [size]="16" aria-hidden="true"></svg> Copiar texto
+            </button>
+          }
+          @if (m.archivoExtension) {
+            <button type="button" (click)="descargar.emit(m)" data-testid="visor-descargar" class="inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-we-primary px-4 py-2 text-sm font-semibold text-white hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150">
+              <svg lucideDownload [size]="16" aria-hidden="true"></svg> Descargar
+            </button>
+            <span class="text-xs text-ink-muted">{{ m.archivoNombre }} · {{ tamanoLegible(m.archivoTamano) }}</span>
+          }
+        </div>
+      </div>
+    </div>
+  }
+</div>

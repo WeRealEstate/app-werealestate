@@ -262,6 +262,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/we-forms/we-form-detalle/we-form-detalle.component').then((m) => m.WeFormDetalleComponent),
       },
       {
+        path: 'material',
+        canActivate: [roleGuard(['ADMIN', 'LIDER_AREA']), moduloGuard(['MATERIAL'])],
+        loadComponent: () => import('./features/material/material-list.component').then((m) => m.MaterialListComponent),
+      },
+      {
         path: 'teams',
         canActivate: [roleGuard(['ADMIN', 'LIDER_AREA']), moduloGuard(['COMUNIDADES'])],
         loadComponent: () => import('./features/teams/teams.component').then((m) => m.TeamsComponent),

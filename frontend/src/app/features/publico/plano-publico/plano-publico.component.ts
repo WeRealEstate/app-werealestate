@@ -20,6 +20,7 @@ import { DetectorDeRueda } from '../../../core/utils/rueda';
 import { leerImagenParaPdf } from '../../../core/utils/imagen-pdf';
 import { ToastService } from '../../../core/services/toast.service';
 import { WeFormsPublicoService } from '../../../core/services/we-forms-publico.service';import { DesarrolloLoaderComponent } from '../../../shared/desarrollo-loader/desarrollo-loader.component';
+import { MaterialPublicoModalComponent } from '../../../shared/material-publico-modal/material-publico-modal.component';
 import { ToastContainerComponent } from '../../../shared/toast-container/toast-container.component';
 
 type ProyectoPublico = 'samai' | 'nanuu';
@@ -84,7 +85,7 @@ function guardarAsesor(proyecto: string, nombre: string | null): void {
 @Component({
   selector: 'app-plano-publico',
   standalone: true,
-  imports: [FormsModule, DecimalPipe, RouterLink, ToastContainerComponent, DesarrolloLoaderComponent],
+  imports: [FormsModule, DecimalPipe, RouterLink, ToastContainerComponent, DesarrolloLoaderComponent, MaterialPublicoModalComponent],
   templateUrl: './plano-publico.component.html',
 })
 export class PlanoPublicoComponent implements OnDestroy {
@@ -176,6 +177,8 @@ export class PlanoPublicoComponent implements OnDestroy {
   readonly modoSeleccion = signal(false);
   readonly seleccion = signal<number[]>([]);
   readonly mostrarApartarVarios = signal(false);
+  /** Material de venta (modal): solo con asesor verificado. */
+  readonly mostrarMaterial = signal(false);
   readonly maxSeleccion = MAX_LOTES_APARTADO_MULTIPLE;
   /** El modo solo vale mientras haya un asesor verificado (si sale, se ignora aunque siga marcado). */
   readonly seleccionActiva = computed(() => this.modoSeleccion() && !!this.asesorVerificado());
@@ -510,6 +513,7 @@ export class PlanoPublicoComponent implements OnDestroy {
     guardarAsesor(this.proyecto, null);
     this.weFormsPublico.guardarPin(null);
     this.mostrarApartar.set(false);
+    this.mostrarMaterial.set(false);
   }
 
   /** Descarga el plano completo en PDF, coloreado por estado y con su leyenda — el mismo archivo que
@@ -774,7 +778,7 @@ export class PlanoPublicoComponent implements OnDestroy {
   onTecla(event: KeyboardEvent): void {
     if (event.ctrlKey || event.metaKey || event.altKey) return;
     if (event.target instanceof Element && event.target.closest('input, textarea, select, [contenteditable]')) return;
-    if (this.mostrarApartar() || this.mostrarApartarVarios() || this.mostrarAcceso() || this.loteActivo()) return;
+    if (this.mostrarApartar() || this.mostrarApartarVarios() || this.mostrarMaterial() || this.mostrarAcceso() || this.loteActivo()) return;
 
     const paso = event.shiftKey ? PASO_TECLADO_PX * 3 : PASO_TECLADO_PX;
     switch (event.key) {

@@ -157,6 +157,9 @@
           >
             {{ generandoPdf() ? 'Generando PDF…' : 'Descargar PDF' }}
           </button>
+          <button type="button" (click)="mostrarMaterial.set(true)" data-testid="material" class="plano-btn" style="--e: 2">
+            Material
+          </button>
           <!-- We Forms: el registro de venta se llena en otra pestaña; el PIN no viaja en el enlace, pero este dispositivo ya lo recuerda. -->
           <a
             [href]="'/we-forms?proyecto=' + proyecto"
@@ -164,7 +167,7 @@
             rel="noopener"
             data-testid="registrar-venta"
             class="plano-btn"
-            style="--e: 2"
+            style="--e: 3"
           >
             Registrar venta
           </a>
@@ -175,7 +178,7 @@
               data-testid="seleccionar-varios"
               class="plano-btn"
               [class.plano-btn-peligro]="modoSeleccion()"
-              style="--e: 3"
+              style="--e: 4"
             >
               {{ modoSeleccion() ? 'Cancelar selección' : 'Seleccionar varios' }}
             </button>
@@ -539,6 +542,10 @@
         </div>
       </form>
     </div>
+  }
+
+  @if (mostrarMaterial()) {
+    <app-material-publico-modal [proyecto]="proyecto" (cerrar)="mostrarMaterial.set(false)" />
   }
 
   <app-toast-container />

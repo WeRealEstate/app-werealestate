@@ -15,6 +15,16 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '9.0.2', fecha: '2026-10-17', cambios: [
+    "Material: corregido que las imágenes aparecieran con un ícono en vez de su vista previa. Ahora, si no hay miniatura, la tarjeta muestra la imagen completa.",
+  ] },
+  { version: '9.0.1', fecha: '2026-10-17', cambios: [
+    "Material: vista previa. Cada tarjeta muestra una miniatura de la imagen (PDF y video llevan un ícono) y, al tocarla o pulsar 'Vista previa', se abre un visor grande: la imagen ampliada, el video con reproductor o el PDF, con su texto, 'Copiar texto' y 'Descargar', y flechas para pasar al anterior o siguiente. Disponible en el panel de Material y en el botón 'Material' del plano público.",
+  ] },
+  { version: '9.0.0', fecha: '2026-10-17', cambios: [
+    "Nuevo módulo 'Material' (debajo de We Forms): Administración sube copys (texto con botón 'Copiar'), flyers, brochures y videos (JPG, PNG, WEBP, PDF o MP4, hasta 25 MB), los asigna a SAMAI, Aldea Nanuu o ambos, y puede editarlos o eliminarlos.",
+    "Plano público: nuevo botón 'Material' (entre Descargar PDF y Registrar venta) para el asesor verificado: ve el material de su desarrollo, copia los textos y ve o descarga los archivos. Usa el mismo PIN que ya recuerda We Forms; los archivos no son públicos y el servidor pide el PIN en cada consulta.",
+  ] },
   { version: '8.0.24', fecha: '2026-10-17', cambios: [
     "Plano público: los botones ahora son azul sólido con borde claro, para que se noten como botones. Al pasar el mouse suben y los cruza un destello, y al aparecer entran uno tras otro.",
     "Plano público: todos los botones (asesor, Descargar PDF, Registrar venta, Seleccionar varios) quedan juntos abajo a la izquierda, apilados sobre 'Seleccionar varios'. 'Cancelar selección' sale en rojo y 'Apartar N lotes' en verde.",

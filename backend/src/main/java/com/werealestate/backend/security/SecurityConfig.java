@@ -94,6 +94,8 @@ public class SecurityConfig {
                         // We Forms: el link público del registro de venta (cada petición exige el PIN del asesor).
                         .requestMatchers(HttpMethod.GET, "/api/forms-publico/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/forms-publico/**").permitAll()
+                        // Material de venta del plano público (cada petición exige el PIN del asesor).
+                        .requestMatchers(HttpMethod.GET, "/api/material-publico/**").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, authException) -> {
                     response.setContentType("application/json");

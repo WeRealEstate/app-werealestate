@@ -1,0 +1,29 @@
+<button
+  type="button"
+  (click)="abrir.emit()"
+  [attr.aria-label]="'Vista previa de ' + item().titulo"
+  data-testid="material-miniatura"
+  class="group relative block aspect-[16/10] w-full overflow-hidden rounded-lg border border-border bg-surface-2 text-ink-muted"
+>
+  @if (esImagen && url(); as src) {
+    <img [src]="src" [alt]="item().titulo" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" draggable="false" />
+  } @else if (esImagen && !fallo()) {
+    <span class="absolute inset-0 animate-pulse bg-surface-2" aria-hidden="true"></span>
+  } @else {
+    <span class="absolute inset-0 flex flex-col items-center justify-center gap-1.5">
+      @if (esVideo) {
+        <svg lucidePlay [size]="34" aria-hidden="true"></svg>
+        <span class="text-xs font-semibold tracking-wide">VIDEO</span>
+      } @else {
+        <svg lucideFileText [size]="34" aria-hidden="true"></svg>
+        <span class="text-xs font-semibold tracking-wide">{{ esImagen ? 'IMAGEN' : 'PDF' }}</span>
+      }
+    </span>
+  }
+  @if (esVideo && url()) {
+    <span class="absolute inset-0 flex items-center justify-center"><svg lucidePlay [size]="34" aria-hidden="true"></svg></span>
+  }
+  <span class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-3 pb-2 pt-6 text-left text-xs font-semibold text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
+    Ver vista previa
+  </span>
+</button>

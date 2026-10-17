@@ -1,0 +1,186 @@
+<div class="page-enter">
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="font-heading text-2xl font-semibold text-ink">Material</h1>
+      <p class="mt-1 text-sm text-ink-muted">
+        Copys, flyers, brochures y videos para vender. Los asesores lo consultan con su PIN desde el botón "Material" del plano público de su desarrollo.
+      </p>
+    </div>
+    <button
+      type="button"
+      (click)="abrirNuevo()"
+      data-testid="nuevo-material"
+      class="inline-flex shrink-0 items-center justify-center rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
+             hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150 min-h-[44px]"
+    >
+      + Nuevo material
+    </button>
+  </div>
+
+  @if (errorMessage()) {
+    <div class="mt-6 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  @if (isLoading()) {
+    <app-we-loader texto="Cargando material…" />
+  } @else if (items().length === 0 && !errorMessage()) {
+    <div class="mt-8 rounded-xl border border-dashed border-border p-10 text-center">
+      <p class="text-sm text-ink-muted">Todavía no hay material. Agrega el primero con "Nuevo material".</p>
+    </div>
+  } @else {
+    <div class="mt-6 flex flex-wrap gap-3">
+      <select
+        [ngModel]="filtroProyecto()"
+        (ngModelChange)="filtroProyecto.set($event)"
+        aria-label="Filtrar por desarrollo"
+        class="rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+      >
+        <option value="">Todos los desarrollos</option>
+        @for (p of proyectos; track p.valor) {
+          @if (p.valor !== 'AMBOS') {
+            <option [value]="p.valor">{{ p.etiqueta }}</option>
+          }
+        }
+      </select>
+      <select
+        [ngModel]="filtroCategoria()"
+        (ngModelChange)="filtroCategoria.set($event)"
+        aria-label="Filtrar por categoría"
+        class="rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+      >
+        <option value="">Todas las categorías</option>
+        @for (c of categorias; track c.valor) {
+          <option [value]="c.valor">{{ c.etiqueta }}</option>
+        }
+      </select>
+    </div>
+
+    @if (visibles().length === 0) {
+      <p class="mt-6 text-sm text-ink-muted">Ningún material coincide con los filtros.</p>
+    }
+    <div class="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      @for (m of visibles(); track m.id) {
+        <div class="flex flex-col rounded-xl border border-border bg-surface p-5 shadow-sm" data-testid="material-card">
+          @if (m.archivoExtension) {
+            <div class="mb-3">
+              <app-material-miniatura [item]="m" [cargar]="cargarMiniatura" (abrir)="abrirVisor(m)" />
+            </div>
+          }
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="rounded-full bg-we-primary/10 px-2.5 py-1 text-xs font-semibold text-we-primary dark:bg-we-primary/25 dark:text-we-blue-light">{{ etiquetaCategoria(m.categoria) }}</span>
+            <span class="rounded-full bg-surface-2 px-2.5 py-1 text-xs font-medium text-ink-muted">{{ etiquetaProyecto(m.proyecto) }}</span>
+          </div>
+          <h2 class="mt-3 font-heading text-base font-semibold text-ink">{{ m.titulo }}</h2>
+          @if (m.descripcion) {
+            <p class="mt-1 text-sm text-ink-muted">{{ m.descripcion }}</p>
+          }
+          @if (m.texto) {
+            <p class="mt-3 line-clamp-4 whitespace-pre-line rounded-lg bg-surface-2 p-3 text-sm text-ink">{{ m.texto }}</p>
+          }
+          @if (m.archivoExtension) {
+            <p class="mt-3 text-xs text-ink-muted">
+              Archivo: <span class="font-medium text-ink">{{ m.archivoNombre }}</span> · {{ tamanoLegible(m.archivoTamano) }}
+            </p>
+          }
+          <div class="mt-4 flex flex-wrap gap-2">
+            <button type="button" (click)="abrirVisor(m)" data-testid="vista-previa" class="rounded-lg border border-border px-3.5 py-2 text-sm font-semibold text-ink hover:border-we-primary active:scale-[0.97] transition-transform duration-150">Vista previa</button>
+            @if (m.archivoExtension) {
+              <button type="button" (click)="descargar(m)" class="rounded-lg border border-border px-3.5 py-2 text-sm font-semibold text-ink hover:border-we-primary active:scale-[0.97] transition-transform duration-150">Descargar</button>
+            }
+            @if (m.texto) {
+              <button type="button" (click)="copiarTexto(m)" class="rounded-lg border border-border px-3.5 py-2 text-sm font-semibold text-ink hover:border-we-primary active:scale-[0.97] transition-transform duration-150">Copiar texto</button>
+            }
+            <button type="button" (click)="abrirEditar(m)" data-testid="editar-material" class="rounded-lg bg-we-primary px-3.5 py-2 text-sm font-semibold text-white hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150">Editar</button>
+            <button type="button" (click)="eliminar(m)" data-testid="eliminar-material" class="rounded-lg border border-red-300 px-3.5 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 dark:border-red-500/40 dark:text-red-300 dark:hover:bg-red-500/10 active:scale-[0.97] transition-transform duration-150">Eliminar</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  @if (mostrarForm()) {
+    <button type="button" (click)="mostrarForm.set(false)" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="material-form-titulo">
+      <form (submit)="$event.preventDefault(); guardar()" class="modal-panel-enter max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <h2 id="material-form-titulo" class="font-heading text-lg font-semibold text-ink">{{ editandoId() == null ? 'Nuevo material' : 'Editar material' }}</h2>
+
+        <div class="mt-4 space-y-3">
+          <div>
+            <label for="mat-titulo" class="mb-1 block text-xs font-medium text-ink-muted">Título *</label>
+            <input id="mat-titulo" name="titulo" maxlength="150" [ngModel]="titulo()" (ngModelChange)="titulo.set($event)" placeholder="Ej. Flyer SAMAI octubre"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+          </div>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label for="mat-categoria" class="mb-1 block text-xs font-medium text-ink-muted">Categoría *</label>
+              <select id="mat-categoria" name="categoria" [ngModel]="categoria()" (ngModelChange)="categoria.set($event)"
+                class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50">
+                @for (c of categorias; track c.valor) {
+                  <option [value]="c.valor">{{ c.etiqueta }}</option>
+                }
+              </select>
+            </div>
+            <div>
+              <label for="mat-proyecto" class="mb-1 block text-xs font-medium text-ink-muted">Desarrollo *</label>
+              <select id="mat-proyecto" name="proyecto" [ngModel]="proyecto()" (ngModelChange)="proyecto.set($event)"
+                class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50">
+                @for (p of proyectos; track p.valor) {
+                  <option [value]="p.valor">{{ p.etiqueta }}</option>
+                }
+              </select>
+            </div>
+          </div>
+          <div>
+            <label for="mat-desc" class="mb-1 block text-xs font-medium text-ink-muted">Descripción (opcional)</label>
+            <textarea id="mat-desc" name="descripcion" rows="2" maxlength="1000" [ngModel]="descripcion()" (ngModelChange)="descripcion.set($event)" placeholder="Cuándo usarlo, para quién…"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"></textarea>
+          </div>
+          <div>
+            <label for="mat-texto" class="mb-1 block text-xs font-medium text-ink-muted">Texto / copy (opcional si subes un archivo)</label>
+            <textarea id="mat-texto" name="texto" rows="5" maxlength="5000" [ngModel]="texto()" (ngModelChange)="texto.set($event)" placeholder="El asesor lo copiará con un botón."
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"></textarea>
+          </div>
+          <div>
+            <label for="mat-archivo" class="mb-1 block text-xs font-medium text-ink-muted">Archivo (opcional si escribes un texto)</label>
+            @if (archivoActual(); as actual) {
+              <p class="mb-2 text-xs text-ink-muted">
+                Actual: <span class="font-medium text-ink">{{ actual.archivoNombre }}</span> ({{ tamanoLegible(actual.archivoTamano) }}).
+                Si eliges otro, lo reemplaza.
+              </p>
+              <label class="mb-2 flex items-center gap-2 text-xs text-ink-muted">
+                <input type="checkbox" name="quitar" [ngModel]="quitarArchivo()" (ngModelChange)="quitarArchivo.set($event)" [disabled]="!!archivo()" />
+                Quitar el archivo actual
+              </label>
+            }
+            <input id="mat-archivo" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf,.mp4,image/jpeg,image/png,image/webp,application/pdf,video/mp4" (change)="elegirArchivo($event)"
+              class="block w-full text-sm text-ink file:mr-3 file:rounded-lg file:border-0 file:bg-we-primary file:px-3.5 file:py-2 file:text-sm file:font-semibold file:text-white" />
+            <p class="mt-1 text-xs text-ink-muted">JPG, PNG, WEBP, PDF o MP4, de hasta {{ maxMb }} MB.</p>
+          </div>
+        </div>
+
+        @if (errorForm()) {
+          <p class="mt-3 text-sm text-red-600 dark:text-red-400">{{ errorForm() }}</p>
+        }
+        <div class="mt-5 flex justify-end gap-2.5">
+          <button type="button" (click)="mostrarForm.set(false)" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cancelar</button>
+          <button type="submit" [disabled]="guardando()" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
+            {{ guardando() ? 'Guardando…' : 'Guardar' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+
+  @if (visorIndice() !== null) {
+    <app-material-visor
+      [items]="visibles()"
+      [indiceInicial]="visorIndice()!"
+      [cargar]="cargarArchivo"
+      (cerrar)="visorIndice.set(null)"
+      (descargar)="descargar($event)"
+      (copiar)="copiarTexto($event)"
+    />
+  }
+</div>

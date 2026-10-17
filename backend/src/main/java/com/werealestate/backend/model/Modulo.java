@@ -17,7 +17,8 @@ public enum Modulo {
     CALENDARIO("Calendario"),
     ASESORES_EXTERNOS("Asesores externos"),
     COMUNIDADES("Comunidades We"),
-    WE_FORMS("We Forms");
+    WE_FORMS("We Forms"),
+    MATERIAL("Material");
 
     private final String etiqueta;
 

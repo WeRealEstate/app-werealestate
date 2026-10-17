@@ -36,7 +36,8 @@ public final class ModulosAcceso {
                     Modulo.CALENDARIO,
                     Modulo.ASESORES_EXTERNOS,
                     Modulo.COMUNIDADES,
-                    Modulo.WE_FORMS);
+                    Modulo.WE_FORMS,
+                    Modulo.MATERIAL);
             case EQUIPO_INTERNO -> EnumSet.of(Modulo.CALENDARIO);
         };
     }

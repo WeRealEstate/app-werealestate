@@ -7,6 +7,7 @@ import {
   LucideBadgeDollarSign,
   LucideClipboardList,
   LucideContactRound,
+  LucideFolderOpen,
   LucideHouse,
   LucideKanban,
   LucideLandPlot,
@@ -35,7 +36,7 @@ interface NavItem {
   modulo?: Modulo;
   /** Alternativa: el item también se muestra a quien tenga este otro módulo (Finanzas incluye la pestaña Gastos). */
   tambienConModulo?: Modulo;
-  icon: 'home' | 'leads' | 'usuarios' | 'asesores' | 'comunidades' | 'calendario' | 'pipeline' | 'cotizador' | 'lotes' | 'plano' | 'ventas' | 'clientes' | 'finanzas' | 'gastos' | 'forms';
+  icon: 'home' | 'leads' | 'usuarios' | 'asesores' | 'comunidades' | 'calendario' | 'pipeline' | 'cotizador' | 'lotes' | 'plano' | 'ventas' | 'clientes' | 'finanzas' | 'gastos' | 'forms' | 'material';
 }
 
 const ASESORES_EXTERNOS_NAV_ITEM: NavItem = {
@@ -46,6 +47,7 @@ const ASESORES_EXTERNOS_NAV_ITEM: NavItem = {
 };
 const TEAMS_NAV_ITEM: NavItem = { label: 'Comunidades We', route: '/panel/teams', modulo: 'COMUNIDADES', icon: 'comunidades' };
 const WE_FORMS_NAV_ITEM: NavItem = { label: 'We Forms', route: '/panel/we-forms', modulo: 'WE_FORMS', icon: 'forms' };
+const MATERIAL_NAV_ITEM: NavItem = { label: 'Material', route: '/panel/material', modulo: 'MATERIAL', icon: 'material' };
 
 /** {@code label: null} agrupa items sin encabezado visible (Inicio, siempre arriba y suelto). */
 interface NavSection {
@@ -92,6 +94,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
         ASESORES_EXTERNOS_NAV_ITEM,
         TEAMS_NAV_ITEM,
         WE_FORMS_NAV_ITEM,
+        MATERIAL_NAV_ITEM,
         { label: 'Calendario', route: '/panel/calendario', modulo: 'CALENDARIO', icon: 'calendario' },
       ],
     },
@@ -127,6 +130,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
         ASESORES_EXTERNOS_NAV_ITEM,
         TEAMS_NAV_ITEM,
         WE_FORMS_NAV_ITEM,
+        MATERIAL_NAV_ITEM,
         { label: 'Calendario', route: '/panel/calendario', modulo: 'CALENDARIO', icon: 'calendario' },
       ],
     },
@@ -154,6 +158,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
     LucideBadgeDollarSign,
     LucideContactRound,
     LucideClipboardList,
+    LucideFolderOpen,
     LucideUser,
     LucideUserCog,
     LucideUsersRound,
