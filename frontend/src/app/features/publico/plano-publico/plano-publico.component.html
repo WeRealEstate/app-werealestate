@@ -157,9 +157,17 @@
           >
             {{ generandoPdf() ? 'Generando PDF…' : 'Descargar PDF' }}
           </button>
-          <button type="button" (click)="mostrarMaterial.set(true)" data-testid="material" class="plano-btn" style="--e: 2">
+          <!-- Material de venta: página aparte (grid), en otra pestaña para no perder el plano. -->
+          <a
+            [href]="'/material?proyecto=' + proyecto"
+            target="_blank"
+            rel="noopener"
+            data-testid="material"
+            class="plano-btn"
+            style="--e: 2"
+          >
             Material
-          </button>
+          </a>
           <!-- We Forms: el registro de venta se llena en otra pestaña; el PIN no viaja en el enlace, pero este dispositivo ya lo recuerda. -->
           <a
             [href]="'/we-forms?proyecto=' + proyecto"
@@ -542,10 +550,6 @@
         </div>
       </form>
     </div>
-  }
-
-  @if (mostrarMaterial()) {
-    <app-material-publico-modal [proyecto]="proyecto" (cerrar)="mostrarMaterial.set(false)" />
   }
 
   <app-toast-container />

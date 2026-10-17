@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '9.0.3', fecha: '2026-10-17', cambios: [
+    "Plano público: el botón 'Material' ahora abre una página aparte (en otra pestaña) con el material en un grid de tarjetas: miniatura grande, título, categoría y botones 'Copiar texto' o 'Descargar'; los copys muestran el inicio del texto. Al tocar una tarjeta se abre la vista previa grande. Pide el PIN solo si este dispositivo no lo recuerda, y trae filtros por categoría y 'Cambiar de asesor'.",
+  ] },
   { version: '9.0.2', fecha: '2026-10-17', cambios: [
     "Material: corregido que las imágenes aparecieran con un ícono en vez de su vista previa. Ahora, si no hay miniatura, la tarjeta muestra la imagen completa.",
   ] },

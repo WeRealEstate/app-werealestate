@@ -279,6 +279,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/publico/we-forms-publico/we-forms-publico-lista.component').then((m) => m.WeFormsPublicoListaComponent),
   },
   {
+    path: 'material',
+    title: 'We Real Estate | Material',
+    loadComponent: () => import('./features/publico/material-publico/material-publico.component').then((m) => m.MaterialPublicoComponent),
+  },
+  {
     path: 'we-forms/:slug',
     title: 'We Real Estate | Registrar venta',
     loadComponent: () => import('./features/publico/we-forms-publico/we-form-publico.component').then((m) => m.WeFormPublicoComponent),

@@ -16,6 +16,7 @@ const PAGINAS = [
   { ruta: 'samai', titulo: 'We Real Estate | Plano Samai', descripcion: 'Consulta la disponibilidad de lotes de SAMAI Campestre en el plano', imagen: 'samai-og.jpg' },
   { ruta: 'aldea-nanuu', titulo: 'We Real Estate | Plano Nanuu', descripcion: 'Consulta la disponibilidad de lotes de Aldea Nanuu en el plano', imagen: 'nanuu-og.jpg' },
   { ruta: 'we-forms', titulo: 'We Real Estate | Registrar venta', descripcion: 'Registra la venta de tu cliente' },
+  { ruta: 'material', titulo: 'We Real Estate | Material', descripcion: 'Material de venta para asesores' },
 ];
 
 const esc = (t) => t.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
