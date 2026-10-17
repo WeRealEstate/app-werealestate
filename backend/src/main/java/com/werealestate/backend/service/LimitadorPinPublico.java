@@ -29,7 +29,7 @@ public class LimitadorPinPublico {
 
     /** Devuelve al asesor del PIN o lanza el error que corresponda (429 con demasiados fallos). */
     public AsesorPublicoService.Identificado exigir(HttpServletRequest http, String pin, String proyecto) {
-        String ip = ipDe(http);
+        String ip = IpCliente.de(http);
         if (fallosRecientes(ip) >= MAX_FALLOS) {
             throw new ResponseStatusException(
                     HttpStatus.TOO_MANY_REQUESTS, "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.");
@@ -46,12 +46,6 @@ public class LimitadorPinPublico {
             case SIN_ACCESO -> throw new ForbiddenOperationException("No tienes acceso a este desarrollo.");
             default -> throw new ResourceNotFoundException("PIN incorrecto");
         }
-    }
-
-    private static String ipDe(HttpServletRequest http) {
-        String reenviada = http.getHeader("X-Forwarded-For");
-        if (reenviada != null && !reenviada.isBlank()) return reenviada.split(",")[0].trim();
-        return http.getRemoteAddr();
     }
 
     private int fallosRecientes(String ip) {

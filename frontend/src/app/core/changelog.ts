@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '8.0.24', fecha: '2026-10-15', cambios: [
+    "Errores de seguridad en el PIN arregaldos",
+  ] },
   { version: '8.0.23', fecha: '2026-10-15', cambios: [
     "Plano público: los botones de arriba a la derecha (asesor, Descargar PDF, Registrar venta) y los de selección de lotes abajo a la izquierda ahora son bastante más grandes y fáciles de tocar. En celular, 'Seleccionar varios' queda sobre los controles de zoom para no encimarse.",
   ] },

@@ -32,7 +32,7 @@ Migraciones: `src/main/resources/db/migration/V1…V63` (la siguiente es **V67**
 - 13 módulos (`Modulo`): LEADS, PIPELINE, COTIZADOR, LOTES, PLANO, VENTAS, CLIENTES, FINANZAS, GASTOS, CALENDARIO, ASESORES_EXTERNOS, COMUNIDADES, WE_FORMS. `ModulosAcceso` define máximo y default por rol; `Usuario.modulos` (CSV, null = default del rol).
 - `ModuloAccesoInterceptor`: mapa prefijo de API → módulos que lo habilitan (más específico primero). **Un endpoint nuevo de un módulo debe agregarse ahí.** APIs compartidas (desarrollos, usuarios, notificaciones, tareas, reportes) solo por rol.
 - Cada servicio valida su rol con helpers tipo `exigirAdminOLider()` / `exigirAdmin(...)`. Acciones destructivas piden la contraseña de quien las hace (eliminar venta: admin y administración, con cuenta regresiva de 10 s en la UI; limpiar mapa: solo admin).
-- Login: `AuthService` + `TurnstileService` (captcha Cloudflare, desactivado por defecto). PIN público: `AsesorPublicoService` + `LimitadorPinPublico` (5 fallos / 10 min por IP, usa `X-Forwarded-For`).
+- Login: `AuthService` + `TurnstileService` (captcha Cloudflare, desactivado por defecto). PIN público: `AsesorPublicoService` + `LimitadorPinPublico` y `AsesorPublicoController` (5 fallos / 10 min por IP). La IP sale de `IpCliente.de(request)`: solo lee `X-Forwarded-For` si la conexión directa es loopback/red privada (el proxy) y toma la IP añadida por el proxy (de derecha a izquierda), no la primera, que el cliente puede inventar.
 - Usuario de sistema `cotizador-publico@weinversiones.com` (V17) atribuye acciones sin sesión (cotizador público, apartado público, registros de venta).
 
 ### Dominio (servicios grandes — leerlos antes de tocar su área)
@@ -69,11 +69,10 @@ Migraciones: `src/main/resources/db/migration/V1…V63` (la siguiente es **V67**
 ## Pendientes / riesgos conocidos
 1. `JWT_SECRET` nunca seteado en el VPS (usa el default de `application.properties`) — crítico. Rotar la password de DB que se pegó en un chat.
 2. `PUT /api/lotes/publico/*/estado` no exige PIN en servidor (el PIN solo gatea la UI).
-3. `LimitadorPinPublico` confía en `X-Forwarded-For` (falseable si el proxy no lo sobrescribe).
-4. Token válido tras desactivar un usuario (480 min por defecto).
-5. Varios servicios cargan tablas completas en memoria (`FinanzasService.Datos`, `ComisionService.Totales`, `ClienteService.verificarDuplicado`, `LoteService.actualizarPrecioManzana`).
-6. Código marcado "temporal": `Venta.actualizar` y su botón; conviven dos reglas de comisión (`reglaNueva`).
-7. `API_CONTRACT.md` solo cubre el login y no menciona `captchaToken`; `README.md` vacío.
+3. Token válido tras desactivar un usuario (480 min por defecto).
+4. Varios servicios cargan tablas completas en memoria (`FinanzasService.Datos`, `ComisionService.Totales`, `ClienteService.verificarDuplicado`, `LoteService.actualizarPrecioManzana`).
+5. Código marcado "temporal": `Venta.actualizar` y su botón; conviven dos reglas de comisión (`reglaNueva`).
+6. `API_CONTRACT.md` solo cubre el login y no menciona `captchaToken`; `README.md` vacío.
 
 ## Qué NO está leído a detalle (leer cuando se necesite)
 DTOs, repositorios (queries nativas de numeración: `bloquearNumeracion`, `recorrer`, `bajarDesde`, `fijarNumero`), migraciones SQL, `ReporteService`, `GastoService`, `GastoRecurrenteService`, `AsesorExternoService`, `WeFormService`, `CotizacionService` y casi todos los componentes de `features/` y `shared/`.

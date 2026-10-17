@@ -2,6 +2,7 @@ package com.werealestate.backend.controller;
 
 import com.werealestate.backend.dto.VerificarAsesorPublicoRequest;
 import com.werealestate.backend.service.AsesorPublicoService;
+import com.werealestate.backend.service.IpCliente;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.ArrayDeque;
@@ -34,7 +35,7 @@ public class AsesorPublicoController {
     @PostMapping
     public ResponseEntity<Map<String, String>> verificar(
             @Valid @RequestBody VerificarAsesorPublicoRequest request, HttpServletRequest http) {
-        String ip = ipDe(http);
+        String ip = IpCliente.de(http);
         if (fallosRecientes(ip) >= MAX_FALLOS) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body(Map.of("message", "Demasiados intentos. Espera unos minutos e inténtalo de nuevo."));
@@ -53,12 +54,6 @@ public class AsesorPublicoController {
             default -> ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("message", "PIN incorrecto"));
         };
-    }
-
-    private static String ipDe(HttpServletRequest http) {
-        String reenviada = http.getHeader("X-Forwarded-For");
-        if (reenviada != null && !reenviada.isBlank()) return reenviada.split(",")[0].trim();
-        return http.getRemoteAddr();
     }
 
     private int fallosRecientes(String ip) {
