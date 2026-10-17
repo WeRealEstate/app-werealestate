@@ -568,6 +568,51 @@ select.rounded-full:not([multiple]):not([size]) {
 .plano-ui { opacity: 0; pointer-events: none; }
 .plano-ui-in { pointer-events: auto; animation: plano-ui-in 0.6s ease-out var(--d, 1.3s) forwards; }
 .plano-fade-in { animation: plano-fade-in 0.8s ease-out 1.5s forwards; }
+
+/* Botones del plano público (asesor, PDF, registrar venta, seleccionar varios): azul de la marca sólido con
+   borde claro para que se vean como botones sobre el plano blanco. Al pasar el mouse suben y un destello
+   los cruza; entran escalonados con --e (0, 1, 2…). */
+.plano-btn {
+  position: relative; overflow: hidden; display: inline-flex; align-items: center; justify-content: center;
+  padding: 0.875rem 1.25rem; border-radius: 0.75rem; border: 1px solid rgba(255, 255, 255, 0.55);
+  background: var(--color-we-primary); color: #fff; font-size: 1rem; font-weight: 600; line-height: 1.25rem;
+  text-decoration: none; cursor: pointer;
+  box-shadow: 0 4px 12px -2px rgba(11, 19, 43, 0.5);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+  animation: plano-btn-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: calc(var(--e, 0) * 80ms);
+}
+.plano-btn::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.45) 50%, transparent 65%);
+  transform: translateX(-120%);
+}
+.plano-btn:hover:not(:disabled) {
+  transform: translateY(-3px); background: #2f50d9;
+  box-shadow: 0 10px 20px -4px rgba(36, 63, 184, 0.65);
+}
+.plano-btn:hover:not(:disabled)::after { transform: translateX(120%); transition: transform 0.6s ease; }
+.plano-btn:active:not(:disabled) { transform: translateY(0) scale(0.97); box-shadow: 0 2px 6px -2px rgba(11, 19, 43, 0.5); }
+.plano-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.plano-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.plano-btn-peligro { background: #b42318; }
+.plano-btn-peligro:hover:not(:disabled) { background: #d12b1d; box-shadow: 0 10px 20px -4px rgba(180, 35, 24, 0.65); }
+.plano-btn-ok { background: #15803d; }
+.plano-btn-ok:hover:not(:disabled) { background: #19964a; box-shadow: 0 10px 20px -4px rgba(21, 128, 61, 0.65); }
+.plano-btn-info {
+  display: inline-flex; align-items: center; padding: 0.875rem 1rem; border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.95); color: var(--color-we-dark); font-size: 1rem; font-weight: 500;
+  border: 1px solid rgba(11, 19, 43, 0.15); box-shadow: 0 4px 12px -2px rgba(11, 19, 43, 0.35);
+}
+@keyframes plano-btn-in {
+  0% { opacity: 0; transform: translateY(10px) scale(0.92); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .plano-btn { animation: none; transition: none; }
+  .plano-btn::after { display: none; }
+  .plano-btn:hover:not(:disabled) { transform: none; }
+}
 @media (prefers-reduced-motion: reduce) {
   .plano-revelar { animation: none; -webkit-mask-image: none; mask-image: none; }
   .plano-ui-in, .plano-fade-in { animation-duration: 0.01s; animation-delay: 0s; }

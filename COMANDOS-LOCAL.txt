@@ -1,0 +1,94 @@
+COMANDOS PARA CORRER WE REAL ESTATE EN LOCAL
+=============================================
+Requisitos: Java 25, Maven, Node + npm, Postgres 16 (Homebrew).
+Ruta del proyecto: ~/Desktop/app-werealestate
+
+
+1) BASE DE DATOS (Postgres nativo de Homebrew, puerto 5432)
+-----------------------------------------------------------
+Ver si ya esta corriendo:
+    brew services list | grep postgres
+
+Iniciar / detener:
+    brew services start postgresql@16
+    brew services stop postgresql@16
+
+Credenciales por defecto (ya estan en application.properties, no hay que configurar nada):
+    base: werealestate   usuario: werealestate   password: werealestate
+
+No uses docker-compose: el Postgres nativo ya ocupa el 5432 y es el que tiene los datos.
+
+
+2) BACKEND (Spring Boot, puerto 8080)
+-------------------------------------
+    cd ~/Desktop/app-werealestate/backend
+    mvn spring-boot:run
+
+Flyway aplica las migraciones solo al arrancar. Cuando veas "Started BackendApplication" esta listo.
+
+Para correrlo en otro puerto (por ejemplo 8081):
+    mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=8081
+
+Pruebas del backend:
+    mvn test
+    mvn test -Dtest=NombreDeLaClaseTest      (una sola clase)
+
+
+3) FRONTEND (Angular, puerto 4200)
+----------------------------------
+En otra terminal:
+    cd ~/Desktop/app-werealestate/frontend
+    npm install          (solo la primera vez o si cambian las dependencias)
+    npm start
+
+Abre http://localhost:4200
+El proxy (frontend/proxy.conf.json) manda /api y /uploads al backend en :8080.
+
+Para el frontend en otro puerto o con otro proxy:
+    npx ng serve --port 4201 --proxy-config ruta/al/proxy.json
+
+Build de produccion (genera build-info.ts y las paginas con titulos para compartir links):
+    npm run build
+
+Pruebas del frontend:
+    npm test
+
+
+4) ENTRAR A LA APP
+------------------
+    http://localhost:4200/login
+    usuario:  admin@weinversiones.com
+    password: Admin123!        (admin de prueba sembrado por la migracion V2)
+
+Paginas publicas utiles:
+    http://localhost:4200/samai
+    http://localhost:4200/aldea-nanuu
+    http://localhost:4200/cotizador-publico
+
+
+5) ORDEN RAPIDO (3 terminales)
+------------------------------
+    Terminal 1:  brew services start postgresql@16
+    Terminal 2:  cd ~/Desktop/app-werealestate/backend && mvn spring-boot:run
+    Terminal 3:  cd ~/Desktop/app-werealestate/frontend && npm start
+
+
+6) PROBLEMAS COMUNES
+--------------------
+Puerto ocupado (8080 o 4200):
+    lsof -i :8080
+    kill <PID>             (sin -9 si puedes evitarlo)
+
+El backend no conecta a la base:
+    brew services list | grep postgres      (debe decir "started")
+
+Ver que version de Java usa Maven:
+    mvn -v                                  (debe ser Java 25)
+
+Variables opcionales del backend (solo si quieres cambiar algo; ya tienen valor por defecto):
+    DB_URL, DB_USER, DB_PASSWORD, JWT_SECRET, JWT_EXPIRATION_MINUTES,
+    TURNSTILE_ENABLED, TURNSTILE_SECRET_KEY, LEAD_DIAS_FRIO, LEAD_DIAS_SIN_CONTACTAR,
+    LOTE_DIAS_APARTADO_EXPIRA, UPLOADS_DIR, UPLOADS_PRIVADOS_DIR
+    Ejemplo:  TURNSTILE_ENABLED=false mvn spring-boot:run
+
+IMPORTANTE: la base local es independiente del VPS. Nunca apuntes DB_URL a la base de produccion.

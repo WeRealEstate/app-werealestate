@@ -15,6 +15,10 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '8.0.24', fecha: '2026-10-17', cambios: [
+    "Plano público: los botones ahora son azul sólido con borde claro, para que se noten como botones. Al pasar el mouse suben y los cruza un destello, y al aparecer entran uno tras otro.",
+    "Plano público: todos los botones (asesor, Descargar PDF, Registrar venta, Seleccionar varios) quedan juntos abajo a la izquierda, apilados sobre 'Seleccionar varios'. 'Cancelar selección' sale en rojo y 'Apartar N lotes' en verde.",
+  ] },
   { version: '8.0.24', fecha: '2026-10-15', cambios: [
     "Errores de seguridad en el PIN arregaldos",
   ] },

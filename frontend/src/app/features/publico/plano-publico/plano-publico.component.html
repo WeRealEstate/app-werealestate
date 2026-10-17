@@ -126,47 +126,79 @@
         </div>
       </div>
 
-      <!-- Apartar varios lotes: solo con asesor verificado. Abajo a la izquierda; con lotes elegidos aparece
-           "Apartar N". -->
-      @if (asesorVerificado()) {
-        <div
-          class="plano-ui absolute bottom-[calc(max(0.75rem,env(safe-area-inset-bottom))+3.5rem)] left-[max(0.75rem,env(safe-area-inset-left))] flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-2.5 sm:bottom-[max(0.75rem,env(safe-area-inset-bottom))] sm:max-w-[calc(100%-9rem)]"
-          [class.plano-ui-in]="imagenLista()"
-          style="--d: 1.5s"
-          (click)="$event.stopPropagation()"
-          (pointerdown)="$event.stopPropagation()"
-        >
+      <!-- Zona de botones, abajo a la izquierda y apilados de arriba abajo. Sin asesor verificado solo está
+           el candado "Asesor" (pide el nombre de un asesor registrado). Ya verificado: nombre con "salir",
+           Descargar PDF, Registrar venta y, al final, la selección de varios lotes (con lotes elegidos
+           aparece "Apartar N"). -->
+      <div
+        class="plano-ui absolute bottom-[calc(max(0.75rem,env(safe-area-inset-bottom))+3.5rem)] left-[max(0.75rem,env(safe-area-inset-left))] flex max-w-[calc(100%-1.5rem)] flex-col items-start gap-2.5 sm:bottom-[max(0.75rem,env(safe-area-inset-bottom))] sm:max-w-[calc(100%-9rem)]"
+        [class.plano-ui-in]="imagenLista()"
+        style="--d: 1.4s"
+        (click)="$event.stopPropagation()"
+        (pointerdown)="$event.stopPropagation()"
+      >
+        @if (asesorVerificado(); as asesor) {
           <button
             type="button"
-            (click)="alternarModoSeleccion()"
-            data-testid="seleccionar-varios"
-            class="rounded-xl px-5 py-3.5 text-base font-semibold shadow-lg backdrop-blur active:scale-[0.97] transition-transform duration-150"
-            [class.bg-we-primary]="modoSeleccion()"
-            [class.text-white]="modoSeleccion()"
-            [class.border]="!modoSeleccion()"
-            [class.border-border]="!modoSeleccion()"
-            [class.bg-surface/95]="!modoSeleccion()"
-            [class.text-ink]="!modoSeleccion()"
+            (click)="cerrarSesionAsesor()"
+            title="Salir del modo asesor"
+            class="plano-btn max-w-full truncate"
+            style="--e: 0"
           >
-            {{ modoSeleccion() ? 'Cancelar selección' : 'Seleccionar varios' }}
+            {{ asesor }} · salir
           </button>
-          @if (modoSeleccion()) {
-            <span class="rounded-xl border border-border bg-surface/95 px-4 py-3.5 text-base font-medium text-ink shadow-lg backdrop-blur" data-testid="contador-seleccion">
-              {{ seleccion().length }} de {{ maxSeleccion }} elegidos
-            </span>
-            @if (seleccion().length > 0) {
-              <button
-                type="button"
-                (click)="abrirApartarVarios()"
-                data-testid="apartar-seleccion"
-                class="rounded-xl bg-we-primary px-5 py-3.5 text-base font-semibold text-white shadow-lg hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150"
-              >
-                Apartar {{ seleccion().length }} {{ seleccion().length === 1 ? 'lote' : 'lotes' }}
-              </button>
+          <button
+            type="button"
+            (click)="descargarPdf()"
+            [disabled]="generandoPdf()"
+            data-testid="descargar-pdf"
+            class="plano-btn"
+            style="--e: 1"
+          >
+            {{ generandoPdf() ? 'Generando PDF…' : 'Descargar PDF' }}
+          </button>
+          <!-- We Forms: el registro de venta se llena en otra pestaña; el PIN no viaja en el enlace, pero este dispositivo ya lo recuerda. -->
+          <a
+            [href]="'/we-forms?proyecto=' + proyecto"
+            target="_blank"
+            rel="noopener"
+            data-testid="registrar-venta"
+            class="plano-btn"
+            style="--e: 2"
+          >
+            Registrar venta
+          </a>
+          <div class="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              (click)="alternarModoSeleccion()"
+              data-testid="seleccionar-varios"
+              class="plano-btn"
+              [class.plano-btn-peligro]="modoSeleccion()"
+              style="--e: 3"
+            >
+              {{ modoSeleccion() ? 'Cancelar selección' : 'Seleccionar varios' }}
+            </button>
+            @if (modoSeleccion()) {
+              <span class="plano-btn-info" data-testid="contador-seleccion">
+                {{ seleccion().length }} de {{ maxSeleccion }} elegidos
+              </span>
+              @if (seleccion().length > 0) {
+                <button
+                  type="button"
+                  (click)="abrirApartarVarios()"
+                  data-testid="apartar-seleccion"
+                  class="plano-btn plano-btn-ok"
+                >
+                  Apartar {{ seleccion().length }} {{ seleccion().length === 1 ? 'lote' : 'lotes' }}
+                </button>
+              }
             }
-          }
-        </div>
-      }
+          </div>
+        } @else {
+          <button type="button" (click)="abrirAcceso()" class="plano-btn" style="--e: 0">Asesor</button>
+        }
+      </div>
 
       <!-- Controles de zoom del plano (no del navegador): esquina inferior derecha, estilo mapa. -->
       <div
@@ -457,55 +489,6 @@
           <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
         </button>
       </div>
-    </div>
-  }
-
-  <!-- Candado discreto: el botón "Asesor" pide el nombre de un asesor registrado para mostrar los
-       botones de cotizar y apartar. Ya verificado, muestra el nombre y permite salir. -->
-  @if (!isLoading() && !errorMessage() && planoUrl()) {
-    <div
-      class="plano-ui absolute right-[max(0.75rem,env(safe-area-inset-right))] top-[max(0.75rem,env(safe-area-inset-top))] z-20 flex flex-col items-end gap-2.5"
-      [class.plano-ui-in]="imagenLista()"
-      style="--d: 1.4s"
-    >
-      @if (asesorVerificado(); as asesor) {
-        <button
-          type="button"
-          (click)="cerrarSesionAsesor()"
-          title="Salir del modo asesor"
-          class="max-w-[18rem] truncate rounded-xl border border-gray-400/60 bg-black/50 px-5 py-3.5 text-base font-semibold text-white/90 hover:bg-black/70 active:scale-[0.97] transition-transform duration-150"
-        >
-          {{ asesor }} · salir
-        </button>
-        <button
-          type="button"
-          (click)="descargarPdf()"
-          [disabled]="generandoPdf()"
-          data-testid="descargar-pdf"
-          class="rounded-xl border border-gray-400/60 bg-black/50 px-5 py-3.5 text-base font-semibold text-white/90 hover:bg-black/70
-                 active:scale-[0.97] transition-transform duration-150 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {{ generandoPdf() ? 'Generando PDF…' : 'Descargar PDF' }}
-        </button>
-        <!-- We Forms: el registro de venta se llena en otra pestaña; el PIN no viaja en el enlace, pero este dispositivo ya lo recuerda. -->
-        <a
-          [href]="'/we-forms?proyecto=' + proyecto"
-          target="_blank"
-          rel="noopener"
-          data-testid="registrar-venta"
-          class="rounded-xl border border-gray-400/60 bg-black/50 px-5 py-3.5 text-base font-semibold text-white/90 hover:bg-black/70 active:scale-[0.97] transition-transform duration-150"
-        >
-          Registrar venta
-        </a>
-      } @else {
-        <button
-          type="button"
-          (click)="abrirAcceso()"
-          class="rounded-xl border border-gray-400/60 bg-black/30 px-5 py-3.5 text-base font-semibold text-white/70 hover:bg-black/60 hover:text-white active:scale-[0.97] transition-transform duration-150"
-        >
-          Asesor
-        </button>
-      }
     </div>
   }
 
