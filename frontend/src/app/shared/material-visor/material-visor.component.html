@@ -1,13 +1,13 @@
-<button type="button" (click)="cerrar.emit()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-[60] bg-black/70"></button>
+<button #fondo type="button" (click)="pedirCierre()" aria-label="Cerrar" class="fixed inset-0 z-[60] bg-black/70"></button>
 <div class="pointer-events-none fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4" role="dialog" aria-modal="true" aria-label="Vista previa del material" data-testid="material-visor">
   @if (actual; as m) {
-    <div class="modal-panel-enter pointer-events-auto flex max-h-[96dvh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-lg">
+    <div #panel class="pointer-events-auto flex max-h-[96dvh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-lg">
       <div class="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
         <div class="min-w-0">
           <h2 class="truncate font-heading text-base font-semibold text-ink">{{ m.titulo }}</h2>
           <p class="text-xs text-ink-muted">{{ etiquetaCategoria(m.categoria) }} · {{ indice() + 1 }} de {{ items().length }}</p>
         </div>
-        <button type="button" (click)="cerrar.emit()" aria-label="Cerrar" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2">
+        <button type="button" (click)="pedirCierre()" aria-label="Cerrar" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2">
           <svg lucideX [size]="20" aria-hidden="true"></svg>
         </button>
       </div>

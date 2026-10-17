@@ -604,6 +604,18 @@ select.rounded-full:not([multiple]):not([size]) {
   background: rgba(255, 255, 255, 0.95); color: var(--color-we-dark); font-size: 1rem; font-weight: 500;
   border: 1px solid rgba(11, 19, 43, 0.15); box-shadow: 0 4px 12px -2px rgba(11, 19, 43, 0.35);
 }
+/* Tarjetas del grid público de Material: entran en cascada (--i = posición, tope de 8 para que no tarde). */
+.mat-card-in {
+  animation: mat-card-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(min(var(--i, 0), 8) * 45ms);
+}
+@keyframes mat-card-in {
+  0% { opacity: 0; transform: translateY(14px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mat-card-in { animation: none; }
+}
 @keyframes plano-btn-in {
   0% { opacity: 0; transform: translateY(10px) scale(0.92); }
   100% { opacity: 1; transform: translateY(0) scale(1); }

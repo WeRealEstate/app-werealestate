@@ -62,7 +62,7 @@
     }
     <div class="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       @for (m of visibles(); track m.id) {
-        <div class="flex flex-col rounded-xl border border-border bg-surface p-5 shadow-sm" data-testid="material-card">
+        <div class="flex flex-col rounded-xl border border-border bg-surface p-5 shadow-sm" data-testid="material-card" [attr.data-material-id]="m.id">
           @if (m.archivoExtension) {
             <div class="mb-3">
               <app-material-miniatura [item]="m" [cargar]="cargarMiniatura" (abrir)="abrirVisor(m)" />

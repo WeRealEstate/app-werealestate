@@ -17,6 +17,8 @@ export class MaterialMiniaturaComponent implements OnInit, OnDestroy {
   readonly item = input.required<MaterialItem>();
   readonly cargar = input.required<(m: MaterialItem) => Promise<Blob>>();
   readonly abrir = output<void>();
+  /** El rótulo "Ver vista previa" al pasar el mouse; se apaga cuando quien la usa pone su propia capa. */
+  readonly mostrarEtiqueta = input(true);
 
   readonly url = signal<string | null>(null);
   readonly fallo = signal(false);
