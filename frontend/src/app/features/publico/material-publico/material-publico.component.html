@@ -39,25 +39,42 @@
               [attr.data-material-id]="m.id"
               [style.--i]="i"
             >
-              <!-- Miniatura (o inicio del texto en un copy). Con el mouse encima, una capa muestra el contenido completo. -->
+              <!-- Copy: panel oscuro con el texto siempre visible. Archivo: miniatura con una franja fija abajo
+                   (descripción o texto) que, con el mouse encima, se cambia por una capa con el contenido completo. -->
               <div class="relative">
                 @if (m.archivoExtension) {
                   <app-material-miniatura [item]="m" [cargar]="cargarMiniatura" [mostrarEtiqueta]="false" (abrir)="abrirVisor(m)" />
+                  <div
+                    aria-hidden="true"
+                    class="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-0.5 rounded-b-lg bg-gradient-to-t from-we-dark/90 via-we-dark/60 to-transparent px-3 pb-2.5 pt-8 text-white
+                           transition-opacity duration-200 group-hover/card:opacity-0 group-focus-within/card:opacity-0 motion-reduce:transition-none"
+                  >
+                    @if (m.descripcion || m.texto) {
+                      <p class="line-clamp-2 whitespace-pre-line text-xs leading-snug">{{ m.descripcion || m.texto }}</p>
+                    }
+                    <span class="text-[11px] font-medium text-we-blue-light">Clic para ampliar</span>
+                  </div>
+                  <div
+                    aria-hidden="true"
+                    class="pointer-events-none absolute inset-0 flex translate-y-2 flex-col justify-end gap-1 overflow-hidden rounded-lg bg-gradient-to-t from-we-dark/95 via-we-dark/85 to-we-dark/45 p-3.5 text-white opacity-0
+                           transition-[opacity,transform] duration-200 ease-out group-hover/card:translate-y-0 group-hover/card:opacity-100 group-focus-within/card:translate-y-0 group-focus-within/card:opacity-100
+                           motion-reduce:transition-none"
+                  >
+                    <span class="text-[11px] font-semibold uppercase tracking-wider text-we-blue-light">Vista previa</span>
+                    <p class="line-clamp-6 whitespace-pre-line text-sm leading-snug">{{ m.texto || m.descripcion || m.titulo }}</p>
+                    <span class="text-xs font-medium text-white/80">Clic para ampliar</span>
+                  </div>
                 } @else {
-                  <button type="button" (click)="abrirVisor(m)" [attr.aria-label]="'Vista previa de ' + m.titulo" class="block aspect-[16/10] w-full overflow-hidden rounded-lg border border-border bg-surface-2 p-3 text-left">
-                    <span class="line-clamp-5 whitespace-pre-line text-sm text-ink transition-opacity duration-200 group-hover/card:opacity-0 group-focus-within/card:opacity-0 motion-reduce:transition-none">{{ m.texto }}</span>
+                  <button
+                    type="button"
+                    (click)="abrirVisor(m)"
+                    [attr.aria-label]="'Vista previa de ' + m.titulo"
+                    class="flex aspect-[16/10] w-full flex-col gap-1 overflow-hidden rounded-lg bg-gradient-to-t from-we-dark via-we-dark/95 to-we-dark/80 p-3.5 text-left text-white"
+                  >
+                    <span class="line-clamp-6 whitespace-pre-line text-sm leading-snug">{{ m.texto }}</span>
+                    <span class="mt-auto pt-1 text-xs font-medium text-we-blue-light">Clic para ampliar</span>
                   </button>
                 }
-                <div
-                  aria-hidden="true"
-                  class="pointer-events-none absolute inset-0 flex translate-y-2 flex-col justify-end gap-1 overflow-hidden rounded-lg bg-gradient-to-t from-we-dark/95 via-we-dark/85 to-we-dark/45 p-3.5 text-white opacity-0
-                         transition-[opacity,transform] duration-200 ease-out group-hover/card:translate-y-0 group-hover/card:opacity-100 group-focus-within/card:translate-y-0 group-focus-within/card:opacity-100
-                         motion-reduce:transition-none"
-                >
-                  <span class="text-[11px] font-semibold uppercase tracking-wider text-we-blue-light">{{ m.texto && !m.archivoExtension ? 'Texto completo' : 'Vista previa' }}</span>
-                  <p class="line-clamp-6 whitespace-pre-line text-sm leading-snug">{{ m.texto || m.descripcion || m.titulo }}</p>
-                  <span class="text-xs font-medium text-white/80">Clic para ampliar</span>
-                </div>
               </div>
 
               <div class="mt-4 flex flex-wrap items-center gap-2">

@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '9.0.5', fecha: '2026-10-17', cambios: [
+    "Bugs arregalados",
+  ] },
   { version: '9.0.4', fecha: '2026-10-17', cambios: [
     "Página pública de Material rediseñada: las tarjetas ahora son como las del panel (miniatura, categoría, título, descripción, texto y botones 'Vista previa', 'Copiar texto' y 'Descargar'), sin Editar ni Eliminar. Entran en cascada y, al pasar el mouse, la tarjeta se eleva y una capa sobre la miniatura muestra el texto o la descripción completa.",
     "Material: la vista previa ahora crece desde la tarjeta que tocaste y se encoge hacia ella al cerrarla (en el panel y en la página pública). Con 'reducir movimiento' activado en el sistema no se anima.",
