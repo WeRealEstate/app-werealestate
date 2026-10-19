@@ -4,6 +4,8 @@ import com.werealestate.backend.dto.MaterialDtos;
 import com.werealestate.backend.service.LimitadorPinPublico;
 import com.werealestate.backend.service.MaterialService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -53,5 +55,39 @@ public class MaterialPublicoController {
             HttpServletRequest http) {
         limitador.exigir(http, pin, proyecto);
         return MaterialController.responder(service.miniaturaPublico(id, proyecto));
+    }
+
+    @GetMapping("/{id}/imagenes/{imagenId}")
+    public ResponseEntity<byte[]> imagen(
+            @PathVariable Long id,
+            @PathVariable Long imagenId,
+            @RequestParam String proyecto,
+            @RequestHeader("X-Asesor-Pin") String pin,
+            HttpServletRequest http) {
+        limitador.exigir(http, pin, proyecto);
+        return MaterialController.responder(service.imagenPublico(id, imagenId, proyecto));
+    }
+
+    @GetMapping("/{id}/imagenes/{imagenId}/miniatura")
+    public ResponseEntity<byte[]> miniaturaImagen(
+            @PathVariable Long id,
+            @PathVariable Long imagenId,
+            @RequestParam String proyecto,
+            @RequestHeader("X-Asesor-Pin") String pin,
+            HttpServletRequest http) {
+        limitador.exigir(http, pin, proyecto);
+        return MaterialController.responder(service.miniaturaImagenPublico(id, imagenId, proyecto));
+    }
+
+    /** Toda la galería en un ZIP (ver MaterialController.enviarZip). */
+    @GetMapping("/{id}/zip")
+    public void zip(
+            @PathVariable Long id,
+            @RequestParam String proyecto,
+            @RequestHeader("X-Asesor-Pin") String pin,
+            HttpServletRequest http,
+            HttpServletResponse response) throws IOException {
+        limitador.exigir(http, pin, proyecto);
+        MaterialController.enviarZip(service.zipPublico(id, proyecto), response);
     }
 }

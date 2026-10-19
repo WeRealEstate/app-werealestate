@@ -24,6 +24,15 @@ class MaterialServiceTest {
     }
 
     @Test
+    void unaGaleriaSoloAceptaImagenes() {
+        assertEquals("png", MaterialService.extensionDeImagen(new byte[] {(byte) 0x89, 'P', 'N', 'G', 13, 10, 26, 10}));
+        assertEquals("jpg", MaterialService.extensionDeImagen(new byte[] {(byte) 0xff, (byte) 0xd8, (byte) 0xff, 0}));
+        assertThrows(ValidationException.class, () -> MaterialService.extensionDeImagen("%PDF-1.7 ...".getBytes()));
+        assertThrows(ValidationException.class, () -> MaterialService.extensionDeImagen(new byte[] {0, 0, 0, 24, 'f', 't', 'y', 'p', 'i', 's', 'o', 'm'}));
+        assertThrows(ValidationException.class, () -> MaterialService.extensionDeImagen("MZ ejecutable".getBytes()));
+    }
+
+    @Test
     void elNombreDeDescargaNoLlevaRutasNiCaracteresRaros() {
         assertEquals("flyer samai.pdf", MaterialService.nombreSeguro("../../etc/flyer samai.exe", "pdf"));
         assertEquals("material.jpg", MaterialService.nombreSeguro("<>|?.png", "jpg"));

@@ -15,6 +15,10 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '10.1.0', fecha: '2026-10-19', cambios: [
+    "Material: nuevo tipo 'Galería' para juntar varias imágenes (renders, flyers o fotos del proyecto) en una sola tarjeta. Al crearla se eligen o arrastran hasta 25 imágenes JPG, PNG o WEBP de hasta 10 MB cada una, se ordenan arrastrando (la primera es la portada) y se suben con su avance.",
+    "La tarjeta de una galería muestra un mosaico con sus primeras imágenes. En la vista previa se pasa de una imagen a otra con las flechas, el teclado o deslizando el dedo, hay una tira de miniaturas para saltar a cualquiera, y se puede descargar una imagen o todas juntas en un ZIP. También en la página de Material de los asesores.",
+  ] },
   // Redacción vaga a propósito: este historial lo ve todo el equipo, y la separación de lotes en el inventario
   // es solo para admin y administración.
   { version: '10.0.1', fecha: '2026-10-19', cambios: [

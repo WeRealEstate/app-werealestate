@@ -5,7 +5,11 @@
       <div class="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
         <div class="min-w-0">
           <h2 class="truncate font-heading text-base font-semibold text-ink">{{ m.titulo }}</h2>
-          <p class="text-xs text-ink-muted">{{ etiquetaCategoria(m.categoria) }} · {{ indice() + 1 }} de {{ items().length }}</p>
+          @if (esGaleria && m.imagenes.length > 0) {
+            <p class="text-xs text-ink-muted">Galería · imagen {{ imagenIndice() + 1 }} de {{ m.imagenes.length }}</p>
+          } @else {
+            <p class="text-xs text-ink-muted">{{ etiquetaCategoria(m.categoria) }} · {{ indice() + 1 }} de {{ items().length }}</p>
+          }
         </div>
         <button type="button" (click)="pedirCierre()" aria-label="Cerrar" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2">
           <svg lucideX [size]="20" aria-hidden="true"></svg>
@@ -13,13 +17,21 @@
       </div>
 
       <!-- Los lados (px-12 / sm:px-16) son el espacio de las flechas: así nunca tapan el contenido. -->
-      <div class="relative flex min-h-[40dvh] flex-1 items-center justify-center overflow-auto px-12 sm:px-16" [class.bg-black/80]="tipo !== 'texto'" [class.bg-surface]="tipo === 'texto'">
+      <div
+        class="relative flex min-h-[40dvh] flex-1 items-center justify-center overflow-auto px-12 sm:px-16"
+        [class.bg-black/80]="tipo !== 'texto'"
+        [class.bg-surface]="tipo === 'texto'"
+        (touchstart)="inicioToque($event)"
+        (touchend)="finToque($event)"
+      >
         @if (cargando()) {
           <app-we-loader texto="Cargando vista previa…" />
         } @else if (error()) {
           <p class="px-6 text-center text-sm text-white">No se pudo cargar la vista previa. Intenta de nuevo o descarga el archivo.</p>
         } @else if (tipo === 'imagen' && url(); as src) {
-          <img [src]="src" [alt]="m.titulo" class="max-h-[62dvh] max-w-full object-contain" data-testid="visor-imagen" />
+          <img [src]="src" [alt]="imagenActual?.nombre ?? m.titulo" class="max-h-[62dvh] max-w-full object-contain" data-testid="visor-imagen" />
+        } @else if (tipo === 'vacia') {
+          <p class="px-6 text-center text-sm text-white">Esta galería todavía no tiene imágenes.</p>
         } @else if (tipo === 'video' && url(); as src) {
           <video [src]="src" controls playsinline class="max-h-[62dvh] max-w-full" data-testid="visor-video"></video>
         } @else if (tipo === 'pdf' && urlSegura(); as src) {
@@ -27,17 +39,38 @@
         } @else if (tipo === 'texto') {
           <p class="max-h-[62dvh] w-full overflow-y-auto whitespace-pre-line bg-surface p-6 text-base text-ink" data-testid="visor-texto">{{ m.texto }}</p>
         }
-        @if (indice() > 0) {
+        @if (puedeAnterior) {
           <button type="button" (click)="anterior()" aria-label="Anterior" class="absolute left-1.5 top-1/2 flex h-10 w-10 -translate-y-1/2 sm:left-3 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80">
             <svg lucideChevronLeft [size]="22" aria-hidden="true"></svg>
           </button>
         }
-        @if (indice() < items().length - 1) {
+        @if (puedeSiguiente) {
           <button type="button" (click)="siguiente()" aria-label="Siguiente" class="absolute right-1.5 top-1/2 flex h-10 w-10 -translate-y-1/2 sm:right-3 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80">
             <svg lucideChevronRight [size]="22" aria-hidden="true"></svg>
           </button>
         }
       </div>
+
+      <!-- Galería: tira de miniaturas para saltar a cualquier imagen. -->
+      @if (esGaleria && m.imagenes.length > 1 && cargarMiniaturaImagen()) {
+        <div class="flex gap-1.5 overflow-x-auto border-t border-border bg-surface px-4 py-2.5 [scrollbar-width:thin]" data-testid="visor-tira">
+          @for (img of m.imagenes; track img.id; let i = $index) {
+            <button
+              type="button"
+              (click)="irAImagen(i)"
+              [attr.aria-label]="'Ver imagen ' + (i + 1)"
+              [attr.aria-current]="i === imagenIndice() ? 'true' : null"
+              class="h-14 w-14 shrink-0 overflow-hidden rounded-md ring-offset-2 ring-offset-surface transition-[opacity,box-shadow] duration-150
+                     focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary"
+              [class.ring-2]="i === imagenIndice()"
+              [class.ring-we-primary]="i === imagenIndice()"
+              [class.opacity-60]="i !== imagenIndice()"
+            >
+              <app-imagen-diferida [cargar]="cargadorMiniatura(m, img)" [alt]="img.nombre" />
+            </button>
+          }
+        </div>
+      }
 
       <div class="max-h-[30dvh] overflow-y-auto border-t border-border px-4 py-3">
         @if (m.descripcion) {
@@ -51,6 +84,17 @@
             <button type="button" (click)="copiar.emit(m)" class="inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-we-primary px-4 py-2 text-sm font-semibold text-white hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150">
               <svg lucideCopy [size]="16" aria-hidden="true"></svg> Copiar texto
             </button>
+          }
+          @if (imagenActual; as img) {
+            <button type="button" (click)="descargarImagen.emit({ item: m, imagen: img })" data-testid="visor-descargar-imagen" class="inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-we-primary px-4 py-2 text-sm font-semibold text-white hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150">
+              <svg lucideDownload [size]="16" aria-hidden="true"></svg> Descargar imagen
+            </button>
+            @if (m.imagenes.length > 1) {
+              <button type="button" (click)="descargarGaleria.emit(m)" data-testid="visor-descargar-todas" class="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-semibold text-ink hover:border-we-primary active:scale-[0.97] transition-transform duration-150">
+                <svg lucideDownload [size]="16" aria-hidden="true"></svg> Descargar todas ({{ m.imagenes.length }})
+              </button>
+            }
+            <span class="text-xs text-ink-muted">{{ img.nombre }} · {{ tamanoLegible(img.tamano) }}</span>
           }
           @if (m.archivoExtension) {
             <button type="button" (click)="descargar.emit(m)" data-testid="visor-descargar" class="inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-we-primary px-4 py-2 text-sm font-semibold text-white hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150">

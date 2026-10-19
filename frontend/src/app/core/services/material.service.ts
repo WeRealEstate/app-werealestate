@@ -1,6 +1,6 @@
-import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpEventType, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { filter, firstValueFrom, map, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { MaterialItem } from '../models/material.model';
 
@@ -54,6 +54,43 @@ export class MaterialService {
     }
   }
 
+  // ---------------------------------------------------------------- galería (panel)
+
+  /** Sube una imagen al final de la galería; `alAvanzar` recibe el avance de la subida (0 a 100). */
+  agregarImagen(id: number, archivo: File, alAvanzar?: (porcentaje: number) => void): Promise<MaterialItem> {
+    const datos = new FormData();
+    datos.append('archivo', archivo);
+    return firstValueFrom(
+      this.http.post<MaterialItem>(`${this.baseUrl}/${id}/imagenes`, datos, { reportProgress: true, observe: 'events' }).pipe(
+        tap((e) => {
+          if (e.type === HttpEventType.UploadProgress && e.total) alAvanzar?.(Math.round((e.loaded / e.total) * 100));
+        }),
+        filter((e) => e.type === HttpEventType.Response),
+        map((e) => e.body as MaterialItem),
+      ),
+    );
+  }
+
+  quitarImagen(id: number, imagenId: number): Promise<MaterialItem> {
+    return firstValueFrom(this.http.delete<MaterialItem>(`${this.baseUrl}/${id}/imagenes/${imagenId}`));
+  }
+
+  ordenarImagenes(id: number, ids: number[]): Promise<MaterialItem> {
+    return firstValueFrom(this.http.put<MaterialItem>(`${this.baseUrl}/${id}/imagenes/orden`, { ids }));
+  }
+
+  imagen(id: number, imagenId: number): Promise<Blob> {
+    return firstValueFrom(this.http.get(`${this.baseUrl}/${id}/imagenes/${imagenId}`, { responseType: 'blob' }));
+  }
+
+  miniaturaImagen(id: number, imagenId: number): Promise<Blob> {
+    return firstValueFrom(this.http.get(`${this.baseUrl}/${id}/imagenes/${imagenId}/miniatura`, { responseType: 'blob' }));
+  }
+
+  zip(id: number): Promise<Blob> {
+    return firstValueFrom(this.http.get(`${this.baseUrl}/${id}/zip`, { responseType: 'blob' }));
+  }
+
   private cuerpo(form: MaterialForm): FormData {
     const datos = new FormData();
     datos.append('titulo', form.titulo.trim());
@@ -89,6 +126,31 @@ export class MaterialService {
     } catch {
       return this.archivoPublico(id, proyecto, pin);
     }
+  }
+
+  imagenPublico(id: number, imagenId: number, proyecto: string, pin: string): Promise<Blob> {
+    const params = new HttpParams().set('proyecto', proyecto);
+    return firstValueFrom(
+      this.http.get(`${this.publicoUrl}/${id}/imagenes/${imagenId}`, { params, headers: this.cabeceras(pin), responseType: 'blob' }),
+    );
+  }
+
+  miniaturaImagenPublico(id: number, imagenId: number, proyecto: string, pin: string): Promise<Blob> {
+    const params = new HttpParams().set('proyecto', proyecto);
+    return firstValueFrom(
+      this.http.get(`${this.publicoUrl}/${id}/imagenes/${imagenId}/miniatura`, {
+        params,
+        headers: this.cabeceras(pin),
+        responseType: 'blob',
+      }),
+    );
+  }
+
+  zipPublico(id: number, proyecto: string, pin: string): Promise<Blob> {
+    const params = new HttpParams().set('proyecto', proyecto);
+    return firstValueFrom(
+      this.http.get(`${this.publicoUrl}/${id}/zip`, { params, headers: this.cabeceras(pin), responseType: 'blob' }),
+    );
   }
 
   private cabeceras(pin: string): HttpHeaders {

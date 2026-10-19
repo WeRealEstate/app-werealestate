@@ -1,10 +1,12 @@
 package com.werealestate.backend.model;
 
-/** Tipo de material de venta. Lista fija: no hay administración de categorías. */
+/** Tipo de material de venta. Lista fija: no hay administración de categorías. GALERIA no lleva archivo propio:
+ * agrupa varias imágenes (ver MaterialImagen). */
 public enum CategoriaMaterial {
     COPY,
     FLYER,
     BROCHURE,
     VIDEO,
-    OTRO
+    OTRO,
+    GALERIA
 }

@@ -1,7 +1,8 @@
 import { Component, ElementRef, HostListener, OnDestroy, afterNextRender, effect, inject, input, output, signal, untracked, viewChild } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { LucideChevronLeft, LucideChevronRight, LucideCopy, LucideDownload, LucideX } from '@lucide/angular';
-import { MaterialItem, etiquetaCategoria, tamanoLegible } from '../../core/models/material.model';
+import { MaterialImagen, MaterialItem, etiquetaCategoria, tamanoLegible } from '../../core/models/material.model';
+import { ImagenDiferidaComponent } from '../imagen-diferida/imagen-diferida.component';
 import { WeLoaderComponent } from '../we-loader/we-loader.component';
 
 /** Visor grande de un material: imagen ampliada, video con reproductor o PDF embebido, con su texto, "Copiar" y
@@ -10,11 +11,15 @@ import { WeLoaderComponent } from '../we-loader/we-loader.component';
  *
  * Al abrirse crece desde la tarjeta del material (el elemento con `data-material-id`) y al cerrarse se encoge
  * hacia ella; sin tarjeta a la vista entra con un fundido corto. Solo anima transform y opacity, y respeta
- * prefers-reduced-motion. */
+ * prefers-reduced-motion.
+ *
+ * Galerías: las flechas (y deslizar con el dedo) recorren primero las imágenes de la galería y, al llegar al final,
+ * pasan al material siguiente. Abajo, una tira de miniaturas para saltar a cualquier imagen, y "Descargar imagen" /
+ * "Descargar todas". `cargarImagen` y `cargarMiniaturaImagen` traen las imágenes (panel o plano público). */
 @Component({
   selector: 'app-material-visor',
   standalone: true,
-  imports: [WeLoaderComponent, LucideChevronLeft, LucideChevronRight, LucideCopy, LucideDownload, LucideX],
+  imports: [WeLoaderComponent, ImagenDiferidaComponent, LucideChevronLeft, LucideChevronRight, LucideCopy, LucideDownload, LucideX],
   templateUrl: './material-visor.component.html',
 })
 export class MaterialVisorComponent implements OnDestroy {
@@ -23,15 +28,23 @@ export class MaterialVisorComponent implements OnDestroy {
   readonly items = input.required<MaterialItem[]>();
   readonly indiceInicial = input.required<number>();
   readonly cargar = input.required<(m: MaterialItem) => Promise<Blob>>();
+  /** En qué imagen empieza, si el material inicial es una galería. */
+  readonly imagenInicial = input(0);
+  readonly cargarImagen = input<((m: MaterialItem, imagen: MaterialImagen) => Promise<Blob>) | null>(null);
+  readonly cargarMiniaturaImagen = input<((m: MaterialItem, imagen: MaterialImagen) => Promise<Blob>) | null>(null);
   readonly cerrar = output<void>();
   readonly descargar = output<MaterialItem>();
   readonly copiar = output<MaterialItem>();
+  readonly descargarImagen = output<{ item: MaterialItem; imagen: MaterialImagen }>();
+  readonly descargarGaleria = output<MaterialItem>();
 
   private readonly panel = viewChild<ElementRef<HTMLElement>>('panel');
   private readonly fondo = viewChild<ElementRef<HTMLElement>>('fondo');
   private cerrando = false;
 
   readonly indice = signal(0);
+  /** Imagen que se ve dentro de la galería actual. */
+  readonly imagenIndice = signal(0);
   readonly url = signal<string | null>(null);
   readonly urlSegura = signal<SafeResourceUrl | null>(null);
   readonly cargando = signal(false);
@@ -44,11 +57,15 @@ export class MaterialVisorComponent implements OnDestroy {
   private peticion = 0;
 
   constructor() {
-    effect(() => this.indice.set(this.indiceInicial()));
+    effect(() => {
+      this.indice.set(this.indiceInicial());
+      this.imagenIndice.set(this.imagenInicial());
+    });
     afterNextRender(() => void this.animar(true));
     effect(() => {
       const item = this.items()[this.indice()];
-      if (item) untracked(() => void this.mostrar(item));
+      const imagen = item ? (item.imagenes[this.imagenIndice()] ?? null) : null;
+      if (item) untracked(() => void this.mostrar(item, imagen));
     });
   }
 
@@ -56,7 +73,25 @@ export class MaterialVisorComponent implements OnDestroy {
     return this.items()[this.indice()];
   }
 
-  get tipo(): 'imagen' | 'video' | 'pdf' | 'texto' {
+  get esGaleria(): boolean {
+    return this.actual?.categoria === 'GALERIA';
+  }
+
+  get imagenActual(): MaterialImagen | null {
+    return this.esGaleria ? (this.actual?.imagenes[this.imagenIndice()] ?? null) : null;
+  }
+
+  get puedeAnterior(): boolean {
+    return (this.esGaleria && this.imagenIndice() > 0) || this.indice() > 0;
+  }
+
+  get puedeSiguiente(): boolean {
+    const m = this.actual;
+    return (!!m && this.esGaleria && this.imagenIndice() < m.imagenes.length - 1) || this.indice() < this.items().length - 1;
+  }
+
+  get tipo(): 'imagen' | 'video' | 'pdf' | 'texto' | 'vacia' {
+    if (this.esGaleria) return this.imagenActual ? 'imagen' : 'vacia';
     const ext = this.actual?.archivoExtension;
     if (!ext) return 'texto';
     if (ext === 'mp4') return 'video';
@@ -64,17 +99,19 @@ export class MaterialVisorComponent implements OnDestroy {
     return 'imagen';
   }
 
-  private async mostrar(item: MaterialItem): Promise<void> {
+  private async mostrar(item: MaterialItem, imagen: MaterialImagen | null): Promise<void> {
     const mia = ++this.peticion;
     this.liberar();
     this.error.set(false);
-    if (!item.archivoExtension) {
+    const galeria = item.categoria === 'GALERIA';
+    const cargarImagen = this.cargarImagen();
+    if (galeria ? !imagen || !cargarImagen : !item.archivoExtension) {
       this.cargando.set(false);
       return;
     }
     this.cargando.set(true);
     try {
-      const blob = await this.cargar()(item);
+      const blob = galeria ? await cargarImagen!(item, imagen!) : await this.cargar()(item);
       if (mia !== this.peticion) return;
       this.urlActual = URL.createObjectURL(blob);
       this.url.set(this.urlActual);
@@ -95,11 +132,50 @@ export class MaterialVisorComponent implements OnDestroy {
   }
 
   anterior(): void {
-    if (this.indice() > 0) this.indice.update((i) => i - 1);
+    if (this.esGaleria && this.imagenIndice() > 0) {
+      this.imagenIndice.update((i) => i - 1);
+      return;
+    }
+    if (this.indice() === 0) return;
+    // Al regresar a una galería se entra por su última imagen, como quien va hacia atrás.
+    const previo = this.items()[this.indice() - 1];
+    this.imagenIndice.set(previo.categoria === 'GALERIA' ? Math.max(0, previo.imagenes.length - 1) : 0);
+    this.indice.update((i) => i - 1);
   }
 
   siguiente(): void {
-    if (this.indice() < this.items().length - 1) this.indice.update((i) => i + 1);
+    const m = this.actual;
+    if (m && this.esGaleria && this.imagenIndice() < m.imagenes.length - 1) {
+      this.imagenIndice.update((i) => i + 1);
+      return;
+    }
+    if (this.indice() >= this.items().length - 1) return;
+    this.imagenIndice.set(0);
+    this.indice.update((i) => i + 1);
+  }
+
+  irAImagen(i: number): void {
+    this.imagenIndice.set(i);
+  }
+
+  cargadorMiniatura(m: MaterialItem, imagen: MaterialImagen): () => Promise<Blob> {
+    return () => this.cargarMiniaturaImagen()!(m, imagen);
+  }
+
+  // Deslizar con el dedo sobre la imagen: a la izquierda, siguiente; a la derecha, anterior.
+  private toqueX: number | null = null;
+
+  inicioToque(e: TouchEvent): void {
+    this.toqueX = e.touches.length === 1 ? e.touches[0].clientX : null;
+  }
+
+  finToque(e: TouchEvent): void {
+    if (this.toqueX === null) return;
+    const dx = e.changedTouches[0].clientX - this.toqueX;
+    this.toqueX = null;
+    if (Math.abs(dx) < 50) return;
+    if (dx < 0) this.siguiente();
+    else this.anterior();
   }
 
   /** Cierra con la animación de salida (más corta que la de entrada) y luego avisa. */

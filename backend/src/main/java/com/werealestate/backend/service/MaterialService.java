@@ -6,11 +6,13 @@ import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.exception.ValidationException;
 import com.werealestate.backend.model.CategoriaMaterial;
 import com.werealestate.backend.model.Material;
+import com.werealestate.backend.model.MaterialImagen;
 import com.werealestate.backend.model.Modulo;
 import com.werealestate.backend.model.ModulosAcceso;
 import com.werealestate.backend.model.ProyectoMaterial;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Usuario;
+import com.werealestate.backend.repository.MaterialImagenRepository;
 import com.werealestate.backend.repository.MaterialRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
 import java.awt.Color;
@@ -22,10 +24,14 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Iterator;
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReadParam;
 import javax.imageio.ImageReader;
@@ -37,27 +43,35 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * Material de venta (copys, flyers, brochures, videos). Administración lo sube en el panel (módulo Material);
- * los asesores lo consultan desde el plano público con su PIN (el controlador público lo exige en cada
- * petición). Los archivos se guardan en la carpeta privada, nunca en la pública: solo se sirven por aquí.
+ * Material de venta (copys, flyers, brochures, videos y galerías de imágenes). Administración lo sube en el panel
+ * (módulo Material); los asesores lo consultan desde el plano público con su PIN (el controlador público lo exige
+ * en cada petición). Los archivos se guardan en la carpeta privada, nunca en la pública: solo se sirven por aquí.
+ * Una galería (categoría GALERIA) no tiene archivo propio: agrupa hasta 25 imágenes de hasta 10 MB cada una.
  */
 @Service
 public class MaterialService {
 
     static final long MAX_ARCHIVO_BYTES = 25L * 1024 * 1024;
+    /** Cada imagen de una galería: más chica que un archivo suelto para que la galería cargue rápido en el celular. */
+    static final long MAX_IMAGEN_GALERIA_BYTES = 10L * 1024 * 1024;
+    static final int MAX_IMAGENES_GALERIA = 25;
+    private static final Set<String> EXTENSIONES_IMAGEN = Set.of("jpg", "png", "webp");
     /** Lado mayor de la miniatura (JPG) que se genera al subir una imagen JPG o PNG. */
     private static final int LADO_MINIATURA = 480;
     private static final int MAX_TEXTO = 5000;
 
     private final MaterialRepository repository;
+    private final MaterialImagenRepository imagenRepository;
     private final CurrentUserProvider currentUserProvider;
     private final String uploadsPrivadosDir;
 
     public MaterialService(
             MaterialRepository repository,
+            MaterialImagenRepository imagenRepository,
             CurrentUserProvider currentUserProvider,
             @Value("${app.uploads-privados.dir:uploads-privados}") String uploadsPrivadosDir) {
         this.repository = repository;
+        this.imagenRepository = imagenRepository;
         this.currentUserProvider = currentUserProvider;
         this.uploadsPrivadosDir = uploadsPrivadosDir;
     }
@@ -65,12 +79,18 @@ public class MaterialService {
     /** Archivo listo para servir: bytes, tipo y el nombre con que se descarga. */
     public record Descarga(byte[] bytes, MediaType tipo, String nombre) {}
 
+    /** Una galería lista para empaquetar en ZIP: el controlador escribe los archivos uno por uno directo en la
+     * respuesta (hasta 25 × 10 MB: no se arma en memoria). */
+    public record Zip(String nombre, List<EntradaZip> archivos) {}
+
+    public record EntradaZip(Path ruta, String nombre) {}
+
     // ---------------------------------------------------------------- panel
 
     @Transactional(readOnly = true)
     public List<MaterialDtos.Item> listar() {
         exigirAcceso();
-        return repository.findAllByOrderByFechaActualizacionDesc().stream().map(MaterialDtos.Item::from).toList();
+        return conImagenes(repository.findAllByOrderByFechaActualizacionDesc());
     }
 
     @Transactional
@@ -94,7 +114,94 @@ public class MaterialService {
         exigirAcceso();
         Material m = obtenerEntidad(id);
         borrarArchivo(m);
+        List<MaterialImagen> imagenes = imagenRepository.findByMaterialIdOrderByOrdenAscIdAsc(id);
+        imagenes.forEach(this::borrarArchivoImagen);
+        imagenRepository.deleteAll(imagenes);
+        borrarCarpetaGaleria(id);
         repository.delete(m);
+    }
+
+    // ---------------------------------------------------------------- galería (panel)
+
+    /** Agrega una imagen al final de una galería. Las imágenes se suben de una en una: así cada petición queda
+     * lejos del tope de 26 MB del servidor y, si una falla, las demás sí quedan. */
+    @Transactional
+    public MaterialDtos.Item agregarImagen(Long id, MultipartFile archivo) {
+        exigirAcceso();
+        Material m = obtenerGaleria(id);
+        if (archivo == null || archivo.isEmpty()) throw new ValidationException("Elige una imagen");
+        List<MaterialImagen> actuales = imagenRepository.findByMaterialIdOrderByOrdenAscIdAsc(id);
+        if (actuales.size() >= MAX_IMAGENES_GALERIA) {
+            throw new ValidationException("Una galería puede tener hasta " + MAX_IMAGENES_GALERIA + " imágenes");
+        }
+        if (archivo.getSize() > MAX_IMAGEN_GALERIA_BYTES) throw new ValidationException("Cada imagen puede pesar hasta 10 MB");
+        byte[] bytes;
+        try {
+            bytes = archivo.getBytes();
+        } catch (IOException e) {
+            throw new UncheckedIOException("No se pudo leer la imagen", e);
+        }
+        String extension = extensionDeImagen(bytes);
+        int orden = actuales.stream().mapToInt(MaterialImagen::getOrden).max().orElse(-1) + 1;
+        MaterialImagen imagen = imagenRepository.save(
+                new MaterialImagen(m, orden, nombreSeguro(archivo.getOriginalFilename(), extension), extension, archivo.getSize()));
+        try {
+            Path destino = rutaImagen(id, imagen.getId(), extension);
+            Files.createDirectories(destino.getParent());
+            Files.write(destino, bytes);
+            generarMiniatura(rutaMiniaturaImagen(id, imagen.getId()), extension, bytes);
+        } catch (IOException e) {
+            throw new UncheckedIOException("No se pudo guardar la imagen", e);
+        }
+        m.tocar();
+        return item(m);
+    }
+
+    @Transactional
+    public MaterialDtos.Item quitarImagen(Long id, Long imagenId) {
+        exigirAcceso();
+        Material m = obtenerGaleria(id);
+        MaterialImagen imagen = obtenerImagen(id, imagenId);
+        borrarArchivoImagen(imagen);
+        imagenRepository.delete(imagen);
+        m.tocar();
+        return item(m);
+    }
+
+    /** Reordena la galería: ids trae todas sus imágenes, de la portada a la última. */
+    @Transactional
+    public MaterialDtos.Item ordenarImagenes(Long id, List<Long> ids) {
+        exigirAcceso();
+        Material m = obtenerGaleria(id);
+        List<MaterialImagen> imagenes = imagenRepository.findByMaterialIdOrderByOrdenAscIdAsc(id);
+        Set<Long> actuales = imagenes.stream().map(MaterialImagen::getId).collect(Collectors.toSet());
+        if (ids == null || ids.size() != imagenes.size() || !actuales.equals(new HashSet<>(ids))) {
+            throw new ValidationException("La lista de imágenes no coincide con la galería; recarga la página");
+        }
+        Map<Long, MaterialImagen> porId = imagenes.stream().collect(Collectors.toMap(MaterialImagen::getId, i -> i));
+        for (int i = 0; i < ids.size(); i++) {
+            porId.get(ids.get(i)).cambiarOrden(i);
+        }
+        m.tocar();
+        return item(m);
+    }
+
+    @Transactional(readOnly = true)
+    public Descarga imagenDelPanel(Long id, Long imagenId) {
+        exigirAcceso();
+        return leerImagen(obtenerImagen(id, imagenId));
+    }
+
+    @Transactional(readOnly = true)
+    public Descarga miniaturaImagenDelPanel(Long id, Long imagenId) {
+        exigirAcceso();
+        return leerMiniaturaImagen(obtenerImagen(id, imagenId));
+    }
+
+    @Transactional(readOnly = true)
+    public Zip zipDelPanel(Long id) {
+        exigirAcceso();
+        return armarZip(obtenerGaleria(id));
     }
 
     @Transactional(readOnly = true)
@@ -115,9 +222,7 @@ public class MaterialService {
     public List<MaterialDtos.Item> listarPublico(String proyecto) {
         exigirProyectoPublico(proyecto);
         Set<ProyectoMaterial> aplicables = EnumSet.of(ProyectoMaterial.AMBOS, ProyectoMaterial.valueOf(proyecto.toUpperCase()));
-        return repository.findByProyectoInOrderByFechaActualizacionDesc(aplicables).stream()
-                .map(MaterialDtos.Item::from)
-                .toList();
+        return conImagenes(repository.findByProyectoInOrderByFechaActualizacionDesc(aplicables));
     }
 
     @Transactional(readOnly = true)
@@ -135,6 +240,24 @@ public class MaterialService {
         Material m = obtenerEntidad(id);
         if (!m.getProyecto().aplicaA(proyecto)) throw new ResourceNotFoundException("Material no encontrado");
         return leerMiniatura(m);
+    }
+
+    @Transactional(readOnly = true)
+    public Descarga imagenPublico(Long id, Long imagenId, String proyecto) {
+        return leerImagen(obtenerImagenPublica(id, imagenId, proyecto));
+    }
+
+    @Transactional(readOnly = true)
+    public Descarga miniaturaImagenPublico(Long id, Long imagenId, String proyecto) {
+        return leerMiniaturaImagen(obtenerImagenPublica(id, imagenId, proyecto));
+    }
+
+    @Transactional(readOnly = true)
+    public Zip zipPublico(Long id, String proyecto) {
+        exigirProyectoPublico(proyecto);
+        Material m = obtenerGaleria(id);
+        if (!m.getProyecto().aplicaA(proyecto)) throw new ResourceNotFoundException("Material no encontrado");
+        return armarZip(m);
     }
 
     // ---------------------------------------------------------------- internos
@@ -156,7 +279,18 @@ public class MaterialService {
 
         boolean hayArchivoNuevo = archivo != null && !archivo.isEmpty();
         boolean quedaArchivo = hayArchivoNuevo || (m.tieneArchivo() && !quitarArchivo);
-        if (tx == null && !quedaArchivo) throw new ValidationException("Agrega un texto, un archivo o ambos");
+        if (cat == CategoriaMaterial.GALERIA) {
+            // Una galería no lleva archivo propio: sus imágenes se suben aparte (agregarImagen), después de crearla.
+            if (hayArchivoNuevo) throw new ValidationException("Una galería no lleva archivo: sus imágenes se agregan aparte");
+            if (m.tieneArchivo() && !quitarArchivo) {
+                throw new ValidationException("Quita el archivo actual para convertir este material en galería");
+            }
+        } else {
+            if (m.getId() != null && imagenRepository.countByMaterialId(m.getId()) > 0) {
+                throw new ValidationException("Quita las imágenes de la galería antes de cambiarle el tipo");
+            }
+            if (tx == null && !quedaArchivo) throw new ValidationException("Agrega un texto, un archivo o ambos");
+        }
 
         String extension = hayArchivoNuevo ? validarArchivo(archivo) : null;
 
@@ -171,7 +305,27 @@ public class MaterialService {
             borrarArchivo(guardado);
             guardado.quitarArchivo();
         }
-        return MaterialDtos.Item.from(nuevo ? repository.save(guardado) : guardado);
+        return item(nuevo ? repository.save(guardado) : guardado);
+    }
+
+    /** El material con las imágenes de su galería (vacía si no es galería). */
+    private MaterialDtos.Item item(Material m) {
+        return MaterialDtos.Item.from(m, imagenRepository.findByMaterialIdOrderByOrdenAscIdAsc(m.getId()));
+    }
+
+    /** Lista de materiales con sus imágenes, en una sola consulta para todas las galerías. */
+    private List<MaterialDtos.Item> conImagenes(List<Material> materiales) {
+        List<Long> galerias = materiales.stream()
+                .filter(m -> m.getCategoria() == CategoriaMaterial.GALERIA)
+                .map(Material::getId)
+                .toList();
+        Map<Long, List<MaterialImagen>> porMaterial = galerias.isEmpty()
+                ? Map.of()
+                : imagenRepository.findByMaterialIdInOrderByOrdenAscIdAsc(galerias).stream()
+                        .collect(Collectors.groupingBy(i -> i.getMaterial().getId()));
+        return materiales.stream()
+                .map(m -> MaterialDtos.Item.from(m, porMaterial.getOrDefault(m.getId(), List.of())))
+                .toList();
     }
 
     private void escribirArchivo(Material m, MultipartFile archivo, String extension) {
@@ -180,7 +334,7 @@ public class MaterialService {
             Files.createDirectories(destino.getParent());
             byte[] bytes = archivo.getBytes();
             Files.write(destino, bytes);
-            generarMiniatura(m.getId(), extension, bytes);
+            generarMiniatura(rutaMiniatura(m.getId()), extension, bytes);
             m.asignarArchivo(nombreSeguro(archivo.getOriginalFilename(), extension), extension, archivo.getSize());
         } catch (IOException e) {
             throw new UncheckedIOException("No se pudo guardar el archivo", e);
@@ -225,7 +379,7 @@ public class MaterialService {
         }
     }
 
-    private void generarMiniatura(Long id, String extension, byte[] bytes) {
+    private void generarMiniatura(Path destino, String extension, byte[] bytes) {
         if (!extension.equals("jpg") && !extension.equals("png")) return;
         try {
             BufferedImage reducida = reducir(bytes);
@@ -237,7 +391,6 @@ public class MaterialService {
             g.fillRect(0, 0, plana.getWidth(), plana.getHeight());
             g.drawImage(reducida, 0, 0, null);
             g.dispose();
-            Path destino = rutaMiniatura(id);
             Files.createDirectories(destino.getParent());
             ImageIO.write(plana, "jpg", destino.toFile());
         } catch (IOException | RuntimeException e) {
@@ -283,8 +436,88 @@ public class MaterialService {
         return Path.of(uploadsPrivadosDir, "material", "material-" + id + "." + extension);
     }
 
+    Path rutaImagen(Long materialId, Long imagenId, String extension) {
+        return Path.of(uploadsPrivadosDir, "material", "galeria-" + materialId, "imagen-" + imagenId + "." + extension);
+    }
+
+    Path rutaMiniaturaImagen(Long materialId, Long imagenId) {
+        return Path.of(uploadsPrivadosDir, "material", "galeria-" + materialId, "imagen-" + imagenId + "-mini.jpg");
+    }
+
+    private Descarga leerImagen(MaterialImagen imagen) {
+        Long materialId = imagen.getMaterial().getId();
+        try {
+            byte[] bytes = Files.readAllBytes(rutaImagen(materialId, imagen.getId(), imagen.getExtension()));
+            return new Descarga(bytes, mediaTypeDe(imagen.getExtension()), imagen.getNombre());
+        } catch (IOException e) {
+            throw new ResourceNotFoundException("Imagen no encontrada");
+        }
+    }
+
+    /** Igual que la miniatura de un archivo suelto: la reducida si existe (JPG/PNG) y si no, la imagen completa. */
+    private Descarga leerMiniaturaImagen(MaterialImagen imagen) {
+        Path mini = rutaMiniaturaImagen(imagen.getMaterial().getId(), imagen.getId());
+        if (!Files.exists(mini)) return leerImagen(imagen);
+        try {
+            return new Descarga(Files.readAllBytes(mini), MediaType.IMAGE_JPEG, "miniatura.jpg");
+        } catch (IOException e) {
+            throw new ResourceNotFoundException("Imagen no encontrada");
+        }
+    }
+
+    private void borrarArchivoImagen(MaterialImagen imagen) {
+        Long materialId = imagen.getMaterial().getId();
+        try {
+            Files.deleteIfExists(rutaImagen(materialId, imagen.getId(), imagen.getExtension()));
+            Files.deleteIfExists(rutaMiniaturaImagen(materialId, imagen.getId()));
+        } catch (IOException e) {
+            throw new UncheckedIOException("No se pudo borrar la imagen", e);
+        }
+    }
+
+    private void borrarCarpetaGaleria(Long materialId) {
+        try {
+            Files.deleteIfExists(Path.of(uploadsPrivadosDir, "material", "galeria-" + materialId));
+        } catch (IOException e) {
+            // Si quedó algo dentro no se borra: no estorba y no vale la pena fallar la eliminación por eso.
+        }
+    }
+
+    /** Los archivos de la galería en orden, con nombres numerados (01-…, 02-…) para que no choquen dentro del ZIP. */
+    private Zip armarZip(Material m) {
+        List<MaterialImagen> imagenes = imagenRepository.findByMaterialIdOrderByOrdenAscIdAsc(m.getId());
+        if (imagenes.isEmpty()) throw new ResourceNotFoundException("Esta galería todavía no tiene imágenes");
+        List<EntradaZip> archivos = new ArrayList<>();
+        for (int i = 0; i < imagenes.size(); i++) {
+            MaterialImagen img = imagenes.get(i);
+            archivos.add(new EntradaZip(
+                    rutaImagen(m.getId(), img.getId(), img.getExtension()), String.format("%02d-%s", i + 1, img.getNombre())));
+        }
+        return new Zip(nombreSeguro(m.getTitulo(), "zip"), archivos);
+    }
+
     private Material obtenerEntidad(Long id) {
         return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Material no encontrado"));
+    }
+
+    private Material obtenerGaleria(Long id) {
+        Material m = obtenerEntidad(id);
+        if (m.getCategoria() != CategoriaMaterial.GALERIA) throw new ValidationException("Este material no es una galería");
+        return m;
+    }
+
+    /** La imagen, solo si es de esa galería (si no, se trata como inexistente). */
+    private MaterialImagen obtenerImagen(Long materialId, Long imagenId) {
+        return imagenRepository.findById(imagenId)
+                .filter(i -> i.getMaterial().getId().equals(materialId))
+                .orElseThrow(() -> new ResourceNotFoundException("Imagen no encontrada"));
+    }
+
+    private MaterialImagen obtenerImagenPublica(Long materialId, Long imagenId, String proyecto) {
+        exigirProyectoPublico(proyecto);
+        MaterialImagen imagen = obtenerImagen(materialId, imagenId);
+        if (!imagen.getMaterial().getProyecto().aplicaA(proyecto)) throw new ResourceNotFoundException("Imagen no encontrada");
+        return imagen;
     }
 
     private Usuario exigirAcceso() {
@@ -333,6 +566,20 @@ public class MaterialService {
             throw new UncheckedIOException("No se pudo leer el archivo", e);
         }
         return extensionPorFirma(b);
+    }
+
+    /** Solo JPG, PNG o WEBP (por firma): lo único que acepta una galería. */
+    static String extensionDeImagen(byte[] bytes) {
+        String extension;
+        try {
+            extension = extensionPorFirma(bytes);
+        } catch (ValidationException e) {
+            extension = null;
+        }
+        if (extension == null || !EXTENSIONES_IMAGEN.contains(extension)) {
+            throw new ValidationException("Solo se aceptan imágenes JPG, PNG o WEBP");
+        }
+        return extension;
     }
 
     static String extensionPorFirma(byte[] b) {

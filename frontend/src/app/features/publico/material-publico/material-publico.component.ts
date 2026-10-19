@@ -4,6 +4,7 @@ import { ActivatedRoute } from '@angular/router';
 import {
   CATEGORIAS_MATERIAL,
   CategoriaMaterial,
+  MaterialImagen,
   MaterialItem,
   etiquetaCategoria,
   tamanoLegible,
@@ -13,6 +14,7 @@ import { ToastService } from '../../../core/services/toast.service';
 import { WeFormsPublicoService } from '../../../core/services/we-forms-publico.service';
 import { descargarBlob } from '../../../core/utils/descargar-blob';
 import { DesarrolloLoaderComponent } from '../../../shared/desarrollo-loader/desarrollo-loader.component';
+import { MaterialGaleriaMosaicoComponent } from '../../../shared/material-galeria-mosaico/material-galeria-mosaico.component';
 import { MaterialMiniaturaComponent } from '../../../shared/material-miniatura/material-miniatura.component';
 import { MaterialVisorComponent } from '../../../shared/material-visor/material-visor.component';
 import { PinPublicoComponent } from '../../../shared/pin-publico/pin-publico.component';
@@ -24,7 +26,14 @@ import { ToastContainerComponent } from '../../../shared/toast-container/toast-c
 @Component({
   selector: 'app-material-publico',
   standalone: true,
-  imports: [PinPublicoComponent, DesarrolloLoaderComponent, MaterialMiniaturaComponent, MaterialVisorComponent, ToastContainerComponent],
+  imports: [
+    PinPublicoComponent,
+    DesarrolloLoaderComponent,
+    MaterialMiniaturaComponent,
+    MaterialGaleriaMosaicoComponent,
+    MaterialVisorComponent,
+    ToastContainerComponent,
+  ],
   templateUrl: './material-publico.component.html',
 })
 export class MaterialPublicoComponent {
@@ -49,6 +58,8 @@ export class MaterialPublicoComponent {
   readonly trabajando = signal<number | null>(null);
   /** Posición en la lista visible del material que se está viendo en el visor (null = visor cerrado). */
   readonly visorIndice = signal<number | null>(null);
+  /** En qué imagen empieza el visor si se abrió desde una celda del mosaico de una galería. */
+  readonly visorImagen = signal(0);
 
   readonly categoriasPresentes = computed(() =>
     CATEGORIAS_MATERIAL.filter((c) => (this.items() ?? []).some((m) => m.categoria === c.valor)),
@@ -59,6 +70,10 @@ export class MaterialPublicoComponent {
     this.service.archivoPublico(m.id, this.proyecto, this.weFormsPublico.pin() ?? '');
   readonly cargarMiniatura = (m: MaterialItem): Promise<Blob> =>
     this.service.miniaturaPublico(m.id, this.proyecto, this.weFormsPublico.pin() ?? '');
+  readonly cargarImagen = (m: MaterialItem, img: MaterialImagen): Promise<Blob> =>
+    this.service.imagenPublico(m.id, img.id, this.proyecto, this.weFormsPublico.pin() ?? '');
+  readonly cargarMiniaturaImagen = (m: MaterialItem, img: MaterialImagen): Promise<Blob> =>
+    this.service.miniaturaImagenPublico(m.id, img.id, this.proyecto, this.weFormsPublico.pin() ?? '');
 
   constructor() {
     const pin = this.weFormsPublico.pin();
@@ -90,9 +105,11 @@ export class MaterialPublicoComponent {
     }
   }
 
-  abrirVisor(m: MaterialItem): void {
+  abrirVisor(m: MaterialItem, imagen = 0): void {
     const i = this.visibles().findIndex((x) => x.id === m.id);
-    if (i >= 0) this.visorIndice.set(i);
+    if (i < 0) return;
+    this.visorImagen.set(imagen);
+    this.visorIndice.set(i);
   }
 
   async copiarTexto(m: MaterialItem): Promise<void> {
@@ -101,6 +118,27 @@ export class MaterialPublicoComponent {
       this.toast.success('Texto copiado.');
     } catch {
       this.toast.error('No se pudo copiar el texto.');
+    }
+  }
+
+  async descargarImagen(e: { item: MaterialItem; imagen: MaterialImagen }): Promise<void> {
+    try {
+      descargarBlob(await this.cargarImagen(e.item, e.imagen), e.imagen.nombre);
+    } catch {
+      this.toast.error('No se pudo descargar la imagen. Intenta de nuevo.');
+    }
+  }
+
+  /** Toda la galería en un ZIP (puede tardar: el botón dice "Descargando…" mientras tanto). */
+  async descargarGaleria(m: MaterialItem): Promise<void> {
+    if (this.trabajando() !== null) return;
+    this.trabajando.set(m.id);
+    try {
+      descargarBlob(await this.service.zipPublico(m.id, this.proyecto, this.weFormsPublico.pin() ?? ''), `${m.titulo}.zip`);
+    } catch {
+      this.toast.error('No se pudo descargar la galería. Intenta de nuevo.');
+    } finally {
+      this.trabajando.set(null);
     }
   }
 

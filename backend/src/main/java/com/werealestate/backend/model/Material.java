@@ -90,6 +90,11 @@ public class Material {
         this.fechaActualizacion = LocalDateTime.now();
     }
 
+    /** Marca el material como actualizado (p. ej. al cambiar las imágenes de su galería) para que suba en la lista. */
+    public void tocar() {
+        this.fechaActualizacion = LocalDateTime.now();
+    }
+
     public boolean tieneArchivo() {
         return archivoExtension != null;
     }

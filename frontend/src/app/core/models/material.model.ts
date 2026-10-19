@@ -1,4 +1,4 @@
-export type CategoriaMaterial = 'COPY' | 'FLYER' | 'BROCHURE' | 'VIDEO' | 'OTRO';
+export type CategoriaMaterial = 'COPY' | 'FLYER' | 'BROCHURE' | 'VIDEO' | 'OTRO' | 'GALERIA';
 export type ProyectoMaterial = 'SAMAI' | 'NANUU' | 'AMBOS';
 
 export const CATEGORIAS_MATERIAL: { valor: CategoriaMaterial; etiqueta: string }[] = [
@@ -7,6 +7,7 @@ export const CATEGORIAS_MATERIAL: { valor: CategoriaMaterial; etiqueta: string }
   { valor: 'BROCHURE', etiqueta: 'Brochure' },
   { valor: 'VIDEO', etiqueta: 'Video' },
   { valor: 'OTRO', etiqueta: 'Otro' },
+  { valor: 'GALERIA', etiqueta: 'Galería' },
 ];
 
 export const PROYECTOS_MATERIAL: { valor: ProyectoMaterial; etiqueta: string }[] = [
@@ -17,6 +18,18 @@ export const PROYECTOS_MATERIAL: { valor: ProyectoMaterial; etiqueta: string }[]
 
 /** Máximo por archivo; el servidor lo vuelve a validar. */
 export const MAX_ARCHIVO_MATERIAL_MB = 25;
+
+/** Galería: máximo por imagen y de imágenes (el servidor los vuelve a validar). */
+export const MAX_IMAGEN_GALERIA_MB = 10;
+export const MAX_IMAGENES_GALERIA = 25;
+
+/** Una imagen de una galería (material de categoría GALERIA). */
+export interface MaterialImagen {
+  id: number;
+  nombre: string;
+  extension: string;
+  tamano: number;
+}
 
 export interface MaterialItem {
   id: number;
@@ -29,6 +42,8 @@ export interface MaterialItem {
   archivoExtension: string | null;
   archivoTamano: number | null;
   fechaActualizacion: string;
+  /** Imágenes de la galería en orden (la primera es la portada); vacía si no es galería. */
+  imagenes: MaterialImagen[];
 }
 
 export function etiquetaCategoria(c: CategoriaMaterial): string {

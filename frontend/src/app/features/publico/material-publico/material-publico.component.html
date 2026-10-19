@@ -7,7 +7,7 @@
       <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 class="font-heading text-xl font-semibold text-ink sm:text-2xl">Material de venta · {{ nombreProyecto }}</h1>
-          <p class="mt-1 text-sm text-ink-muted">Copia los textos y descarga flyers, brochures y videos para vender.</p>
+          <p class="mt-1 text-sm text-ink-muted">Copia los textos y descarga flyers, brochures, videos y galerías de imágenes para vender.</p>
         </div>
         <div class="flex items-center gap-4 text-xs text-ink-muted">
           <a [href]="rutaPlano" class="underline underline-offset-2 hover:text-ink">Ir al plano</a>
@@ -42,7 +42,9 @@
               <!-- Copy: panel oscuro con el texto siempre visible. Archivo: miniatura con una franja fija abajo
                    (descripción o texto) que, con el mouse encima, se cambia por una capa con el contenido completo. -->
               <div class="relative">
-                @if (m.archivoExtension) {
+                @if (m.categoria === 'GALERIA') {
+                  <app-material-galeria-mosaico [item]="m" [cargarMiniatura]="cargarMiniaturaImagen" (abrir)="abrirVisor(m, $event)" />
+                } @else if (m.archivoExtension) {
                   <app-material-miniatura [item]="m" [cargar]="cargarMiniatura" [mostrarEtiqueta]="false" (abrir)="abrirVisor(m)" />
                   <div
                     aria-hidden="true"
@@ -91,11 +93,18 @@
                 <p class="mt-3 text-xs text-ink-muted">
                   Archivo: <span class="font-medium text-ink">{{ m.archivoNombre }}</span> · {{ tamanoLegible(m.archivoTamano) }}
                 </p>
+              } @else if (m.categoria === 'GALERIA') {
+                <p class="mt-3 text-xs text-ink-muted">{{ m.imagenes.length }} {{ m.imagenes.length === 1 ? 'imagen' : 'imágenes' }}</p>
               }
               <div class="mt-auto flex flex-wrap gap-2 pt-4">
                 <button type="button" (click)="abrirVisor(m)" data-testid="vista-previa" class="min-h-[44px] rounded-lg border border-border px-3.5 py-2 text-sm font-semibold text-ink hover:border-we-primary active:scale-[0.97] transition-transform duration-150">Vista previa</button>
                 @if (m.texto) {
                   <button type="button" (click)="copiarTexto(m)" class="min-h-[44px] rounded-lg border border-border px-3.5 py-2 text-sm font-semibold text-ink hover:border-we-primary active:scale-[0.97] transition-transform duration-150">Copiar texto</button>
+                }
+                @if (m.categoria === 'GALERIA' && m.imagenes.length > 0) {
+                  <button type="button" (click)="descargarGaleria(m)" [disabled]="trabajando() !== null" class="min-h-[44px] rounded-lg bg-we-primary px-3.5 py-2 text-sm font-semibold text-white hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150 disabled:opacity-60">
+                    {{ trabajando() === m.id ? 'Descargando…' : 'Descargar todas' }}
+                  </button>
                 }
                 @if (m.archivoExtension) {
                   <button type="button" (click)="descargar(m)" [disabled]="trabajando() !== null" class="min-h-[44px] rounded-lg bg-we-primary px-3.5 py-2 text-sm font-semibold text-white hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150 disabled:opacity-60">
@@ -113,9 +122,14 @@
       <app-material-visor
         [items]="visibles()"
         [indiceInicial]="visorIndice()!"
+        [imagenInicial]="visorImagen()"
         [cargar]="cargarArchivo"
+        [cargarImagen]="cargarImagen"
+        [cargarMiniaturaImagen]="cargarMiniaturaImagen"
         (cerrar)="visorIndice.set(null)"
         (descargar)="descargar($event)"
+        (descargarImagen)="descargarImagen($event)"
+        (descargarGaleria)="descargarGaleria($event)"
         (copiar)="copiarTexto($event)"
       />
     }

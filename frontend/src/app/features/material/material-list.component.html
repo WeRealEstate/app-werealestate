@@ -3,7 +3,7 @@
     <div>
       <h1 class="font-heading text-2xl font-semibold text-ink">Material</h1>
       <p class="mt-1 text-sm text-ink-muted">
-        Copys, flyers, brochures y videos para vender. Los asesores lo consultan con su PIN desde el botón "Material" del plano público de su desarrollo.
+        Copys, flyers, brochures, videos y galerías de imágenes para vender. Los asesores lo consultan con su PIN desde el botón "Material" del plano público de su desarrollo.
       </p>
     </div>
     <button
@@ -75,7 +75,11 @@
             [attr.aria-label]="'Vista previa de ' + m.titulo"
             class="absolute inset-0 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50"
           ></button>
-          @if (m.archivoExtension) {
+          @if (m.categoria === 'GALERIA') {
+            <div class="mb-3">
+              <app-material-galeria-mosaico [item]="m" [cargarMiniatura]="cargarMiniaturaImagen" (abrir)="abrirVisor(m, $event)" />
+            </div>
+          } @else if (m.archivoExtension) {
             <div class="mb-3">
               <app-material-miniatura [item]="m" [cargar]="cargarMiniatura" (abrir)="abrirVisor(m)" />
             </div>
@@ -107,6 +111,12 @@
                     Descargar
                   </button>
                 }
+                @if (m.categoria === 'GALERIA' && m.imagenes.length > 0) {
+                  <button cdkMenuItem type="button" (cdkMenuItemTriggered)="descargarGaleria(m)" class="menu-item">
+                    <svg lucideDownload [size]="16" aria-hidden="true"></svg>
+                    Descargar todas ({{ m.imagenes.length }})
+                  </button>
+                }
                 <button cdkMenuItem type="button" (cdkMenuItemTriggered)="abrirEditar(m)" data-testid="editar-material" class="menu-item">
                   <svg lucidePencil [size]="16" aria-hidden="true"></svg>
                   Editar
@@ -130,6 +140,10 @@
             <p class="mt-3 text-xs text-ink-muted">
               Archivo: <span class="font-medium text-ink">{{ m.archivoNombre }}</span> · {{ tamanoLegible(m.archivoTamano) }}
             </p>
+          } @else if (m.categoria === 'GALERIA') {
+            <p class="mt-3 text-xs text-ink-muted">
+              {{ m.imagenes.length }} {{ m.imagenes.length === 1 ? 'imagen' : 'imágenes' }} · {{ pesoGaleria(m) }}
+            </p>
           }
         </div>
       }
@@ -137,7 +151,7 @@
   }
 
   @if (mostrarForm()) {
-    <button type="button" (click)="mostrarForm.set(false)" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
+    <button type="button" (click)="cerrarForm()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
     <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="material-form-titulo">
       <form (submit)="$event.preventDefault(); guardar()" class="modal-panel-enter max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5 shadow-lg">
         <h2 id="material-form-titulo" class="font-heading text-lg font-semibold text-ink">{{ editandoId() == null ? 'Nuevo material' : 'Editar material' }}</h2>
@@ -174,10 +188,93 @@
               class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"></textarea>
           </div>
           <div>
-            <label for="mat-texto" class="mb-1 block text-xs font-medium text-ink-muted">Texto / copy (opcional si subes un archivo)</label>
+            <label for="mat-texto" class="mb-1 block text-xs font-medium text-ink-muted">
+              {{ esGaleria() ? 'Texto / copy (opcional)' : 'Texto / copy (opcional si subes un archivo)' }}
+            </label>
             <textarea id="mat-texto" name="texto" rows="5" maxlength="5000" [ngModel]="texto()" (ngModelChange)="texto.set($event)" placeholder="El asesor lo copiará con un botón."
               class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"></textarea>
           </div>
+          @if (esGaleria()) {
+          <!-- Galería: varias imágenes; se arrastran para ordenar y la primera es la portada. Se suben al guardar. -->
+          <div>
+            <div class="mb-1 flex items-baseline justify-between gap-2">
+              <span class="block text-xs font-medium text-ink-muted">Imágenes *</span>
+              <span class="text-xs tabular-nums text-ink-muted">{{ galeria().length }} de {{ maxImagenes }}</span>
+            </div>
+            @if (archivoActual(); as actual) {
+              <p class="mb-2 text-xs text-amber-700 dark:text-amber-300">
+                Al guardar como galería se quitará el archivo actual ({{ actual.archivoNombre }}).
+              </p>
+            }
+            <div
+              cdkDropList
+              cdkDropListOrientation="mixed"
+              (cdkDropListDropped)="soltar($event)"
+              class="grid grid-cols-3 gap-2 sm:grid-cols-4"
+              data-testid="galeria-form"
+            >
+              @for (e of galeria(); track e.clave; let i = $index) {
+                <div
+                  cdkDrag
+                  [cdkDragDisabled]="guardando()"
+                  class="relative aspect-square cursor-grab overflow-hidden rounded-lg border bg-surface-2 active:cursor-grabbing"
+                  [class.border-border]="e.estado !== 'error'"
+                  [class.border-red-500]="e.estado === 'error'"
+                >
+                  @if (e.vista) {
+                    <img [src]="e.vista" [alt]="e.archivo?.name ?? ''" class="h-full w-full object-cover" draggable="false" />
+                  } @else if (e.existente) {
+                    <app-imagen-diferida [cargar]="miniaturaDe(e.existente)" [alt]="e.existente.nombre" />
+                  }
+                  @if (i === 0) {
+                    <span class="pointer-events-none absolute bottom-1 left-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-white">Portada</span>
+                  }
+                  @if (e.estado === 'subiendo') {
+                    <div class="absolute inset-x-1.5 bottom-1.5 h-1.5 overflow-hidden rounded-full bg-black/40" role="progressbar" [attr.aria-valuenow]="e.progreso" aria-valuemin="0" aria-valuemax="100">
+                      <div class="h-full rounded-full bg-white transition-[width] duration-150" [style.width.%]="e.progreso"></div>
+                    </div>
+                  }
+                  @if (e.estado === 'error') {
+                    <span class="absolute inset-x-0 bottom-0 bg-red-600/90 px-1.5 py-1 text-[10px] font-semibold leading-tight text-white" [title]="e.error ?? ''">
+                      {{ e.error }}
+                    </span>
+                  }
+                  <button
+                    type="button"
+                    (click)="quitarDeGaleria(e)"
+                    [disabled]="guardando()"
+                    [attr.aria-label]="'Quitar imagen ' + (i + 1)"
+                    class="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 disabled:opacity-50"
+                  >
+                    <svg lucideX [size]="14" aria-hidden="true"></svg>
+                  </button>
+                </div>
+              }
+              @if (galeria().length < maxImagenes) {
+                <label
+                  class="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border text-ink-muted transition-colors hover:border-we-primary hover:text-ink"
+                  [class.pointer-events-none]="guardando()"
+                  [class.opacity-50]="guardando()"
+                >
+                  <svg lucidePlus [size]="20" aria-hidden="true"></svg>
+                  <span class="text-xs font-semibold">Agregar</span>
+                  <input
+                    type="file"
+                    multiple
+                    accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                    class="sr-only"
+                    (change)="elegirImagenes($event)"
+                    [disabled]="guardando()"
+                    data-testid="galeria-agregar"
+                  />
+                </label>
+              }
+            </div>
+            <p class="mt-1 text-xs text-ink-muted">
+              JPG, PNG o WEBP de hasta {{ maxImagenMb }} MB cada una. Arrastra para cambiar el orden; la primera es la portada.
+            </p>
+          </div>
+          } @else {
           <div>
             <label for="mat-archivo" class="mb-1 block text-xs font-medium text-ink-muted">Archivo (opcional si escribes un texto)</label>
             @if (archivoActual(); as actual) {
@@ -194,15 +291,16 @@
               class="block w-full text-sm text-ink file:mr-3 file:rounded-lg file:border-0 file:bg-we-primary file:px-3.5 file:py-2 file:text-sm file:font-semibold file:text-white" />
             <p class="mt-1 text-xs text-ink-muted">JPG, PNG, WEBP, PDF o MP4, de hasta {{ maxMb }} MB.</p>
           </div>
+          }
         </div>
 
         @if (errorForm()) {
           <p class="mt-3 text-sm text-red-600 dark:text-red-400">{{ errorForm() }}</p>
         }
         <div class="mt-5 flex justify-end gap-2.5">
-          <button type="button" (click)="mostrarForm.set(false)" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cancelar</button>
+          <button type="button" (click)="cerrarForm()" [disabled]="guardando()" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary disabled:opacity-60">Cancelar</button>
           <button type="submit" [disabled]="guardando()" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
-            {{ guardando() ? 'Guardando…' : 'Guardar' }}
+            {{ guardando() ? (progresoGuardado() ?? 'Guardando…') : 'Guardar' }}
           </button>
         </div>
       </form>
@@ -213,9 +311,14 @@
     <app-material-visor
       [items]="visibles()"
       [indiceInicial]="visorIndice()!"
+      [imagenInicial]="visorImagen()"
       [cargar]="cargarArchivo"
+      [cargarImagen]="cargarImagen"
+      [cargarMiniaturaImagen]="cargarMiniaturaImagen"
       (cerrar)="visorIndice.set(null)"
       (descargar)="descargar($event)"
+      (descargarImagen)="descargarImagen($event)"
+      (descargarGaleria)="descargarGaleria($event)"
       (copiar)="copiarTexto($event)"
     />
   }
