@@ -128,7 +128,7 @@
 
       <!-- Zona de botones, abajo a la izquierda y apilados de arriba abajo. Sin asesor verificado solo está
            el candado "Asesor" (pide el nombre de un asesor registrado). Ya verificado: nombre con "salir",
-           Descargar PDF, Registrar venta y, al final, la selección de varios lotes (con lotes elegidos
+           Descargar plano, Registrar venta y, al final, la selección de varios lotes (con lotes elegidos
            aparece "Apartar N"). -->
       <div
         class="plano-ui absolute bottom-[calc(max(0.75rem,env(safe-area-inset-bottom))+3.5rem)] left-[max(0.75rem,env(safe-area-inset-left))] flex max-w-[calc(100%-1.5rem)] flex-col items-start gap-2.5 sm:bottom-[max(0.75rem,env(safe-area-inset-bottom))] sm:max-w-[calc(100%-9rem)]"
@@ -155,7 +155,7 @@
             class="plano-btn"
             style="--e: 1"
           >
-            {{ generandoPdf() ? 'Generando PDF…' : 'Descargar PDF' }}
+            {{ generandoPdf() ? 'Generando plano…' : 'Descargar plano' }}
           </button>
           <!-- Material de venta: página aparte (grid), en otra pestaña para no perder el plano. -->
           <a

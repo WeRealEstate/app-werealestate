@@ -76,6 +76,50 @@ function guardarAsesor(proyecto: string, nombre: string | null): void {
   }
 }
 
+/** Desarrollos a los que el PIN recordado NO tiene acceso (proyecto → { pin, hasta }). Evita volver a preguntarle
+ * al servidor en cada visita: cada respuesta "sin acceso" cuenta como intento fallido del PIN en esa IP (ver
+ * AsesorPublicoController), y con 5 se bloquea por 10 minutos a todos los que entran desde ahí. Caduca en unas
+ * horas por si administración le da acceso después; escribir el PIN a mano con el botón "Asesor" también lo borra. */
+const CLAVE_SIN_ACCESO = 'plano-publico-sin-acceso';
+const DURACION_SIN_ACCESO_MS = 12 * 60 * 60 * 1000;
+
+function leerSinAcceso(): Record<string, { pin: string; hasta: number }> {
+  try {
+    return JSON.parse(localStorage.getItem(CLAVE_SIN_ACCESO) ?? '{}');
+  } catch {
+    return {};
+  }
+}
+
+function sinAccesoReciente(pin: string, proyecto: string): boolean {
+  const marca = leerSinAcceso()[proyecto];
+  return !!marca && marca.pin === pin && marca.hasta > Date.now();
+}
+
+function marcarSinAcceso(pin: string, proyecto: string): void {
+  try {
+    const marcas = leerSinAcceso();
+    marcas[proyecto] = { pin, hasta: Date.now() + DURACION_SIN_ACCESO_MS };
+    localStorage.setItem(CLAVE_SIN_ACCESO, JSON.stringify(marcas));
+  } catch {
+    // Sin almacenamiento: se vuelve a preguntar en la siguiente visita.
+  }
+}
+
+function olvidarSinAcceso(proyecto?: string): void {
+  try {
+    if (!proyecto) {
+      localStorage.removeItem(CLAVE_SIN_ACCESO);
+      return;
+    }
+    const marcas = leerSinAcceso();
+    delete marcas[proyecto];
+    localStorage.setItem(CLAVE_SIN_ACCESO, JSON.stringify(marcas));
+  } catch {
+    // nada que borrar
+  }
+}
+
 /** Plano interactivo público, en pantalla completa y sin sesión — para compartir el link de un
  * desarrollo directamente (/samai, /aldea-nanuu, ver app.routes.ts). Mismas restricciones que
  * /cotizador-publico/lotes: cualquiera puede ver el estado de cada lote y apartar uno disponible
@@ -265,8 +309,9 @@ export class PlanoPublicoComponent implements OnDestroy {
   // de asesor y de cliente (nota opcional) porque no hay una sesión real detrás de este apartado.
   readonly mostrarApartar = signal(false);
 
-  // Candado: sin un asesor verificado no se muestran los botones de cotizar ni apartar. Se recuerda
-  // solo mientras dure la pestaña (sessionStorage), nunca de forma permanente.
+  // Candado: sin un asesor verificado no se muestran los botones de cotizar ni apartar. El nombre se recuerda en la
+  // pestaña (sessionStorage) y el PIN en el dispositivo (WeFormsPublicoService, hasta que toque "salir"): con él,
+  // al abrir cualquier plano se verifica solo contra ese desarrollo (ver entrarConPinGuardado).
   readonly asesorVerificado = signal<string | null>(leerAsesorGuardado(this.proyecto));
   readonly mostrarAcceso = signal(false);
   /** PIN del botón Asesor: un carácter por casilla. */
@@ -325,6 +370,26 @@ export class PlanoPublicoComponent implements OnDestroy {
     this.escucharVisualViewport();
     this.cargar();
     this.iniciarAvisoRotar();
+    void this.entrarConPinGuardado();
+  }
+
+  /** Si este dispositivo ya recuerda el PIN de un asesor (lo guardan el plano, We Forms y Material), se verifica
+   * contra este desarrollo sin pedírselo: quien tiene acceso aparece ya con su sesión (p. ej. entró en Samai y
+   * ahora abre Aldea Nanuu) y quien no, solo ve el botón "Asesor", como cualquier visitante. */
+  private async entrarConPinGuardado(): Promise<void> {
+    const pin = this.weFormsPublico.pin();
+    if (this.asesorVerificado() || !pin || sinAccesoReciente(pin, this.proyecto)) return;
+    try {
+      const nombre = await this.lotesService.verificarAsesorPublico(pin, this.proyecto);
+      // Si mientras tanto alguien entró o salió a mano, eso manda.
+      if (this.weFormsPublico.pin() !== pin || this.asesorVerificado()) return;
+      this.asesorVerificado.set(nombre);
+      guardarAsesor(this.proyecto, nombre);
+    } catch (e) {
+      const estado = e instanceof HttpErrorResponse ? e.status : 0;
+      if (estado === 404) this.weFormsPublico.guardarPin(null); // ese PIN ya no existe: no se vuelve a probar
+      else if (estado === 403) marcarSinAcceso(pin, this.proyecto); // sin acceso a este desarrollo o contrato vencido
+    }
   }
 
   /** En Android la barra de URL aparece y desaparece cambiando el área visible sin que siempre se
@@ -485,6 +550,7 @@ export class PlanoPublicoComponent implements OnDestroy {
       const registrado = await this.lotesService.verificarAsesorPublico(nombre, this.proyecto);
       this.asesorVerificado.set(registrado);
       guardarAsesor(this.proyecto, registrado);
+      olvidarSinAcceso(this.proyecto);
       // El mismo PIN sirve en el registro de venta de We Forms: se recuerda para no pedirlo otra vez.
       this.weFormsPublico.guardarPin(nombre);
       this.mostrarAcceso.set(false);
@@ -505,9 +571,12 @@ export class PlanoPublicoComponent implements OnDestroy {
     }
   }
 
+  /** "salir": olvida al asesor en este dispositivo, en ambos planos (y en We Forms y Material, que usan el mismo PIN). */
   cerrarSesionAsesor(): void {
     this.asesorVerificado.set(null);
-    guardarAsesor(this.proyecto, null);
+    guardarAsesor('samai', null);
+    guardarAsesor('nanuu', null);
+    olvidarSinAcceso();
     this.weFormsPublico.guardarPin(null);
     this.mostrarApartar.set(false);
   }
@@ -540,7 +609,7 @@ export class PlanoPublicoComponent implements OnDestroy {
         })),
       });
     } catch {
-      this.toast.error('No se pudo generar el PDF del plano.');
+      this.toast.error('No se pudo generar el plano. Intenta de nuevo.');
     } finally {
       this.generandoPdf.set(false);
     }
