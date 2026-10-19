@@ -19,7 +19,6 @@ export const CHANGELOG: EntradaVersion[] = [
   // es solo para admin y administración.
   { version: '10.0.1', fecha: '2026-10-19', cambios: [
     "Inicio del admin y Lotes: ajustes en cómo se cuenta y se filtra el inventario para administración.",
-    "El panel usa el logo principal de We (W azul y 'e' azul claro) en el menú lateral y en la barra del celular; en modo oscuro, el mismo logo en blanco.",
   ] },
   { version: '10.0.0', fecha: '2026-10-19', cambios: [
     "Nuevo estilo visual inspirado en Apple en toda la app: letra Inter, fondos gris claro con tarjetas blancas (y el azul marino de We en modo oscuro), el azul We como color de acción, y selección de texto y barras de desplazamiento con los colores de la marca.",
