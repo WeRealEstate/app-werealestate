@@ -1,6 +1,8 @@
 /* You can add global styles to this file, and also import other style files */
 
 @import 'tailwindcss';
+/* Posicionamiento de los menús desplegables (@angular/cdk/menu, ver .menu-panel más abajo). */
+@import '@angular/cdk/overlay-prebuilt.css';
 
 /* Habilita el modo oscuro por clase (.dark en <html>), no solo por preferencia del sistema. */
 @custom-variant dark (&:where(.dark, .dark *));
@@ -25,44 +27,48 @@
   --color-ink: var(--ink);
   --color-ink-muted: var(--ink-muted);
 
-  --font-heading: 'Lexend', 'Segoe UI', ui-sans-serif, system-ui, sans-serif;
-  --font-body: 'Source Sans 3', 'Segoe UI', ui-sans-serif, system-ui, sans-serif;
+  /* Inter (con tamaño óptico: en títulos grandes usa su corte "display") — el mismo espíritu que la
+     SF Pro de Apple, pero idéntica en iPhone, Android y Windows. */
+  --font-heading: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 }
 
-/* ---- Tema claro (por defecto) — inspirado en "SaaS Analytics Dashboard" ---- */
+/* ---- Tema claro (por defecto) — grises de Apple: el lienzo gris muy claro hace que las tarjetas
+   blancas floten sin necesidad de bordes marcados; el azul We queda como único color de acción. ---- */
 :root {
-  --canvas: #ffffff;
+  --canvas: #f5f5f7;
   --surface: #ffffff;
-  --surface-2: #f8fafc;
-  --border: #e2e8f0;
-  --ink: #0b132b;
-  --ink-muted: #64748b;
+  --surface-2: #f5f5f7;
+  --border: #e3e3e8;
+  --ink: #1d1d1f;
+  --ink-muted: #6e6e73;
 }
 
-/* ---- Tema oscuro — inspirado en "Fintech Crypto Dashboard" ---- */
+/* ---- Tema oscuro — azul marino de We: el fondo es el mismo #0b132b de la marca y las tarjetas suben un
+   tono del mismo azul, para que todo combine con el menú lateral en vez de verse negro y gris. ---- */
 .dark {
-  --canvas: #0f172a;
-  --surface: #1b2336;
-  --surface-2: #242c40;
-  --border: #334155;
-  --ink: #f8fafc;
-  --ink-muted: #94a3b8;
+  --canvas: #0b132b;
+  --surface: #131d3b;
+  --surface-2: #1b2749;
+  --border: #28355c;
+  --ink: #f5f5f7;
+  --ink-muted: #a3acc2;
 }
 
 /* ---- Barra lateral del panel: se adapta al tema (tokens usados con text-[var(--sb-…)]) ---- */
 :root {
-  --sb-bg: #f7f9ff;
-  --sb-border: #e2e8f0;
-  --sb-fg: #0b132b;
-  --sb-fg-dim: #475569;
-  --sb-muted: #64748b;
-  --sb-hover: #eef3ff;
-  --sb-active: #e3eaff;
+  --sb-bg: rgba(251, 251, 253, 0.94);
+  --sb-border: #e3e3e8;
+  --sb-fg: #1d1d1f;
+  --sb-fg-dim: #424245;
+  --sb-muted: #6e6e73;
+  --sb-hover: rgba(0, 0, 0, 0.045);
+  --sb-active: rgba(36, 63, 184, 0.1);
   --sb-active-fg: #243fb8;
   --sb-ring: rgba(36, 63, 184, 0.4);
-  --sb-chip: #eef3ff;
-  --sb-chip-border: #c7d4f5;
-  --sb-line: #cbd5e1;
+  --sb-chip: rgba(36, 63, 184, 0.08);
+  --sb-chip-border: rgba(36, 63, 184, 0.2);
+  --sb-line: #d2d2d7;
   --sb-line-hover: #243fb8;
 }
 .dark {
@@ -127,6 +133,50 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
 }
 
+/* ---- Acabado tipo Apple: texto nítido, títulos con tracking cerrado, cifras de tablas alineadas y las
+   superficies del navegador (selección, cursor, scroll) teñidas con la marca en vez de los grises por
+   defecto. En @layer base para que cualquier utilidad (tracking-wide, etc.) siga ganando. ---- */
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    caret-color: var(--color-we-primary);
+    accent-color: var(--color-we-primary);
+  }
+  html.dark {
+    caret-color: var(--color-we-blue-light);
+    accent-color: var(--color-we-blue-light);
+  }
+  h1, h2, h3 {
+    letter-spacing: -0.021em;
+  }
+  td, th {
+    font-variant-numeric: tabular-nums;
+  }
+  ::selection {
+    background: rgba(36, 63, 184, 0.18);
+  }
+  .dark ::selection {
+    background: rgba(129, 179, 240, 0.32);
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(60, 60, 67, 0.28) transparent;
+  }
+  .dark * {
+    scrollbar-color: rgba(235, 235, 245, 0.25) transparent;
+  }
+}
+
+/* Anillo de foco solo con teclado (como en macOS/iOS): al hacer clic con el mouse en un botón o enlace
+   no queda el contorno azul pegado. Los campos de texto lo siguen mostrando siempre. Sin @layer a
+   propósito: tiene que ganarle a las utilidades focus:ring-* que ya traen cientos de botones. */
+:where(button, a, [role='button'], summary):focus:not(:focus-visible) {
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-ring-offset-shadow: 0 0 #0000;
+}
+
 /* Keep record actions beside their data on narrow screens. */
 @media (max-width: 639px) {
   .mobile-records,
@@ -170,6 +220,14 @@ h1, h2, h3, h4, h5, h6 {
   .mobile-records td[data-label='Estado'],
   .mobile-records td[data-label='Acciones'] {
     grid-column: 1 / -1;
+  }
+
+  /* Filas de detalle desplegado (una sola celda con colspan): ocupan todo el ancho y sin etiqueta. */
+  .mobile-records td[colspan] {
+    grid-column: 1 / -1;
+  }
+  .mobile-records td[colspan]::before {
+    display: none;
   }
 
   .mobile-records :is(button, a, select) {
@@ -244,6 +302,145 @@ select.rounded-full:not([multiple]):not([size]) {
 }
 .page-enter {
   animation: page-enter 320ms var(--ease-brand-out) both;
+}
+
+/* Transición entre pantallas (View Transitions, ver withViewTransitions en app.config.ts): la pantalla
+   vieja y la nueva se funden en un solo cuadro, como al navegar en iOS. Misma duración y curva para
+   ambas a propósito: así lo que no cambia (sidebar, encabezado) se queda quieto en vez de parpadear.
+   Donde el navegador la soporta, el fundido propio de .page-enter se apaga para no sumar dos. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 240ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+@supports (view-transition-name: none) {
+  .page-enter {
+    animation: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+}
+
+/* Entrada de la tarjeta del login: se enfoca desde un leve desenfoque, como una ventana de macOS al
+   abrirse. Propia (no .page-enter) porque es la primera carga y no pasa por la transición de pantallas. */
+@keyframes login-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+    filter: blur(6px);
+  }
+}
+.login-enter {
+  animation: login-enter 700ms cubic-bezier(0.16, 1, 0.3, 1) 150ms both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .login-enter {
+    animation: page-enter 300ms ease-out both;
+  }
+}
+
+/* Barras del inicio del admin (inventario por estado y avance de cobranza): se dibujan de izquierda a
+   derecha al cargar, como las gráficas de Salud de Apple. Recorte (clip-path) en vez de ancho para no
+   recalcular el layout; con "reducir movimiento" aparecen ya completas. */
+@keyframes barra-revela {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+.barra-inventario,
+.barra-avance {
+  animation: barra-revela 900ms cubic-bezier(0.16, 1, 0.3, 1) 150ms both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .barra-inventario,
+  .barra-avance {
+    animation: none;
+  }
+}
+
+/* Barra fija de las páginas públicas cuando el contenido pasa por debajo: vidrio esmerilado como la
+   barra de apple.com (el fondo se adivina detrás pero el texto siempre se lee). */
+.barra-vidrio {
+  background-color: color-mix(in srgb, var(--surface) 72%, transparent);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-color: color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+/* Menús desplegables ("Más", "⋯"): panel blanco con sombra suave que nace desde el botón que lo abrió,
+   como los menús de macOS. Viven en el overlay del CDK (fuera del componente), por eso son globales. */
+@layer components {
+  .menu-panel {
+    min-width: 13rem;
+    padding: 0.375rem;
+    border-radius: 0.875rem;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    box-shadow: 0 14px 34px -10px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.05);
+    transform-origin: top right;
+    animation: menu-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .menu-item {
+    display: flex;
+    width: 100%;
+    min-height: 40px;
+    align-items: center;
+    gap: 0.625rem;
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 120ms ease;
+  }
+  .menu-item:hover,
+  .menu-item:focus-visible,
+  .menu-item.cdk-menu-item:focus {
+    background: var(--surface-2);
+    outline: none;
+  }
+  .menu-item svg {
+    flex-shrink: 0;
+    color: var(--ink-muted);
+  }
+  .menu-item-peligro,
+  .menu-item-peligro svg {
+    color: #d70015;
+  }
+  .dark .menu-item-peligro,
+  .dark .menu-item-peligro svg {
+    color: #ff6961;
+  }
+  .menu-separador {
+    height: 1px;
+    margin: 0.25rem 0.5rem;
+    background: var(--border);
+  }
+}
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .menu-panel {
+    animation-name: menu-fade;
+  }
+}
+@keyframes menu-fade {
+  from {
+    opacity: 0;
+  }
 }
 
 /* Stagger: para tarjetas/filas que aparecen juntas al cargar una lista.
@@ -570,35 +767,30 @@ select.rounded-full:not([multiple]):not([size]) {
 .plano-fade-in { animation: plano-fade-in 0.8s ease-out 1.5s forwards; }
 
 /* Botones del plano público (asesor, PDF, registrar venta, seleccionar varios): azul de la marca sólido con
-   borde claro para que se vean como botones sobre el plano blanco. Al pasar el mouse suben y un destello
-   los cruza; entran escalonados con --e (0, 1, 2…). */
+   borde claro para que se vean como botones sobre el plano blanco. Al pasar el mouse solo se aclaran y
+   suben apenas (sin destellos ni halos de color, para que se sientan de la misma familia que el panel);
+   entran escalonados con --e (0, 1, 2…). */
 .plano-btn {
-  position: relative; overflow: hidden; display: inline-flex; align-items: center; justify-content: center;
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
   padding: 0.875rem 1.25rem; border-radius: 0.75rem; border: 1px solid rgba(255, 255, 255, 0.55);
   background: var(--color-we-primary); color: #fff; font-size: 1rem; font-weight: 600; line-height: 1.25rem;
   text-decoration: none; cursor: pointer;
   box-shadow: 0 4px 12px -2px rgba(11, 19, 43, 0.5);
   transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
-  animation: plano-btn-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: plano-btn-in 0.4s cubic-bezier(0.23, 1, 0.32, 1) both;
   animation-delay: calc(var(--e, 0) * 80ms);
 }
-.plano-btn::after {
-  content: ''; position: absolute; inset: 0; pointer-events: none;
-  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.45) 50%, transparent 65%);
-  transform: translateX(-120%);
-}
 .plano-btn:hover:not(:disabled) {
-  transform: translateY(-3px); background: #2f50d9;
-  box-shadow: 0 10px 20px -4px rgba(36, 63, 184, 0.65);
+  transform: translateY(-1px); background: #2f50d9;
+  box-shadow: 0 6px 14px -3px rgba(11, 19, 43, 0.55);
 }
-.plano-btn:hover:not(:disabled)::after { transform: translateX(120%); transition: transform 0.6s ease; }
 .plano-btn:active:not(:disabled) { transform: translateY(0) scale(0.97); box-shadow: 0 2px 6px -2px rgba(11, 19, 43, 0.5); }
 .plano-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 .plano-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .plano-btn-peligro { background: #b42318; }
-.plano-btn-peligro:hover:not(:disabled) { background: #d12b1d; box-shadow: 0 10px 20px -4px rgba(180, 35, 24, 0.65); }
+.plano-btn-peligro:hover:not(:disabled) { background: #d12b1d; }
 .plano-btn-ok { background: #15803d; }
-.plano-btn-ok:hover:not(:disabled) { background: #19964a; box-shadow: 0 10px 20px -4px rgba(21, 128, 61, 0.65); }
+.plano-btn-ok:hover:not(:disabled) { background: #19964a; }
 .plano-btn-info {
   display: inline-flex; align-items: center; padding: 0.875rem 1rem; border-radius: 0.75rem;
   background: rgba(255, 255, 255, 0.95); color: var(--color-we-dark); font-size: 1rem; font-weight: 500;
@@ -617,12 +809,11 @@ select.rounded-full:not([multiple]):not([size]) {
   .mat-card-in { animation: none; }
 }
 @keyframes plano-btn-in {
-  0% { opacity: 0; transform: translateY(10px) scale(0.92); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 @media (prefers-reduced-motion: reduce) {
   .plano-btn { animation: none; transition: none; }
-  .plano-btn::after { display: none; }
   .plano-btn:hover:not(:disabled) { transform: none; }
 }
 @media (prefers-reduced-motion: reduce) {

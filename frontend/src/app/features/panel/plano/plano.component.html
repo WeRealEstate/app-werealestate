@@ -466,10 +466,7 @@
           @if (lote.sinVentaRegistrada) {
             <p class="mt-1.5 flex items-center gap-1.5 text-xs text-ink-muted">
               <span class="h-2 w-2 shrink-0 rounded-full bg-red-500" aria-hidden="true"></span>
-              Vendido sin venta registrada en el sistema
-              @if (puedeVerInfoLote()) {
-                — usa "Ver información" para registrarla
-              }
+              <span>Vendido sin venta registrada en el sistema.@if (puedeVerInfoLote()) { Usa "Ver información" para registrarla.}</span>
             </p>
           }
           @if (lote.estado === 'APARTADO_A_PLAZO' && lote.fechaExpiraApartado) {

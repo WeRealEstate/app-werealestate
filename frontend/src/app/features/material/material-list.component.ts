@@ -1,6 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
+import { CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
 import { FormsModule } from '@angular/forms';
+import { LucideCopy, LucideDownload, LucideEllipsis, LucidePencil, LucideTrash2 } from '@lucide/angular';
 import {
   CATEGORIAS_MATERIAL,
   CategoriaMaterial,
@@ -18,6 +20,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { descargarBlob } from '../../core/utils/descargar-blob';
 import { MaterialMiniaturaComponent } from '../../shared/material-miniatura/material-miniatura.component';
 import { MaterialVisorComponent } from '../../shared/material-visor/material-visor.component';
+import { POSICION_MENU_DERECHA } from '../../shared/menu/posicion-menu';
 import { WeLoaderComponent } from '../../shared/we-loader/we-loader.component';
 
 /** Material de venta (módulo Material): administración sube copys, flyers, brochures y videos que los asesores
@@ -25,10 +28,24 @@ import { WeLoaderComponent } from '../../shared/we-loader/we-loader.component';
 @Component({
   selector: 'app-material-list',
   standalone: true,
-  imports: [FormsModule, WeLoaderComponent, MaterialMiniaturaComponent, MaterialVisorComponent],
+  imports: [
+    FormsModule,
+    WeLoaderComponent,
+    MaterialMiniaturaComponent,
+    MaterialVisorComponent,
+    CdkMenu,
+    CdkMenuItem,
+    CdkMenuTrigger,
+    LucideCopy,
+    LucideDownload,
+    LucideEllipsis,
+    LucidePencil,
+    LucideTrash2,
+  ],
   templateUrl: './material-list.component.html',
 })
 export class MaterialListComponent {
+  readonly posicionMenu = POSICION_MENU_DERECHA;
   private readonly service = inject(MaterialService);
   private readonly toast = inject(ToastService);
   private readonly confirmService = inject(ConfirmService);

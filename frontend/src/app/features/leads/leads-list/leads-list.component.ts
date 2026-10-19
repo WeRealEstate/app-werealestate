@@ -1,5 +1,14 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { LucideArchive, LucideEye } from '@lucide/angular';
+import { CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
+import {
+  LucideArchive,
+  LucideChevronDown,
+  LucideDownload,
+  LucideEye,
+  LucideFileDown,
+  LucideFileSpreadsheet,
+  LucideUpload,
+} from '@lucide/angular';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
@@ -7,6 +16,7 @@ import { UsuariosService } from '../../../core/services/usuarios.service';
 import { descargarCsv } from '../../../core/utils/csv';
 import { descargarExcel } from '../../../core/utils/excel';
 import { generarPlantillaLeads } from '../../../core/utils/plantilla-leads';
+import { POSICION_MENU_DERECHA } from '../../../shared/menu/posicion-menu';
 import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 import {
   ESTADO_LEAD_LABELS,
@@ -38,10 +48,24 @@ const DEBOUNCE_BUSQUEDA_MS = 350;
 @Component({
   selector: 'app-leads-list',
   standalone: true,
-  imports: [WeLoaderComponent, RouterLink, LucideArchive, LucideEye],
+  imports: [
+    WeLoaderComponent,
+    RouterLink,
+    CdkMenu,
+    CdkMenuItem,
+    CdkMenuTrigger,
+    LucideArchive,
+    LucideChevronDown,
+    LucideDownload,
+    LucideEye,
+    LucideFileDown,
+    LucideFileSpreadsheet,
+    LucideUpload,
+  ],
   templateUrl: './leads-list.component.html',
 })
 export class LeadsListComponent {
+  readonly posicionMenu = POSICION_MENU_DERECHA;
   private readonly leadsService = inject(LeadsService);
   private readonly usuariosService = inject(UsuariosService);
   private readonly auth = inject(AuthService);

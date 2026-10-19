@@ -1,7 +1,8 @@
 @if (isLoading()) {
   <app-we-loader modo="compacto" texto="Cargando…" />
 } @else {
-  <div class="grid gap-4 lg:grid-cols-2">
+  <div class="@container">
+  <div class="grid gap-4 @2xl:grid-cols-2">
     <div class="stagger-item rounded-xl border border-border bg-surface p-5">
       <h2 class="font-heading font-semibold text-ink text-sm mb-4">Mis tareas</h2>
       @if (misTareas().length === 0) {
@@ -112,7 +113,7 @@
       }
     </div>
 
-    <div class="stagger-item rounded-xl border border-border bg-surface p-5 lg:col-span-2">
+    <div class="stagger-item rounded-xl border border-border bg-surface p-5 @2xl:col-span-2">
       <h2 class="font-heading font-semibold text-ink text-sm mb-4">Tareas que has asignado</h2>
       @if (tareasCreadas().length === 0) {
         <p class="text-sm text-ink-muted">Todavía no has asignado ninguna tarea.</p>
@@ -146,5 +147,6 @@
         </ul>
       }
     </div>
+  </div>
   </div>
 }

@@ -5,32 +5,31 @@
       <p class="mt-1 text-sm text-ink-muted">Inventario de lotes de Samai y Nanuu.</p>
     </div>
     <div class="flex items-center gap-2.5">
-      <a
-        routerLink="/panel/lotes/historial"
-        class="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink
-               hover:border-we-primary active:scale-[0.97] transition-transform duration-150
-               focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
-      >
-        Ver historial
-      </a>
       @if (esAdmin()) {
-        <a
-          routerLink="/panel/lotes/importar"
-          class="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink
-                 hover:border-we-primary active:scale-[0.97] transition-transform duration-150
-                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
-        >
-          Importar Excel
-        </a>
-        <button
-          type="button"
-          (click)="abrirPrecioManzana()"
-          class="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink
-                 hover:border-we-primary active:scale-[0.97] transition-transform duration-150
-                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
-        >
-          Precio por manzana
+        <!-- Una sola acción principal; historial, importar y precio por manzana van en "Más". -->
+        <button type="button" [cdkMenuTriggerFor]="menuLotes" [cdkMenuPosition]="posicionMenu"
+          class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink
+               hover:border-we-primary active:scale-[0.97] transition-transform duration-150
+               focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]">
+          Más
+          <svg lucideChevronDown [size]="16" aria-hidden="true"></svg>
         </button>
+        <ng-template #menuLotes>
+          <div cdkMenu class="menu-panel">
+            <a cdkMenuItem routerLink="/panel/lotes/historial" class="menu-item">
+              <svg lucideHistory [size]="16" aria-hidden="true"></svg>
+              Ver historial
+            </a>
+            <a cdkMenuItem routerLink="/panel/lotes/importar" class="menu-item">
+              <svg lucideUpload [size]="16" aria-hidden="true"></svg>
+              Importar Excel
+            </a>
+            <button cdkMenuItem type="button" (cdkMenuItemTriggered)="abrirPrecioManzana()" class="menu-item">
+              <svg lucideDollarSign [size]="16" aria-hidden="true"></svg>
+              Precio por manzana
+            </button>
+          </div>
+        </ng-template>
         <a
           routerLink="/panel/lotes/nuevo"
           class="inline-flex items-center justify-center gap-2 rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
@@ -38,6 +37,13 @@
                  focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
         >
           + Nuevo lote
+        </a>
+      } @else {
+        <a routerLink="/panel/lotes/historial"
+          class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink
+               hover:border-we-primary active:scale-[0.97] transition-transform duration-150
+               focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]">
+          Ver historial
         </a>
       }
     </div>
@@ -48,7 +54,8 @@
       type="search"
       [value]="filtroManzana()"
       (input)="onFiltroTextoInput('manzana', $any($event.target).value)"
-      placeholder="Buscar por manzana…"
+      placeholder="Manzana…"
+      aria-label="Buscar por manzana"
       class="w-full max-w-[160px] rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted
              focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
     />
@@ -56,7 +63,8 @@
       type="search"
       [value]="filtroNumeroLote()"
       (input)="onFiltroTextoInput('numeroLote', $any($event.target).value)"
-      placeholder="Buscar por lote…"
+      placeholder="Lote…"
+      aria-label="Buscar por lote"
       class="w-full max-w-[160px] rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted
              focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
     />
@@ -160,7 +168,7 @@
                   @if (lote.sinVentaRegistrada) {
                     <span
                       class="h-2 w-2 shrink-0 rounded-full bg-red-500"
-                      title="Vendido sin venta registrada en el sistema — usa el ícono de información para registrarla"
+                      title="Vendido sin venta registrada en el sistema. Usa el ícono de información para registrarla"
                       aria-label="Vendido sin venta registrada en el sistema"
                     ></span>
                   }

@@ -13,13 +13,19 @@
       [class.border-red-200]="t.type === 'error'"
       [class.dark:bg-red-500/10]="t.type === 'error'"
       [class.dark:border-red-500/25]="t.type === 'error'"
+      [class.bg-amber-50]="t.type === 'aviso'"
+      [class.border-amber-200]="t.type === 'aviso'"
+      [class.dark:bg-amber-500/10]="t.type === 'aviso'"
+      [class.dark:border-amber-500/25]="t.type === 'aviso'"
     >
       @if (t.type === 'success') {
         <svg lucideCircleCheck class="mt-0.5 h-5 w-5 shrink-0 text-green-600 dark:text-green-400" aria-hidden="true"></svg>
+      } @else if (t.type === 'aviso') {
+        <svg lucideBell class="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden="true"></svg>
       } @else {
         <svg lucideCircleAlert class="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true"></svg>
       }
-      <p class="flex-1 text-sm font-medium" [class.text-green-800]="t.type === 'success'" [class.dark:text-green-200]="t.type === 'success'" [class.text-red-800]="t.type === 'error'" [class.dark:text-red-200]="t.type === 'error'">
+      <p class="flex-1 text-sm font-medium" [class.text-green-800]="t.type === 'success'" [class.dark:text-green-200]="t.type === 'success'" [class.text-red-800]="t.type === 'error'" [class.dark:text-red-200]="t.type === 'error'" [class.text-amber-900]="t.type === 'aviso'" [class.dark:text-amber-100]="t.type === 'aviso'">
         {{ t.message }}
       </p>
       <button

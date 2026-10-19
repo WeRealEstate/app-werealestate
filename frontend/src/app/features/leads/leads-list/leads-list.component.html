@@ -8,44 +8,42 @@
         {{ verArchivados() ? 'Se conservan como métrica; no aparecen en la lista activa.' : 'Seguimiento de leads de Samai y Nanuu.' }}
       </p>
     </div>
-    <div class="flex flex-wrap items-center gap-2.5">
-      @if (esAdmin() && !isLoading() && !errorMessage() && leads().length > 0) {
-        <button
-          type="button"
-          (click)="exportarCsv()"
-          class="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink
-                 hover:border-we-primary active:scale-[0.97] transition-transform duration-150
-                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
-        >
-          Exportar CSV
-        </button>
-        <button
-          type="button"
-          (click)="exportarExcel()"
-          class="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink
-                 hover:border-we-primary active:scale-[0.97] transition-transform duration-150
-                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
-        >
-          Exportar Excel
-        </button>
-      }
+    <div class="flex items-center gap-2.5">
+      <!-- Una sola acción principal; importar, plantilla y exportar van en "Más". -->
       <button
         type="button"
-        (click)="descargarPlantilla()"
-        class="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink
+        [cdkMenuTriggerFor]="menuLeads"
+        [cdkMenuPosition]="posicionMenu"
+        class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink
                hover:border-we-primary active:scale-[0.97] transition-transform duration-150
                focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
       >
-        Descargar plantilla
+        Más
+        <svg lucideChevronDown [size]="16" aria-hidden="true"></svg>
       </button>
-      <a
-        routerLink="/panel/leads/importar"
-        class="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink
-               hover:border-we-primary active:scale-[0.97] transition-transform duration-150
-               focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
-      >
-        Importar Excel
-      </a>
+      <ng-template #menuLeads>
+        <div cdkMenu class="menu-panel">
+          <a cdkMenuItem routerLink="/panel/leads/importar" class="menu-item">
+            <svg lucideUpload [size]="16" aria-hidden="true"></svg>
+            Importar Excel
+          </a>
+          <button cdkMenuItem type="button" (cdkMenuItemTriggered)="descargarPlantilla()" class="menu-item">
+            <svg lucideFileDown [size]="16" aria-hidden="true"></svg>
+            Descargar plantilla
+          </button>
+          @if (esAdmin() && !isLoading() && !errorMessage() && leads().length > 0) {
+            <div class="menu-separador" role="separator"></div>
+            <button cdkMenuItem type="button" (cdkMenuItemTriggered)="exportarCsv()" class="menu-item">
+              <svg lucideDownload [size]="16" aria-hidden="true"></svg>
+              Exportar CSV
+            </button>
+            <button cdkMenuItem type="button" (cdkMenuItemTriggered)="exportarExcel()" class="menu-item">
+              <svg lucideFileSpreadsheet [size]="16" aria-hidden="true"></svg>
+              Exportar Excel
+            </button>
+          }
+        </div>
+      </ng-template>
       <a
         routerLink="/panel/leads/nuevo"
         class="inline-flex items-center justify-center gap-2 rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white

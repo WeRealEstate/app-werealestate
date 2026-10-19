@@ -15,6 +15,27 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '10.0.0', fecha: '2026-10-19', cambios: [
+    "Nuevo estilo visual inspirado en Apple en toda la app: letra Inter, fondos gris claro con tarjetas blancas (y el azul marino de We en modo oscuro), el azul We como color de acción, y selección de texto y barras de desplazamiento con los colores de la marca.",
+    "Animaciones: las pantallas del panel se funden al cambiar de una a otra, los menús nacen desde su botón y el contenido del cotizador aparece suavemente al bajar. Si el dispositivo tiene activado 'reducir movimiento', casi todo se queda quieto.",
+    "Cotizador público: portada rediseñada con la foto de la costa de Oaxaca a pantalla completa, 'Cotizador We' al centro, botón 'Comenzar cotización' y enlaces a los planos de Samai y Aldea Nanuu. Al bajar, la foto se acerca y se oscurece y la barra de arriba se vuelve translúcida.",
+    "Leads y Lotes: arriba queda solo el botón principal ('+ Nuevo lead' / '+ Nuevo lote') y lo demás (importar, plantilla, exportar, historial, precio por manzana) pasa a un menú 'Más'.",
+    "Material: al tocar una tarjeta se abre la vista previa; copiar texto, descargar, editar y eliminar están en el menú '⋯' de cada tarjeta.",
+    "Pipeline: los botones '+ Nuevo lead' y '+ Nueva tarjeta' van junto al título, y el buscador, el tablero y el contador en una fila aparte, así ya no se bajan de línea.",
+    "Al hacer clic con el mouse en un botón ya no queda el contorno azul; sigue apareciendo al moverse con el teclado.",
+    "Nuevo inicio del admin: el inventario de SAMAI y Aldea Nanuu con una barra por estado (cada estado lleva a Lotes ya filtrado), la cobranza del mes contra lo esperado, las comisiones por entregar el sábado y los leads fríos. Debajo, el desempeño y tus tareas lado a lado.",
+    "Calendario: el mes ocupa la pantalla y lo del día elegido se ve al lado (debajo en el celular). '+ Nuevo evento', o tocar un día vacío, abre el formulario en una ventana.",
+    "Detalle del lead: en pantallas grandes, registrar seguimiento a la izquierda y la bitácora a la derecha.",
+    "Celular: el aviso de 'gira tu teléfono' del plano público ya no tapa el botón Asesor; en Finanzas las pestañas se deslizan de lado, las cifras no dejan huecos y cada comisión se ve como tarjeta en lugar de una tabla ancha.",
+    "Inicio de sesión más sobrio: tarjeta blanca sólida sobre la foto, etiquetas visibles en los campos y botón azul sólido. El captcha sigue el modo claro u oscuro.",
+    "Plano público: los botones ya no tienen destello ni rebote al aparecer; solo se aclaran al pasar el mouse.",
+    "Cotizador: si 'Generar PDF' y 'Compartir' están apagados, abajo se dice qué falta (por ejemplo, el nombre del cliente o el lote). Corregidos 'Datos de la cotización', 'Precio por m²' y 'Hectárea'.",
+    "El aviso 'Tienes N pendientes' sale una sola vez por inicio de sesión (no en cada recarga) y con color de aviso en lugar del verde de éxito.",
+    "Las casillas del PIN ya no muestran asteriscos cuando están vacías. Pipeline dice 'tarjetas' junto al contador y los buscadores de Pipeline y Lotes ya no cortan su texto. Ajustes de redacción en varias pantallas.",
+  ] },
+  { version: '9.0.6', fecha: '2026-10-17', cambios: [
+    "Material: en la vista previa, las flechas de anterior y siguiente ya no tapan el contenido; tienen su propio espacio a los lados del texto, la imagen, el video o el PDF.",
+  ] },
   { version: '9.0.5', fecha: '2026-10-17', cambios: [
     "Bugs arregalados",
   ] },

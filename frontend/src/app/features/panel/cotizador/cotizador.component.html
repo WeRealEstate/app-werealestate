@@ -1,4 +1,7 @@
 <div class="page-enter">
+  <!-- En /cotizador-publico la portada del layout ya trae el título ("Cotizador We"): aquí no se repite y el
+       formulario arranca directo con los proyectos. -->
+  @if (!esPublico) {
   <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
     <div>
       <h1 class="font-heading text-2xl font-semibold text-ink">Cotizador</h1>
@@ -29,12 +32,13 @@
       </div>
     }
   </div>
+  }
 
   <!-- ====================================================== -->
   <!-- BARRA SUPERIOR -->
   <!-- ====================================================== -->
 
-  <div class="mt-6 mb-7 flex flex-col gap-5 lg:flex-row lg:flex-wrap lg:items-end lg:justify-between">
+  <div class="mb-7 flex flex-col gap-5 lg:flex-row lg:flex-wrap lg:items-end lg:justify-between" [class.mt-6]="!esPublico">
     <!-- PROYECTOS -->
     <div>
       <p class="mb-3 text-sm font-semibold text-ink">Selecciona un proyecto</p>
@@ -158,7 +162,7 @@
     <!-- FORMULARIO PRINCIPAL -->
     <!-- ==================================================== -->
 
-    <div class="rounded-[24px] border border-border/60 bg-surface p-6 shadow-[0_12px_35px_rgba(15,23,42,0.08)] sm:p-8 lg:p-9">
+    <div weRevelar class="rounded-[24px] border border-border/60 bg-surface p-6 shadow-[0_12px_35px_rgba(15,23,42,0.08)] sm:p-8 lg:p-9">
       <!-- ================================================== -->
       <!-- DATOS DEL CLIENTE -->
       <!-- ================================================== -->
@@ -168,7 +172,7 @@
           <div class="flex items-start gap-3">
             <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-we-primary/10 text-sm font-bold text-we-primary dark:text-we-blue-light">01</span>
             <div>
-              <h2 class="text-base font-bold uppercase tracking-wide text-ink">Datos de la cotizacion</h2>
+              <h2 class="text-base font-bold uppercase tracking-wide text-ink">Datos de la cotización</h2>
               <p class="mt-1 text-sm text-ink-muted">Información que aparecerá en la cotización.</p>
             </div>
           </div>
@@ -278,7 +282,7 @@
 
         <!-- PRECIO POR M2 -->
         <div class="mb-6">
-          <label class="mb-2 block text-sm font-medium text-ink">Precio por m2</label>
+          <label class="mb-2 block text-sm font-medium text-ink">Precio por m²</label>
 
           <div class="relative">
             <select
@@ -291,7 +295,7 @@
             >
               @if (selectedProject === 'samai') {
                 <option [ngValue]="800">$800 MXN - Lote</option>
-                <option [ngValue]="170">$170 MXN - Hectarea</option>
+                <option [ngValue]="170">$170 MXN - Hectárea</option>
               }
               @if (selectedProject === 'nanuu') {
                 <option [ngValue]="3700">$3,700 MXN - Lote</option>
@@ -993,8 +997,8 @@
           <div weFadeIn class="mt-6 rounded-2xl border border-we-primary/20 dark:border-we-primary/25 bg-we-primary/5 dark:bg-we-primary/10 p-5 shadow-[0_6px_18px_rgba(36,63,184,0.06)]">
             <p class="mb-1 text-sm font-semibold text-ink">Configura el pago inicial</p>
             <p class="mb-5 text-xs text-ink-muted">
-              Es un monto fijo que el cliente da de entrada para reducir el saldo a financiar — a diferencia del
-              enganche, no es un porcentaje, y no cuenta como la primera mensualidad.
+              Es un monto fijo que el cliente da de entrada para reducir el saldo a financiar. A diferencia del
+              enganche, no es un porcentaje y no cuenta como la primera mensualidad.
             </p>
 
             <div class="grid gap-5 sm:grid-cols-2">
@@ -1052,7 +1056,7 @@
     <!-- RESUMEN DE COTIZACIÓN -->
     <!-- ==================================================== -->
 
-    <aside class="self-start overflow-hidden rounded-[24px] border border-border/60 bg-surface shadow-[0_12px_35px_rgba(15,23,42,0.08)] xl:sticky xl:top-6">
+    <aside weRevelar [weRevelarRetraso]="0.12" class="self-start overflow-hidden rounded-[24px] border border-border/60 bg-surface shadow-[0_12px_35px_rgba(15,23,42,0.08)] xl:sticky xl:top-6">
       <!-- TÍTULO -->
       <div class="px-6 pt-6">
         <h2 class="text-sm font-bold uppercase tracking-wide text-ink">Resumen de cotización</h2>
@@ -1202,6 +1206,9 @@
             Compartir
           </button>
         </div>
+        @if (motivoCotizacionIncompleta; as motivo) {
+          <p class="-mt-2 text-xs text-ink-muted" aria-live="polite">{{ motivo }}</p>
+        }
       </div>
     </aside>
   </div>

@@ -1,6 +1,19 @@
 <div class="page-enter">
-  <h1 class="font-heading text-2xl font-semibold text-ink">Calendario</h1>
-  <p class="mt-1 text-sm text-ink-muted">Tus eventos son privados — solo tú los ves.</p>
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div>
+      <h1 class="font-heading text-2xl font-semibold text-ink">Calendario</h1>
+      <p class="mt-1 text-sm text-ink-muted">Tus eventos son privados: solo tú los ves.</p>
+    </div>
+    <button
+      type="button"
+      (click)="abrirNuevo()"
+      class="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
+             hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
+             focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
+    >
+      + Nuevo evento
+    </button>
+  </div>
 
   @if (isLoading()) {
     <app-we-loader texto="Cargando calendario…" />
@@ -50,12 +63,36 @@
       </div>
     </div>
 
-    <div class="mt-4 stagger-item rounded-2xl border border-border bg-surface p-5">
-      <h2 class="font-heading font-semibold text-ink text-base">Establecer eventos</h2>
-      <p class="mt-0.5 text-xs text-ink-muted">{{ selectedDateLabel() }}</p>
-
-      <div class="mt-4 grid gap-6 lg:grid-cols-2">
-        <div>
+    <div class="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_17rem] xl:grid-cols-[minmax(0,1fr)_20rem]">
+      <div class="rounded-2xl border border-border bg-surface p-3 sm:p-4">
+        <div class="grid grid-cols-7 gap-1 mb-1.5">
+          @for (d of diasSemana; track d) {
+            <div class="text-center text-[11px] font-medium text-ink-muted">{{ d }}</div>
+          }
+        </div>
+        <div class="grid grid-cols-7 gap-1">
+          @for (day of calendarDays(); track day.iso) {
+            <button
+              type="button"
+              (click)="tocarDia(day.date)"
+              class="relative flex aspect-square flex-col items-center justify-start gap-1 rounded-lg pt-1.5 text-xs sm:aspect-auto sm:h-20 xl:h-24
+                     transition-colors duration-150 active:scale-[0.96] focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+              [class]="diaClase(day)"
+            >
+              <span class="font-medium" [class]="diaNumeroClase(day)">{{ day.dayNumber }}</span>
+              <div class="flex items-center gap-0.5">
+                @for (dot of dotsForDay(day.iso); track dot) {
+                  <span class="h-1.5 w-1.5 rounded-full" [class]="dot" aria-hidden="true"></span>
+                }
+              </div>
+            </button>
+          }
+        </div>
+      </div>
+      <!-- Lo del día elegido: al lado del mes en pantallas anchas, debajo en el celular. -->
+      <section class="stagger-item self-start rounded-2xl border border-border bg-surface p-5" aria-live="polite">
+        <h2 class="font-heading text-base font-semibold text-ink">{{ selectedDateLabel() }}</h2>
+        <div class="mt-4">
           @if (selectedDayItems().length === 0) {
             <p class="text-sm text-ink-muted">Sin eventos este día.</p>
           } @else {
@@ -104,16 +141,29 @@
             </ul>
           }
         </div>
+        <button
+          type="button"
+          (click)="abrirNuevo()"
+          class="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink
+                 hover:border-we-primary active:scale-[0.97] transition-transform duration-150
+                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
+        >
+          + Agregar a este día
+        </button>
+      </section>
+    </div>
 
-        <form [formGroup]="form" (ngSubmit)="guardarEvento()" class="space-y-3" novalidate>
+    @if (formularioAbierto()) {
+      <button type="button" (click)="cerrarFormulario()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
+      <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="cal-form-titulo">
+        <form [formGroup]="form" (ngSubmit)="guardarEvento()" class="modal-panel-enter w-full max-w-md space-y-3 rounded-2xl border border-border bg-surface p-5 shadow-lg" novalidate>
+          <h2 id="cal-form-titulo" class="font-heading text-lg font-semibold text-ink">{{ editandoId() ? 'Editar evento' : 'Nuevo evento' }}</h2>
           <div>
-            <label for="cal-titulo" class="block text-xs font-medium text-ink-muted mb-1">
-              {{ editandoId() ? 'Editar evento' : 'Nuevo evento' }}
-            </label>
+            <label for="cal-titulo" class="block text-xs font-medium text-ink-muted mb-1">Título</label>
             <input
               id="cal-titulo"
               type="text"
-              placeholder="Título"
+              placeholder="Ej. Firma con el notario"
               formControlName="titulo"
               class="block w-full rounded-lg border border-border px-3 py-2 text-sm text-ink bg-surface placeholder:text-ink-muted
                      focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
@@ -132,7 +182,6 @@
               class="block w-full rounded-lg border border-border px-3 py-2 text-sm text-ink bg-surface
                      focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
             />
-            <p class="mt-1 text-xs text-ink-muted">El calendario de abajo se mueve a esta fecha.</p>
           </div>
 
           <div>
@@ -168,44 +217,16 @@
             >
               {{ isGuardando() ? 'Guardando…' : editandoId() ? 'Guardar cambios' : 'Agregar evento' }}
             </button>
-            @if (editandoId()) {
-              <button
-                type="button"
-                (click)="cancelarEdicion()"
-                class="text-xs font-medium text-ink-muted hover:text-ink transition-colors duration-150"
-              >
-                Cancelar
-              </button>
-            }
+            <button
+              type="button"
+              (click)="cerrarFormulario()"
+              class="rounded-lg px-3 py-2 text-sm font-medium text-ink-muted hover:text-ink transition-colors duration-150"
+            >
+              Cancelar
+            </button>
           </div>
         </form>
       </div>
-    </div>
-
-    <div class="mt-4 rounded-2xl border border-border bg-surface p-3 sm:p-4">
-      <div class="grid grid-cols-7 gap-1 mb-1.5">
-        @for (d of diasSemana; track d) {
-          <div class="text-center text-[11px] font-medium text-ink-muted">{{ d }}</div>
-        }
-      </div>
-      <div class="grid grid-cols-7 gap-1">
-        @for (day of calendarDays(); track day.iso) {
-          <button
-            type="button"
-            (click)="seleccionarDia(day.date)"
-            class="relative flex aspect-square flex-col items-center justify-start gap-1 rounded-lg pt-1.5 text-xs
-                   transition-colors duration-150 active:scale-[0.96] focus:outline-none focus:ring-2 focus:ring-we-primary/50"
-            [class]="diaClase(day)"
-          >
-            <span class="font-medium" [class]="diaNumeroClase(day)">{{ day.dayNumber }}</span>
-            <div class="flex items-center gap-0.5">
-              @for (dot of dotsForDay(day.iso); track dot) {
-                <span class="h-1.5 w-1.5 rounded-full" [class]="dot" aria-hidden="true"></span>
-              }
-            </div>
-          </button>
-        }
-      </div>
-    </div>
+    }
   }
 </div>

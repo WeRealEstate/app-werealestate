@@ -26,6 +26,7 @@ import { AportacionesSelectorComponent } from '../../../shared/aportaciones-sele
 import { PROJECTS_CONFIG } from '../../../core/data/proyectos-cotizador.config';
 import { FadeInDirective } from '../../../shared/motion/fade-in.directive';
 import { PressDirective } from '../../../shared/motion/press.directive';
+import { RevelarDirective } from '../../../shared/motion/revelar.directive';
 import { ValuePulseDirective } from '../../../shared/motion/value-pulse.directive';
 import { MonedaInputDirective, formatearNumero, limpiarNumero, numeroDeTexto } from '../../../shared/moneda-input/moneda-input.directive';
 
@@ -58,7 +59,7 @@ function compararNatural(a: string, b: string): number {
 @Component({
   selector: 'app-cotizador',
   standalone: true,
-  imports: [MonedaInputDirective, 
+  imports: [MonedaInputDirective, RevelarDirective, 
     DatePipe,
     FormsModule,
     RouterLink,
@@ -1360,6 +1361,20 @@ export class CotizadorComponent implements OnInit {
       return false;
     }
     return !this.requiereLoteEnCaptura || (this.blockNumber.trim().length > 0 && this.lotNumber.trim().length > 0);
+  }
+
+  /** Qué le falta a la cotización para poder generar o compartir el PDF; null si ya está lista. Se muestra
+   * bajo esos botones para que no queden apagados sin explicación. */
+  get motivoCotizacionIncompleta(): string | null {
+    if (this.isQuoteValid) return null;
+    const faltan: string[] = [];
+    if (!this.advisorName.trim()) faltan.push('el nombre del asesor');
+    if (!this.clientName.trim()) faltan.push('el nombre del cliente');
+    if (this.requiereLoteEnCaptura && !this.blockNumber.trim()) faltan.push('la manzana');
+    if (this.requiereLoteEnCaptura && !this.lotNumber.trim()) faltan.push('el lote');
+    if (faltan.length === 0) return 'Revisa los montos de la forma de pago para generar el PDF.';
+    const lista = faltan.length === 1 ? faltan[0] : `${faltan.slice(0, -1).join(', ')} y ${faltan[faltan.length - 1]}`;
+    return `Para generar el PDF falta ${lista}.`;
   }
 
   get advisorNameInvalid(): boolean {

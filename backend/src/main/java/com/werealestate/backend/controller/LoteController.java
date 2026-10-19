@@ -14,6 +14,7 @@ import com.werealestate.backend.dto.LoteUpdateRequest;
 import com.werealestate.backend.dto.MovimientoLoteDto;
 import com.werealestate.backend.dto.PaginaDto;
 import com.werealestate.backend.dto.PlanoDesarrolloDto;
+import com.werealestate.backend.dto.ResumenLotesDto;
 import com.werealestate.backend.service.LoteService;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
@@ -52,6 +53,12 @@ public class LoteController {
             @RequestParam(defaultValue = "20") int tamano) {
         return loteService.buscarPaginado(
                 manzana, numeroLote, desarrolloId, estado, superficieMin, superficieMax, pagina, tamano);
+    }
+
+    /** Inventario por desarrollo y estado, para las cifras del inicio del admin. */
+    @GetMapping("/resumen")
+    public List<ResumenLotesDto> resumen() {
+        return loteService.resumenPorDesarrollo();
     }
 
     @GetMapping("/disponibles")

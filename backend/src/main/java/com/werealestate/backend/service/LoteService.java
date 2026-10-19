@@ -18,6 +18,7 @@ import com.werealestate.backend.dto.PaginaDto;
 import com.werealestate.backend.dto.PlanoDesarrolloDto;
 import com.werealestate.backend.dto.PoligonoMapaJson;
 import com.werealestate.backend.dto.PuntoMapaDto;
+import com.werealestate.backend.dto.ResumenLotesDto;
 import com.werealestate.backend.exception.ConflictException;
 import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
@@ -39,6 +40,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -215,6 +218,35 @@ public class LoteService {
                 .map(l -> l.estado() == EstadoLote.VENDIDO && !conVenta.contains(l.id())
                         ? l.conSinVentaRegistrada(true)
                         : l)
+                .toList();
+    }
+
+    /** Inventario de cada desarrollo contado por estado, para las cifras del inicio del admin. Los
+     * desarrollos sin lotes también aparecen (todo en 0) y cada uno trae los 6 estados, en el orden del
+     * enum, para que el frontend no tenga que rellenar huecos. Se omite el catálogo genérico "Otro" (V12):
+     * solo existe para leads de desarrollos ajenos y nunca tiene lotes. Solo lectura: lo puede pedir cualquiera con
+     * acceso a los módulos de lotes (ver ModuloAccesoInterceptor). */
+    private static final String DESARROLLO_GENERICO_OTRO = "Otro";
+
+    @Transactional(readOnly = true)
+    public List<ResumenLotesDto> resumenPorDesarrollo() {
+        Map<Long, Map<EstadoLote, Long>> conteos = new HashMap<>();
+        for (LoteRepository.ConteoPorEstado c : loteRepository.contarPorDesarrolloYEstado()) {
+            conteos.computeIfAbsent(c.getDesarrolloId(), id -> new EnumMap<>(EstadoLote.class))
+                    .put(c.getEstado(), c.getTotal());
+        }
+        return desarrolloRepository.findAll().stream()
+                .filter(d -> !DESARROLLO_GENERICO_OTRO.equals(d.getNombre()))
+                .sorted(Comparator.comparing(Desarrollo::getId))
+                .map(d -> {
+                    Map<EstadoLote, Long> porEstado = new EnumMap<>(EstadoLote.class);
+                    Map<EstadoLote, Long> delDesarrollo = conteos.getOrDefault(d.getId(), Map.of());
+                    for (EstadoLote estado : EstadoLote.values()) {
+                        porEstado.put(estado, delDesarrollo.getOrDefault(estado, 0L));
+                    }
+                    long total = porEstado.values().stream().mapToLong(Long::longValue).sum();
+                    return new ResumenLotesDto(d.getId(), d.getNombre(), total, porEstado);
+                })
                 .toList();
     }
 

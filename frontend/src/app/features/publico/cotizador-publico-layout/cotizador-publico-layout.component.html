@@ -1,6 +1,72 @@
 <div class="flex min-h-dvh flex-col bg-canvas pb-[env(safe-area-inset-bottom)]">
-  <!-- Espejo literal del hero de cotizador.weinversiones.com; irAlCotizador() hace scroll hasta
-       el id="cotizador" de aquí abajo, igual que en el sitio original. -->
+  <!-- Barra fija estilo Apple: transparente sobre la foto de la portada y translúcida (vidrio esmerilado)
+       en cuanto el contenido pasa por debajo, para que se lea sobre cualquier fondo. -->
+  <header
+    id="barra-publica"
+    class="fixed inset-x-0 top-0 z-40 border-b pt-[env(safe-area-inset-top)] transition-[background-color,border-color] duration-300"
+    [class.border-transparent]="sobreHero()"
+    [class.barra-vidrio]="!sobreHero()"
+  >
+    <div class="mx-auto flex h-13 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-10">
+      <a
+        routerLink="/cotizador-publico"
+        class="flex items-center gap-3 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50"
+      >
+        <img
+          src="/images/we-logo-color.png"
+          alt="We Real Estate"
+          class="h-7 w-auto dark:hidden"
+          [class.hidden]="sobreHero()"
+          width="65"
+          height="28"
+        />
+        <img
+          src="/images/we-logo.png"
+          alt=""
+          aria-hidden="true"
+          class="h-7 w-auto dark:block"
+          [class.hidden]="!sobreHero()"
+          width="65"
+          height="28"
+        />
+        <span
+          class="hidden text-sm font-medium tracking-[-0.01em] transition-colors duration-300 sm:inline"
+          [class.text-white]="sobreHero()"
+          [class.text-ink]="!sobreHero()"
+        >
+          Cotizador
+        </span>
+      </a>
+
+      <nav aria-label="Planos de los desarrollos" class="-mr-2.5 flex items-center text-[13px] font-medium sm:text-sm">
+        <a
+          routerLink="/samai"
+          class="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg px-2.5 transition-colors duration-300
+                 focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50"
+          [class.text-white/85]="sobreHero()"
+          [class.hover:text-white]="sobreHero()"
+          [class.text-ink-muted]="!sobreHero()"
+          [class.hover:text-ink]="!sobreHero()"
+        >
+          <svg lucideMap [size]="15" aria-hidden="true"></svg>
+          <span class="sm:hidden">Samai</span><span class="hidden sm:inline">Plano Samai</span>
+        </a>
+        <a
+          routerLink="/aldea-nanuu"
+          class="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg px-2.5 transition-colors duration-300
+                 focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50"
+          [class.text-white/85]="sobreHero()"
+          [class.hover:text-white]="sobreHero()"
+          [class.text-ink-muted]="!sobreHero()"
+          [class.hover:text-ink]="!sobreHero()"
+        >
+          <svg lucideMap [size]="15" aria-hidden="true"></svg>
+          <span class="sm:hidden">Nanuu</span><span class="hidden sm:inline">Plano Aldea Nanuu</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
   <app-hero-publico />
 
   <main id="cotizador" class="flex-1 p-4 sm:p-6 lg:p-10">

@@ -1,9 +1,18 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
-import { LucideEye, LucidePencil, LucideTrash2 } from '@lucide/angular';
+import { CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
+import {
+  LucideChevronDown,
+  LucideDollarSign,
+  LucideEye,
+  LucideHistory,
+  LucidePencil,
+  LucideTrash2,
+  LucideUpload,
+} from '@lucide/angular';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { LeadsService } from '../../../core/services/leads.service';
@@ -12,6 +21,7 @@ import { LoteCambioEstadoModalComponent } from '../../../shared/lote-cambio-esta
 import { LoteInfoModalComponent } from '../../../shared/lote-info-modal/lote-info-modal.component';
 import { ToastService } from '../../../core/services/toast.service';
 import { Desarrollo } from '../../../core/models/lead.model';
+import { POSICION_MENU_DERECHA } from '../../../shared/menu/posicion-menu';
 import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 import {
   ESTADO_LOTE_BADGE_CLASSES,
@@ -46,15 +56,23 @@ const ESTADOS_TODOS: EstadoLote[] = [
     RouterLink,
     DecimalPipe,
     DatePipe,
+    CdkMenu,
+    CdkMenuItem,
+    CdkMenuTrigger,
+    LucideChevronDown,
+    LucideDollarSign,
     LucideEye,
+    LucideHistory,
     LucidePencil,
     LucideTrash2,
+    LucideUpload,
     LoteCambioEstadoModalComponent,
     LoteInfoModalComponent,
   ],
   templateUrl: './lotes-list.component.html',
 })
 export class LotesListComponent {
+  readonly posicionMenu = POSICION_MENU_DERECHA;
   private readonly lotesService = inject(LotesService);
   private readonly leadsService = inject(LeadsService);
   private readonly auth = inject(AuthService);
@@ -106,6 +124,13 @@ export class LotesListComponent {
   private debounceHandle: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
+    // Filtros que llegan por enlace (p. ej. desde las cifras del inicio: ?desarrolloId=1&estado=VENDIDO).
+    const params = inject(ActivatedRoute).snapshot.queryParamMap;
+    const desarrolloId = Number(params.get('desarrolloId'));
+    if (Number.isInteger(desarrolloId) && desarrolloId > 0) this.filtroDesarrolloId.set(desarrolloId);
+    const estado = params.get('estado');
+    if (estado && estado in ESTADO_LOTE_LABELS) this.filtroEstado.set(estado as EstadoLote);
+
     this.leadsService.listarDesarrollosGestionables().then((d) => this.desarrollos.set(d));
     this.cargar();
   }

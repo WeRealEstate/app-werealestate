@@ -14,6 +14,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { filter } from 'rxjs';
+import { AuthService } from '../../core/services/auth.service';
 import { NotificacionesService } from '../../core/services/notificaciones.service';
 import { PushService } from '../../core/services/push.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -23,6 +24,10 @@ import { Notificacion } from '../../core/models/notificacion.model';
  * navegar (ver constructor): sin esto, la campana se queda con el conteo de la primera carga
  * hasta que se refresca la página a mano, aunque el usuario resuelva pendientes mientras tanto. */
 const INTERVALO_REFRESCO_MS = 60_000;
+
+/** Guarda la firma del token con el que ya se mostró el aviso de pendientes: así sale una sola vez por
+ * inicio de sesión (el token cambia en cada login) y no en cada recarga de la página. */
+const CLAVE_AVISO_PENDIENTES = 'we_aviso_pendientes';
 
 @Component({
   selector: 'app-notification-bell',
@@ -45,6 +50,7 @@ const INTERVALO_REFRESCO_MS = 60_000;
 export class NotificationBellComponent {
   private readonly notificacionesService = inject(NotificacionesService);
   private readonly toast = inject(ToastService);
+  private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   readonly push = inject(PushService);
@@ -77,14 +83,28 @@ export class NotificationBellComponent {
     try {
       const lista = await this.notificacionesService.listar();
       this.notificaciones.set(lista);
-      if (mostrarAviso && lista.length > 0) {
-        this.toast.success(
+      if (mostrarAviso && lista.length > 0 && this.avisoPendiente()) {
+        this.toast.aviso(
           `Tienes ${lista.length} pendiente${lista.length === 1 ? '' : 's'}: revisa la campana de notificaciones.`,
         );
       }
     } catch {
       // Las notificaciones son informativas: si fallan, simplemente no se muestran.
     }
+  }
+
+  /** true solo la primera vez en esta sesión (y la marca como avisada). Si el almacenamiento no está
+   * disponible (modo privado estricto), avisa como antes en vez de no avisar nunca. */
+  private avisoPendiente(): boolean {
+    const firma = this.auth.token?.slice(-16);
+    if (!firma) return true;
+    try {
+      if (localStorage.getItem(CLAVE_AVISO_PENDIENTES) === firma) return false;
+      localStorage.setItem(CLAVE_AVISO_PENDIENTES, firma);
+    } catch {
+      // Sin almacenamiento: se avisa en cada carga.
+    }
+    return true;
   }
 
   toggle(): void {

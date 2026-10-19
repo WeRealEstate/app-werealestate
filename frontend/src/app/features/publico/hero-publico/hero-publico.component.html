@@ -1,488 +1,75 @@
-<!-- HERO -->
-<section
-  class="relative min-h-svh overflow-hidden bg-we-dark"
->
-
-  <!-- IMAGEN DE FONDO -->
-  <div class="absolute inset-0">
-
+<!-- Portada del cotizador público, al estilo de una página de producto de Apple: la foto a todo lo ancho,
+     un título corto centrado y dos caminos (cotizar o ver un plano). Al bajar, la foto se acerca y se
+     oscurece mientras el texto se desvanece, como transición hacia el formulario (ver hero-publico.ts). -->
+<section #hero class="relative h-[100svh] min-h-[560px] overflow-hidden bg-black text-white">
+  <div #fotoMarco class="absolute inset-0 will-change-transform">
     <img
+      #foto
       src="/images/cotizador-hero.png"
-      alt="Costa de Oaxaca"
-      class="
-        h-full
-        w-full
-        object-cover
-        object-[62%_center]
-        sm:object-center
-      "
+      alt=""
+      fetchpriority="high"
+      class="h-full w-full object-cover object-[62%_center] sm:object-center"
     />
-
-    <!-- Overlay desktop -->
-    <div
-      class="
-        absolute
-        inset-0
-        bg-gradient-to-r
-        from-[#061c3c]/95
-        via-[#061c3c]/75
-        to-[#061c3c]/25
-      "
-    ></div>
-
-    <!-- Overlay adicional móvil -->
-    <div
-      class="
-        absolute
-        inset-0
-        bg-black/15
-        sm:hidden
-      "
-    ></div>
-
   </div>
 
+  <!-- Velo para leer el texto blanco sobre la foto; abajo se oscurece un poco más para la flecha. -->
+  <div class="absolute inset-0 bg-black/40" aria-hidden="true"></div>
+  <div class="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/45 to-transparent" aria-hidden="true"></div>
+  <!-- Se va oscureciendo al bajar (scroll), hasta fundirse con el formulario. -->
+  <div #veloScroll class="absolute inset-0 bg-black opacity-0" aria-hidden="true"></div>
 
-  <!-- CONTENIDO -->
   <div
-    class="
-      relative
-      z-10
-      mx-auto
-      flex
-      min-h-svh
-      max-w-7xl
-      px-5
-      py-12
-
-      sm:px-6
-      lg:px-5
-    "
+    #contenido
+    class="relative z-10 mx-auto flex h-full max-w-4xl flex-col items-center justify-center px-6 pt-[calc(3.25rem+env(safe-area-inset-top))] text-center"
   >
+    <h1 class="hero-item font-heading text-[clamp(3rem,10vw,6rem)] font-semibold leading-[1.02] tracking-[-0.035em]">
+      Cotizador We
+    </h1>
+    <p
+      class="hero-item mt-4 max-w-2xl text-balance text-[clamp(1.25rem,2.8vw,1.75rem)] font-medium leading-snug tracking-[-0.012em] text-white/85"
+    >
+      SAMAI Campestre y Aldea Nanuu, cotizados en minutos.
+    </p>
 
-    <div class="w-full max-w-3xl">
-
-
-      <!-- ETIQUETA -->
-      <h1
-        class="
-          hero-item
-          inline-flex
-          items-center
-          rounded-full
-          border
-          border-white/20
-          bg-white/10
-          px-4
-          py-2
-          text-xs
-          font-semibold
-          uppercase
-          tracking-[0.08em]
-          text-white
-          backdrop-blur-md
-
-          sm:text-sm
-        "
+    <div class="hero-item mt-10 flex flex-col items-center gap-6 sm:flex-row sm:gap-8">
+      <button
+        type="button"
+        (click)="irAlCotizador()"
+        class="rounded-full bg-we-primary px-7 py-3.5 text-[17px] font-medium text-white shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]
+               transition-[background-color,transform] duration-200 hover:bg-[#2f50d9] active:scale-[0.97]
+               focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black/40"
       >
-        Cotizador WE
-      </h1>
-
-
-      <!-- TÍTULO -->
-      <h1
-        class="
-          hero-item
-          mt-6
-          max-w-3xl
-          text-[40px]
-          font-bold
-          leading-[1.05]
-          tracking-[-0.03em]
-          text-white
-
-          sm:text-5xl
-          lg:text-6xl
-          xl:text-7xl
-        "
-      >
-        Cotiza inversiones
-
-        <span
-          class="
-            block
-            mt-1
-            text-blue-300
-          "
-        >
-          de forma rápida y sencilla
-        </span>
-      </h1>
-
-
-      <!-- TEXTO -->
-      <div class="hero-item mt-6 max-w-2xl">
-
-        <p
-          class="
-            text-xl
-            font-semibold
-            text-white
-            sm:text-2xl
-          "
-        >
-          Hola, WE asesor.
-        </p>
-
-        <p
-          class="
-            mt-3
-            max-w-xl
-            text-[15px]
-            leading-7
-            text-white/80
-
-            sm:text-lg
-            sm:leading-8
-          "
-        >
-          Cotiza los proyectos disponibles para tus clientes,
-          compara opciones de pago y genera propuestas claras
-          en pocos minutos.
-        </p>
-
-      </div>
-
-
-      <!-- BENEFICIOS -->
-      <div
-        class="
-          hero-item
-          mt-7
-          grid
-          gap-3
-
-          sm:max-w-2xl
-          sm:grid-cols-3
-          sm:gap-4
-        "
-      >
-
-        <!-- BENEFICIO 1 -->
-        <div
-          class="
-            flex
-            items-center
-            gap-3
-            rounded-xl
-            border
-            border-white/20
-            bg-white/10
-            px-4
-            py-3
-            backdrop-blur-md
-
-            sm:block
-            sm:rounded-2xl
-            sm:p-4
-          "
-        >
-
-          <div
-            class="
-              flex
-              h-9
-              w-9
-              shrink-0
-              items-center
-              justify-center
-              rounded-lg
-              bg-white/10
-              text-white
-            "
-          >
-            01
-          </div>
-
-          <div>
-            <p
-              class="
-                text-sm
-                font-semibold
-                text-white
-              "
-            >
-              Cotiza en minutos
-            </p>
-
-            <p
-              class="
-                mt-1
-                hidden
-                text-xs
-                leading-5
-                text-white/65
-
-                sm:block
-              "
-            >
-              Calcula diferentes escenarios rápidamente.
-            </p>
-          </div>
-
-        </div>
-
-
-        <!-- BENEFICIO 2 -->
-        <div
-          class="
-            flex
-            items-center
-            gap-3
-            rounded-xl
-            border
-            border-white/20
-            bg-white/10
-            px-4
-            py-3
-            backdrop-blur-md
-
-            sm:block
-            sm:rounded-2xl
-            sm:p-4
-          "
-        >
-
-          <div
-            class="
-              flex
-              h-9
-              w-9
-              shrink-0
-              items-center
-              justify-center
-              rounded-lg
-              bg-white/10
-              text-white
-            "
-          >
-            02
-          </div>
-
-          <div>
-            <p
-              class="
-                text-sm
-                font-semibold
-                text-white
-              "
-            >
-              Compara opciones
-            </p>
-
-            <p
-              class="
-                mt-1
-                hidden
-                text-xs
-                leading-5
-                text-white/65
-
-                sm:block
-              "
-            >
-              Revisa plazos, enganches y mensualidades.
-            </p>
-          </div>
-
-        </div>
-
-
-        <!-- BENEFICIO 3 -->
-        <div
-          class="
-            flex
-            items-center
-            gap-3
-            rounded-xl
-            border
-            border-white/20
-            bg-white/10
-            px-4
-            py-3
-            backdrop-blur-md
-
-            sm:block
-            sm:rounded-2xl
-            sm:p-4
-          "
-        >
-
-          <div
-            class="
-              flex
-              h-9
-              w-9
-              shrink-0
-              items-center
-              justify-center
-              rounded-lg
-              bg-white/10
-              text-white
-            "
-          >
-            03
-          </div>
-
-          <div>
-            <p
-              class="
-                text-sm
-                font-semibold
-                text-white
-              "
-            >
-              Genera propuestas
-            </p>
-
-            <p
-              class="
-                mt-1
-                hidden
-                text-xs
-                leading-5
-                text-white/65
-
-                sm:block
-              "
-            >
-              Obtén una cotización lista para compartir.
-            </p>
-          </div>
-
-        </div>
-
-      </div>
-
-
-      <!-- CTA -->
-      <div class="hero-item mt-7 flex flex-col gap-3 sm:flex-row">
-        <button
-          type="button"
-          weMotionPress
-          (click)="irAlCotizador()"
-          class="
-            group
-            flex
-            items-center
-            justify-center
-            gap-3
-            rounded-xl
-            bg-we-primary
-            px-6
-            py-4
-            text-sm
-            font-semibold
-            text-white
-            shadow-[0_8px_20px_rgba(36,63,184,0.20)]
-            transition-all
-            duration-300
-            hover:-translate-y-0.5
-            hover:shadow-[0_12px_28px_rgba(36,63,184,0.28)]
-          "
-        >
-          Comenzar cotización
-
-          <span
-            class="
-              transition-transform
-              duration-300
-              group-hover:translate-x-1
-            "
-          >
-            →
-          </span>
-        </button>
-
+        Comenzar cotización
+      </button>
+      <div class="flex items-center gap-6 text-[17px]">
         <a
           routerLink="/samai"
-          weMotionPress
-          class="
-            group
-            flex
-            items-center
-            justify-center
-            gap-3
-            rounded-xl
-            border
-            border-white/25
-            bg-white/10
-            px-6
-            py-4
-            text-sm
-            font-semibold
-            text-white
-            backdrop-blur-md
-            transition-all
-            duration-300
-            hover:-translate-y-0.5
-            hover:bg-white/15
-          "
+          class="group inline-flex items-center gap-0.5 rounded text-white underline-offset-4 hover:underline
+                 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
         >
           Plano Samai
-
-          <span
-            class="
-              transition-transform
-              duration-300
-              group-hover:translate-x-1
-            "
-          >
-            →
-          </span>
+          <svg lucideChevronRight [size]="18" class="transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true"></svg>
         </a>
-       <a
+        <a
           routerLink="/aldea-nanuu"
-          weMotionPress
-          class="
-            group
-            flex
-            items-center
-            justify-center
-            gap-3
-            rounded-xl
-            border
-            border-white/25
-            bg-white/10
-            px-6
-            py-4
-            text-sm
-            font-semibold
-            text-white
-            backdrop-blur-md
-            transition-all
-            duration-300
-            hover:-translate-y-0.5
-            hover:bg-white/15
-          "
+          class="group inline-flex items-center gap-0.5 rounded text-white underline-offset-4 hover:underline
+                 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
         >
           Plano Aldea Nanuu
-
-          <span
-            class="
-              transition-transform
-              duration-300
-              group-hover:translate-x-1
-            "
-          >
-            →
-          </span>
+          <svg lucideChevronRight [size]="18" class="transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true"></svg>
         </a>
       </div>
-
-
     </div>
-
   </div>
 
+  <button
+    #flecha
+    type="button"
+    (click)="irAlCotizador()"
+    aria-label="Ir al formulario de cotización"
+    class="absolute bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-1/2 z-10 -translate-x-1/2 rounded-full p-2 text-white/70
+           transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+  >
+    <svg lucideChevronDown [size]="28" aria-hidden="true"></svg>
+  </button>
 </section>

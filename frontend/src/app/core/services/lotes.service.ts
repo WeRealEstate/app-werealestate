@@ -12,6 +12,7 @@ import {
   MovimientoLote,
   PlanoDesarrollo,
   PuntoMapa,
+  ResumenLotes,
 } from '../models/lote.model';
 
 export interface BuscarLotesParams {
@@ -48,6 +49,11 @@ export class LotesService {
     if (params.superficieMax != null) httpParams = httpParams.set('superficieMax', params.superficieMax);
 
     return firstValueFrom(this.http.get<Pagina<Lote>>(`${this.baseUrl}/buscar`, { params: httpParams }));
+  }
+
+  /** Inventario de cada desarrollo contado por estado, para las cifras del inicio del admin. */
+  resumen(): Promise<ResumenLotes[]> {
+    return firstValueFrom(this.http.get<ResumenLotes[]>(`${this.baseUrl}/resumen`));
   }
 
   listarDisponibles(desarrolloId: number): Promise<Lote[]> {

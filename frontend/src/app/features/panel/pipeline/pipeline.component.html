@@ -1,17 +1,42 @@
 <div class="page-enter flex h-full flex-col">
-  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+  <!-- Título y las dos acciones en una fila; buscador, tablero y contador en otra, para que ningún
+       botón se baje de línea en pantallas medianas. -->
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
     <div>
       <h1 class="font-heading text-2xl font-semibold text-ink">Pipeline</h1>
       <p class="mt-1 text-sm text-ink-muted">Crea tus propias tarjetas y arrastra leads entre ellas para moverlos.</p>
     </div>
-    <div class="flex flex-wrap items-center gap-2.5">
+    <div class="flex shrink-0 items-center gap-2.5">
+      <button
+        type="button"
+        (click)="abrirModalLead()"
+        class="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink
+               hover:border-we-primary active:scale-[0.97] transition-transform duration-150
+               focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
+      >
+        + Nuevo lead
+      </button>
+      <button
+        type="button"
+        [disabled]="limiteAlcanzado()"
+        (click)="abrirModalTarjeta()"
+        class="inline-flex items-center justify-center gap-2 rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
+               hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
+               focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px] disabled:opacity-50 disabled:pointer-events-none"
+      >
+        + Nueva tarjeta
+      </button>
+    </div>
+  </div>
+
+  <div class="mt-5 flex flex-wrap items-center gap-2.5">
       <div class="relative w-full max-w-[220px]">
         <svg lucideSearch [size]="16" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted"></svg>
         <input
           type="text"
           [value]="busqueda()"
           (input)="buscar($any($event.target).value)"
-          placeholder="Buscar lead por nombre o teléfono…"
+          placeholder="Nombre o teléfono…"
           aria-label="Buscar lead por nombre o teléfono"
           class="w-full rounded-lg border border-border bg-surface py-2.5 pl-9 pr-8 text-sm text-ink
                  focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
@@ -50,30 +75,10 @@
         [class.dark:text-red-400]="limiteAlcanzado()"
         [class.border-red-300]="limiteAlcanzado()"
         [class.dark:border-red-500]="limiteAlcanzado()"
-        title="Tarjetas creadas"
+        [title]="'Llevas ' + totalTarjetas() + ' de ' + maxTarjetas + ' tarjetas permitidas'"
       >
-        {{ totalTarjetas() }}/{{ maxTarjetas }}
+        {{ totalTarjetas() }}/{{ maxTarjetas }} tarjetas
       </span>
-      <button
-        type="button"
-        (click)="abrirModalLead()"
-        class="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink
-               hover:border-we-primary active:scale-[0.97] transition-transform duration-150
-               focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]"
-      >
-        + Nuevo lead
-      </button>
-      <button
-        type="button"
-        [disabled]="limiteAlcanzado()"
-        (click)="abrirModalTarjeta()"
-        class="inline-flex items-center justify-center gap-2 rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
-               hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
-               focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px] disabled:opacity-50 disabled:pointer-events-none"
-      >
-        + Nueva tarjeta
-      </button>
-    </div>
   </div>
 
   @if (limiteAlcanzado()) {

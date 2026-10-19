@@ -479,9 +479,10 @@
   }
 
   <!-- Aviso para girar el teléfono: solo en celular en vertical, una vez por visita; el plano es
-       ancho y se aprovecha mucho más en horizontal. -->
+       ancho y se aprovecha mucho más en horizontal. Va arriba, debajo de "Estados", para no tapar los
+       botones de abajo (Asesor, PDF, Registrar venta). -->
   @if (mostrarAvisoRotar()) {
-    <div class="pointer-events-none fixed inset-x-0 bottom-20 z-30 flex justify-center px-4">
+    <div class="pointer-events-none fixed inset-x-0 top-[calc(max(0.75rem,env(safe-area-inset-top))+3.5rem)] z-30 flex justify-center px-4">
       <div
         class="toast-enter pointer-events-auto flex items-center gap-3.5 rounded-2xl border border-border bg-surface/95 py-3 pl-4 pr-2.5 shadow-2xl"
         role="status"
@@ -519,7 +520,6 @@
               (input)="escribirPin(i, $any($event.target).value, $event)"
               (keydown)="teclaPin(i, $event)"
               (focus)="$any($event.target).select()"
-              placeholder="*"
               maxlength="4"
               autocomplete="off"
               autocapitalize="characters"

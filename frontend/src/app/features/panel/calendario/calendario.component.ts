@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { LucideChevronLeft, LucideChevronRight, LucidePencil, LucideTrash2 } from '@lucide/angular';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -81,6 +81,8 @@ export class CalendarioComponent {
   readonly isLoading = signal(true);
   readonly isGuardando = signal(false);
   readonly editandoId = signal<number | null>(null);
+  /** Ventana del formulario (evento nuevo o edición). */
+  readonly formularioAbierto = signal(false);
 
   readonly eventos = signal<EventoCalendario[]>([]);
   readonly tareaItems = signal<CalendarItem[]>([]);
@@ -256,6 +258,29 @@ export class CalendarioComponent {
     this.form.reset({ titulo: '', descripcion: '', fecha: toIso(date), recordatorio: false }, { emitEvent: false });
   }
 
+  /** Tocar un día lo selecciona y muestra lo que tiene al lado del mes; si está vacío, abre de una vez el
+   * formulario para agregarle un evento. */
+  tocarDia(date: Date): void {
+    this.seleccionarDia(date);
+    if (this.selectedDayItems().length === 0) this.abrirNuevo();
+  }
+
+  /** Formulario de evento nuevo para el día seleccionado. */
+  abrirNuevo(): void {
+    this.cancelarEdicion();
+    this.formularioAbierto.set(true);
+  }
+
+  cerrarFormulario(): void {
+    this.formularioAbierto.set(false);
+    this.cancelarEdicion();
+  }
+
+  @HostListener('document:keydown.escape')
+  alPresionarEscape(): void {
+    if (this.formularioAbierto()) this.cerrarFormulario();
+  }
+
   diaClase(day: CalendarDay): string {
     const base = day.inMonth ? 'text-ink' : 'text-ink-muted';
     const seleccionado = day.iso === this.selectedIso() ? 'bg-we-primary/10' : 'hover:bg-surface-2';
@@ -286,6 +311,7 @@ export class CalendarioComponent {
       },
       { emitEvent: false },
     );
+    this.formularioAbierto.set(true);
   }
 
   cancelarEdicion(): void {
@@ -316,7 +342,7 @@ export class CalendarioComponent {
         this.eventos.update((lista) => [...lista, nuevo]);
         this.toast.success('Evento agregado a tu calendario.');
       }
-      this.cancelarEdicion();
+      this.cerrarFormulario();
     } catch {
       this.toast.error('No se pudo guardar el evento. Intenta de nuevo.');
     } finally {

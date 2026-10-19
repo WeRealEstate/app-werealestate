@@ -1,6 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 
-export type ToastType = 'success' | 'error';
+/** aviso: algo pendiente o informativo que no es ni un éxito ni un error (p. ej. "Tienes 4 pendientes"). */
+export type ToastType = 'success' | 'error' | 'aviso';
 
 export interface Toast {
   id: number;
@@ -23,6 +24,10 @@ export class ToastService {
 
   error(message: string): void {
     this.push(message, 'error');
+  }
+
+  aviso(message: string): void {
+    this.push(message, 'aviso');
   }
 
   dismiss(id: number): void {

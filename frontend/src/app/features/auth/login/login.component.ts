@@ -82,7 +82,8 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
     if (turnstile && contenedor) {
       this.turnstileWidgetId = turnstile.render(contenedor, {
         sitekey: environment.turnstileSiteKey,
-        theme: 'dark',
+        // La tarjeta sigue el tema de la app (clara u oscura), así que el captcha también.
+        theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light',
         callback: (token) => this.captchaToken.set(token),
         'expired-callback': () => this.captchaToken.set(null),
         'error-callback': () => this.captchaToken.set(null),

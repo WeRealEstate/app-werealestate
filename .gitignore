@@ -15,3 +15,6 @@ skills-lock.json
 # OS / editor
 .DS_Store
 .idea/
+
+# Reporte de auditoría de seguridad: no subir (el repositorio es público)
+/SEGURIDAD.md

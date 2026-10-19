@@ -1,84 +1,82 @@
-import { AfterViewInit, Component, ElementRef, inject } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { animate, stagger } from 'motion';
-import { PressDirective } from '../../../shared/motion/press.directive';
+import { LucideChevronDown, LucideChevronRight } from '@lucide/angular';
+import { animate, scroll, stagger } from 'motion';
 
-/** Espejo literal del hero de cotizador.weinversiones.com (mismo markup, imagen, copy y
- * animación de entrada), portado tal cual para /cotizador-publico, que reemplaza a ese sitio. */
+/** Curva de llegada de toda la portada: frena suave al final, sin rebote. */
+const LLEGADA: [number, number, number, number] = [0.16, 1, 0.3, 1];
+
+/** Portada de /cotizador-publico (y /cotizador-publico/lotes, que comparte el layout): la foto de la costa
+ * de Oaxaca a pantalla completa con el título centrado. Dos momentos de movimiento, nada más:
+ *  - al entrar, la foto se asienta (se aleja un poco) y el texto aparece de abajo, de borroso a nítido;
+ *  - al bajar, la foto se acerca y se oscurece mientras el texto sube y se desvanece, dejando paso al
+ *    formulario.
+ * Con "reducir movimiento" no hay desplazamientos ni zoom: el texto solo aparece. El contenido es visible
+ * por defecto (las animaciones parten de JS), así que si algo falla la portada se ve completa. */
 @Component({
   selector: 'app-hero-publico',
   standalone: true,
-  imports: [PressDirective, RouterLink],
+  imports: [RouterLink, LucideChevronDown, LucideChevronRight],
   templateUrl: './hero-publico.component.html',
-  styles: [
-    `
-      .hero-item {
-        opacity: 0;
-      }
-    `,
-  ],
 })
-export class HeroPublicoComponent implements AfterViewInit {
+export class HeroPublicoComponent implements AfterViewInit, OnDestroy {
   private readonly router = inject(Router);
 
-  constructor(private readonly el: ElementRef<HTMLElement>) {}
+  @ViewChild('hero', { static: true }) private readonly hero!: ElementRef<HTMLElement>;
+  @ViewChild('fotoMarco', { static: true }) private readonly fotoMarco!: ElementRef<HTMLElement>;
+  @ViewChild('foto', { static: true }) private readonly foto!: ElementRef<HTMLImageElement>;
+  @ViewChild('veloScroll', { static: true }) private readonly veloScroll!: ElementRef<HTMLElement>;
+  @ViewChild('contenido', { static: true }) private readonly contenido!: ElementRef<HTMLElement>;
+  @ViewChild('flecha', { static: true }) private readonly flecha!: ElementRef<HTMLElement>;
+
+  private readonly limpiezas: VoidFunction[] = [];
 
   ngAfterViewInit(): void {
-    const items = this.el.nativeElement.querySelectorAll('.hero-item');
+    const items = this.hero.nativeElement.querySelectorAll<HTMLElement>('.hero-item');
+    const reducido = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+    if (reducido) {
+      animate(items, { opacity: [0, 1] }, { duration: 0.4, delay: stagger(0.08) });
+      return;
+    }
+
+    // Entrada: la foto se asienta y el texto llega escalonado, de borroso a nítido.
+    animate(this.foto.nativeElement, { scale: [1.08, 1], opacity: [0, 1] }, { duration: 1.6, ease: LLEGADA });
     animate(
       items,
-      {
-        opacity: [0, 1],
-        y: [24, 0],
-      },
-      {
-        duration: 0.6,
-        delay: stagger(0.1),
-        ease: [0.22, 1, 0.36, 1],
-      },
+      { opacity: [0, 1], y: [28, 0], filter: ['blur(10px)', 'blur(0px)'] },
+      { duration: 0.9, delay: stagger(0.12, { startDelay: 0.2 }), ease: LLEGADA },
+    );
+    animate(this.flecha.nativeElement, { opacity: [0, 1] }, { duration: 0.6, delay: 0.9 });
+
+    // Al bajar: el avance del scroll sobre la portada (de su borde superior al inferior) mueve la escena.
+    const opciones = { target: this.hero.nativeElement, offset: ['start start', 'end start'] as ['start start', 'end start'] };
+    this.limpiezas.push(
+      scroll(animate(this.fotoMarco.nativeElement, { scale: [1, 1.12] }, { ease: 'linear' }), opciones),
+      scroll(animate(this.veloScroll.nativeElement, { opacity: [0, 0.55] }, { ease: 'linear' }), opciones),
+      scroll(animate(this.contenido.nativeElement, { opacity: [1, 0], y: [0, -80] }, { ease: 'linear' }), {
+        ...opciones,
+        offset: ['start start', 'center start'],
+      }),
     );
   }
 
-  /** El hero es compartido por /cotizador-publico y /cotizador-publico/lotes (mismo layout, ver
-   * CotizadorPublicoLayoutComponent): si "Comenzar cotización" se hace clic estando en /lotes,
-   * primero hay que volver a la ruta del cotizador — si no, el scroll a "#cotizador" solo revela
-   * la pantalla de lotes, que sigue montada ahí. */
+  ngOnDestroy(): void {
+    this.limpiezas.forEach((limpiar) => limpiar());
+  }
+
+  /** La portada es compartida por /cotizador-publico y /cotizador-publico/lotes (mismo layout, ver
+   * CotizadorPublicoLayoutComponent): si "Comenzar cotización" se toca estando en /lotes, primero hay que
+   * volver a la ruta del cotizador — si no, bajar a "#cotizador" solo revelaría la pantalla de lotes. */
   irAlCotizador(): void {
     if (this.router.url.startsWith('/cotizador-publico/lotes')) {
       void this.router.navigateByUrl('/cotizador-publico');
     }
-
     const destino = document.getElementById('cotizador');
-
     if (!destino) return;
-
-    const inicio = window.scrollY;
-    const fin = destino.getBoundingClientRect().top + window.scrollY;
-    const distancia = fin - inicio;
-
-    const duracion = 900;
-    let tiempoInicio: number | null = null;
-
-    const animarScroll = (tiempoActual: number) => {
-      if (tiempoInicio === null) {
-        tiempoInicio = tiempoActual;
-      }
-
-      const tiempoTranscurrido = tiempoActual - tiempoInicio;
-
-      const progreso = Math.min(tiempoTranscurrido / duracion, 1);
-
-      // Curva easeInOutCubic
-      const suavizado = progreso < 0.5 ? 4 * progreso * progreso * progreso : 1 - Math.pow(-2 * progreso + 2, 3) / 2;
-
-      window.scrollTo(0, inicio + distancia * suavizado);
-
-      if (progreso < 1) {
-        requestAnimationFrame(animarScroll);
-      }
-    };
-
-    requestAnimationFrame(animarScroll);
+    const reducido = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // La barra superior es fija: se descuenta su alto para que el formulario no quede debajo de ella.
+    const barra = document.getElementById('barra-publica')?.offsetHeight ?? 0;
+    window.scrollTo({ top: destino.getBoundingClientRect().top + window.scrollY - barra, behavior: reducido ? 'auto' : 'smooth' });
   }
 }

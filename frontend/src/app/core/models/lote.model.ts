@@ -63,6 +63,24 @@ export const ESTADO_LOTE_COLOR_RGB: Record<EstadoLote, [number, number, number]>
   VENDIDO: [239, 68, 68],
 };
 
+/** Orden en que se listan los estados (el mismo del plano y del enum del backend). */
+export const ESTADOS_LOTE_ORDEN: EstadoLote[] = [
+  'DISPONIBLE',
+  'APARTADO',
+  'APARTADO_A_PLAZO',
+  'APARTADO_CON_DINERO',
+  'EN_PROCESO_DE_FIRMA',
+  'VENDIDO',
+];
+
+/** Inventario de un desarrollo contado por estado (GET /api/lotes/resumen). porEstado trae los 6 estados. */
+export interface ResumenLotes {
+  desarrolloId: number;
+  desarrollo: string;
+  total: number;
+  porEstado: Record<EstadoLote, number>;
+}
+
 /** Un vértice del polígono que delimita un lote sobre el plano, en % (0-100) del ancho/alto de la
  * imagen — así sirve para cualquier tamaño de pantalla. */
 export interface PuntoMapa {

@@ -44,7 +44,7 @@ const FILA_EJEMPLO = [
   'juan.perez@correo.com',
   'SAMAI Campestre',
   'Campaña Facebook Junio 2026',
-  'EJEMPLO — BORRA ESTA FILA. Interesado en terreno de 200m2, pidió información por WhatsApp.',
+  'EJEMPLO: BORRA ESTA FILA. Interesado en terreno de 200m2, pidió información por WhatsApp.',
 ];
 
 /** Genera y descarga la plantilla .xlsx para importar leads, con la lista de desarrollos disponibles como validación. */

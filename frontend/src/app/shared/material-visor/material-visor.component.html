@@ -12,7 +12,8 @@
         </button>
       </div>
 
-      <div class="relative flex min-h-[40dvh] flex-1 items-center justify-center overflow-auto bg-black/80">
+      <!-- Los lados (px-12 / sm:px-16) son el espacio de las flechas: así nunca tapan el contenido. -->
+      <div class="relative flex min-h-[40dvh] flex-1 items-center justify-center overflow-auto px-12 sm:px-16" [class.bg-black/80]="tipo !== 'texto'" [class.bg-surface]="tipo === 'texto'">
         @if (cargando()) {
           <app-we-loader texto="Cargando vista previa…" />
         } @else if (error()) {
@@ -27,12 +28,12 @@
           <p class="max-h-[62dvh] w-full overflow-y-auto whitespace-pre-line bg-surface p-6 text-base text-ink" data-testid="visor-texto">{{ m.texto }}</p>
         }
         @if (indice() > 0) {
-          <button type="button" (click)="anterior()" aria-label="Anterior" class="absolute left-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80">
+          <button type="button" (click)="anterior()" aria-label="Anterior" class="absolute left-1.5 top-1/2 flex h-10 w-10 -translate-y-1/2 sm:left-3 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80">
             <svg lucideChevronLeft [size]="22" aria-hidden="true"></svg>
           </button>
         }
         @if (indice() < items().length - 1) {
-          <button type="button" (click)="siguiente()" aria-label="Siguiente" class="absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80">
+          <button type="button" (click)="siguiente()" aria-label="Siguiente" class="absolute right-1.5 top-1/2 flex h-10 w-10 -translate-y-1/2 sm:right-3 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80">
             <svg lucideChevronRight [size]="22" aria-hidden="true"></svg>
           </button>
         }

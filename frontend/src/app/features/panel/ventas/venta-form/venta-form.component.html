@@ -73,7 +73,7 @@
             >
               <option [ngValue]="null">Selecciona un lote</option>
               @for (l of lotesDisponiblesParaAgregar(); track l.id) {
-                <option [ngValue]="l.id">{{ l.manzana }} / {{ l.numeroLote }} — {{ estadoLabels[l.estado] }}</option>
+                <option [ngValue]="l.id">{{ l.manzana }} / {{ l.numeroLote }} · {{ estadoLabels[l.estado] }}</option>
               }
             </select>
           }

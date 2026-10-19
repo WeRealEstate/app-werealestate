@@ -2,7 +2,7 @@
   type="button"
   [attr.aria-pressed]="themeService.theme() === 'dark'"
   [attr.aria-label]="themeService.theme() === 'dark' ? 'Modo oscuro activado, cambiar a modo claro' : 'Modo claro activado, cambiar a modo oscuro'"
-  [attr.title]="themeService.theme() === 'dark' ? 'Modo oscuro — cambiar a claro' : 'Modo claro — cambiar a oscuro'"
+  [attr.title]="themeService.theme() === 'dark' ? 'Modo oscuro: cambiar a claro' : 'Modo claro: cambiar a oscuro'"
   (click)="toggle()"
   class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[var(--sb-line)] text-[var(--sb-fg-dim)]
          hover:border-[var(--sb-line-hover)] hover:text-[var(--sb-fg)] transition-[color,border-color,transform] duration-150 active:scale-90
