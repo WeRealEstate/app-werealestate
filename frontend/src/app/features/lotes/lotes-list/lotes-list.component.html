@@ -85,7 +85,10 @@
     >
       <option value="" [selected]="filtroEstado() === null">Todos los estados</option>
       @for (e of estadosLote; track e) {
-        <option [value]="e" [selected]="e === filtroEstado()">{{ estadoLabels[e] }}</option>
+        <option [value]="e" [selected]="e === filtroEstado() && !soloReservadosWe()">{{ estadoLabels[e] }}</option>
+      }
+      @if (puedeVerInfoLote()) {
+        <option value="RESERVADO_WE" [selected]="soloReservadosWe()">Reservado por We</option>
       }
     </select>
     <div class="flex items-center gap-1.5">
@@ -166,11 +169,13 @@
                     </span>
                   }
                   @if (lote.sinVentaRegistrada) {
+                    <!-- Solo lo reciben admin y administración: afuera este lote se ve vendido. -->
                     <span
-                      class="h-2 w-2 shrink-0 rounded-full bg-red-500"
-                      title="Vendido sin venta registrada en el sistema. Usa el ícono de información para registrarla"
-                      aria-label="Vendido sin venta registrada en el sistema"
-                    ></span>
+                      class="inline-flex shrink-0 whitespace-nowrap rounded-full bg-teal-600/10 px-2 py-0.5 text-[11px] font-semibold text-teal-700 dark:bg-teal-400/15 dark:text-teal-300"
+                      title="Reservado por We: afuera se ve como vendido. Cuando se venda, registra la venta desde el ícono de información."
+                    >
+                      Reservado por We
+                    </span>
                   }
                 </div>
                 @if (lote.estado === 'APARTADO_A_PLAZO' && lote.fechaExpiraApartado) {

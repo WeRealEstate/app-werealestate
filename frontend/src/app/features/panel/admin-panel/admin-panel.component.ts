@@ -26,6 +26,21 @@ const ESTADO_BARRA_CLASES: Record<EstadoLote, string> = {
   VENDIDO: 'bg-[#ef4444] dark:bg-[#f87171]',
 };
 
+/** "Reservado por We" no es un estado del lote (en la BD son VENDIDO sin venta registrada) pero en el inicio
+ * del admin se muestra como uno más, entre "En proceso de firma" y "Vendido". Verde azulado, validado junto a
+ * los otros seis colores igual que ellos. */
+const RESERVADO_WE_CLASE = 'bg-[#0d9488] dark:bg-[#2dd4bf]';
+
+/** Un tramo de la barra de inventario y su renglón en la lista. */
+interface SegmentoInventario {
+  clave: string;
+  etiqueta: string;
+  valor: number;
+  clase: string;
+  /** Valor de ?estado= para abrir Lotes con ese filtro. */
+  estadoFiltro: string;
+}
+
 const MONEDA = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
 
 function mesActual(): string {
@@ -104,13 +119,38 @@ export class AdminPanelComponent {
     return MONEDA.format(valor);
   }
 
-  /** Ancho de un estado en la barra, en % del total del desarrollo. */
-  porcentaje(r: ResumenLotes, estado: EstadoLote): number {
-    return r.total > 0 ? (r.porEstado[estado] / r.total) * 100 : 0;
+  /** Los tramos de un desarrollo en orden: los 6 estados y, solo si el backend los separó (admin y
+   * administración), "Reservado por We" justo antes de "Vendido". */
+  segmentos(r: ResumenLotes): SegmentoInventario[] {
+    const lista: SegmentoInventario[] = this.estados.map((e) => ({
+      clave: e,
+      etiqueta: this.estadoLabels[e],
+      valor: r.porEstado[e],
+      clase: this.estadoClases[e],
+      estadoFiltro: e,
+    }));
+    if (this.separaReservados()) {
+      lista.splice(lista.length - 1, 0, {
+        clave: 'RESERVADO_WE',
+        etiqueta: 'Reservado por We',
+        valor: r.reservadosWe,
+        clase: RESERVADO_WE_CLASE,
+        estadoFiltro: 'RESERVADO_WE',
+      });
+    }
+    return lista;
+  }
+
+  /** Admin y administración ven los reservados por We aparte (el resto del panel los ve como vendidos). */
+  readonly separaReservados = computed(() => ['ADMIN', 'LIDER_AREA'].includes(this.user()?.rol ?? ''));
+
+  /** Ancho de un tramo en la barra, en % del total del desarrollo. */
+  porcentaje(r: ResumenLotes, valor: number): number {
+    return r.total > 0 ? (valor / r.total) * 100 : 0;
   }
 
   /** Descripción completa de la barra para lectores de pantalla (la barra sola es solo color). */
   descripcionBarra(r: ResumenLotes): string {
-    return `${r.desarrollo}: ` + this.estados.map((e) => `${r.porEstado[e]} ${this.estadoLabels[e].toLowerCase()}`).join(', ');
+    return `${r.desarrollo}: ` + this.segmentos(r).map((s) => `${s.valor} ${s.etiqueta.toLowerCase()}`).join(', ');
   }
 }

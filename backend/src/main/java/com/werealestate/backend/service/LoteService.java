@@ -29,6 +29,8 @@ import com.werealestate.backend.model.Lote;
 import com.werealestate.backend.model.MovimientoLote;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Usuario;
+import com.werealestate.backend.model.VentaLote;
+import jakarta.persistence.criteria.Subquery;
 import com.werealestate.backend.repository.AsesorExternoRepository;
 import com.werealestate.backend.repository.DesarrolloRepository;
 import com.werealestate.backend.repository.LoteRepository;
@@ -159,6 +161,7 @@ public class LoteService {
             String estado,
             BigDecimal superficieMin,
             BigDecimal superficieMax,
+            Boolean reservadoWe,
             int pagina,
             int tamano) {
         Specification<Lote> spec = (root, query, cb) -> cb.conjunction();
@@ -177,6 +180,16 @@ public class LoteService {
         if (estado != null && !estado.isBlank()) {
             EstadoLote estadoEnum = EstadoLote.valueOf(estado);
             spec = spec.and((root, query, cb) -> cb.equal(root.get("estado"), estadoEnum));
+            // Dentro de "Vendido", admin y administración pueden pedir solo los reservados por We (true) o
+            // solo los vendidos de verdad (false). Para cualquier otro rol el filtro se ignora.
+            if (estadoEnum == EstadoLote.VENDIDO && reservadoWe != null && puedeVerReservadosWe()) {
+                spec = spec.and((root, query, cb) -> {
+                    Subquery<Long> conVenta = query.subquery(Long.class);
+                    var ventaLote = conVenta.from(VentaLote.class);
+                    conVenta.select(ventaLote.get("id")).where(cb.equal(ventaLote.get("lote"), root));
+                    return reservadoWe ? cb.not(cb.exists(conVenta)) : cb.exists(conVenta);
+                });
+            }
         }
         if (superficieMin != null) {
             spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("superficie"), superficieMin));
@@ -203,9 +216,14 @@ public class LoteService {
         return new PaginaDto<>(marcarSinVentaRegistrada(lotes), resultado.hasNext());
     }
 
-    /** Para el punto rojo en /panel/lotes: de los lotes VENDIDO en esta página, cuáles no tienen
-     * ningún VentaLote asociado (se marcaron vendidos a mano, sin pasar por el módulo de Ventas). */
+    /** Marca "Reservado por We" en /panel/lotes y /panel/plano: de los lotes VENDIDO, cuáles no tienen
+     * ningún VentaLote asociado. Son lotes que la empresa se guarda para venderlos más adelante y que a
+     * propósito se muestran como vendidos: solo admin y administración reciben la marca; para el resto
+     * (y en todo lo público) siguen siendo simplemente "Vendido". */
     private List<LoteDto> marcarSinVentaRegistrada(List<LoteDto> lotes) {
+        if (!puedeVerReservadosWe()) {
+            return lotes;
+        }
         List<Long> idsVendidos = lotes.stream()
                 .filter(l -> l.estado() == EstadoLote.VENDIDO)
                 .map(LoteDto::id)
@@ -228,12 +246,24 @@ public class LoteService {
      * acceso a los módulos de lotes (ver ModuloAccesoInterceptor). */
     private static final String DESARROLLO_GENERICO_OTRO = "Otro";
 
+    /** Quién puede saber que un lote "vendido" en realidad lo reservó la empresa: admin y administración. */
+    private boolean puedeVerReservadosWe() {
+        Role rol = currentUserProvider.getUsuarioActual().getRol();
+        return rol == Role.ADMIN || rol == Role.LIDER_AREA;
+    }
+
     @Transactional(readOnly = true)
     public List<ResumenLotesDto> resumenPorDesarrollo() {
         Map<Long, Map<EstadoLote, Long>> conteos = new HashMap<>();
         for (LoteRepository.ConteoPorEstado c : loteRepository.contarPorDesarrolloYEstado()) {
             conteos.computeIfAbsent(c.getDesarrolloId(), id -> new EnumMap<>(EstadoLote.class))
                     .put(c.getEstado(), c.getTotal());
+        }
+        Map<Long, Long> reservados = new HashMap<>();
+        if (puedeVerReservadosWe()) {
+            for (LoteRepository.ConteoPorDesarrollo c : loteRepository.contarReservadosWePorDesarrollo()) {
+                reservados.put(c.getDesarrolloId(), c.getTotal());
+            }
         }
         return desarrolloRepository.findAll().stream()
                 .filter(d -> !DESARROLLO_GENERICO_OTRO.equals(d.getNombre()))
@@ -245,7 +275,9 @@ public class LoteService {
                         porEstado.put(estado, delDesarrollo.getOrDefault(estado, 0L));
                     }
                     long total = porEstado.values().stream().mapToLong(Long::longValue).sum();
-                    return new ResumenLotesDto(d.getId(), d.getNombre(), total, porEstado);
+                    long reservadosWe = reservados.getOrDefault(d.getId(), 0L);
+                    porEstado.put(EstadoLote.VENDIDO, porEstado.get(EstadoLote.VENDIDO) - reservadosWe);
+                    return new ResumenLotesDto(d.getId(), d.getNombre(), total, porEstado, reservadosWe);
                 })
                 .toList();
     }
@@ -579,7 +611,8 @@ public class LoteService {
                 .sorted(ORDEN_NATURAL_LOTES)
                 .map(LoteDto::from)
                 .toList();
-        return new PlanoDesarrolloDto(desarrollo.getId(), desarrollo.getNombre(), desarrollo.getPlanoUrl(), lotes);
+        return new PlanoDesarrolloDto(
+                desarrollo.getId(), desarrollo.getNombre(), desarrollo.getPlanoUrl(), marcarSinVentaRegistrada(lotes));
     }
 
     /** Delimita (o borra, con una lista vacía o nula) el polígono de un lote sobre el plano de su

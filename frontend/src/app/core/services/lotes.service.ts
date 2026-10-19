@@ -22,6 +22,8 @@ export interface BuscarLotesParams {
   estado?: string | null;
   superficieMin?: number | null;
   superficieMax?: number | null;
+  /** Con estado VENDIDO (solo admin y administración): true = solo reservados por We, false = solo vendidos de verdad. */
+  reservadoWe?: boolean | null;
   pagina: number;
   tamano: number;
 }
@@ -47,6 +49,7 @@ export class LotesService {
     if (params.estado) httpParams = httpParams.set('estado', params.estado);
     if (params.superficieMin != null) httpParams = httpParams.set('superficieMin', params.superficieMin);
     if (params.superficieMax != null) httpParams = httpParams.set('superficieMax', params.superficieMax);
+    if (params.reservadoWe != null) httpParams = httpParams.set('reservadoWe', params.reservadoWe);
 
     return firstValueFrom(this.http.get<Pagina<Lote>>(`${this.baseUrl}/buscar`, { params: httpParams }));
   }

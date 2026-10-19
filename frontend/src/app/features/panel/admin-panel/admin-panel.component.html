@@ -29,13 +29,13 @@
 
             @if (r.total > 0) {
               <div class="barra-inventario mt-4 flex h-3 gap-[2px] overflow-hidden rounded-full" role="img" [attr.aria-label]="descripcionBarra(r)">
-                @for (e of estados; track e) {
-                  @if (r.porEstado[e] > 0) {
+                @for (s of segmentos(r); track s.clave) {
+                  @if (s.valor > 0) {
                     <div
                       class="h-full min-w-1 basis-0"
-                      [class]="estadoClases[e]"
-                      [style.flex-grow]="r.porEstado[e]"
-                      [attr.title]="estadoLabels[e] + ': ' + r.porEstado[e] + ' (' + (porcentaje(r, e) | number: '1.0-0') + '%)'"
+                      [class]="s.clase"
+                      [style.flex-grow]="s.valor"
+                      [attr.title]="s.etiqueta + ': ' + s.valor + ' (' + (porcentaje(r, s.valor) | number: '1.0-0') + '%)'"
                     ></div>
                   }
                 }
@@ -47,17 +47,17 @@
             <!-- La lista es la lectura exacta (nombre + número) y lleva a Lotes con el filtro puesto. Sus
                  columnas dependen del ancho de la tarjeta, para que los nombres nunca se corten. -->
             <ul class="mt-4 grid grid-cols-1 gap-x-4 @sm:grid-cols-2 @2xl:grid-cols-3">
-              @for (e of estados; track e) {
+              @for (s of segmentos(r); track s.clave) {
                 <li>
                   <a
                     [routerLink]="['/panel/lotes']"
-                    [queryParams]="{ desarrolloId: r.desarrolloId, estado: e }"
+                    [queryParams]="{ desarrolloId: r.desarrolloId, estado: s.estadoFiltro }"
                     class="-mx-2 flex min-h-[36px] items-center gap-2 rounded-lg px-2 text-sm transition-colors hover:bg-surface-2
                            focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50"
                   >
-                    <span class="h-2.5 w-2.5 shrink-0 rounded-full" [class]="estadoClases[e]" aria-hidden="true"></span>
-                    <span class="min-w-0 flex-1 truncate text-ink-muted">{{ estadoLabels[e] }}</span>
-                    <span class="font-semibold tabular-nums text-ink">{{ r.porEstado[e] }}</span>
+                    <span class="h-2.5 w-2.5 shrink-0 rounded-full" [class]="s.clase" aria-hidden="true"></span>
+                    <span class="min-w-0 flex-1 truncate text-ink-muted">{{ s.etiqueta }}</span>
+                    <span class="font-semibold tabular-nums text-ink">{{ s.valor }}</span>
                   </a>
                 </li>
               }

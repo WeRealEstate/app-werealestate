@@ -49,10 +49,11 @@ public class LoteController {
             @RequestParam(required = false) String estado,
             @RequestParam(required = false) BigDecimal superficieMin,
             @RequestParam(required = false) BigDecimal superficieMax,
+            @RequestParam(required = false) Boolean reservadoWe,
             @RequestParam(defaultValue = "0") int pagina,
             @RequestParam(defaultValue = "20") int tamano) {
         return loteService.buscarPaginado(
-                manzana, numeroLote, desarrolloId, estado, superficieMin, superficieMax, pagina, tamano);
+                manzana, numeroLote, desarrolloId, estado, superficieMin, superficieMax, reservadoWe, pagina, tamano);
     }
 
     /** Inventario por desarrollo y estado, para las cifras del inicio del admin. */

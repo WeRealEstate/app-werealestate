@@ -107,6 +107,9 @@ export class LotesListComponent {
   readonly filtroNumeroLote = signal('');
   readonly filtroDesarrolloId = signal<number | null>(null);
   readonly filtroEstado = signal<EstadoLote | null>(null);
+  /** Dentro de "Vendido": solo los reservados por We (lotes que la empresa se guarda y afuera se ven
+   * vendidos). Solo lo usan admin y administración; ver LoteService.puedeVerReservadosWe en el backend. */
+  readonly soloReservadosWe = signal(false);
   readonly superficieMin = signal<number | null>(null);
   readonly superficieMax = signal<number | null>(null);
 
@@ -129,7 +132,12 @@ export class LotesListComponent {
     const desarrolloId = Number(params.get('desarrolloId'));
     if (Number.isInteger(desarrolloId) && desarrolloId > 0) this.filtroDesarrolloId.set(desarrolloId);
     const estado = params.get('estado');
-    if (estado && estado in ESTADO_LOTE_LABELS) this.filtroEstado.set(estado as EstadoLote);
+    if (estado === 'RESERVADO_WE') {
+      this.filtroEstado.set('VENDIDO');
+      this.soloReservadosWe.set(true);
+    } else if (estado && estado in ESTADO_LOTE_LABELS) {
+      this.filtroEstado.set(estado as EstadoLote);
+    }
 
     this.leadsService.listarDesarrollosGestionables().then((d) => this.desarrollos.set(d));
     this.cargar();
@@ -209,7 +217,8 @@ export class LotesListComponent {
   }
 
   onEstadoChange(valor: string): void {
-    this.filtroEstado.set(valor === '' ? null : (valor as EstadoLote));
+    this.soloReservadosWe.set(valor === 'RESERVADO_WE');
+    this.filtroEstado.set(valor === '' ? null : valor === 'RESERVADO_WE' ? 'VENDIDO' : (valor as EstadoLote));
     this.recargarDesdeInicio();
   }
 
@@ -265,6 +274,8 @@ export class LotesListComponent {
       estado: this.filtroEstado(),
       superficieMin: this.superficieMin(),
       superficieMax: this.superficieMax(),
+      // Para admin y administración "Vendido" son solo los vendidos de verdad; los reservados por We tienen su opción.
+      reservadoWe: this.puedeVerInfoLote() && this.filtroEstado() === 'VENDIDO' ? this.soloReservadosWe() : null,
       pagina,
       tamano: TAMANO_PAGINA,
     });

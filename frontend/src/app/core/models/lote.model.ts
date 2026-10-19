@@ -79,6 +79,9 @@ export interface ResumenLotes {
   desarrollo: string;
   total: number;
   porEstado: Record<EstadoLote, number>;
+  /** Reservados por We: se muestran como vendidos. Solo viene distinto de 0 para admin y administración,
+   * y en ese caso porEstado.VENDIDO ya no los incluye. */
+  reservadosWe: number;
 }
 
 /** Un vértice del polígono que delimita un lote sobre el plano, en % (0-100) del ancho/alto de la

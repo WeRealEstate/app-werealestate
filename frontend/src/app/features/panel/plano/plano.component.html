@@ -464,9 +464,10 @@
             </span>
           }
           @if (lote.sinVentaRegistrada) {
+            <!-- Solo lo reciben admin y administración (ver LoteService.puedeVerReservadosWe). -->
             <p class="mt-1.5 flex items-center gap-1.5 text-xs text-ink-muted">
-              <span class="h-2 w-2 shrink-0 rounded-full bg-red-500" aria-hidden="true"></span>
-              <span>Vendido sin venta registrada en el sistema.@if (puedeVerInfoLote()) { Usa "Ver información" para registrarla.}</span>
+              <span class="h-2 w-2 shrink-0 rounded-full bg-teal-600 dark:bg-teal-400" aria-hidden="true"></span>
+              <span>Reservado por We: afuera se ve como vendido.@if (puedeVerInfoLote()) { Cuando se venda, registra la venta en "Ver información".}</span>
             </p>
           }
           @if (lote.estado === 'APARTADO_A_PLAZO' && lote.fechaExpiraApartado) {

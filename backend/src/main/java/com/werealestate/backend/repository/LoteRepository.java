@@ -27,6 +27,19 @@ public interface LoteRepository extends JpaRepository<Lote, Long>, JpaSpecificat
             + "from Lote l group by l.desarrollo.id, l.estado")
     List<ConteoPorEstado> contarPorDesarrolloYEstado();
 
+    /** Lotes reservados por la empresa (VENDIDO sin ninguna venta registrada) por desarrollo. Afuera se
+     * muestran como vendidos; ver LoteService.puedeVerReservadosWe. */
+    @Query("select l.desarrollo.id as desarrolloId, count(l) as total from Lote l "
+            + "where l.estado = com.werealestate.backend.model.EstadoLote.VENDIDO "
+            + "and not exists (select vl.id from VentaLote vl where vl.lote = l) group by l.desarrollo.id")
+    List<ConteoPorDesarrollo> contarReservadosWePorDesarrollo();
+
+    interface ConteoPorDesarrollo {
+        Long getDesarrolloId();
+
+        Long getTotal();
+    }
+
     interface ConteoPorEstado {
         Long getDesarrolloId();
 
