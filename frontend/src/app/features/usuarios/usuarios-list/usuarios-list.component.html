@@ -65,7 +65,7 @@
               <td class="px-4 py-3">
                 <select
                   [disabled]="u.id === propioId() || savingId() === u.id"
-                  (change)="cambiarRol(u, $any($event.target).value)"
+                  (change)="cambiarRol(u, $any($event.target))"
                   class="rounded-lg border border-border px-3 py-2 text-sm text-ink bg-surface
                          focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary disabled:opacity-60"
                 >
@@ -80,14 +80,36 @@
                   [disabled]="u.rol === 'ADMIN' || savingId() === u.id"
                   (click)="abrirModulos(u)"
                   [attr.aria-label]="'Editar módulos de ' + u.nombre"
-                  class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-ink
-                         hover:border-we-primary active:scale-[0.97] transition-transform duration-150
-                         disabled:opacity-60 disabled:cursor-default disabled:hover:border-border disabled:active:scale-100"
+                  class="boton-secundario rounded-lg px-3 py-1.5 text-xs font-medium text-ink
+                         active:scale-[0.97] transition duration-150
+                         disabled:opacity-60 disabled:cursor-default disabled:active:scale-100"
                 >
                   {{ resumenModulos(u) }}
                 </button>
               </td>
-              <td class="px-4 py-3 font-mono text-ink-muted">{{ u.pin || '—' }}</td>
+              <td class="px-4 py-3">
+                @if (u.pin) {
+                  <span class="inline-flex items-center gap-1.5">
+                    <span class="min-w-[4ch] font-mono text-ink-muted">{{ pinesVisibles().has(u.id) ? u.pin : '••••' }}</span>
+                    <button
+                      type="button"
+                      (click)="alternarPin(u.id)"
+                      [attr.aria-label]="(pinesVisibles().has(u.id) ? 'Ocultar' : 'Ver') + ' PIN de ' + u.nombre"
+                      [attr.aria-pressed]="pinesVisibles().has(u.id)"
+                      [title]="pinesVisibles().has(u.id) ? 'Ocultar PIN' : 'Ver PIN'"
+                      class="flex h-7 w-7 items-center justify-center rounded-md text-ink-muted hover:bg-surface-2 hover:text-we-primary"
+                    >
+                      @if (pinesVisibles().has(u.id)) {
+                        <svg lucideEyeOff [size]="14" aria-hidden="true"></svg>
+                      } @else {
+                        <svg lucideEye [size]="14" aria-hidden="true"></svg>
+                      }
+                    </button>
+                  </span>
+                } @else {
+                  <span class="text-ink-muted">—</span>
+                }
+              </td>
               <td class="px-4 py-3">
                 <button
                   type="button"
@@ -179,8 +201,8 @@
                       <button
                         type="button"
                         (click)="cancelarReset()"
-                        class="rounded-lg border border-border px-3.5 py-2 text-sm font-medium text-ink-muted hover:border-we-primary
-                               active:scale-[0.97] transition-transform duration-150"
+                        class="boton-secundario rounded-lg px-3.5 py-2 text-sm font-medium text-ink-muted
+                               active:scale-[0.97] transition duration-150"
                       >
                         Cancelar
                       </button>
@@ -211,8 +233,8 @@
           <button
             type="button"
             (click)="cerrarModulos()"
-            class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary
-                   active:scale-[0.97] transition-transform duration-150"
+            class="boton-secundario rounded-lg px-4 py-2.5 text-sm font-medium text-ink-muted
+                   active:scale-[0.97] transition duration-150"
           >
             Cancelar
           </button>
@@ -252,7 +274,7 @@
           <p class="mt-2 text-xs text-red-600 dark:text-red-400" role="alert">{{ error }}</p>
         }
         <div class="mt-5 flex justify-end gap-2.5">
-          <button type="button" (click)="cerrarNombre()" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cancelar</button>
+          <button type="button" (click)="cerrarNombre()" class="boton-secundario rounded-lg px-4 py-2.5 text-sm font-medium text-ink-muted">Cancelar</button>
           <button type="submit" [disabled]="savingId() === u.id" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
             {{ savingId() === u.id ? 'Guardando…' : 'Guardar' }}
           </button>
@@ -300,7 +322,7 @@
             <span></span>
           }
           <div class="flex gap-2.5">
-            <button type="button" (click)="cerrarNomina()" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cancelar</button>
+            <button type="button" (click)="cerrarNomina()" class="boton-secundario rounded-lg px-4 py-2.5 text-sm font-medium text-ink-muted">Cancelar</button>
             <button type="submit" [disabled]="savingId() === u.id" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
               {{ savingId() === u.id ? 'Guardando…' : 'Guardar' }}
             </button>

@@ -483,7 +483,7 @@ public class MaterialService {
         }
     }
 
-    /** Los archivos de la galería en orden, con nombres numerados (01-…, 02-…) para que no choquen dentro del ZIP. */
+    /** Los archivos de la galería en orden, nombrados con el título y su posición (ver {@link #nombreImagenGaleria}). */
     private Zip armarZip(Material m) {
         List<MaterialImagen> imagenes = imagenRepository.findByMaterialIdOrderByOrdenAscIdAsc(m.getId());
         if (imagenes.isEmpty()) throw new ResourceNotFoundException("Esta galería todavía no tiene imágenes");
@@ -491,7 +491,8 @@ public class MaterialService {
         for (int i = 0; i < imagenes.size(); i++) {
             MaterialImagen img = imagenes.get(i);
             archivos.add(new EntradaZip(
-                    rutaImagen(m.getId(), img.getId(), img.getExtension()), String.format("%02d-%s", i + 1, img.getNombre())));
+                    rutaImagen(m.getId(), img.getId(), img.getExtension()),
+                    nombreImagenGaleria(m.getTitulo(), i + 1, img.getExtension())));
         }
         return new Zip(nombreSeguro(m.getTitulo(), "zip"), archivos);
     }
@@ -545,6 +546,17 @@ public class MaterialService {
     }
 
     /** Nombre con el que se descarga: sin rutas ni caracteres raros, y siempre con la extensión real. */
+    /** Nombre con que sale una imagen de galería al descargarla, en el ZIP y suelta: el título y su posición
+     * ("Flyers SAMAI 03.jpg"), para no mostrar el nombre con que se subió (p. ej. "WhatsApp Image…"). El frontend
+     * arma el mismo nombre en {@code nombreDescargaImagen}. El título se recorta antes de numerar para que el
+     * número nunca se pierda y dos entradas del ZIP no choquen. */
+    static String nombreImagenGaleria(String titulo, int posicion, String extension) {
+        String base = titulo == null ? "" : titulo.replaceAll("[^\\p{L}\\p{N} ._-]", "").strip();
+        if (base.length() > 140) base = base.substring(0, 140).strip();
+        if (base.isEmpty()) base = "imagen";
+        return String.format("%s %02d.%s", base, posicion, extension);
+    }
+
     static String nombreSeguro(String original, String extension) {
         String base = original == null ? "" : original;
         base = base.substring(Math.max(base.lastIndexOf('/'), base.lastIndexOf('\\')) + 1);

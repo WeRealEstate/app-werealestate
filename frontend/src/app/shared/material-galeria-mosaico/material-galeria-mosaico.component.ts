@@ -39,7 +39,6 @@ import { ImagenDiferidaComponent } from '../imagen-diferida/imagen-diferida.comp
           >
             <app-imagen-diferida
               [cargar]="cargadorDe(img)"
-              [alt]="img.nombre"
               class="transition-transform duration-300 group-hover:scale-105 motion-reduce:transition-none"
             />
             @if (i === primeras().length - 1 && restantes() > 0) {

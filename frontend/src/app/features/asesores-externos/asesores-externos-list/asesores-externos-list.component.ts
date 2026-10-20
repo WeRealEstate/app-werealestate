@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { LucideEye, LucideExternalLink, LucidePencil, LucideTrash2 } from '@lucide/angular';
+import { LucideEye, LucideEyeOff, LucideExternalLink, LucidePencil, LucideTrash2 } from '@lucide/angular';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -33,7 +33,7 @@ const ordenarAsesoresPorNombre = (asesores: AsesorExterno[]): AsesorExterno[] =>
 @Component({
   selector: 'app-asesores-externos-list',
   standalone: true,
-  imports: [CorreoInputDirective, WeLoaderComponent, FormsModule, RouterLink, LucideEye, LucideExternalLink, LucidePencil, LucideTrash2],
+  imports: [CorreoInputDirective, WeLoaderComponent, FormsModule, RouterLink, LucideEye, LucideEyeOff, LucideExternalLink, LucidePencil, LucideTrash2],
   templateUrl: './asesores-externos-list.component.html',
 })
 export class AsesoresExternosListComponent {
@@ -46,6 +46,17 @@ export class AsesoresExternosListComponent {
   readonly isLoading = signal(true);
   readonly errorMessage = signal<string | null>(null);
   readonly savingId = signal<number | null>(null);
+
+  /** Los PIN dan entrada a los planos públicos y We Forms: van tapados y se destapan fila por fila. */
+  readonly pinesVisibles = signal<ReadonlySet<number>>(new Set());
+
+  alternarPin(id: number): void {
+    this.pinesVisibles.update((ids) => {
+      const siguiente = new Set(ids);
+      if (!siguiente.delete(id)) siguiente.add(id);
+      return siguiente;
+    });
+  }
 
   // --- Tarjeta flotante para agregar uno nuevo: el botón "+ Agregar" siempre está habilitado
   // (no depende de ningún campo) y solo abre el formulario; el propio formulario valida al guardar. ---

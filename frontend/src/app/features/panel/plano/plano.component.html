@@ -39,8 +39,8 @@
           type="button"
           (click)="descargarPdf()"
           [disabled]="generandoPdf()"
-          class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-ink
-                 hover:border-we-primary active:scale-[0.97] transition-transform duration-150 min-h-[44px]
+          class="boton-secundario inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-semibold text-ink
+                 active:scale-[0.97] transition duration-150 min-h-[44px]
                  disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
         >
           {{ generandoPdf() ? 'Generando…' : 'Descargar PDF' }}
@@ -123,8 +123,8 @@
             <button
               type="button"
               (click)="quitarUltimoPunto()"
-              class="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm font-semibold text-ink
-                     hover:border-we-primary active:scale-[0.97] transition-transform duration-150"
+              class="boton-secundario inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2.5 text-sm font-semibold text-ink
+                     active:scale-[0.97] transition duration-150"
             >
               Deshacer último punto
               <kbd class="rounded border border-border bg-black/5 px-1.5 py-0.5 text-xs font-normal dark:bg-white/10">Esc</kbd>
@@ -133,8 +133,8 @@
             <button
               type="button"
               (click)="avanzarSiguienteLote()"
-              class="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm font-semibold text-ink
-                     hover:border-we-primary active:scale-[0.97] transition-transform duration-150"
+              class="boton-secundario inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2.5 text-sm font-semibold text-ink
+                     active:scale-[0.97] transition duration-150"
             >
               Siguiente lote
               <kbd class="rounded border border-border bg-black/5 px-1.5 py-0.5 text-xs font-normal dark:bg-white/10">Enter</kbd>
@@ -492,8 +492,8 @@
             <button
               type="button"
               (click)="verInfoLote(lote)"
-              class="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink
-                     hover:border-we-primary active:scale-[0.97] transition-transform duration-150"
+              class="boton-secundario inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-ink
+                     active:scale-[0.97] transition duration-150"
             >
               Ver información
             </button>
@@ -542,7 +542,7 @@
             type="button"
             (click)="cerrarLimpiarTodo()"
             [disabled]="limpiandoTodo()"
-            class="rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink hover:border-we-primary min-h-[44px]"
+            class="boton-secundario rounded-lg px-4 py-2.5 text-sm font-semibold text-ink min-h-[44px]"
           >
             Cancelar
           </button>

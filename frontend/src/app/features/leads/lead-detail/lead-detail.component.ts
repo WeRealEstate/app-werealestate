@@ -3,7 +3,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { LucideArchive, LucideCheck, LucidePencil, LucideTrash2 } from '@lucide/angular';
+import { CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
+import { LucideArchive, LucideCheck, LucideEllipsis, LucidePencil, LucideTrash2 } from '@lucide/angular';
 import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
 import { EtiquetasService } from '../../../core/services/etiquetas.service';
@@ -28,6 +29,7 @@ import {
 } from '../../../core/models/lead.model';
 import { Usuario } from '../../../core/models/user.model';
 import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
+import { POSICION_MENU_DERECHA } from '../../../shared/menu/posicion-menu';
 import {
   DURACION_OPCIONES,
   DURACION_POR_DEFECTO,
@@ -45,7 +47,7 @@ const ROLES_ASIGNABLES = new Set(['ASESOR', 'LIDER_AREA', 'ADMIN']);
 @Component({
   selector: 'app-lead-detail',
   standalone: true,
-  imports: [WeLoaderComponent, ReactiveFormsModule, RouterLink, DatePipe, DecimalPipe, LucidePencil, LucideArchive, LucideTrash2, LucideCheck],
+  imports: [WeLoaderComponent, ReactiveFormsModule, RouterLink, DatePipe, DecimalPipe, CdkMenu, CdkMenuItem, CdkMenuTrigger, LucidePencil, LucideArchive, LucideEllipsis, LucideTrash2, LucideCheck],
   templateUrl: './lead-detail.component.html',
 })
 export class LeadDetailComponent implements OnInit {
@@ -68,6 +70,7 @@ export class LeadDetailComponent implements OnInit {
   readonly horasOpciones = HORAS_OPCIONES;
   readonly minutosOpciones = MINUTOS_OPCIONES;
   readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
+  readonly posicionMenu = POSICION_MENU_DERECHA;
   readonly propioId = computed(() => this.auth.currentUser()?.id);
   /** Las tarjetas son por asesor (ver ColumnaPersonalizadaService.resolverAsesorId): solo se
    * pueden consultar las propias, o las de cualquiera si quien mira es admin. Un líder de área

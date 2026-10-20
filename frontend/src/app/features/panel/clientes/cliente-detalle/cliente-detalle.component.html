@@ -20,7 +20,7 @@
         </p>
       </div>
       <div class="flex items-center gap-2">
-        <button type="button" (click)="editando.set(true)" class="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink hover:border-we-primary">
+        <button type="button" (click)="editando.set(true)" class="boton-secundario inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-ink">
           <svg lucidePencil [size]="16" aria-hidden="true"></svg> Editar
         </button>
         @if (c.activo) {
@@ -193,7 +193,7 @@
         }
 
         <div class="mt-5 flex justify-end gap-2">
-          <button type="button" (click)="cerrarCambioNumero()" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink hover:border-we-primary">Cancelar</button>
+          <button type="button" (click)="cerrarCambioNumero()" class="boton-secundario rounded-lg px-4 py-2.5 text-sm font-medium text-ink">Cancelar</button>
           <button type="submit" [disabled]="numeroNuevo() === null || guardandoNumero()" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-50">
             {{ guardandoNumero() ? 'Guardando…' : 'Guardar' }}
           </button>

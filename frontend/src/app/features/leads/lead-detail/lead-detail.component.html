@@ -5,34 +5,39 @@
       <div class="flex items-center gap-2">
         <a
           [routerLink]="['/panel/leads', l.id, 'editar']"
-          class="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-ink-muted
-                 hover:border-we-primary hover:text-we-primary active:scale-[0.97] transition-transform duration-150"
+          class="boton-secundario inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-ink-muted
+                 hover:text-we-primary active:scale-[0.97] transition duration-150"
         >
           <svg lucidePencil [size]="14"></svg>
           Editar
         </a>
         <button
           type="button"
-          [disabled]="isArchivando()"
-          (click)="l.archivado ? desarchivar() : archivar()"
-          class="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-ink-muted
-                 hover:border-we-primary hover:text-we-primary active:scale-[0.97] transition-transform duration-150 disabled:opacity-60"
+          [cdkMenuTriggerFor]="menuLead"
+          [cdkMenuPosition]="posicionMenu"
+          [disabled]="isArchivando() || isEliminando()"
+          aria-label="Más acciones del lead"
+          title="Más acciones"
+          class="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-muted transition-colors
+                 hover:bg-surface-2 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50 disabled:opacity-60"
         >
-          <svg lucideArchive [size]="14"></svg>
-          {{ isArchivando() ? 'Guardando…' : (l.archivado ? 'Desarchivar' : 'Archivar') }}
+          <svg lucideEllipsis [size]="18" aria-hidden="true"></svg>
         </button>
-        @if (esAdmin()) {
-          <button
-            type="button"
-            [disabled]="isEliminando()"
-            (click)="eliminar()"
-            class="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-ink-muted
-                   hover:border-red-400 hover:text-red-600 active:scale-[0.97] transition-transform duration-150 disabled:opacity-60"
-          >
-            <svg lucideTrash2 [size]="14"></svg>
-            {{ isEliminando() ? 'Borrando…' : 'Borrar' }}
-          </button>
-        }
+        <ng-template #menuLead>
+          <div cdkMenu class="menu-panel">
+            <button cdkMenuItem type="button" (cdkMenuItemTriggered)="l.archivado ? desarchivar() : archivar()" class="menu-item">
+              <svg lucideArchive [size]="16" aria-hidden="true"></svg>
+              {{ l.archivado ? 'Desarchivar' : 'Archivar' }}
+            </button>
+            @if (esAdmin()) {
+              <div class="menu-separador" role="separator"></div>
+              <button cdkMenuItem type="button" (cdkMenuItemTriggered)="eliminar()" class="menu-item menu-item-peligro">
+                <svg lucideTrash2 [size]="16" aria-hidden="true"></svg>
+                Borrar lead
+              </button>
+            }
+          </div>
+        </ng-template>
       </div>
     }
   </div>

@@ -31,6 +31,14 @@ export interface MaterialImagen {
   tamano: number;
 }
 
+/** Nombre con que se descarga una imagen de galería: el título y su posición ("Flyers SAMAI 03.jpg"), el mismo que
+ * lleva dentro del ZIP (MaterialService.nombreImagenGaleria), para no exponer el nombre con que se subió. */
+export function nombreDescargaImagen(item: MaterialItem, imagen: MaterialImagen): string {
+  const posicion = Math.max(0, item.imagenes.findIndex((i) => i.id === imagen.id)) + 1;
+  const base = item.titulo.replace(/[^\p{L}\p{N} ._-]/gu, '').trim().slice(0, 140).trim() || 'imagen';
+  return `${base} ${String(posicion).padStart(2, '0')}.${imagen.extension}`;
+}
+
 export interface MaterialItem {
   id: number;
   titulo: string;

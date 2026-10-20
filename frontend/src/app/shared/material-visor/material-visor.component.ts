@@ -32,6 +32,8 @@ export class MaterialVisorComponent implements OnDestroy {
   readonly imagenInicial = input(0);
   readonly cargarImagen = input<((m: MaterialItem, imagen: MaterialImagen) => Promise<Blob>) | null>(null);
   readonly cargarMiniaturaImagen = input<((m: MaterialItem, imagen: MaterialImagen) => Promise<Blob>) | null>(null);
+  /** El nombre con que se subió cada imagen (p. ej. "WhatsApp Image…") solo lo ve el panel; los asesores, el peso. */
+  readonly mostrarNombreArchivo = input(true);
   readonly cerrar = output<void>();
   readonly descargar = output<MaterialItem>();
   readonly copiar = output<MaterialItem>();

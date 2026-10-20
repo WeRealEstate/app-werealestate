@@ -374,6 +374,32 @@ select.rounded-full:not([multiple]):not([size]) {
   border-color: color-mix(in srgb, var(--border) 70%, transparent);
 }
 
+/* Botón secundario (Cancelar, Más, Exportar, Volver…): relleno gris translúcido sin contorno, como los botones
+   grises de iOS/macOS, en lugar del rectángulo con borde. El tinte sale de --ink, así funciona igual sobre el
+   lienzo, sobre una tarjeta blanca y en modo oscuro. El borde transparente conserva la misma altura que tenía. */
+@layer components {
+  .boton-secundario {
+    border: 1px solid transparent;
+    background-color: color-mix(in srgb, var(--ink) 7%, transparent);
+    transition: background-color 150ms ease, transform 150ms ease;
+  }
+  .boton-secundario:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--ink) 11%, transparent);
+  }
+}
+
+/* Contraste en modo oscuro: el azul We (#243fb8) sobre el fondo marino casi no se lee, así que el texto, el
+   hover y los bordes azules pasan al azul claro de la marca (menos el de las pastillas rellenas de azul, que ya
+   se distinguen). Respeta a quien ya trae su propio dark:text-… Sin @layer a propósito: debe ganarle a la
+   utilidad text-we-primary. */
+.dark .text-we-primary:not([class*="dark:text-"]),
+.dark .hover\:text-we-primary:not([class*="dark:hover:text-"]):hover {
+  color: var(--color-we-blue-light);
+}
+.dark .border-we-primary:not([class*="dark:border-"]):not(.bg-we-primary) {
+  border-color: var(--color-we-blue-light);
+}
+
 /* Menús desplegables ("Más", "⋯"): panel blanco con sombra suave que nace desde el botón que lo abrió,
    como los menús de macOS. Viven en el overlay del CDK (fuera del componente), por eso son globales. */
 @layer components {

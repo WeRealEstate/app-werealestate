@@ -7,6 +7,7 @@ import {
   MaterialImagen,
   MaterialItem,
   etiquetaCategoria,
+  nombreDescargaImagen,
   tamanoLegible,
 } from '../../../core/models/material.model';
 import { MaterialService } from '../../../core/services/material.service';
@@ -123,7 +124,7 @@ export class MaterialPublicoComponent {
 
   async descargarImagen(e: { item: MaterialItem; imagen: MaterialImagen }): Promise<void> {
     try {
-      descargarBlob(await this.cargarImagen(e.item, e.imagen), e.imagen.nombre);
+      descargarBlob(await this.cargarImagen(e.item, e.imagen), nombreDescargaImagen(e.item, e.imagen));
     } catch {
       this.toast.error('No se pudo descargar la imagen. Intenta de nuevo.');
     }

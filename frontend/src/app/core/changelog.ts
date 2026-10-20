@@ -15,6 +15,17 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '10.1.3', fecha: '2026-10-20', cambios: [
+    "Galerías de Material: en la página de los asesores, debajo de la imagen ya no aparece el nombre con que se subió el archivo, solo su peso.",
+    "Al descargar una imagen de una galería, o todas en el ZIP, cada archivo se llama con el título de la galería y su número (por ejemplo 'Flyers SAMAI 03.jpg').",
+  ] },
+  { version: '10.1.2', fecha: '2026-10-20', cambios: [
+    "Usuarios y Asesores externos: los PIN aparecen tapados (••••) y se ven con el botón del ojo de cada fila.",
+    "Usuarios: cambiar el rol de alguien pide confirmación; si se cancela, el selector vuelve al rol que tenía.",
+    "Detalle del lead: arriba queda 'Editar' y 'Archivar' y 'Borrar' pasan al menú '⋯'.",
+    "Botones secundarios (Cancelar, Más, Exportar, Volver…) con relleno gris suave en lugar de contorno, como en iOS y macOS.",
+    "Modo oscuro: los textos y bordes en azul We se ven en azul claro para que se lean bien sobre el fondo marino.",
+  ] },
   { version: '10.1.1', fecha: '2026-10-19', cambios: [
     "Planos públicos: el asesor que ya puso su PIN en un plano (por ejemplo Samai) aparece con su sesión al abrir el otro (Aldea Nanuu) sin volver a escribirlo, si tiene acceso a ese desarrollo. La sesión se recuerda en el dispositivo hasta que toque 'salir', que cierra en ambos planos.",
     "Plano público: el botón 'Descargar PDF' ahora dice 'Descargar plano'.",

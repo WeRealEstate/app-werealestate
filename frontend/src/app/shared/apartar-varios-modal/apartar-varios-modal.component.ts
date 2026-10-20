@@ -74,7 +74,7 @@ const NOTA_MAX_LENGTH = 500;
 
         <div class="flex justify-end gap-2.5 pt-5">
           <button type="button" (click)="cancelar()" [disabled]="guardando()"
-            class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary active:scale-[0.97] transition-transform duration-150">
+            class="boton-secundario rounded-lg px-4 py-2.5 text-sm font-medium text-ink-muted active:scale-[0.97] transition duration-150">
             Cancelar
           </button>
           <button type="button" (click)="confirmar()" [disabled]="invalido() || guardando()" data-testid="confirmar-apartar-varios"

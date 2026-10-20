@@ -266,7 +266,7 @@
           }
         }
         <div class="flex justify-end gap-2.5">
-          <button type="button" (click)="cerrado.emit()" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cancelar</button>
+          <button type="button" (click)="cerrado.emit()" class="boton-secundario rounded-lg px-4 py-2.5 text-sm font-medium text-ink-muted">Cancelar</button>
           <button type="submit" [disabled]="guardando()" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
             {{ guardando() ? 'Guardando…' : 'Guardar' }}
           </button>

@@ -90,6 +90,7 @@ public class UsuarioService {
     public List<UsuarioDto> listar() {
         exigirAdmin();
         return usuarioRepository.findAll().stream()
+                .filter(u -> !esUsuarioSistema(u))
                 .sorted(Comparator.comparing(Usuario::getNombre))
                 .map(UsuarioDto::conNomina)
                 .toList();
@@ -145,8 +146,7 @@ public class UsuarioService {
 
     public UsuarioDto actualizar(Long id, UsuarioUpdateRequest request) {
         Usuario actual = exigirAdmin();
-        Usuario usuario = usuarioRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        Usuario usuario = obtenerModificable(id);
 
         boolean esUnoMismo = usuario.getId().equals(actual.getId());
         if (esUnoMismo && (request.rol() != Role.ADMIN || !request.activo())) {
@@ -188,8 +188,7 @@ public class UsuarioService {
     /** Configura (o quita) la nómina semanal de un usuario: monto y desde cuándo. Solo admin. */
     public UsuarioDto actualizarNomina(Long id, UsuarioNominaRequest request) {
         exigirAdmin();
-        Usuario usuario = usuarioRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        Usuario usuario = obtenerModificable(id);
         BigDecimal sueldo = request.nominaSemanal();
         if (sueldo != null && sueldo.signum() < 0) {
             throw new ValidationException("El sueldo no puede ser negativo");
@@ -215,8 +214,7 @@ public class UsuarioService {
      */
     public void eliminar(Long id) {
         Usuario actual = exigirAdmin();
-        Usuario usuario = usuarioRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        Usuario usuario = obtenerModificable(id);
 
         if (usuario.getId().equals(actual.getId())) {
             throw new ForbiddenOperationException("No puedes eliminar tu propia cuenta");
@@ -244,11 +242,28 @@ public class UsuarioService {
         usuarioRepository.delete(usuario);
     }
 
+    /** Usuario "de sistema" (V17) al que se atribuyen las acciones del cotizador y los planos públicos: no es una
+     * persona, no se lista en Usuarios y no se puede editar, activar, cambiar de rol, reasignar su contraseña ni
+     * borrar — si se tocara, el cotizador público, el apartado público y los registros de venta dejarían de funcionar. */
+    private static final String EMAIL_USUARIO_SISTEMA = "cotizador-publico@weinversiones.com";
+
+    private static boolean esUsuarioSistema(Usuario u) {
+        return EMAIL_USUARIO_SISTEMA.equalsIgnoreCase(u.getEmail());
+    }
+
+    private Usuario obtenerModificable(Long id) {
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        if (esUsuarioSistema(usuario)) {
+            throw new ForbiddenOperationException("Es el usuario del sistema del cotizador y los planos públicos; no se puede modificar");
+        }
+        return usuario;
+    }
+
     /** Solo un admin puede fijar la contraseña de cualquier usuario (incluida la propia). Los usuarios no la cambian ellos mismos. */
     public void restablecerPassword(Long id, UsuarioResetPasswordRequest request) {
         exigirAdmin();
-        Usuario usuario = usuarioRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        Usuario usuario = obtenerModificable(id);
 
         usuario.setPassword(passwordEncoder.encode(request.password()));
         usuarioRepository.save(usuario);

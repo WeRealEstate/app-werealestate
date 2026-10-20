@@ -29,7 +29,7 @@
         } @else if (error()) {
           <p class="px-6 text-center text-sm text-white">No se pudo cargar la vista previa. Intenta de nuevo o descarga el archivo.</p>
         } @else if (tipo === 'imagen' && url(); as src) {
-          <img [src]="src" [alt]="imagenActual?.nombre ?? m.titulo" class="max-h-[62dvh] max-w-full object-contain" data-testid="visor-imagen" />
+          <img [src]="src" [alt]="esGaleria ? m.titulo + ' · imagen ' + (imagenIndice() + 1) : m.titulo" class="max-h-[62dvh] max-w-full object-contain" data-testid="visor-imagen" />
         } @else if (tipo === 'vacia') {
           <p class="px-6 text-center text-sm text-white">Esta galería todavía no tiene imágenes.</p>
         } @else if (tipo === 'video' && url(); as src) {
@@ -66,7 +66,7 @@
               [class.ring-we-primary]="i === imagenIndice()"
               [class.opacity-60]="i !== imagenIndice()"
             >
-              <app-imagen-diferida [cargar]="cargadorMiniatura(m, img)" [alt]="img.nombre" />
+              <app-imagen-diferida [cargar]="cargadorMiniatura(m, img)" />
             </button>
           }
         </div>
@@ -90,11 +90,11 @@
               <svg lucideDownload [size]="16" aria-hidden="true"></svg> Descargar imagen
             </button>
             @if (m.imagenes.length > 1) {
-              <button type="button" (click)="descargarGaleria.emit(m)" data-testid="visor-descargar-todas" class="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-semibold text-ink hover:border-we-primary active:scale-[0.97] transition-transform duration-150">
+              <button type="button" (click)="descargarGaleria.emit(m)" data-testid="visor-descargar-todas" class="boton-secundario inline-flex min-h-[44px] items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-ink active:scale-[0.97] transition duration-150">
                 <svg lucideDownload [size]="16" aria-hidden="true"></svg> Descargar todas ({{ m.imagenes.length }})
               </button>
             }
-            <span class="text-xs text-ink-muted">{{ img.nombre }} · {{ tamanoLegible(img.tamano) }}</span>
+            <span class="text-xs text-ink-muted">@if (mostrarNombreArchivo()) {{{ img.nombre }} · }{{ tamanoLegible(img.tamano) }}</span>
           }
           @if (m.archivoExtension) {
             <button type="button" (click)="descargar.emit(m)" data-testid="visor-descargar" class="inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-we-primary px-4 py-2 text-sm font-semibold text-white hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150">

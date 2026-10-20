@@ -1,6 +1,6 @@
 import { FormsModule } from '@angular/forms';
 import { Component, computed, inject, signal } from '@angular/core';
-import { LucideKey, LucidePencil, LucideTrash2 } from '@lucide/angular';
+import { LucideEye, LucideEyeOff, LucideKey, LucidePencil, LucideTrash2 } from '@lucide/angular';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
@@ -17,7 +17,7 @@ const ROLES: Role[] = ['ASESOR', 'LIDER_AREA', 'EQUIPO_INTERNO', 'ADMIN'];
 @Component({
   selector: 'app-usuarios-list',
   standalone: true,
-  imports: [MonedaInputDirective, WeLoaderComponent, FormsModule, RouterLink, LucideKey, LucidePencil, LucideTrash2, ModulosSelectorComponent],
+  imports: [MonedaInputDirective, WeLoaderComponent, FormsModule, RouterLink, LucideEye, LucideEyeOff, LucideKey, LucidePencil, LucideTrash2, ModulosSelectorComponent],
   templateUrl: './usuarios-list.component.html',
 })
 export class UsuariosListComponent {
@@ -41,6 +41,17 @@ export class UsuariosListComponent {
     () => this.errorMessage()?.includes('tiene actividad registrada') ?? false,
   );
 
+  /** Los PIN dan entrada a los planos públicos y We Forms: van tapados y se destapan fila por fila. */
+  readonly pinesVisibles = signal<ReadonlySet<number>>(new Set());
+
+  alternarPin(id: number): void {
+    this.pinesVisibles.update((ids) => {
+      const siguiente = new Set(ids);
+      if (!siguiente.delete(id)) siguiente.add(id);
+      return siguiente;
+    });
+  }
+
   readonly resetId = signal<number | null>(null);
   readonly nuevaPassword = signal('');
   readonly resetError = signal<string | null>(null);
@@ -61,14 +72,29 @@ export class UsuariosListComponent {
     }
   }
 
-  async cambiarRol(usuario: Usuario, nuevoRol: Role): Promise<void> {
+  /** El rol decide qué ve y qué puede hacer la persona (y reinicia sus módulos), así que un cambio accidental del
+   * selector no debe aplicarse solo: se confirma, y si se cancela el selector vuelve al rol que tenía. */
+  async cambiarRol(usuario: Usuario, selector: HTMLSelectElement): Promise<void> {
+    const nuevoRol = selector.value as Role;
     if (nuevoRol === usuario.rol) return;
+    const confirmado = await this.confirmService.confirm({
+      titulo: 'Cambiar rol',
+      mensaje: `¿Cambiar a ${usuario.nombre} de ${this.roleLabels[usuario.rol]} a ${this.roleLabels[nuevoRol]}? Sus módulos vuelven a los de ese rol.`,
+      textoConfirmar: 'Cambiar rol',
+    });
+    if (!confirmado) {
+      selector.value = usuario.rol;
+      return;
+    }
     await this.guardar(
       usuario,
       // Al cambiar de rol, sus módulos se reinician a los de ese rol (modulos: null).
       { nombre: usuario.nombre, rol: nuevoRol, activo: usuario.activo, modulos: null },
       `Rol de ${usuario.nombre} actualizado a ${this.roleLabels[nuevoRol]}.`,
     );
+    // Si el servidor lo rechazó, la fila no cambió y el selector debe volver a mostrar el rol real.
+    const actual = this.usuarios().find((u) => u.id === usuario.id);
+    if (actual) selector.value = actual.rol;
   }
 
   async eliminar(usuario: Usuario): Promise<void> {

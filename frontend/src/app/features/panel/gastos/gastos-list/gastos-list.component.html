@@ -131,8 +131,8 @@
         @if (esAdmin()) {
           <button
             type="button" (click)="abrirNuevoRecurrente()"
-            class="inline-flex items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink hover:border-we-primary
-                   active:scale-[0.97] transition-transform duration-150 min-h-[44px]"
+            class="boton-secundario inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold text-ink
+                   active:scale-[0.97] transition duration-150 min-h-[44px]"
           >
             + Nuevo gasto recurrente
           </button>
@@ -317,7 +317,7 @@
           <p class="mt-3 text-xs text-red-600 dark:text-red-400" role="alert">{{ error }}</p>
         }
         <div class="flex justify-end gap-2.5 pt-5">
-          <button type="button" (click)="cerrarModales()" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cancelar</button>
+          <button type="button" (click)="cerrarModales()" class="boton-secundario rounded-lg px-4 py-2.5 text-sm font-medium text-ink-muted">Cancelar</button>
           <button type="submit" [disabled]="guardando()" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
             {{ guardando() ? 'Guardando…' : 'Registrar' }}
           </button>
@@ -361,7 +361,7 @@
           <p class="mt-3 text-xs text-red-600 dark:text-red-400" role="alert">{{ error }}</p>
         }
         <div class="flex justify-end gap-2.5 pt-5">
-          <button type="button" (click)="cerrarModales()" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cancelar</button>
+          <button type="button" (click)="cerrarModales()" class="boton-secundario rounded-lg px-4 py-2.5 text-sm font-medium text-ink-muted">Cancelar</button>
           <button type="submit" [disabled]="guardando()" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
             {{ guardando() ? 'Guardando…' : 'Marcar pagado' }}
           </button>
@@ -454,7 +454,7 @@
           <p class="mt-3 text-xs text-red-600 dark:text-red-400" role="alert">{{ error }}</p>
         }
         <div class="flex justify-end gap-2.5 pt-5">
-          <button type="button" (click)="cerrarModales()" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cancelar</button>
+          <button type="button" (click)="cerrarModales()" class="boton-secundario rounded-lg px-4 py-2.5 text-sm font-medium text-ink-muted">Cancelar</button>
           <button type="submit" [disabled]="guardando()" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
             {{ guardando() ? 'Guardando…' : 'Guardar' }}
           </button>

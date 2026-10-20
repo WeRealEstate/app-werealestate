@@ -97,9 +97,9 @@
                 <p class="mt-3 text-xs text-ink-muted">{{ m.imagenes.length }} {{ m.imagenes.length === 1 ? 'imagen' : 'imágenes' }}</p>
               }
               <div class="mt-auto flex flex-wrap gap-2 pt-4">
-                <button type="button" (click)="abrirVisor(m)" data-testid="vista-previa" class="min-h-[44px] rounded-lg border border-border px-3.5 py-2 text-sm font-semibold text-ink hover:border-we-primary active:scale-[0.97] transition-transform duration-150">Vista previa</button>
+                <button type="button" (click)="abrirVisor(m)" data-testid="vista-previa" class="boton-secundario min-h-[44px] rounded-lg px-3.5 py-2 text-sm font-semibold text-ink active:scale-[0.97] transition duration-150">Vista previa</button>
                 @if (m.texto) {
-                  <button type="button" (click)="copiarTexto(m)" class="min-h-[44px] rounded-lg border border-border px-3.5 py-2 text-sm font-semibold text-ink hover:border-we-primary active:scale-[0.97] transition-transform duration-150">Copiar texto</button>
+                  <button type="button" (click)="copiarTexto(m)" class="boton-secundario min-h-[44px] rounded-lg px-3.5 py-2 text-sm font-semibold text-ink active:scale-[0.97] transition duration-150">Copiar texto</button>
                 }
                 @if (m.categoria === 'GALERIA' && m.imagenes.length > 0) {
                   <button type="button" (click)="descargarGaleria(m)" [disabled]="trabajando() !== null" class="min-h-[44px] rounded-lg bg-we-primary px-3.5 py-2 text-sm font-semibold text-white hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150 disabled:opacity-60">
@@ -126,6 +126,7 @@
         [cargar]="cargarArchivo"
         [cargarImagen]="cargarImagen"
         [cargarMiniaturaImagen]="cargarMiniaturaImagen"
+        [mostrarNombreArchivo]="false"
         (cerrar)="visorIndice.set(null)"
         (descargar)="descargar($event)"
         (descargarImagen)="descargarImagen($event)"

@@ -52,7 +52,7 @@ import { VentasService } from '../../core/services/ventas.service';
         </div>
         <button
           type="submit" [disabled]="guardandoNumero() || !cambioNumero()" data-testid="guardar-numero-contrato"
-          class="rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink hover:border-we-primary disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
+          class="boton-secundario rounded-lg px-4 py-2.5 text-sm font-semibold text-ink disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
         >
           {{ guardandoNumero() ? 'Guardando…' : 'Guardar número' }}
         </button>

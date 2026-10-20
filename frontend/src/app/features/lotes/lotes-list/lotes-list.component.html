@@ -8,8 +8,8 @@
       @if (esAdmin()) {
         <!-- Una sola acción principal; historial, importar y precio por manzana van en "Más". -->
         <button type="button" [cdkMenuTriggerFor]="menuLotes" [cdkMenuPosition]="posicionMenu"
-          class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink
-               hover:border-we-primary active:scale-[0.97] transition-transform duration-150
+          class="boton-secundario inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-ink
+               active:scale-[0.97] transition duration-150
                focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]">
           Más
           <svg lucideChevronDown [size]="16" aria-hidden="true"></svg>
@@ -40,8 +40,8 @@
         </a>
       } @else {
         <a routerLink="/panel/lotes/historial"
-          class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-ink
-               hover:border-we-primary active:scale-[0.97] transition-transform duration-150
+          class="boton-secundario inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-ink
+               active:scale-[0.97] transition duration-150
                focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]">
           Ver historial
         </a>
@@ -229,8 +229,8 @@
           type="button"
           (click)="cargarMas()"
           [disabled]="isLoadingMore()"
-          class="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-5 py-2.5 text-sm font-semibold text-ink
-                 hover:border-we-primary active:scale-[0.97] transition-transform duration-150
+          class="boton-secundario inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-ink
+                 active:scale-[0.97] transition duration-150
                  focus:outline-none focus:ring-2 focus:ring-we-primary/50 min-h-[44px]
                  disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
         >
@@ -284,7 +284,7 @@
         <div class="mt-5 flex items-center justify-between gap-2.5">
           <button type="button" [disabled]="pmGuardando()" (click)="guardarPrecioManzana(true)" class="text-sm font-medium text-ink-muted underline hover:text-ink disabled:opacity-60">Quitar precio propio</button>
           <div class="flex gap-2.5">
-            <button type="button" (click)="mostrarPrecioManzana.set(false)" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cancelar</button>
+            <button type="button" (click)="mostrarPrecioManzana.set(false)" class="boton-secundario rounded-lg px-4 py-2.5 text-sm font-medium text-ink-muted">Cancelar</button>
             <button type="submit" [disabled]="pmGuardando()" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
               {{ pmGuardando() ? 'Guardando…' : 'Guardar' }}
             </button>

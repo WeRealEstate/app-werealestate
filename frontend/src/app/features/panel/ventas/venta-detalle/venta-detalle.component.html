@@ -38,8 +38,8 @@
           <button
             type="button"
             (click)="abrirEdicion()"
-            class="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-border px-3.5 py-2 text-sm font-semibold text-ink
-                   hover:border-we-primary active:scale-[0.97] transition-transform duration-150"
+            class="boton-secundario inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-semibold text-ink
+                   active:scale-[0.97] transition duration-150"
           >
             <svg lucidePencil [size]="14" aria-hidden="true"></svg>
             Modificar venta
@@ -127,7 +127,7 @@
           }
           @if (errorDeposito()) { <p class="mt-3 text-sm text-red-600 dark:text-red-400">{{ errorDeposito() }}</p> }
           <div class="mt-5 flex justify-end gap-2.5">
-            <button type="button" (click)="mostrarDeposito.set(false)" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cancelar</button>
+            <button type="button" (click)="mostrarDeposito.set(false)" class="boton-secundario rounded-lg px-4 py-2.5 text-sm font-medium text-ink-muted">Cancelar</button>
             <button type="button" (click)="aplicarDeposito()" [disabled]="aplicandoDeposito()" data-testid="confirmar-deposito"
               class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
               {{ aplicandoDeposito() ? 'Aplicando…' : 'Aplicar' }}
@@ -357,8 +357,8 @@
             <button
               type="button"
               (click)="cancelarEdicion()"
-              class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary
-                     active:scale-[0.97] transition-transform duration-150"
+              class="boton-secundario rounded-lg px-4 py-2.5 text-sm font-medium text-ink-muted
+                     active:scale-[0.97] transition duration-150"
             >
               Cancelar
             </button>
@@ -468,7 +468,7 @@
         }
 
         <div class="mt-5 flex items-center justify-end gap-2.5">
-          <button type="button" (click)="cerrarEliminar()" [disabled]="eliminando()" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary disabled:opacity-60">
+          <button type="button" (click)="cerrarEliminar()" [disabled]="eliminando()" class="boton-secundario rounded-lg px-4 py-2.5 text-sm font-medium text-ink-muted disabled:opacity-60">
             Cancelar
           </button>
           <button
