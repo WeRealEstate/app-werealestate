@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '10.1.4', fecha: '2026-10-20', cambios: [
+    "Registrar venta: si el desarrollo tiene un solo formulario activo, el botón del plano lleva directo al formulario (ya no pasa por la pantalla para elegirlo). Con más de uno se sigue mostrando la lista.",
+  ] },
   { version: '10.1.3', fecha: '2026-10-20', cambios: [
     "Galerías de Material: en la página de los asesores, debajo de la imagen ya no aparece el nombre con que se subió el archivo, solo su peso.",
     "Al descargar una imagen de una galería, o todas en el ZIP, cada archivo se llama con el título de la galería y su número (por ejemplo 'Flyers SAMAI 03.jpg').",

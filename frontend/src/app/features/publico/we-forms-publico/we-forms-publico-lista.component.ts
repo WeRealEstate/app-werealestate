@@ -1,13 +1,13 @@
 import { Component, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { WeFormPublicoLista } from '../../../core/models/we-form.model';
 import { WeFormsPublicoService } from '../../../core/services/we-forms-publico.service';
 import { DesarrolloLoaderComponent } from '../../../shared/desarrollo-loader/desarrollo-loader.component';
 import { PinPublicoComponent } from '../../../shared/pin-publico/pin-publico.component';
 
-/** /we-forms?proyecto=samai: a donde lleva el botón "Registrar venta" del plano. Pide el PIN y muestra los
- * formularios activos de ese desarrollo para elegir. */
+/** /we-forms?proyecto=samai: a donde lleva el botón "Registrar venta" del plano. Pide el PIN y, si el desarrollo
+ * tiene más de un formulario activo, deja elegir; con uno solo va directo a él. */
 @Component({
   selector: 'app-we-forms-publico-lista',
   standalone: true,
@@ -16,6 +16,7 @@ import { PinPublicoComponent } from '../../../shared/pin-publico/pin-publico.com
 })
 export class WeFormsPublicoListaComponent {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly service = inject(WeFormsPublicoService);
 
   readonly proyecto = this.route.snapshot.queryParamMap.get('proyecto') === 'nanuu' ? 'nanuu' : 'samai';
@@ -43,8 +44,15 @@ export class WeFormsPublicoListaComponent {
     this.verificando.set(true);
     this.error.set(null);
     try {
-      this.formularios.set(await this.service.listar(this.proyecto, pin));
+      const lista = await this.service.listar(this.proyecto, pin);
       this.service.guardarPin(pin);
+      // Con un solo formulario no hay nada que elegir: se va directo a él (sin dejar esta pantalla en el historial,
+      // para que "atrás" regrese al plano).
+      if (lista.length === 1) {
+        await this.router.navigate(['/we-forms', lista[0].slug], { queryParams: { proyecto: this.proyecto }, replaceUrl: true });
+        return;
+      }
+      this.formularios.set(lista);
     } catch (e) {
       // Solo se olvida el PIN si el servidor lo rechazó; un fallo de red no debe borrarlo.
       if (e instanceof HttpErrorResponse && (e.status === 403 || e.status === 404)) this.service.guardarPin(null);
