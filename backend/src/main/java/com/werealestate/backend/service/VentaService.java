@@ -266,10 +266,15 @@ public class VentaService {
             total = total.add(a.monto());
         }
 
+        // Con enganche o pago inicial (se pueden combinar con aportaciones o anualidades), entre los dos
+        // tampoco pueden cubrir todo el precio: debe quedar saldo para las mensualidades regulares.
         BigDecimal precio =
                 request.lotes().stream().map(VentaLoteItemRequest::precio).reduce(BigDecimal.ZERO, BigDecimal::add);
-        if (total.compareTo(precio) >= 0) {
-            throw new ValidationException("Las aportaciones no pueden sumar todo el precio de la venta");
+        BigDecimal enganche = request.enganche() == null ? BigDecimal.ZERO : request.enganche();
+        if (total.add(enganche).compareTo(precio) >= 0) {
+            throw new ValidationException(enganche.signum() > 0
+                    ? "El enganche y las aportaciones no pueden sumar todo el precio de la venta"
+                    : "Las aportaciones no pueden sumar todo el precio de la venta");
         }
     }
 

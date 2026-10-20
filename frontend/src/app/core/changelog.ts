@@ -15,6 +15,11 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '10.2.0', fecha: '2026-10-20', cambios: [
+    "Formas de pago combinables en el Cotizador (panel y público), Registrar venta y We Forms: a Sin enganche, Con enganche o Pago inicial se les puede sumar Con anualidades o Con aportaciones. Lo que no se combina queda apagado hasta desmarcar lo elegido, y Contado va solo. Al abrir no viene nada marcado.",
+    "El enganche o pago inicial se resta primero y el saldo se reparte entre las anualidades o aportaciones y las mensualidades. El resumen, la tabla de pagos y el PDF muestran el enganche y las anualidades o aportaciones por separado.",
+    "Registrar venta y We Forms: las anualidades piden monto, mes y cuántas, y se guardan como aportaciones programadas de la venta (una por año), así sus abonos se registran como aportación.",
+  ] },
   { version: '10.1.4', fecha: '2026-10-20', cambios: [
     "Registrar venta: si el desarrollo tiene un solo formulario activo, el botón del plano lleva directo al formulario (ya no pasa por la pantalla para elegirlo). Con más de uno se sigue mostrando la lista.",
   ] },

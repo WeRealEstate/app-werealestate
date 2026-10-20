@@ -63,12 +63,22 @@ public class WeFormPublicoService {
     private static final String EMAIL_USUARIO_PUBLICO = "cotizador-publico@weinversiones.com";
     private static final long MAX_ARCHIVO_BYTES = 2L * 1024 * 1024;
     private static final Pattern CORREO = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
-    private static final Set<String> TIPOS_PAGO = Set.of("msi", "downpayment", "initial", "annualities", "aportaciones", "cash");
-    private static final Map<String, String> ETIQUETA_PAGO = Map.of(
-            "msi", "Sin enganche", "downpayment", "Con enganche", "initial", "Pago inicial",
-            "annualities", "Con anualidades", "aportaciones", "Con aportaciones", "cash", "Contado");
-    private static final Map<String, String> ETIQUETA_ENGANCHE =
-            Map.of("downpayment", "Enganche", "initial", "Pago inicial", "annualities", "Aportación anual");
+    /** Formas de pago combinables, igual que el Cotizador y Registrar venta (frontend core/utils/formas-pago):
+     * una base y, opcional, anualidades o aportaciones; contado va solo. */
+    private static final Set<String> BASES_PAGO = Set.of("msi", "downpayment", "initial", "cash");
+    private static final Set<String> EXTRAS_PAGO = Set.of("annualities", "aportaciones");
+    private static final Map<String, String> ETIQUETA_ENGANCHE = Map.of("downpayment", "Enganche", "initial", "Pago inicial");
+
+    /** Lo que se contestó en "Tipo de pago". Con anualidades trae su monto, mes y cuántas. */
+    private record FormaPago(String base, String extra, BigDecimal montoAnualidad, Integer mesAnualidad, Integer cantidadAnualidades) {
+        boolean contado() {
+            return "cash".equals(base);
+        }
+
+        boolean conEntrada() {
+            return base != null && ETIQUETA_ENGANCHE.containsKey(base);
+        }
+    }
 
     private final WeFormService formService;
     private final WeFormRepository formRepository;
@@ -179,17 +189,16 @@ public class WeFormPublicoService {
         // 1) Valida y normaliza cada respuesta según el tipo de su pregunta.
         Map<Long, String> textoPorPregunta = new LinkedHashMap<>();
         Map<DestinoPregunta, JsonNode> porDestino = new HashMap<>();
-        String tipoPago = null;
+        FormaPago formaDePago = null;
         for (WeFormPregunta p : preguntas) {
             if (p.getDestino() == DestinoPregunta.TIPO_PAGO) {
-                JsonNode v = respuestas.get(p.getId());
-                tipoPago = v == null || v.isNull() ? null : v.asText();
+                formaDePago = leerFormaPago(respuestas.get(p.getId()));
             }
         }
         for (WeFormPregunta p : preguntas) {
             if (p.getTipo() == TipoPreguntaForm.TITULO) continue;
             JsonNode valor = respuestas.get(p.getId());
-            boolean obligatoria = esObligatoria(p, tipoPago);
+            boolean obligatoria = esObligatoria(p, formaDePago);
             if (p.getTipo() == TipoPreguntaForm.ASESOR) {
                 textoPorPregunta.put(p.getId(), asesor.nombre());
                 continue;
@@ -247,11 +256,11 @@ public class WeFormPublicoService {
         Integer diaPago = entero(porDestino.get(DestinoPregunta.DIA_PAGO), "El día de pago");
         BigDecimal enganche = decimal(porDestino.get(DestinoPregunta.ENGANCHE), "El enganche");
         List<VentaAportacionItemRequest> aportaciones = aportaciones(porDestino.get(DestinoPregunta.APORTACIONES));
-        if (tipoPago == null) throw new ValidationException("Elige el tipo de pago");
+        if (formaDePago == null) throw new ValidationException("Elige el tipo de pago");
 
         BigDecimal mensualidad = null;
         String engancheLabel = null;
-        if ("cash".equals(tipoPago)) {
+        if (formaDePago.contado()) {
             plazo = null;
             diaPago = null;
             enganche = null;
@@ -259,26 +268,42 @@ public class WeFormPublicoService {
         } else {
             if (plazo == null || plazo < 1) throw new ValidationException("Indica el plazo en meses");
             if (diaPago == null || diaPago < 1 || diaPago > 31) throw new ValidationException("Indica el día de pago (1 al 31)");
-            if ("aportaciones".equals(tipoPago)) {
+
+            // Entrada (enganche o pago inicial): se resta primero.
+            engancheLabel = formaDePago.conEntrada() ? ETIQUETA_ENGANCHE.get(formaDePago.base()) : null;
+            if (engancheLabel == null) {
                 enganche = null;
+            } else if (enganche == null || enganche.signum() <= 0 || enganche.compareTo(precioTotal) >= 0) {
+                throw new ValidationException("Indica un monto de " + engancheLabel.toLowerCase() + " menor al precio");
+            }
+            BigDecimal saldo = precioTotal.subtract(enganche == null ? BigDecimal.ZERO : enganche);
+
+            // Anualidades o aportaciones: en su mes se paga solo eso; las anualidades se guardan como aportaciones
+            // programadas, una por año, para que quepan junto al enganche.
+            if ("aportaciones".equals(formaDePago.extra())) {
                 if (aportaciones.isEmpty()) throw new ValidationException("Agrega al menos una aportación");
-                BigDecimal aportado = aportaciones.stream().map(VentaAportacionItemRequest::monto).reduce(BigDecimal.ZERO, BigDecimal::add);
-                int regulares = plazo - aportaciones.size();
-                BigDecimal saldo = precioTotal.subtract(aportado);
-                if (regulares <= 0 || saldo.signum() <= 0) {
-                    throw new ValidationException("Las aportaciones no dejan saldo para las mensualidades regulares");
+            } else if ("annualities".equals(formaDePago.extra())) {
+                aportaciones = anualidadesComoAportaciones(YearMonth.now(), plazo, formaDePago.mesAnualidad(),
+                        formaDePago.montoAnualidad(), formaDePago.cantidadAnualidades());
+                if (aportaciones.isEmpty()) {
+                    throw new ValidationException("Con ese plazo no caben anualidades: debe ser de al menos 24 meses");
                 }
-                mensualidad = saldo.divide(BigDecimal.valueOf(regulares), 2, RoundingMode.HALF_UP);
             } else {
                 aportaciones = List.of();
-                engancheLabel = ETIQUETA_ENGANCHE.get(tipoPago);
-                if (engancheLabel == null) {
-                    enganche = null;
-                } else if (enganche == null || enganche.signum() <= 0 || enganche.compareTo(precioTotal) >= 0) {
-                    throw new ValidationException("Indica un monto de " + engancheLabel.toLowerCase() + " menor al precio");
-                }
-                BigDecimal saldo = precioTotal.subtract(enganche == null ? BigDecimal.ZERO : enganche);
+            }
+
+            if (aportaciones.isEmpty()) {
                 mensualidad = saldo.divide(BigDecimal.valueOf(plazo), 2, RoundingMode.HALF_UP);
+            } else {
+                BigDecimal aportado = aportaciones.stream().map(VentaAportacionItemRequest::monto).reduce(BigDecimal.ZERO, BigDecimal::add);
+                int regulares = plazo - aportaciones.size();
+                BigDecimal restante = saldo.subtract(aportado);
+                if (regulares <= 0 || restante.signum() <= 0) {
+                    throw new ValidationException("annualities".equals(formaDePago.extra())
+                            ? "Las anualidades no dejan saldo para las mensualidades regulares"
+                            : "Las aportaciones no dejan saldo para las mensualidades regulares");
+                }
+                mensualidad = restante.divide(BigDecimal.valueOf(regulares), 2, RoundingMode.HALF_UP);
             }
         }
 
@@ -310,8 +335,7 @@ public class WeFormPublicoService {
         // 5) Venta (con sus lotes en "En proceso de firma").
         Usuario sistema = usuarioRepository.findByEmail(EMAIL_USUARIO_PUBLICO)
                 .orElseThrow(() -> new IllegalStateException("Falta el usuario de sistema del cotizador público"));
-        String unidad = "msi".equals(tipoPago) || "downpayment".equals(tipoPago) ? "MSI" : "meses";
-        String formaPago = ETIQUETA_PAGO.get(tipoPago) + (plazo != null ? " · " + plazo + " " + unidad : "");
+        String formaPago = etiquetaFormaPago(formaDePago, plazo);
         VentaCreateRequest ventaRequest = new VentaCreateRequest(
                 lotesVenta, resuelto.cliente().getId(), null, List.of(),
                 asesor.usuario() != null ? asesor.usuario().getId() : null,
@@ -353,17 +377,102 @@ public class WeFormPublicoService {
 
     // ---------------------------------------------------------------- validación de cada pregunta
 
-    private static boolean esObligatoria(WeFormPregunta p, String tipoPago) {
+    private static boolean esObligatoria(WeFormPregunta p, FormaPago forma) {
         DestinoPregunta d = p.getDestino();
         if (d == null) return p.isObligatoria();
         if (d.siempreObligatoria()) return true;
-        if (tipoPago == null || "cash".equals(tipoPago)) return false;
+        if (forma == null || forma.contado()) return false;
         return switch (d) {
             case PLAZO, DIA_PAGO -> true;
-            case ENGANCHE -> ETIQUETA_ENGANCHE.containsKey(tipoPago);
-            case APORTACIONES -> "aportaciones".equals(tipoPago);
+            case ENGANCHE -> forma.conEntrada();
+            case APORTACIONES -> "aportaciones".equals(forma.extra());
             default -> p.isObligatoria();
         };
+    }
+
+    /** La respuesta de "Tipo de pago": un objeto {base, extra, anualidad: {monto, mes, cantidad}}. Un texto suelto
+     * ("msi", "aportaciones"…) es el formato de antes de poder combinarlas y se sigue aceptando. null si no se
+     * eligió nada. */
+    private static FormaPago leerFormaPago(JsonNode v) {
+        if (v == null || v.isNull()) return null;
+        String base;
+        String extra;
+        JsonNode anualidad = null;
+        if (v.isTextual()) {
+            String t = v.asText().trim();
+            if (t.isEmpty()) return null;
+            // Antes "Con anualidades" mandaba un solo monto en la pregunta del enganche: ya no alcanza para
+            // programarlas, así que se pide volver a elegir con la página nueva.
+            if ("annualities".equals(t)) {
+                throw new ValidationException("El formulario se actualizó: recarga la página y vuelve a elegir el tipo de pago");
+            }
+            base = BASES_PAGO.contains(t) ? t : null;
+            extra = EXTRAS_PAGO.contains(t) ? t : null;
+            if (base == null && extra == null) throw new ValidationException("Elige un tipo de pago válido");
+        } else if (v.isObject()) {
+            base = campoTexto(v, "base");
+            extra = campoTexto(v, "extra");
+            anualidad = v.get("anualidad");
+            if (base == null && extra == null) return null;
+            if ((base != null && !BASES_PAGO.contains(base)) || (extra != null && !EXTRAS_PAGO.contains(extra))) {
+                throw new ValidationException("Elige un tipo de pago válido");
+            }
+            if ("cash".equals(base) && extra != null) {
+                throw new ValidationException("Contado no se combina con anualidades ni aportaciones");
+            }
+        } else {
+            throw new ValidationException("Elige un tipo de pago válido");
+        }
+        if (!"annualities".equals(extra)) return new FormaPago(base, extra, null, null, null);
+
+        if (anualidad == null || !anualidad.isObject()) {
+            throw new ValidationException("Indica el monto, el mes y cuántas anualidades lleva la venta");
+        }
+        BigDecimal monto = decimal(anualidad.get("monto"), "El monto de la anualidad");
+        if (monto == null || monto.signum() <= 0) throw new ValidationException("Ingresa el monto de cada anualidad");
+        Integer mes = entero(anualidad.get("mes"), "El mes de la anualidad");
+        if (mes == null || mes < 1 || mes > 12) throw new ValidationException("Elige el mes de las anualidades");
+        Integer cantidad = entero(anualidad.get("cantidad"), "El número de anualidades");
+        if (cantidad == null || cantidad < 1) throw new ValidationException("Indica cuántas anualidades lleva la venta");
+        return new FormaPago(base, extra, monto, mes, cantidad);
+    }
+
+    private static String campoTexto(JsonNode v, String campo) {
+        JsonNode n = v.get(campo);
+        return n == null || n.isNull() || n.asText().isBlank() ? null : n.asText().trim();
+    }
+
+    /** "Con enganche · 36 MSI", "Con enganche + anualidades · 36 meses", "Con aportaciones · 24 meses", "Contado"
+     * (sin plazo, solo el nombre). Mismo texto que arma el frontend en etiquetaFormaPago. */
+    private static String etiquetaFormaPago(FormaPago f, Integer plazo) {
+        if (f.contado()) return "Contado";
+        String extra = "annualities".equals(f.extra()) ? "anualidades" : "aportaciones".equals(f.extra()) ? "aportaciones" : null;
+        String nombre;
+        if (f.conEntrada()) {
+            nombre = ("downpayment".equals(f.base()) ? "Con enganche" : "Pago inicial") + (extra != null ? " + " + extra : "");
+        } else {
+            nombre = extra != null ? "Con " + extra : "Sin enganche";
+        }
+        if (plazo == null) return nombre;
+        String unidad = extra == null && ("msi".equals(f.base()) || "downpayment".equals(f.base())) ? "MSI" : "meses";
+        return nombre + " · " + plazo + " " + unidad;
+    }
+
+    /** Las anualidades como aportaciones programadas: una por año en `mes`, desde `inicio`, hasta `cantidad` y nunca
+     * en el último año calendario del plazo (la misma regla de las aportaciones; ver VentaService.validarAportaciones).
+     * Tampoco más de las que permite el plazo (un año de mensualidades regulares al final). */
+    static List<VentaAportacionItemRequest> anualidadesComoAportaciones(
+            YearMonth inicio, int plazo, int mes, BigDecimal monto, int cantidad) {
+        int tope = Math.min(cantidad, Math.max(plazo / 12 - 1, 0));
+        YearMonth fin = inicio.plusMonths(plazo - 1L);
+        List<VentaAportacionItemRequest> lista = new ArrayList<>();
+        for (int i = 0; i < plazo && lista.size() < tope; i++) {
+            YearMonth m = inicio.plusMonths(i);
+            if (m.getMonthValue() == mes && m.getYear() != fin.getYear()) {
+                lista.add(new VentaAportacionItemRequest(m.getYear(), m.getMonthValue(), monto));
+            }
+        }
+        return lista;
     }
 
     private String validarYTexto(WeFormPregunta p, JsonNode v) {
@@ -426,9 +535,11 @@ public class WeFormPublicoService {
                 yield String.join("; ", partes);
             }
             case TIPO_PAGO -> {
-                String t = v.asText();
-                if (!TIPOS_PAGO.contains(t)) throw new ValidationException("Elige un tipo de pago válido");
-                yield ETIQUETA_PAGO.get(t);
+                // Solo el nombre ("Con enganche + anualidades"): así se agrupa en el resumen de respuestas; los montos
+                // quedan en la venta.
+                FormaPago f = leerFormaPago(v);
+                if (f == null) throw new ValidationException("Elige el tipo de pago");
+                yield etiquetaFormaPago(f, null);
             }
             case APORTACIONES -> {
                 List<String> partes = new ArrayList<>();

@@ -23,6 +23,9 @@ export interface QuotePdfData {
   descuentoContado?: boolean;
   downPaymentLabel: string;
   downPayment: number;
+  /** Anualidades o aportaciones de la forma de pago (pueden ir junto con el enganche o el pago inicial):
+   * un renglón aparte en el detalle. Sin entrada, el renglón del enganche en $0 no se muestra. */
+  pagoExtra?: { label: string; monto: number };
   financedAmount: number;
   months: number;
   monthlyPayment: number;
@@ -427,10 +430,13 @@ export class PdfService {
         data.paymentMethod
       ],
 
-      [
-        data.downPaymentLabel,
-        this.money(data.downPayment)
-      ],
+      ...(data.downPayment > 0 || !data.pagoExtra
+        ? [[data.downPaymentLabel, this.money(data.downPayment)] as [string, string]]
+        : []),
+
+      ...(data.pagoExtra
+        ? [[data.pagoExtra.label, this.money(data.pagoExtra.monto)] as [string, string]]
+        : []),
 
       [
         'Saldo',
@@ -444,7 +450,10 @@ export class PdfService {
     ];
 
 
-    const rowHeight = 9;
+    // 9 mm por renglón con los 8 de siempre; con más (anualidades o aportaciones junto al enganche, varios
+    // lotes) bajan a 8 mm para que el aviso de abajo no se encime con el pie de página.
+    const rowHeight = rows.length > 8 ? 8 : 9;
+    const rowTextY = rowHeight - 3;
 
 
     rows.forEach(
@@ -497,7 +506,7 @@ export class PdfService {
         doc.text(
           label,
           22,
-          y + 6
+          y + rowTextY
         );
 
 
@@ -515,7 +524,7 @@ export class PdfService {
         doc.text(
           value,
           pageWidth - 22,
-          y + 6,
+          y + rowTextY,
           {
             align: 'right'
           }
@@ -684,6 +693,18 @@ export class PdfService {
     // INFORMACIÓN IMPORTANTE
     // ==============================
 
+    const notice =
+      'Esta cotización tiene una vigencia de 20 días naturales a partir de su fecha de emisión y está sujeta a disponibilidad, condiciones comerciales vigentes y validación por parte de WE Real Estate. No constituye contrato, apartado o promesa de compraventa.';
+
+    // Medido con la letra con que se escribe (7 pt) para saber cuántos renglones ocupa.
+    doc.setFont(this.FONT, 'normal');
+    doc.setFontSize(7);
+    const noticeLines =
+      doc.splitTextToSize(
+        notice,
+        pageWidth - 36
+      );
+
     y += 27;
 
 
@@ -716,17 +737,6 @@ export class PdfService {
     );
 
     doc.setFontSize(7);
-
-
-    const notice =
-      'Esta cotización tiene una vigencia de 20 días naturales a partir de su fecha de emisión y está sujeta a disponibilidad, condiciones comerciales vigentes y validación por parte de WE Real Estate. No constituye contrato, apartado o promesa de compraventa.';
-
-
-    const noticeLines =
-      doc.splitTextToSize(
-        notice,
-        pageWidth - 36
-      );
 
 
     doc.text(

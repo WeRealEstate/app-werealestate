@@ -1,5 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { LucideCalendar, LucideChevronDown, LucideDollarSign, LucideHistory } from '@lucide/angular';
+import { LucideCalendar, LucideCheck, LucideChevronDown, LucideDollarSign, LucideHistory } from '@lucide/angular';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -22,6 +22,19 @@ import {
   tablaConAportaciones,
   totalAportaciones,
 } from '../../../core/utils/aportaciones';
+import {
+  SIN_FORMA_PAGO,
+  SeleccionPago,
+  TipoPago,
+  alternarFormaPago,
+  estaBloqueado,
+  estaMarcado,
+  etiquetaEntrada,
+  etiquetaFormaPago,
+  hayFormaPago,
+  llevaEntrada,
+  maximoAnualidades,
+} from '../../../core/utils/formas-pago';
 import { AportacionesSelectorComponent } from '../../../shared/aportaciones-selector/aportaciones-selector.component';
 import { PROJECTS_CONFIG } from '../../../core/data/proyectos-cotizador.config';
 import { FadeInDirective } from '../../../shared/motion/fade-in.directive';
@@ -31,7 +44,6 @@ import { ValuePulseDirective } from '../../../shared/motion/value-pulse.directiv
 import { MonedaInputDirective, formatearNumero, limpiarNumero, numeroDeTexto } from '../../../shared/moneda-input/moneda-input.directive';
 
 export type ProjectId = 'samai' | 'nanuu';
-export type PaymentType = 'msi' | 'downpayment' | 'annualities' | 'aportaciones' | 'cash' | 'initial' | 'promocion';
 
 /** Un lote ya confirmado dentro de una cotización de varios lotes juntos. Cada uno guarda su
  * propio precio por m² (no uno solo compartido) porque el umbral de macrolote de SAMAI depende
@@ -70,6 +82,7 @@ function compararNatural(a: string, b: string): number {
     LucideDollarSign,
     LucideCalendar,
     LucideChevronDown,
+    LucideCheck,
     AportacionesSelectorComponent,
   ],
   templateUrl: './cotizador.component.html',
@@ -231,8 +244,15 @@ export class CotizadorComponent implements OnInit {
 
   currentDate = new Date();
 
-  /** Mes del primer pago del plan (referencia estable: es la entrada del selector de aportaciones). */
-  readonly inicioPlan = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth(), 1);
+  /** Mes del primer pago del plan. Con enganche o pago inicial, ese mes se paga la entrada y el plan empieza
+   * el siguiente. Son dos fechas fijas (no una nueva en cada lectura) porque son la entrada del selector de
+   * aportaciones: si cambiara en cada detección de cambios, el selector se reiniciaría. */
+  private readonly inicioPlanMesActual = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth(), 1);
+  private readonly inicioPlanMesSiguiente = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + 1, 1);
+
+  get inicioPlan(): Date {
+    return this.llevaEntrada ? this.inicioPlanMesSiguiente : this.inicioPlanMesActual;
+  }
 
   // Superficie seleccionada
   selectedArea: number = 200;
@@ -245,7 +265,12 @@ export class CotizadorComponent implements OnInit {
 
   customAreaDisplay = '200';
 
-  selectedPaymentType: PaymentType = 'msi';
+  /** Forma de pago elegida (ver core/utils/formas-pago): una base (sin enganche, con enganche, pago inicial
+   * o contado) y, opcional, anualidades o aportaciones. Empieza vacía para que el asesor la elija. */
+  formaPago: SeleccionPago = SIN_FORMA_PAGO;
+
+  /** La promoción va aparte de la forma de pago y no se combina con nada. */
+  modoPromocion = false;
 
   // Enganche de SAMAI: monto libre en pesos (Nanuu conserva su 20% fijo, ver downPayment()).
   downPaymentAmount: number = 0;
@@ -357,13 +382,10 @@ export class CotizadorComponent implements OnInit {
     this.customAreaDisplay = '200';
     this.pricePerM2 = this.selectedProject === 'nanuu' ? 3700 : 800;
 
-    if (this.selectedPaymentType === 'cash') {
-      this.selectedPaymentType = 'msi';
-    }
+    // Contado y las promociones son para un solo lote.
+    this.quitarContado();
     this.promocionSeleccionada = null;
-    if (this.selectedPaymentType === 'promocion') {
-      this.selectedPaymentType = 'msi';
-    }
+    this.modoPromocion = false;
     this.mostrarSelectorPromociones.set(false);
   }
 
@@ -429,7 +451,9 @@ export class CotizadorComponent implements OnInit {
       this.isCustomArea = true;
       this.selectedArea = 0;
       this.customAreaDisplay = '0';
-      this.selectedPaymentType = 'msi';
+      // La tarifa de macrolote no tiene contado y saca de la promoción (seleccionarPromocion la vuelve a poner).
+      this.quitarContado();
+      this.modoPromocion = false;
     }
 
     // Si regresamos al precio normal
@@ -495,7 +519,7 @@ export class CotizadorComponent implements OnInit {
   }
 
   get initialPaymentInvalid(): boolean {
-    if (this.selectedPaymentType !== 'initial') {
+    if (!this.conPagoInicial) {
       return false;
     }
 
@@ -517,7 +541,7 @@ export class CotizadorComponent implements OnInit {
   }
 
   get downPaymentAmountInvalid(): boolean {
-    if (this.selectedPaymentType !== 'downpayment') {
+    if (!this.conEnganche) {
       return false;
     }
 
@@ -562,22 +586,85 @@ export class CotizadorComponent implements OnInit {
   get cashDiscountApplied(): boolean {
     return (
       !this.esMultiLote &&
-      this.selectedPaymentType === 'cash' &&
+      this.esContado &&
       this.selectedProject === 'samai' &&
       this.selectedArea === 200
     );
   }
 
-  selectPaymentType(type: PaymentType): void {
-    if ((type === 'annualities' || type === 'aportaciones') && !this.annualitiesAvailable) {
-      return;
-    }
+  /** Las tarjetas de forma de pago de cada proyecto, en el orden en que se muestran. */
+  readonly opcionesPago: Record<ProjectId, { tipo: TipoPago; titulo: string; detalle: string }[]> = {
+    samai: [
+      { tipo: 'msi', titulo: 'Sin enganche', detalle: 'Hasta 60 MSI' },
+      { tipo: 'downpayment', titulo: 'Con enganche', detalle: 'Tú decides el monto' },
+      { tipo: 'initial', titulo: 'Pago inicial', detalle: 'Baja tu mensualidad' },
+      { tipo: 'annualities', titulo: 'Con anualidades', detalle: 'Aportación anual' },
+      { tipo: 'aportaciones', titulo: 'Con aportaciones', detalle: 'Varias por año, cada una en su mes' },
+      { tipo: 'cash', titulo: 'Contado', detalle: 'Precio especial, pocos lotes' },
+    ],
+    nanuu: [
+      { tipo: 'downpayment', titulo: 'Con enganche', detalle: 'Tú decides el monto' },
+      { tipo: 'msi', titulo: 'Sin enganche', detalle: '0% de enganche' },
+      { tipo: 'initial', titulo: 'Pago inicial', detalle: 'Baja tu mensualidad' },
+      { tipo: 'annualities', titulo: 'Con anualidades', detalle: 'Aportación anual' },
+      { tipo: 'aportaciones', titulo: 'Con aportaciones', detalle: 'Varias por año, cada una en su mes' },
+      { tipo: 'cash', titulo: 'Contado', detalle: 'Pago único, sin intereses' },
+    ],
+  };
 
-    if (type === 'cash' && this.esMultiLote) {
-      return;
-    }
+  pagoMarcado(tipo: TipoPago): boolean {
+    return estaMarcado(this.formaPago, tipo);
+  }
 
-    this.selectedPaymentType = type;
+  /** Anualidades y aportaciones piden un plazo de más de 12 meses; contado, un solo lote fuera de macrolote. */
+  private pagoDisponible(tipo: TipoPago): boolean {
+    if (tipo === 'annualities' || tipo === 'aportaciones') return this.annualitiesAvailable;
+    if (tipo === 'cash') return this.contadoDisponible;
+    return true;
+  }
+
+  /** Lo marcado siempre se puede desmarcar; lo demás se apaga si no está disponible o no se combina con lo
+   * ya marcado (ver estaBloqueado). */
+  pagoDeshabilitado(tipo: TipoPago): boolean {
+    if (this.pagoMarcado(tipo)) return false;
+    return !this.pagoDisponible(tipo) || estaBloqueado(this.formaPago, tipo);
+  }
+
+  alternarPago(tipo: TipoPago): void {
+    if (this.pagoDeshabilitado(tipo)) return;
+    this.formaPago = alternarFormaPago(this.formaPago, tipo);
+  }
+
+  private quitarContado(): void {
+    if (this.formaPago.base === 'cash') {
+      this.formaPago = { ...this.formaPago, base: null };
+    }
+  }
+
+  get hayFormaPago(): boolean {
+    return this.isPromocion || hayFormaPago(this.formaPago);
+  }
+
+  get esContado(): boolean {
+    return !this.isPromocion && this.formaPago.base === 'cash';
+  }
+
+  get conEnganche(): boolean {
+    return !this.isPromocion && this.formaPago.base === 'downpayment';
+  }
+
+  get conPagoInicial(): boolean {
+    return !this.isPromocion && this.formaPago.base === 'initial';
+  }
+
+  /** Con enganche o pago inicial: la entrada se paga este mes y las mensualidades empiezan el siguiente. */
+  get llevaEntrada(): boolean {
+    return !this.isPromocion && llevaEntrada(this.formaPago);
+  }
+
+  /** 'Enganche' o 'Pago inicial' (o 'Enganche' a secas cuando no hay entrada, para el resumen en $0). */
+  get etiquetaEntrada(): string {
+    return etiquetaEntrada(this.formaPago) ?? 'Enganche';
   }
 
   /** "Contado" no está disponible con tarifa de macrolote (siempre fue así) ni al combinar varios
@@ -593,11 +680,11 @@ export class CotizadorComponent implements OnInit {
     this.selectProject(promo.proyecto);
     if (promo.tipoPrecio === 'HECTAREA') {
       this.selectPricePerM2(170);
-      // selectPricePerM2(170) fuerza selectedPaymentType a 'msi'; lo volvemos a poner en 'promocion'
-      // un par de líneas abajo, junto con el resto de las demás promociones.
+      // selectPricePerM2(170) saca del modo promoción; se vuelve a poner un par de líneas abajo, junto
+      // con el resto de las promociones.
     }
     this.promocionSeleccionada = promo;
-    this.selectedPaymentType = 'promocion';
+    this.modoPromocion = true;
     this.mostrarSelectorPromociones.set(false);
   }
 
@@ -620,12 +707,12 @@ export class CotizadorComponent implements OnInit {
   quitarPromocion(): void {
     this.promocionSeleccionada = null;
     this.promocionUsaAportaciones = false;
-    this.selectedPaymentType = 'msi';
+    this.modoPromocion = false;
     this.mostrarSelectorPromociones.set(false);
   }
 
   get isPromocion(): boolean {
-    return this.selectedPaymentType === 'promocion' && this.promocionSeleccionada !== null;
+    return this.modoPromocion && this.promocionSeleccionada !== null;
   }
 
   /** LOTE (precio normal por m²) o HECTAREA (tarifa de macrolote): solo SAMAI llega a HECTAREA,
@@ -650,9 +737,7 @@ export class CotizadorComponent implements OnInit {
   private revisarPromocionCompatible(): void {
     if (this.promocionSeleccionada && this.promocionSeleccionada.tipoPrecio !== this.tipoPrecioActual) {
       this.promocionSeleccionada = null;
-      if (this.selectedPaymentType === 'promocion') {
-        this.selectedPaymentType = 'msi';
-      }
+      this.modoPromocion = false;
     }
   }
 
@@ -746,20 +831,21 @@ export class CotizadorComponent implements OnInit {
     return this.promocionAnnualContributionEstandar * this.promocionFactorAjuste;
   }
 
+  /** Monto de entrada: el enganche o el pago inicial capturado (igual para ambos proyectos); 0 sin entrada. */
   get downPayment(): number {
-    // Pago inicial: monto fijo capturado por el asesor, igual para ambos proyectos.
-    if (this.selectedPaymentType === 'initial') {
+    if (this.conPagoInicial) {
       return this.initialPayment;
     }
 
-    // Monto de enganche libre, capturado directamente por el asesor (igual para ambos proyectos).
-    if (this.selectedPaymentType === 'downpayment') {
+    if (this.conEnganche) {
       return this.downPaymentAmount;
     }
 
     return 0;
   }
 
+  /** Saldo después de la entrada: lo que se reparte entre mensualidades y, si hay, anualidades o aportaciones.
+   * En Nanuu incluye los intereses (si el interruptor está activado). */
   get financedAmount(): number {
     // Promoción: el total (con intereses de Nanuu incluidos, si aplica) se reparte entre
     // mensualidades fijas y aportaciones anuales, igual que "Con anualidades".
@@ -768,52 +854,21 @@ export class CotizadorComponent implements OnInit {
     }
 
     // Contado: se paga todo de una vez, no queda nada que financiar (en ambos proyectos).
-    if (this.selectedPaymentType === 'cash') {
+    if (this.esContado) {
       return 0;
     }
 
-    // Nanuu: el saldo incluye los intereses (si el interruptor está activado), también con anualidades o aportaciones.
-    if (this.selectedProject === 'nanuu') {
-      return this.totalInvestment - this.downPayment;
-    }
-
-    if (this.selectedPaymentType === 'msi') {
-      return this.totalPrice;
-    }
-
-    if (this.selectedPaymentType === 'downpayment' || this.selectedPaymentType === 'initial') {
-      return this.totalPrice - this.downPayment;
-    }
-
-    if (this.isAnnualities || this.isAportaciones) {
-      return this.totalPrice;
-    }
-
-    return 0;
+    return this.totalInvestment - this.downPayment;
   }
 
   get financingMonths(): number {
-    if (this.selectedPaymentType === 'cash') {
+    if (!this.hayFormaPago || this.esContado) {
       return 0;
     }
 
-    if (this.selectedProject === 'nanuu') {
-      return this.selectedMonths;
-    }
-
-    if (
-      this.selectedPaymentType === 'msi' ||
-      this.selectedPaymentType === 'downpayment' ||
-      this.selectedPaymentType === 'annualities' ||
-      this.selectedPaymentType === 'aportaciones' ||
-      this.selectedPaymentType === 'initial' ||
-      this.selectedPaymentType === 'promocion'
-    ) {
-      return this.selectedMonths;
-    }
-
-    return 0;
+    return this.selectedMonths;
   }
+
   get monthlyPayment(): number {
     if (this.financingMonths <= 0) {
       return 0;
@@ -825,7 +880,7 @@ export class CotizadorComponent implements OnInit {
       return (this.promocionSeleccionada?.mensualidadFija ?? 0) * this.promocionFactorAjuste;
     }
 
-    if (this.selectedPaymentType === 'annualities') {
+    if (this.isAnnualities) {
       return this.annualitiesMonthlyPayment;
     }
 
@@ -833,21 +888,7 @@ export class CotizadorComponent implements OnInit {
       return this.aportacionesMonthlyPayment;
     }
 
-    // NANUU
-    if (this.selectedProject === 'nanuu') {
-      return this.financedAmount / this.selectedMonths;
-    }
-
-    // SAMAI
-    if (
-      this.selectedPaymentType === 'msi' ||
-      this.selectedPaymentType === 'downpayment' ||
-      this.selectedPaymentType === 'initial'
-    ) {
-      return this.financedAmount / this.selectedMonths;
-    }
-
-    return 0;
+    return this.financedAmount / this.selectedMonths;
   }
 
   get paymentMethodLabel(): string {
@@ -855,60 +896,20 @@ export class CotizadorComponent implements OnInit {
       return `Promoción "${this.promocionSeleccionada?.nombre}" · ${this.selectedMonths} meses`;
     }
 
-    if (
-      this.selectedProject === 'nanuu' &&
-      this.selectedPaymentType !== 'annualities' &&
-      this.selectedPaymentType !== 'aportaciones' &&
-      this.selectedPaymentType !== 'cash'
-    ) {
+    if (!this.hayFormaPago) {
+      return 'Sin elegir';
+    }
+
+    // Nanuu siempre lleva intereses (no son MSI): sin anualidades ni aportaciones se nombra solo por el plazo.
+    if (this.selectedProject === 'nanuu' && !this.formaPago.extra && !this.esContado) {
       return `${this.selectedMonths} meses`;
     }
 
-    if (this.selectedPaymentType === 'msi') {
-      return `Sin enganche · ${this.selectedMonths} MSI`;
-    }
-
-    if (this.selectedPaymentType === 'downpayment') {
-      return `Con enganche · ${this.selectedMonths} MSI`;
-    }
-
-    if (this.selectedPaymentType === 'annualities') {
-      return `Con anualidades · ${this.selectedMonths} meses`;
-    }
-
-    if (this.selectedPaymentType === 'aportaciones') {
-      return `Con aportaciones · ${this.selectedMonths} meses`;
-    }
-
-    if (this.selectedPaymentType === 'initial') {
-      return `Pago inicial · ${this.selectedMonths} meses`;
-    }
-
-    if (this.selectedPaymentType === 'cash') {
-      return 'Contado';
-    }
-
-    return '';
-  }
-
-  get totalToPay(): number {
-    if (this.selectedPaymentType === 'cash') {
-      return this.cashPrice;
-    }
-
-    if (this.selectedPaymentType === 'msi') {
-      return this.totalPrice;
-    }
-
-    if (this.selectedPaymentType === 'downpayment' || this.selectedPaymentType === 'initial') {
-      return this.downPayment + this.financedAmount;
-    }
-
-    return 0;
+    return etiquetaFormaPago(this.formaPago, this.selectedMonths);
   }
 
   get displayedLandPrice(): number {
-    if (this.selectedPaymentType === 'cash') {
+    if (this.esContado) {
       return this.cashPrice;
     }
 
@@ -944,8 +945,14 @@ export class CotizadorComponent implements OnInit {
       precioM2: data.pricePerM2,
       precioTotal: data.totalPrice,
       formaPago: data.paymentMethod,
-      engancheLabel: data.downPaymentLabel,
-      enganche: data.downPayment,
+      // Sin enganche ni pago inicial, el monto que se guarda es el de las anualidades o aportaciones (como
+      // siempre se guardó "Total en aportaciones"); con entrada, la entrada, y el extra queda en formaPago.
+      // (enganche_label mide 30: va el nombre corto, no el del PDF.)
+      engancheLabel:
+        data.downPayment <= 0 && data.pagoExtra
+          ? this.isAnnualities ? 'Total en anualidades' : 'Total en aportaciones'
+          : data.downPaymentLabel,
+      enganche: data.downPayment <= 0 && data.pagoExtra ? data.pagoExtra.monto : data.downPayment,
       montoFinanciado: data.financedAmount,
       meses: data.months,
       mensualidad: data.monthlyPayment,
@@ -987,9 +994,10 @@ export class CotizadorComponent implements OnInit {
 
     if (this.isAnnualities) {
       return this.buildAnnualContributionAmortizationTable(
-        this.totalInvestment,
+        this.financedAmount,
         this.annualContribution,
         this.annualitiesMonthlyPayment,
+        this.llevaEntrada ? 1 : 0,
       );
     }
 
@@ -1005,7 +1013,7 @@ export class CotizadorComponent implements OnInit {
       return tablaConAportaciones(
         this.inicioPlan,
         this.selectedMonths,
-        this.totalInvestment,
+        this.financedAmount,
         this.aportacionesMonthlyPayment,
         this.aportaciones,
         this.monthNames,
@@ -1043,7 +1051,7 @@ export class CotizadorComponent implements OnInit {
     // CONTADO
     // ==============================
 
-    if (this.selectedPaymentType === 'cash') {
+    if (!this.hayFormaPago || this.esContado) {
       return [];
     }
 
@@ -1062,8 +1070,7 @@ export class CotizadorComponent implements OnInit {
       // El enganche y el pago inicial se cubren de entrada, aparte del calendario de
       // mensualidades: no cuentan como la primera mensualidad, por eso el conteo de meses
       // empieza después (offset i, no i - 1).
-      const monthOffset =
-        this.selectedPaymentType === 'downpayment' || this.selectedPaymentType === 'initial' ? i : i - 1;
+      const monthOffset = this.llevaEntrada ? i : i - 1;
 
       const paymentDate = new Date(startDate.getFullYear(), startDate.getMonth() + monthOffset, 1);
 
@@ -1092,11 +1099,13 @@ export class CotizadorComponent implements OnInit {
 
   /** Genera la tabla de amortización para cualquier esquema de "mensualidad + aportación
    * anual" (Con anualidades y Promoción comparten esta misma mecánica; solo cambia cuál de
-   * las dos cantidades es fija y cuál se calcula). */
+   * las dos cantidades es fija y cuál se calcula). `mesesDespues` = 1 cuando hay enganche o
+   * pago inicial: ese mes se paga la entrada y el calendario empieza el siguiente. */
   private buildAnnualContributionAmortizationTable(
     totalAmount: number,
     annualContributionAmount: number,
     monthlyPaymentAmount: number,
+    mesesDespues = 0,
   ): AmortizationRow[] {
     const rows: AmortizationRow[] = [];
 
@@ -1113,7 +1122,7 @@ export class CotizadorComponent implements OnInit {
       // FECHA DEL PAGO
       // ==============================
 
-      const paymentDate = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1);
+      const paymentDate = new Date(startDate.getFullYear(), startDate.getMonth() + i + mesesDespues, 1);
 
       const monthNumber = paymentDate.getMonth() + 1;
 
@@ -1219,19 +1228,15 @@ export class CotizadorComponent implements OnInit {
         ? this.promocionUsaAportaciones
           ? 'Total en aportaciones'
           : 'Aportación anual'
-        : this.isAportaciones
-          ? 'Total en aportaciones'
-          : this.selectedPaymentType === 'initial'
-            ? 'Pago inicial'
-            : 'Enganche',
+        : this.etiquetaEntrada,
 
       downPayment: this.isPromocion
         ? this.promocionUsaAportaciones
           ? this.aportacionesTotal
           : this.promocionAnnualContribution
-        : this.isAportaciones
-          ? this.aportacionesTotal
-          : this.downPayment,
+        : this.downPayment,
+
+      pagoExtra: this.pagoExtraParaPdf,
 
       financedAmount: this.financedAmount,
 
@@ -1249,6 +1254,22 @@ export class CotizadorComponent implements OnInit {
       interestAmount: this.interestAmount,
       totalInvestment: this.totalInvestment,
     };
+  }
+
+  /** Anualidades o aportaciones de la forma de pago, como un renglón aparte del enganche en el PDF y el
+   * historial (la promoción las lleva en su propio renglón, ver downPaymentLabel). */
+  private get pagoExtraParaPdf(): QuotePdfData['pagoExtra'] {
+    if (this.isAnnualities) {
+      const mes = this.mesesDelAnio.find((m) => m.value === this.annualContributionMonth)?.label ?? '';
+      return {
+        label: `Anualidades (${this.annualContributionsCount} en ${mes.toLowerCase()})`,
+        monto: this.annualContributionsTotal,
+      };
+    }
+    if (this.isAportaciones) {
+      return { label: `Aportaciones (${this.aportaciones.length})`, monto: this.aportacionesTotal };
+    }
+    return undefined;
   }
 
   async sharePdf(): Promise<void> {
@@ -1296,7 +1317,7 @@ export class CotizadorComponent implements OnInit {
   }
 
   get interestPercentage(): number {
-    if (this.selectedProject === 'samai' || !this.interesesActivados() || this.selectedPaymentType === 'cash') {
+    if (this.selectedProject === 'samai' || !this.interesesActivados() || this.esContado) {
       return 0;
     }
 
@@ -1332,7 +1353,7 @@ export class CotizadorComponent implements OnInit {
       return this.totalPrice + this.interestAmount;
     }
 
-    if (this.selectedPaymentType === 'cash') {
+    if (this.esContado) {
       return this.cashPrice;
     }
 
@@ -1372,6 +1393,7 @@ export class CotizadorComponent implements OnInit {
     if (!this.clientName.trim()) faltan.push('el nombre del cliente');
     if (this.requiereLoteEnCaptura && !this.blockNumber.trim()) faltan.push('la manzana');
     if (this.requiereLoteEnCaptura && !this.lotNumber.trim()) faltan.push('el lote');
+    if (!this.hayFormaPago) faltan.push('la forma de pago');
     if (faltan.length === 0) return 'Revisa los montos de la forma de pago para generar el PDF.';
     const lista = faltan.length === 1 ? faltan[0] : `${faltan.slice(0, -1).join(', ')} y ${faltan[faltan.length - 1]}`;
     return `Para generar el PDF falta ${lista}.`;
@@ -1402,7 +1424,7 @@ export class CotizadorComponent implements OnInit {
   aportaciones: Aportacion[] = [];
 
   get isAportaciones(): boolean {
-    return this.selectedPaymentType === 'aportaciones';
+    return !this.isPromocion && this.formaPago.extra === 'aportaciones';
   }
 
   get aportacionesTotal(): number {
@@ -1410,11 +1432,11 @@ export class CotizadorComponent implements OnInit {
   }
 
   get aportacionesMonthlyPayment(): number {
-    return mensualidadConAportaciones(this.totalInvestment, this.aportaciones, this.selectedMonths);
+    return mensualidadConAportaciones(this.financedAmount, this.aportaciones, this.selectedMonths);
   }
 
   get aportacionesInvalid(): boolean {
-    return this.isAportaciones && !aportacionesValidas(this.totalInvestment, this.aportaciones, this.selectedMonths);
+    return this.isAportaciones && !aportacionesValidas(this.financedAmount, this.aportaciones, this.selectedMonths);
   }
 
   /** Mensaje de por qué las aportaciones no son válidas (null si lo son o si todavía no hay ninguna). */
@@ -1426,7 +1448,7 @@ export class CotizadorComponent implements OnInit {
       return 'Ingresa el monto de todas las aportaciones elegidas.';
     }
     if (this.aportacionesMonthlyPayment <= 0) {
-      return 'Las aportaciones suman todo el precio: deja saldo para las mensualidades regulares.';
+      return 'Las aportaciones cubren todo el saldo: deja algo para las mensualidades regulares.';
     }
     return null;
   }
@@ -1483,7 +1505,7 @@ export class CotizadorComponent implements OnInit {
    * antes de terminar de pagar. Es el mismo valor que antes se calculaba siempre, ahora es
    * también el máximo que el asesor puede capturar a mano. */
   get annualContributionsCountMax(): number {
-    return Math.max(Math.floor(this.selectedMonths / 12) - 1, 0);
+    return maximoAnualidades(this.selectedMonths);
   }
 
   get annualContributionsCount(): number {
@@ -1502,7 +1524,7 @@ export class CotizadorComponent implements OnInit {
   }
 
   get isAnnualities(): boolean {
-    return this.selectedPaymentType === 'annualities';
+    return !this.isPromocion && this.formaPago.extra === 'annualities';
   }
 
   onAnnualContributionInput(event: Event): void {
@@ -1520,7 +1542,7 @@ export class CotizadorComponent implements OnInit {
   }
 
   get annualitiesMonthlyBalance(): number {
-    return Math.max(this.totalInvestment - this.annualContributionsTotal, 0);
+    return Math.max(this.financedAmount - this.annualContributionsTotal, 0);
   }
 
   get regularPaymentMonths(): number {
@@ -1538,14 +1560,14 @@ export class CotizadorComponent implements OnInit {
 
     // Si todavía no hay anualidad
     if (this.annualContribution <= 0) {
-      return this.totalInvestment / this.selectedMonths;
+      return this.financedAmount / this.selectedMonths;
     }
 
     // Total que se pagará mediante anualidades
     const annualitiesTotal = this.annualContribution * this.annualContributionsCount;
 
-    // Lo que todavía falta cubrir con mensualidades
-    const remainingBalance = this.totalInvestment - annualitiesTotal;
+    // Lo que todavía falta cubrir con mensualidades (el saldo ya sin enganche ni pago inicial)
+    const remainingBalance = this.financedAmount - annualitiesTotal;
 
     // Meses normales restantes
     const regularMonths = this.selectedMonths - this.annualContributionsCount;
@@ -1562,7 +1584,7 @@ export class CotizadorComponent implements OnInit {
       return 0;
     }
 
-    return this.totalInvestment / this.selectedMonths;
+    return this.financedAmount / this.selectedMonths;
   }
 
   get annualContributionInvalid(): boolean {
@@ -1594,7 +1616,7 @@ export class CotizadorComponent implements OnInit {
       return 0;
     }
 
-    return Math.floor((this.totalInvestment - 1) / this.annualContributionsCount);
+    return Math.floor((this.financedAmount - 1) / this.annualContributionsCount);
   }
 
   get annualContributionValid(): boolean {
@@ -1606,6 +1628,10 @@ export class CotizadorComponent implements OnInit {
       return false;
     }
 
+    if (!this.hayFormaPago) {
+      return false;
+    }
+
     if (this.isAnnualities && this.annualContributionInvalid) {
       return false;
     }
@@ -1614,11 +1640,7 @@ export class CotizadorComponent implements OnInit {
       return false;
     }
 
-    if (this.selectedPaymentType === 'initial' && this.initialPaymentInvalid) {
-      return false;
-    }
-
-    if (this.selectedPaymentType === 'downpayment' && this.downPaymentAmountInvalid) {
+    if (this.initialPaymentInvalid || this.downPaymentAmountInvalid) {
       return false;
     }
 

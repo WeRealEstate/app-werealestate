@@ -264,19 +264,39 @@
     </div>
 
     <div>
-      <label class="block text-sm font-medium text-ink mb-1.5">Tipo de pago</label>
-      <div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+      <label class="block text-sm font-medium text-ink mb-1">Tipo de pago *</label>
+      <p class="mb-2 text-xs text-ink-muted">
+        A Sin enganche, Con enganche o Pago inicial puedes sumar anualidades o aportaciones. Lo que no se combina se
+        apaga hasta que desmarques lo que elegiste.
+      </p>
+      <div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3" role="group" aria-label="Tipo de pago">
         @for (opcion of tipoPagoOpciones; track opcion.value) {
           <button
             type="button"
-            (click)="seleccionarTipoPago(opcion.value)"
-            [class.border-we-primary]="tipoPago() === opcion.value"
-            [class.text-we-primary]="tipoPago() === opcion.value"
-            [class.bg-we-primary/10]="tipoPago() === opcion.value"
-            class="rounded-xl border border-border p-3 text-left transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md"
+            (click)="alternarTipoPago(opcion.value)"
+            [disabled]="tipoPagoBloqueado(opcion.value)"
+            [attr.aria-pressed]="tipoPagoMarcado(opcion.value)"
+            [attr.data-testid]="'tipo-pago-' + opcion.value"
+            [class.border-we-primary]="tipoPagoMarcado(opcion.value)"
+            [class.text-we-primary]="tipoPagoMarcado(opcion.value)"
+            [class.bg-we-primary/10]="tipoPagoMarcado(opcion.value)"
+            [class.opacity-40]="tipoPagoBloqueado(opcion.value)"
+            [class.cursor-not-allowed]="tipoPagoBloqueado(opcion.value)"
+            class="relative rounded-xl border border-border p-3 text-left transition-all duration-150 enabled:hover:-translate-y-0.5 enabled:hover:shadow-md"
           >
-            <p class="text-sm font-semibold">{{ opcion.label }}</p>
+            <p class="pr-6 text-sm font-semibold">{{ opcion.label }}</p>
             <p class="text-xs text-ink-muted">{{ opcion.sublabel }}</p>
+            <span
+              class="absolute right-2.5 top-2.5 flex h-4 w-4 items-center justify-center rounded-full border"
+              [class.border-border]="!tipoPagoMarcado(opcion.value)"
+              [class.border-we-primary]="tipoPagoMarcado(opcion.value)"
+              [class.bg-we-primary]="tipoPagoMarcado(opcion.value)"
+              aria-hidden="true"
+            >
+              @if (tipoPagoMarcado(opcion.value)) {
+                <svg lucideCheck [size]="10" [strokeWidth]="3" class="text-white"></svg>
+              }
+            </span>
           </button>
         }
       </div>
@@ -464,7 +484,7 @@
           </div>
           @if (mostrarEnganche() && enganchePct() !== null) {
             <div class="flex justify-between gap-3">
-              <dt class="text-ink-muted">Enganche</dt>
+              <dt class="text-ink-muted">{{ engancheLabelActual() }}</dt>
               <dd class="font-medium text-ink">{{ enganchePct() }}% del precio</dd>
             </div>
           }
@@ -481,6 +501,66 @@
             </div>
           }
         </dl>
+      </div>
+    }
+
+    @if (esAnualidades()) {
+      <div class="rounded-xl border border-we-primary/20 bg-we-primary/5 p-4 dark:border-we-primary/25 dark:bg-we-primary/10" data-testid="anualidades-venta">
+        <p class="text-sm font-semibold text-ink">Anualidades</p>
+        <p class="mt-1 text-xs text-ink-muted">
+          Una por año en el mes que elijas, desde el mes de la venta (el último año del plazo queda libre). En ese mes se
+          paga solo la anualidad. Se guardan como aportaciones programadas de la venta.
+        </p>
+        <div class="mt-3 grid gap-4 sm:grid-cols-3">
+          <div>
+            <label for="montoAnualidad" class="block text-sm font-medium text-ink mb-1.5">Monto de cada una *</label>
+            <input
+              id="montoAnualidad"
+              appMoneda
+              [ngModel]="montoAnualidad()"
+              [ngModelOptions]="{ standalone: true }"
+              (ngModelChange)="onMontoAnualidadChange($event)"
+              placeholder="Ej. 50000"
+              class="block w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            />
+          </div>
+          <div>
+            <label for="mesAnualidad" class="block text-sm font-medium text-ink mb-1.5">Mes</label>
+            <select
+              id="mesAnualidad"
+              [ngModel]="mesAnualidad()"
+              [ngModelOptions]="{ standalone: true }"
+              (ngModelChange)="onMesAnualidadChange($event)"
+              class="block w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            >
+              @for (nombre of mesesNombre; track $index) {
+                <option [ngValue]="$index + 1">{{ nombre }}</option>
+              }
+            </select>
+          </div>
+          <div>
+            <label for="numeroAnualidades" class="block text-sm font-medium text-ink mb-1.5">Cuántas</label>
+            <input
+              id="numeroAnualidades"
+              appMoneda decimales="0"
+              min="1"
+              [max]="maximoAnualidades()"
+              [ngModel]="numeroAnualidades()"
+              [ngModelOptions]="{ standalone: true }"
+              (ngModelChange)="onNumeroAnualidadesChange($event)"
+              [placeholder]="maximoAnualidades() > 0 ? 'Máximo ' + maximoAnualidades() : 'Indica el plazo'"
+              class="block w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            />
+          </div>
+        </div>
+        @if (anualidadesTexto()) {
+          <p class="mt-3 text-xs text-ink-muted">Quedan en: <span class="font-medium text-ink">{{ anualidadesTexto() }}</span></p>
+        } @else if (!plazoActual()) {
+          <p class="mt-3 text-xs text-ink-muted">Indica el plazo para ver en qué meses caen.</p>
+        }
       </div>
     }
 

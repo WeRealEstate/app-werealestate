@@ -11,7 +11,19 @@ import {
   WeFormPublico,
 } from '../../../core/models/we-form.model';
 import { WeFormsPublicoService } from '../../../core/services/we-forms-publico.service';
-import { Aportacion, mensualidadConAportaciones } from '../../../core/utils/aportaciones';
+import { Aportacion, MESES_ABREVIADO, MESES_NOMBRE, mensualidadConAportaciones, totalAportaciones } from '../../../core/utils/aportaciones';
+import {
+  SIN_FORMA_PAGO,
+  SeleccionPago,
+  alternarFormaPago,
+  anualidadesComoAportaciones,
+  estaBloqueado,
+  estaMarcado,
+  hayFormaPago,
+  llevaEntrada,
+  maximoAnualidades,
+  unidadPlazo,
+} from '../../../core/utils/formas-pago';
 import { curpFormatoValido, datosDeCurp } from '../../../core/utils/identidad';
 import { AportacionesSelectorComponent } from '../../../shared/aportaciones-selector/aportaciones-selector.component';
 import { CorreoInputDirective } from '../../../shared/correo-input/correo-input.directive';
@@ -22,11 +34,9 @@ import { ESTADOS_MX, estadoCanonico } from '../../../core/data/estados-mx';
 import { PAISES, PAIS_PRINCIPAL } from '../../../core/data/paises';
 import { PinPublicoComponent } from '../../../shared/pin-publico/pin-publico.component';
 
-const TIPOS_CON_ENGANCHE: TipoPagoForm[] = ['downpayment', 'initial', 'annualities'];
 const ETIQUETA_ENGANCHE: Record<string, string> = {
   downpayment: 'Monto del enganche',
   initial: 'Monto del pago inicial',
-  annualities: 'Monto de la aportación anual',
 };
 const MAX_ARCHIVO_BYTES = 2 * 1024 * 1024;
 
@@ -72,6 +82,14 @@ export class WeFormPublicoComponent {
   readonly archivos = signal<Map<number, File>>(new Map());
   readonly errores = signal<Record<number, string>>({});
   readonly aportaciones = signal<Aportacion[]>([]);
+  readonly mesesNombre = MESES_NOMBRE;
+
+  // Anualidades: van dentro de la pregunta "Tipo de pago" (así los formularios que ya existen no necesitan
+  // preguntas nuevas) y el servidor las guarda como aportaciones programadas, una por año.
+  readonly montoAnualidad = signal<number | null>(null);
+  readonly mesAnualidad = signal(12);
+  /** null = el máximo que permite el plazo. */
+  readonly numeroAnualidades = signal<number | null>(null);
 
   readonly paises = PAISES;
   readonly estadosMx = ESTADOS_MX;
@@ -156,10 +174,67 @@ export class WeFormPublicoComponent {
     if (this.errorEnvio()) this.errorEnvio.set(null);
   }
 
-  readonly tipoPago = computed<TipoPagoForm | null>(() => {
+  /** La forma de pago marcada en la pregunta "Tipo de pago": una base y, opcional, anualidades o aportaciones. */
+  readonly formaPago = computed<SeleccionPago>(() => {
     const q = this.pregunta('TIPO_PAGO');
-    return q ? ((this.valores()[q.id] as TipoPagoForm | undefined) ?? null) : null;
+    return (q ? (this.valores()[q.id] as SeleccionPago | undefined) : undefined) ?? SIN_FORMA_PAGO;
   });
+  readonly hayFormaPago = computed(() => hayFormaPago(this.formaPago()));
+  readonly esContado = computed(() => this.formaPago().base === 'cash');
+  readonly llevaEntrada = computed(() => llevaEntrada(this.formaPago()));
+
+  tipoPagoMarcado(tipo: TipoPagoForm): boolean {
+    return estaMarcado(this.formaPago(), tipo);
+  }
+
+  tipoPagoBloqueado(tipo: TipoPagoForm): boolean {
+    return estaBloqueado(this.formaPago(), tipo);
+  }
+
+  /** Marca o desmarca una forma de pago; lo que no se combina con lo ya marcado está bloqueado. */
+  alternarTipoPago(p: PreguntaPublica, tipo: TipoPagoForm): void {
+    if (this.tipoPagoBloqueado(tipo)) return;
+    const nueva = alternarFormaPago(this.formaPago(), tipo);
+    this.setValor(p.id, hayFormaPago(nueva) ? nueva : null);
+    if (nueva.extra !== 'aportaciones') this.aportaciones.set([]);
+    if (nueva.extra !== 'annualities') {
+      this.montoAnualidad.set(null);
+      this.numeroAnualidades.set(null);
+    }
+  }
+
+  readonly maximoAnualidades = computed(() => maximoAnualidades(this.plazo() ?? 0));
+  readonly anualidadesProgramadas = computed<Aportacion[]>(() => {
+    const monto = this.montoAnualidad();
+    const plazo = this.plazo() ?? 0;
+    if (this.formaPago().extra !== 'annualities' || !monto || monto <= 0 || plazo <= 0) return [];
+    const cantidad = Math.min(this.numeroAnualidades() ?? this.maximoAnualidades(), this.maximoAnualidades());
+    return anualidadesComoAportaciones(this.inicioPlan, plazo, this.mesAnualidad(), monto, cantidad);
+  });
+  readonly anualidadesTexto = computed(() =>
+    this.anualidadesProgramadas().map((a) => `${MESES_ABREVIADO[a.mes - 1]} ${a.anio}`).join(' · '),
+  );
+
+  /** Las aportaciones elegidas mes por mes o las anualidades: lo que baja la mensualidad aparte del enganche. */
+  private readonly extrasDelPlan = computed<Aportacion[]>(() =>
+    this.formaPago().extra === 'aportaciones'
+      ? this.aportaciones()
+      : this.formaPago().extra === 'annualities'
+        ? this.anualidadesProgramadas()
+        : [],
+  );
+  readonly totalExtras = computed(() => totalAportaciones(this.extrasDelPlan()));
+
+  /** Por qué las anualidades todavía no se pueden enviar (null si están bien o no aplican). */
+  private errorAnualidades(): string | null {
+    if (this.formaPago().extra !== 'annualities') return null;
+    if (!this.plazo()) return 'Indica el plazo para calcular las anualidades.';
+    if (this.maximoAnualidades() < 1) return 'Con anualidades el plazo debe ser de al menos 24 meses.';
+    if (!this.montoAnualidad() || this.montoAnualidad()! <= 0) return 'Ingresa el monto de cada anualidad.';
+    if (this.anualidadesProgramadas().length === 0) return 'Indica cuántas anualidades lleva la venta.';
+    if (this.mensualidad() === null) return 'Las anualidades y el enganche cubren todo el precio: deja saldo para las mensualidades.';
+    return null;
+  }
 
   readonly lotesElegidos = computed(() => {
     const q = this.pregunta('LOTES');
@@ -203,33 +278,31 @@ export class WeFormPublicoComponent {
   readonly plazo = computed(() => this.numeroDe('PLAZO'));
   readonly enganche = computed(() => this.numeroDe('ENGANCHE'));
 
-  readonly unidadPlazo = computed(() => (this.tipoPago() === 'msi' || this.tipoPago() === 'downpayment' ? 'MSI' : 'meses'));
+  readonly unidadPlazo = computed(() => unidadPlazo(this.formaPago()));
 
+  /** Igual que el servidor: precio menos la entrada, repartido entre los meses sin anualidad o aportación. */
   readonly mensualidad = computed(() => {
-    const tp = this.tipoPago();
     const plazo = this.plazo();
     const precio = this.precioTotal();
-    if (!tp || tp === 'cash' || !plazo || plazo < 1 || precio <= 0) return null;
-    if (tp === 'aportaciones') {
-      const m = mensualidadConAportaciones(precio, this.aportaciones(), plazo);
+    if (!this.hayFormaPago() || this.esContado() || !plazo || plazo < 1 || precio <= 0) return null;
+    const saldo = precio - (this.llevaEntrada() ? (this.enganche() ?? 0) : 0);
+    if (this.formaPago().extra) {
+      const m = mensualidadConAportaciones(saldo, this.extrasDelPlan(), plazo);
       return m > 0 ? Math.round(m * 100) / 100 : null;
     }
-    const eng = TIPOS_CON_ENGANCHE.includes(tp) ? (this.enganche() ?? 0) : 0;
-    const saldo = precio - eng;
     return saldo > 0 ? Math.round((saldo / plazo) * 100) / 100 : null;
   });
 
   /** Las preguntas de enganche, plazo, día de pago y aportaciones solo aparecen cuando el tipo de pago las pide. */
   visible(p: PreguntaPublica): boolean {
-    const tp = this.tipoPago();
     switch (p.destino) {
       case 'ENGANCHE':
-        return !!tp && TIPOS_CON_ENGANCHE.includes(tp);
+        return this.llevaEntrada();
       case 'PLAZO':
       case 'DIA_PAGO':
-        return !!tp && tp !== 'cash';
+        return this.hayFormaPago() && !this.esContado();
       case 'APORTACIONES':
-        return tp === 'aportaciones' && (this.plazo() ?? 0) >= 1;
+        return this.formaPago().extra === 'aportaciones' && (this.plazo() ?? 0) >= 1;
       default:
         return true;
     }
@@ -248,7 +321,7 @@ export class WeFormPublicoComponent {
   }
 
   etiquetaDe(p: PreguntaPublica): string {
-    if (p.destino === 'ENGANCHE') return ETIQUETA_ENGANCHE[this.tipoPago() ?? ''] ?? p.titulo;
+    if (p.destino === 'ENGANCHE') return ETIQUETA_ENGANCHE[this.formaPago().base ?? ''] ?? p.titulo;
     if (p.destino === 'PLAZO') return `Plazo (${this.unidadPlazo()})`;
     return p.titulo;
   }
@@ -348,6 +421,9 @@ export class WeFormPublicoComponent {
       const v = String(this.valor(estadoQ.id) ?? '');
       if (v && !estadoCanonico(v)) errores[estadoQ.id] = 'Elige un estado de la lista.';
     }
+    const tipoPagoQ = this.pregunta('TIPO_PAGO');
+    const errorAnualidades = this.errorAnualidades();
+    if (tipoPagoQ && errorAnualidades && !errores[tipoPagoQ.id]) errores[tipoPagoQ.id] = errorAnualidades;
     const dia = this.pregunta('DIA_PAGO');
     if (dia && this.visible(dia) && !errores[dia.id]) {
       const d = this.numeroDe('DIA_PAGO');
@@ -366,6 +442,22 @@ export class WeFormPublicoComponent {
       if (p.tipo === 'TITULO' || p.tipo === 'ASESOR' || p.tipo === 'ARCHIVO' || !this.visible(p)) continue;
       if (p.tipo === 'APORTACIONES') {
         respuestas.push({ preguntaId: p.id, valor: this.aportaciones().map((a) => ({ anio: a.anio, mes: a.mes, monto: a.monto })) });
+      } else if (p.destino === 'TIPO_PAGO') {
+        // La forma de pago y, con anualidades, su monto, mes y cuántas (el servidor las vuelve a calcular).
+        const sel = this.formaPago();
+        respuestas.push({
+          preguntaId: p.id,
+          valor: hayFormaPago(sel)
+            ? {
+                base: sel.base,
+                extra: sel.extra,
+                anualidad:
+                  sel.extra === 'annualities'
+                    ? { monto: this.montoAnualidad(), mes: this.mesAnualidad(), cantidad: this.anualidadesProgramadas().length }
+                    : null,
+              }
+            : null,
+        });
       } else if (!this.vacio(p)) {
         respuestas.push({ preguntaId: p.id, valor: this.valores()[p.id] });
       }
@@ -411,6 +503,9 @@ export class WeFormPublicoComponent {
     this.archivos.set(new Map());
     this.errores.set({});
     this.aportaciones.set([]);
+    this.montoAnualidad.set(null);
+    this.mesAnualidad.set(12);
+    this.numeroAnualidades.set(null);
     this.limpiarFiltrosLotes();
     this.errorEnvio.set(null);
     this.resultado.set(null);

@@ -1,3 +1,5 @@
+import { TipoPago } from '../utils/formas-pago';
+
 /** We Forms: formularios de registro de venta (panel) y su link público. Ver backend WeFormDtos. */
 
 export type EstadoWeForm = 'ACTIVO' | 'CERRADO';
@@ -229,13 +231,14 @@ export interface WeFormEnvioResultado {
   clienteNuevo: boolean;
 }
 
-export type TipoPagoForm = 'msi' | 'downpayment' | 'initial' | 'annualities' | 'aportaciones' | 'cash';
+/** Mismas formas de pago que el Cotizador y Registrar venta, combinables igual (ver core/utils/formas-pago). */
+export type TipoPagoForm = TipoPago;
 
 export const TIPOS_PAGO_FORM: { value: TipoPagoForm; label: string; sublabel: string }[] = [
   { value: 'msi', label: 'Sin enganche', sublabel: 'Meses sin intereses' },
   { value: 'downpayment', label: 'Con enganche', sublabel: 'Monto libre' },
   { value: 'initial', label: 'Pago inicial', sublabel: 'Baja la mensualidad' },
-  { value: 'annualities', label: 'Con anualidades', sublabel: 'Aportación anual' },
+  { value: 'annualities', label: 'Con anualidades', sublabel: 'Una por año, mismo mes' },
   { value: 'aportaciones', label: 'Con aportaciones', sublabel: 'Varias, cada una en su mes' },
   { value: 'cash', label: 'Contado', sublabel: 'Pago único' },
 ];
