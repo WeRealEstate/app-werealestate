@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '10.3.2', fecha: '2026-10-22', cambios: [
+    "Planos públicos (/samai y /aldea-nanuu): se quitó la animación de carga y la espera mínima de 3.5 s. Ahora se ve negro mientras llega el plano y, en cuanto está, empieza la animación de revelado. Los planos que ya están en el caché del navegador se muestran casi al instante.",
+  ] },
   { version: '10.3.1', fecha: '2026-10-22', cambios: [
     "Material (panel): ahora está separado por pestañas — SAMAI Campestre, Aldea Nanuu y Compartido (lo marcado 'Ambos desarrollos'), cada una con su contador. 'Nuevo material' nace en el proyecto de la pestaña abierta y, al guardar en otro proyecto, te lleva a su pestaña. Se quitó el filtro por desarrollo.",
   ] },

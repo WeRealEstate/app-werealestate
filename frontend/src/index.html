@@ -61,9 +61,10 @@
     // la animación en la misma fase cuando arranca la app.
     (function(){
       var p=location.pathname,d=null,tema=null;
-      if(/^\/samai(\/|$)/.test(p)){d='samai';tema='oscuro'}
-      else if(/^\/aldea-nanuu(\/|$)/.test(p)){d='nanuu';tema='oscuro'}
-      else if(/^\/we-forms(\/|$)/.test(p)){var q=new URLSearchParams(location.search).get('proyecto');if(q==='samai'||q==='nanuu')d=q}
+      // Los planos públicos (/samai, /aldea-nanuu) no llevan pantalla de carga: se ve negro hasta que llega el plano
+      // y entonces se revela (ver plano-publico). Sin esto saldría el pantallazo genérico de We.
+      if(/^\/(samai|aldea-nanuu)(\/|$)/.test(p)){document.documentElement.style.background='#000';document.write('<style>#we-splash{display:none!important}body{background:#000}</style>');return}
+      if(/^\/we-forms(\/|$)/.test(p)){var q=new URLSearchParams(location.search).get('proyecto');if(q==='samai'||q==='nanuu')d=q}
       if(!d)return;
       if(tema)document.documentElement.style.background='#000';
       document.write('<style>#we-splash{display:none!important}'+(tema?'body{background:#000}':'')+'</style>');

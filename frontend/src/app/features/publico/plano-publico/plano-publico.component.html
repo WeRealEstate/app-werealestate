@@ -553,15 +553,4 @@
   }
 
   <app-toast-container />
-
-  <!-- Pantalla de carga del desarrollo (SAMAI o Nanuu); se funde al llegar el plano -->
-  @if (mostrarCarga()) {
-    <div
-      class="absolute inset-0 z-30 transition-opacity duration-500"
-      [class.opacity-0]="imagenLista()"
-      [class.pointer-events-none]="imagenLista()"
-    >
-      <app-desarrollo-loader [desarrollo]="proyecto" modo="cubrir" tema="oscuro" texto="Cargando plano" [continuaSplash]="true" />
-    </div>
-  }
 </div>

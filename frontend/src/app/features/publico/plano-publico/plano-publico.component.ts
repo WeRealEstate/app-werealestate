@@ -19,7 +19,7 @@ import { colorDeBarra, fondoDePagina } from '../../../core/utils/pagina';
 import { DetectorDeRueda } from '../../../core/utils/rueda';
 import { leerImagenParaPdf } from '../../../core/utils/imagen-pdf';
 import { ToastService } from '../../../core/services/toast.service';
-import { WeFormsPublicoService } from '../../../core/services/we-forms-publico.service';import { DesarrolloLoaderComponent } from '../../../shared/desarrollo-loader/desarrollo-loader.component';
+import { WeFormsPublicoService } from '../../../core/services/we-forms-publico.service';
 import { ToastContainerComponent } from '../../../shared/toast-container/toast-container.component';
 
 type ProyectoPublico = 'samai' | 'nanuu';
@@ -55,9 +55,6 @@ const PASO_TECLADO_PX = 80;
 const DURACION_ANIMACION_MS = 220;
 const CLAVE_AVISO_ROTAR = 'plano-publico-aviso-rotar';
 const DURACION_AVISO_ROTAR_MS = 9000;
-
-/** Cuánto se ve, como mínimo, la animación de carga del desarrollo (llega al logo completo a ~2.8 s). */
-const MIN_CARGA_MS = 3500;
 
 function leerAsesorGuardado(proyecto: string): string | null {
   try {
@@ -128,7 +125,7 @@ function olvidarSinAcceso(proyecto?: string): void {
 @Component({
   selector: 'app-plano-publico',
   standalone: true,
-  imports: [FormsModule, DecimalPipe, RouterLink, ToastContainerComponent, DesarrolloLoaderComponent],
+  imports: [FormsModule, DecimalPipe, RouterLink, ToastContainerComponent],
   templateUrl: './plano-publico.component.html',
 })
 export class PlanoPublicoComponent implements OnDestroy {
@@ -182,13 +179,8 @@ export class PlanoPublicoComponent implements OnDestroy {
   readonly isLoading = signal(true);
   /** Carga del plano (ver CSS .plano-*): la imagen ya llegó; la pantalla de carga sale y el plano se revela. */
   readonly imagenLista = signal(false);
-  private readonly inicioCarga = performance.now();
   private cargaProgramada = false;
-  readonly cargaTerminada = signal(false);
   readonly revelado = signal(false);
-  readonly mostrarCarga = computed(
-    () => this.isLoading() || (!this.errorMessage() && !!this.planoUrl() && !this.cargaTerminada()),
-  );
   readonly errorMessage = signal<string | null>(null);
 
   /** El plano/nombre del desarrollo vienen anidados en cualquiera de sus lotes (todos comparten el
@@ -693,18 +685,13 @@ export class PlanoPublicoComponent implements OnDestroy {
     this.terminarCarga(false);
   }
 
-  /** La animación del desarrollo se ve armada al menos MIN_CARGA_MS desde que empezó la carga (si la
-   * página arrancó con el primer pantallazo del desarrollo, cuenta desde ahí), aunque el plano llegue antes. */
+  /** En cuanto llega el plano (o falla) se muestra: sin pantalla de carga ni espera mínima. Con el plano se
+   * dispara la animación de revelado (`plano-revelar`), que dura ~2.4 s. */
   private terminarCarga(conAnimacion: boolean): void {
     if (this.cargaProgramada) return;
     this.cargaProgramada = true;
-    const desde = document.getElementById('dev-splash') ? 0 : this.inicioCarga;
-    const espera = Math.max(0, MIN_CARGA_MS - (performance.now() - desde));
-    setTimeout(() => {
-      this.imagenLista.set(true);
-      setTimeout(() => this.cargaTerminada.set(true), 600);
-      setTimeout(() => this.revelado.set(true), conAnimacion ? 2600 : 0);
-    }, espera);
+    this.imagenLista.set(true);
+    setTimeout(() => this.revelado.set(true), conAnimacion ? 2600 : 0);
   }
 
   @HostListener('window:resize')
