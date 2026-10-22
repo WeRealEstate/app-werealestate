@@ -246,17 +246,28 @@
                   </td>
                   <td class="px-3 py-3 text-ink-muted">{{ g.registradoPor.nombre }}</td>
                   <td class="px-3 py-3 text-right">
-                    @if (g.origen === 'RECURRENTE') {
-                      <button type="button" [disabled]="savingId() === g.id" (click)="deshacerPago(g)" class="text-xs font-semibold text-ink-muted hover:underline disabled:opacity-60">Deshacer pago</button>
-                    } @else if (g.origen === 'UNICO' && esAdmin()) {
+                    <div class="inline-flex items-center justify-end gap-1">
                       <button
-                        type="button" [disabled]="savingId() === g.id" (click)="eliminar(g)" aria-label="Eliminar gasto"
-                        class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-red-50 hover:text-red-600
-                               dark:hover:bg-red-500/10 dark:hover:text-red-400 transition-colors duration-150 active:scale-90 disabled:opacity-60"
+                        type="button" [disabled]="savingId() === g.id" (click)="abrirEditarGasto(g)" aria-label="Modificar egreso" title="Modificar"
+                        data-testid="editar-gasto"
+                        class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2 hover:text-we-primary
+                               transition-colors duration-150 active:scale-90 disabled:opacity-60"
                       >
-                        <svg lucideTrash2 [size]="15"></svg>
+                        <svg lucidePencil [size]="15"></svg>
                       </button>
-                    }
+                      @if (g.origen === 'RECURRENTE') {
+                        <button type="button" [disabled]="savingId() === g.id" (click)="deshacerPago(g)" class="text-xs font-semibold text-ink-muted hover:underline disabled:opacity-60">Deshacer pago</button>
+                      } @else {
+                        <button
+                          type="button" [disabled]="savingId() === g.id" (click)="pedirEliminar(g)" aria-label="Eliminar egreso" title="Eliminar"
+                          data-testid="eliminar-gasto"
+                          class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-red-50 hover:text-red-600
+                                 dark:hover:bg-red-500/10 dark:hover:text-red-400 transition-colors duration-150 active:scale-90 disabled:opacity-60"
+                        >
+                          <svg lucideTrash2 [size]="15"></svg>
+                        </button>
+                      }
+                    </div>
                   </td>
                 </tr>
               }
@@ -279,8 +290,18 @@
     <button type="button" (click)="cerrarModales()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
     <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="crear-gasto-titulo">
       <form (ngSubmit)="crearGasto()" class="modal-panel-enter w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
-        <h2 id="crear-gasto-titulo" class="font-heading text-lg font-semibold text-ink">Registrar gasto</h2>
-        <p class="mt-1 text-sm text-ink-muted">Compras de una sola vez: papelería, insumos, mantenimiento…</p>
+        <h2 id="crear-gasto-titulo" class="font-heading text-lg font-semibold text-ink">{{ editandoGasto() ? 'Modificar egreso' : 'Registrar gasto' }}</h2>
+        @if (editandoGasto(); as e) {
+          <p class="mt-1 text-sm text-ink-muted">
+            @if (e.origen === 'COMISION') {
+              Es el egreso de una entrega de comisión: si cambias el monto o la fecha, la entrega y su ticket se actualizan igual.
+            } @else {
+              Corrige el concepto, la fecha, el monto o el comprobante.
+            }
+          </p>
+        } @else {
+          <p class="mt-1 text-sm text-ink-muted">Compras de una sola vez: papelería, insumos, mantenimiento…</p>
+        }
         <div class="mt-4 space-y-3">
           <div>
             <label for="g-concepto" class="mb-1 block text-xs font-medium text-ink-muted">¿Qué se compró? *</label>
@@ -310,6 +331,12 @@
           </div>
           <div>
             <label for="g-ticket" class="mb-1 block text-xs font-medium text-ink-muted">Ticket o comprobante (opcional)</label>
+            @if (editandoGasto()?.tieneTicket) {
+              <label class="mb-2 flex items-center gap-2 text-xs text-ink-muted">
+                <input type="checkbox" name="quitar-ticket" [ngModel]="quitarTicketActual()" (ngModelChange)="quitarTicketActual.set($event)" [disabled]="!!nuevoTicket()" />
+                Quitar el comprobante actual (si eliges otro archivo, lo reemplaza)
+              </label>
+            }
             <input id="g-ticket" type="file" accept="image/png,image/jpeg,image/webp,application/pdf" (change)="onTicketChange($event, 'gasto')" class="block w-full text-sm text-ink-muted" />
           </div>
         </div>
@@ -319,7 +346,43 @@
         <div class="flex justify-end gap-2.5 pt-5">
           <button type="button" (click)="cerrarModales()" class="boton-secundario rounded-lg px-4 py-2.5 text-sm font-medium text-ink-muted">Cancelar</button>
           <button type="submit" [disabled]="guardando()" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
-            {{ guardando() ? 'Guardando…' : 'Registrar' }}
+            {{ guardando() ? 'Guardando…' : (editandoGasto() ? 'Guardar cambios' : 'Registrar') }}
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+
+  <!-- Eliminar un egreso (pide la contraseña) -->
+  @if (eliminando(); as g) {
+    <button type="button" (click)="cancelarEliminar()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="eliminar-gasto-titulo">
+      <form (ngSubmit)="confirmarEliminar()" class="modal-panel-enter w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <h2 id="eliminar-gasto-titulo" class="font-heading text-lg font-semibold text-ink">Eliminar egreso</h2>
+        <p class="mt-2 text-sm text-ink">{{ g.concepto }} · <span class="font-semibold">${{ money(g.monto) }}</span></p>
+        <p class="mt-2 text-sm text-ink-muted">
+          @if (g.origen === 'COMISION') {
+            Es el egreso de una entrega de comisión: se anula la entrega, la comisión vuelve a quedar pendiente por pagar y su ticket deja de existir.
+          } @else {
+            Se elimina el egreso y su comprobante.
+          }
+          Esta acción no se puede deshacer.
+        </p>
+        <div class="mt-4">
+          <label for="eliminar-gasto-password" class="mb-1 block text-xs font-medium text-ink-muted">Tu contraseña *</label>
+          <input
+            id="eliminar-gasto-password" name="password" type="password" autocomplete="current-password"
+            [ngModel]="passwordEliminar()" (ngModelChange)="passwordEliminar.set($event)"
+            class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-red-500/40"
+          />
+        </div>
+        @if (errorEliminar(); as error) {
+          <p class="mt-3 text-xs text-red-600 dark:text-red-400" role="alert">{{ error }}</p>
+        }
+        <div class="flex justify-end gap-2.5 pt-5">
+          <button type="button" (click)="cancelarEliminar()" class="boton-secundario rounded-lg px-4 py-2.5 text-sm font-medium text-ink-muted">Cancelar</button>
+          <button type="submit" [disabled]="!passwordEliminar() || eliminandoEnCurso()" data-testid="confirmar-eliminar-gasto" class="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60">
+            {{ eliminandoEnCurso() ? 'Eliminando…' : 'Eliminar' }}
           </button>
         </div>
       </form>

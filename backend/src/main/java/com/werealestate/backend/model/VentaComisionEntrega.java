@@ -118,6 +118,17 @@ public class VentaComisionEntrega {
         this.lotes = lotes;
     }
 
+    /** Corrección de la entrega (desde el egreso ligado): fecha y monto. */
+    public void corregir(LocalDate fecha, BigDecimal monto) {
+        this.fecha = fecha;
+        this.monto = monto;
+    }
+
+    /** Mueve el acumulado del ticket cuando se corrige el monto de esta entrega o de una anterior. */
+    public void ajustarEntregadoAcumulado(BigDecimal diferencia) {
+        if (this.entregadoAcumulado != null) this.entregadoAcumulado = this.entregadoAcumulado.add(diferencia);
+    }
+
     /** Solo las entregas registradas desde que existen los tickets (V69) tienen uno. */
     public boolean tieneTicket() {
         return conIva != null && conFactura != null && formaPago != null && comisionMonto != null;

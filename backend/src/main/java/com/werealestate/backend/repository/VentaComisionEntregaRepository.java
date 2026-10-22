@@ -12,5 +12,7 @@ public interface VentaComisionEntregaRepository extends JpaRepository<VentaComis
 
     boolean existsByGastoId(Long gastoId);
 
+    java.util.Optional<VentaComisionEntrega> findByGastoId(Long gastoId);
+
     boolean existsByComisionId(Long comisionId);
 }

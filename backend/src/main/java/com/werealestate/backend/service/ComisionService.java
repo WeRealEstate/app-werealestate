@@ -407,6 +407,59 @@ public class ComisionService {
         return detalle(comision);
     }
 
+    /** Corrige la fecha y el monto de la entrega que originó un egreso (se llama al editar ese gasto en Gastos), para
+     * que la comisión, el ticket y el egreso sigan cuadrando. El monto nuevo no puede pasar de lo ganado y aún no
+     * entregado, contando lo que esta misma entrega ya tenía. Si cambia, se recalcula el acumulado del ticket de esta
+     * entrega y de las posteriores, y qué abonos cubre cada una. */
+    public void corregirEntregaDeGasto(Long gastoId, LocalDate fecha, BigDecimal monto) {
+        exigirAdminOLider();
+        VentaComisionEntrega entrega = entregaRepository
+                .findByGastoId(gastoId)
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró la entrega de comisión de este gasto"));
+        Long comisionId = entrega.getComision().getId();
+        BigDecimal anterior = entrega.getMonto();
+        BigDecimal diferencia = monto.subtract(anterior);
+        if (diferencia.signum() > 0) {
+            Totales totales = totales();
+            BigDecimal disponible = totales.devengado(comisionId).subtract(totales.entregado(comisionId));
+            if (diferencia.compareTo(disponible) > 0) {
+                throw new ConflictException("Solo hay $" + anterior.add(disponible.max(BigDecimal.ZERO))
+                        + " ganados en esta comisión para esta entrega; el cliente no ha pagado más");
+            }
+        }
+        entrega.corregir(fecha, monto);
+        entregaRepository.save(entrega);
+        if (diferencia.signum() == 0) return;
+
+        List<VentaComisionEntrega> afectadas = entregaRepository.findByComisionIdOrderByFechaDescIdDesc(comisionId).stream()
+                .filter(e -> e.getId() >= entrega.getId())
+                .sorted(java.util.Comparator.comparing(VentaComisionEntrega::getId))
+                .toList();
+        List<Porcion> ganado = devengoRepository.findByComisionIdOrderByFechaEntregaAscIdAsc(comisionId).stream()
+                .map(d -> new Porcion(d.getFechaOrigen(), conceptoDe(d), d.getMonto()))
+                .toList();
+        for (VentaComisionEntrega e : afectadas) {
+            e.ajustarEntregadoAcumulado(diferencia);
+            if (!e.tieneTicket()) continue;
+            entregaAbonoRepository.deleteByEntregaId(e.getId());
+            entregaAbonoRepository.flush();
+            BigDecimal yaEntregado = e.getEntregadoAcumulado().subtract(e.getMonto());
+            for (Porcion p : repartirEntrega(ganado, yaEntregado, e.getMonto())) {
+                entregaAbonoRepository.save(new VentaComisionEntregaAbono(e, p.fecha(), p.concepto(), p.monto()));
+            }
+        }
+    }
+
+    /** Anula la entrega ligada a un egreso de comisión (se llama al eliminar ese gasto en Gastos): la comisión vuelve
+     * a quedar pendiente por pagar. El gasto se borra aquí, igual que al anular la entrega desde Finanzas. */
+    public void anularEntregaDeGasto(Long gastoId) {
+        exigirAdminOLider();
+        VentaComisionEntrega entrega = entregaRepository
+                .findByGastoId(gastoId)
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró la entrega de comisión de este gasto"));
+        anularEntrega(entrega.getComision().getId(), entrega.getId());
+    }
+
     /** Datos del ticket de pago de una entrega (solo las registradas desde que existen los tickets). */
     @Transactional(readOnly = true)
     public ComisionTicketDto ticket(Long comisionId, Long entregaId) {

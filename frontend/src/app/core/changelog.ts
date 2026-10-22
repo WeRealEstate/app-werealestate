@@ -15,6 +15,13 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '10.3.4', fecha: '2026-10-22', cambios: [
+    "Gastos: ahora se pueden modificar y eliminar los egresos, también los de pago de comisiones (Admin y Administración). 'Modificar' cambia concepto, fecha, monto y comprobante; si es el egreso de una entrega de comisión, la entrega y su ticket se actualizan igual (el monto nuevo no puede pasar de lo ganado). 'Eliminar' pide tu contraseña y, en una comisión, anula la entrega: vuelve a quedar pendiente por pagar. Los pagos de gastos recurrentes siguen deshaciéndose con 'Deshacer pago'.",
+  ] },
+  { version: '10.3.3', fecha: '2026-10-22', cambios: [
+    "Ticket de entrega de comisión: 'Falta por pagar' ahora dice 'Pendiente por pagar'. En 'Método de entrega' solo aparece cómo se entregó (efectivo o transferencia); ya no se muestran IVA, factura ni gasto (siguen guardados y visibles dentro del sistema).",
+    "Ventas: la modalidad de pago del cliente ahora también puede ser 'Depósito' (además de efectivo y transferencia), al registrar la venta y en 'Modificar venta'.",
+  ] },
   { version: '10.3.2', fecha: '2026-10-22', cambios: [
     "Planos públicos (/samai y /aldea-nanuu): se quitó la animación de carga y la espera mínima de 3.5 s. Ahora se ve negro mientras llega el plano y, en cuanto está, empieza la animación de revelado. Los planos que ya están en el caché del navegador se muestran casi al instante.",
   ] },

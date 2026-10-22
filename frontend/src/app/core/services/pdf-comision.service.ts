@@ -303,38 +303,23 @@ export class PdfComisionService {
     doc.setFont(FUENTE, 'normal');
     doc.setFontSize(9);
     doc.setTextColor(...GRIS);
-    doc.text('Falta por pagar', xd, px(893), { align: 'right' });
+    doc.text('Pendiente por pagar', xd, px(893), { align: 'right' });
     doc.setFont(FUENTE, 'bold');
     doc.setFontSize(13);
     doc.setTextColor(...AZUL);
     doc.text(dinero(falta), xd, px(922), { align: 'right' });
 
-    // Método de entrega (con IVA y factura, que solo se marcan).
+    // Método de entrega: solo cómo se entregó (efectivo o transferencia). Con/sin IVA, con/sin factura y el gasto
+    // se guardan y se ven dentro del sistema, no en el ticket.
     const yb = px(966);
     const hb = px(159);
     doc.setDrawColor(...BORDE);
     doc.roundedRect(X0, yb, px(491) - X0, hb, px(10), px(10), 'S');
     this.etiqueta(doc, 'MÉTODO DE ENTREGA', xi, px(994));
-    const gasto =
-      t.gastoId !== null
-        ? `G-${(t.gastoFecha ?? t.fechaEntrega).slice(0, 4)}-${t.gastoId} · ${t.gastoTipo ?? 'Comisiones'}`
-        : '—';
-    const filas: [string, string, boolean][] = [
-      ['Forma', FORMA_PAGO_COMISION_LABELS[t.formaPago], true],
-      ['IVA', t.conIva ? 'Con IVA' : 'Sin IVA', false],
-      ['Factura', t.conFactura ? 'Con factura' : 'Sin factura', false],
-      ['Gasto', gasto, false],
-    ];
-    filas.forEach(([etiqueta, valor, negrita], i) => {
-      const yf = px(1023 + i * 26.7);
-      doc.setFont(FUENTE, 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(...GRIS);
-      doc.text(etiqueta, xi, yf);
-      doc.setFont(FUENTE, negrita ? 'bold' : 'normal');
-      doc.setTextColor(...TINTA);
-      doc.text(recortar(doc, valor, px(475) - px(163)), px(163), yf);
-    });
+    doc.setFont(FUENTE, 'bold');
+    doc.setFontSize(15);
+    doc.setTextColor(...TINTA);
+    doc.text(FORMA_PAGO_COMISION_LABELS[t.formaPago], xi, px(1055));
 
     // Totales: la comisión del copropietario va en "Comisión secundaria".
     const xt = px(531);

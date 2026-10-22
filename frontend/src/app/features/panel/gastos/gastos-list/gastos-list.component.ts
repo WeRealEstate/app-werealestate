@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { LucideFileText, LucideTrash2 } from '@lucide/angular';
+import { LucideFileText, LucidePencil, LucideTrash2 } from '@lucide/angular';
 import {
   FRECUENCIAS_GASTO,
   FRECUENCIA_GASTO_LABELS,
@@ -26,7 +26,7 @@ import { MonedaInputDirective } from '../../../../shared/moneda-input/moneda-inp
 @Component({
   selector: 'app-gastos-list',
   standalone: true,
-  imports: [MonedaInputDirective, SkeletonKpisComponent, FormsModule, LucideFileText, LucideTrash2],
+  imports: [MonedaInputDirective, SkeletonKpisComponent, FormsModule, LucideFileText, LucidePencil, LucideTrash2],
   templateUrl: './gastos-list.component.html',
 })
 export class GastosListComponent {
@@ -35,8 +35,8 @@ export class GastosListComponent {
   private readonly toast = inject(ToastService);
   private readonly confirmService = inject(ConfirmService);
 
-  /** Crear/editar/eliminar gastos recurrentes y eliminar un gasto ya registrado es solo de admin
-   * (ver GastoService/GastoRecurrenteService); Administración registra gastos y marca pagos. */
+  /** Crear/editar/eliminar gastos recurrentes es solo de admin (ver GastoRecurrenteService); Administración registra
+   * gastos, marca pagos y, como Admin, modifica y elimina egresos (eliminar pide su contraseña, ver GastoService). */
   readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
 
   readonly frecuencias = FRECUENCIAS_GASTO;
@@ -81,6 +81,15 @@ export class GastosListComponent {
   readonly nuevaFecha = signal(hoyIso());
   readonly nuevoMonto = signal<number | null>(null);
   readonly nuevoTicket = signal<File | null>(null);
+  /** Egreso que se está corrigiendo (null = el modal registra uno nuevo). */
+  readonly editandoGasto = signal<Gasto | null>(null);
+  readonly quitarTicketActual = signal(false);
+
+  // ---- Eliminar un egreso (con contraseña) ----
+  readonly eliminando = signal<Gasto | null>(null);
+  readonly passwordEliminar = signal('');
+  readonly errorEliminar = signal<string | null>(null);
+  readonly eliminandoEnCurso = signal(false);
 
   // ---- Pagar un vencimiento ----
   readonly pagando = signal<GastoRecurrentePago | null>(null);
@@ -143,9 +152,23 @@ export class GastosListComponent {
   // ---------------------------------------------------------------- Registrar gasto único
 
   abrirModalGasto(): void {
+    this.editandoGasto.set(null);
+    this.quitarTicketActual.set(false);
     this.nuevoConcepto.set('');
     this.nuevaFecha.set(hoyIso());
     this.nuevoMonto.set(null);
+    this.nuevoTicket.set(null);
+    this.errorModal.set(null);
+    this.mostrarModalGasto.set(true);
+  }
+
+  /** Corrige un egreso ya registrado (de cualquier origen: único, recurrente o entrega de comisión). */
+  abrirEditarGasto(gasto: Gasto): void {
+    this.editandoGasto.set(gasto);
+    this.quitarTicketActual.set(false);
+    this.nuevoConcepto.set(gasto.concepto);
+    this.nuevaFecha.set(gasto.fecha.slice(0, 10));
+    this.nuevoMonto.set(gasto.monto);
     this.nuevoTicket.set(null);
     this.errorModal.set(null);
     this.mostrarModalGasto.set(true);
@@ -158,11 +181,19 @@ export class GastosListComponent {
       this.errorModal.set('Concepto, fecha y monto son obligatorios.');
       return;
     }
+    const editando = this.editandoGasto();
     await this.guardar(async () => {
-      await this.gastosService.crear(concepto, this.nuevaFecha(), monto, this.nuevoTicket());
+      if (editando) {
+        await this.gastosService.actualizar(
+          editando.id, concepto, this.nuevaFecha(), monto, this.nuevoTicket(), this.quitarTicketActual(),
+        );
+        this.toast.success('Egreso actualizado.');
+      } else {
+        await this.gastosService.crear(concepto, this.nuevaFecha(), monto, this.nuevoTicket());
+        this.toast.success('Gasto registrado.');
+      }
       this.mostrarModalGasto.set(false);
-      this.toast.success('Gasto registrado.');
-    }, 'No se pudo registrar el gasto.');
+    }, editando ? 'No se pudo actualizar el egreso.' : 'No se pudo registrar el gasto.');
   }
 
   // ---------------------------------------------------------------- Pagar un vencimiento
@@ -366,24 +397,31 @@ export class GastosListComponent {
     }
   }
 
-  async eliminar(gasto: Gasto): Promise<void> {
-    const confirmado = await this.confirmService.confirm({
-      titulo: 'Eliminar gasto',
-      mensaje: `¿Eliminar este gasto de ${gasto.concepto} por $${this.money(gasto.monto)}? Esta acción no se puede deshacer.`,
-      textoConfirmar: 'Eliminar',
-      peligroso: true,
-    });
-    if (!confirmado) return;
+  /** Abre la confirmación con contraseña para eliminar un egreso. */
+  pedirEliminar(gasto: Gasto): void {
+    this.eliminando.set(gasto);
+    this.passwordEliminar.set('');
+    this.errorEliminar.set(null);
+  }
 
-    this.savingId.set(gasto.id);
+  cancelarEliminar(): void {
+    if (!this.eliminandoEnCurso()) this.eliminando.set(null);
+  }
+
+  async confirmarEliminar(): Promise<void> {
+    const gasto = this.eliminando();
+    if (!gasto || !this.passwordEliminar() || this.eliminandoEnCurso()) return;
+    this.eliminandoEnCurso.set(true);
+    this.errorEliminar.set(null);
     try {
-      await this.gastosService.eliminar(gasto.id);
+      await this.gastosService.eliminar(gasto.id, this.passwordEliminar());
+      this.eliminando.set(null);
       await this.refrescar();
-      this.toast.success('Gasto eliminado.');
+      this.toast.success(gasto.origen === 'COMISION' ? 'Egreso eliminado y entrega anulada.' : 'Egreso eliminado.');
     } catch (error) {
-      this.toast.error(mensajeDe(error, 'No se pudo eliminar el gasto.'));
+      this.errorEliminar.set(mensajeDe(error, 'No se pudo eliminar el egreso.'));
     } finally {
-      this.savingId.set(null);
+      this.eliminandoEnCurso.set(false);
     }
   }
 
@@ -396,6 +434,7 @@ export class GastosListComponent {
     this.mostrarModalGasto.set(false);
     this.mostrarModalRecurrente.set(false);
     this.pagando.set(null);
+    this.cancelarEliminar();
   }
 
   fecha(iso: string | null): string {

@@ -74,6 +74,13 @@ public class Gasto {
         this.registradoPor = registradoPor;
     }
 
+    /** Corrige lo que se capturó a mano: qué fue, cuándo y de cuánto. El origen y quién lo registró no cambian. */
+    public void actualizar(String concepto, LocalDate fecha, BigDecimal monto) {
+        this.concepto = concepto;
+        this.fecha = fecha;
+        this.monto = monto;
+    }
+
     public Long getId() {
         return id;
     }

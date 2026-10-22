@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface VentaComisionEntregaAbonoRepository extends JpaRepository<VentaComisionEntregaAbono, Long> {
 
     List<VentaComisionEntregaAbono> findByEntregaIdOrderByFechaAbonoAscIdAsc(Long entregaId);
+
+    void deleteByEntregaId(Long entregaId);
 }

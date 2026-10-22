@@ -39,13 +39,14 @@ export const MEDIO_FIRMA_LABELS: Record<MedioFirma, string> = {
   AMBOS: 'Ambos (físico y DocuSign)',
 };
 
-/** Cómo paga el cliente: en efectivo o por transferencia, una sola (null = sin definir). No es la "forma de
+/** Cómo paga el cliente: efectivo, transferencia o depósito, una sola (null = sin definir). No es la "forma de
  * pago", que describe el esquema (p. ej. "Sin enganche · 60 MSI"). */
-export type ModalidadPago = 'EFECTIVO' | 'TRANSFERENCIA';
+export type ModalidadPago = 'EFECTIVO' | 'TRANSFERENCIA' | 'DEPOSITO';
 
 export const MODALIDAD_PAGO_LABELS: Record<ModalidadPago, string> = {
   EFECTIVO: 'Efectivo',
   TRANSFERENCIA: 'Transferencia',
+  DEPOSITO: 'Depósito',
 };
 
 export interface Venta {

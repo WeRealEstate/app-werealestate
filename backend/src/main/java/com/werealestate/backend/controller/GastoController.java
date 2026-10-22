@@ -6,9 +6,12 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.format.annotation.DateTimeFormat;
+import com.werealestate.backend.dto.GastoEliminarRequest;
+import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -46,9 +49,22 @@ public class GastoController {
         return gastoService.obtenerTicket(id);
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
-        gastoService.eliminar(id);
+    /** Corrige un egreso (concepto, fecha, monto y comprobante). Multipart, igual que al crearlo. */
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public GastoDto actualizar(
+            @PathVariable Long id,
+            @RequestParam String concepto,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha,
+            @RequestParam BigDecimal monto,
+            @RequestParam(value = "ticket", required = false) MultipartFile ticket,
+            @RequestParam(value = "quitarTicket", defaultValue = "false") boolean quitarTicket) {
+        return gastoService.actualizar(id, concepto, fecha, monto, ticket, quitarTicket);
+    }
+
+    /** Elimina un egreso; pide la contraseña de quien lo hace (como eliminar una venta). */
+    @PostMapping("/{id}/eliminar")
+    public ResponseEntity<Void> eliminar(@PathVariable Long id, @Valid @RequestBody GastoEliminarRequest request) {
+        gastoService.eliminar(id, request.password());
         return ResponseEntity.noContent().build();
     }
 }

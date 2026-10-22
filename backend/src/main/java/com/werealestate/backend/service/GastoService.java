@@ -13,6 +13,7 @@ import com.werealestate.backend.repository.GastoRepository;
 import com.werealestate.backend.repository.GastoRecurrentePagoRepository;
 import com.werealestate.backend.repository.VentaComisionEntregaRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.math.BigDecimal;
@@ -49,6 +50,8 @@ public class GastoService {
     private final VentaComisionEntregaRepository entregaComisionRepository;
     private final GastoRecurrentePagoRepository pagoRecurrenteRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final ComisionService comisionService;
+    private final PasswordEncoder passwordEncoder;
     private final String uploadsPrivadosDir;
 
     public GastoService(
@@ -56,11 +59,15 @@ public class GastoService {
             VentaComisionEntregaRepository entregaComisionRepository,
             GastoRecurrentePagoRepository pagoRecurrenteRepository,
             CurrentUserProvider currentUserProvider,
+            ComisionService comisionService,
+            PasswordEncoder passwordEncoder,
             @Value("${app.uploads-privados.dir:uploads-privados}") String uploadsPrivadosDir) {
         this.gastoRepository = gastoRepository;
         this.entregaComisionRepository = entregaComisionRepository;
         this.pagoRecurrenteRepository = pagoRecurrenteRepository;
         this.currentUserProvider = currentUserProvider;
+        this.comisionService = comisionService;
+        this.passwordEncoder = passwordEncoder;
         this.uploadsPrivadosDir = uploadsPrivadosDir;
     }
 
@@ -116,17 +123,55 @@ public class GastoService {
         return ResponseEntity.ok().contentType(mediaTypeDe(gasto.getTicketExtension())).body(bytes);
     }
 
-    /** Solo admin, igual que corregir cualquier otro registro financiero ya guardado; borra
-     * también el archivo del ticket en disco si tenía uno, para no dejar basura huérfana. */
-    public void eliminar(Long id) {
-        Usuario actual = currentUserProvider.getUsuarioActual();
-        if (actual.getRol() != Role.ADMIN) {
-            throw new ForbiddenOperationException("Solo un administrador puede eliminar un gasto");
+    /** Corrige un egreso ya registrado (Admin y Administración): concepto, fecha, monto y comprobante. Si es el egreso de
+     * una entrega de comisión, la entrega (y su ticket) se corrige igual para que todo cuadre; si es el pago de un
+     * gasto recurrente, solo cambia el egreso. {@code quitarTicket} borra el comprobante; uno nuevo reemplaza al anterior. */
+    public GastoDto actualizar(
+            Long id, String concepto, LocalDate fecha, BigDecimal monto, MultipartFile ticket, boolean quitarTicket) {
+        exigirAdminOLider();
+        if (concepto == null || concepto.isBlank()) {
+            throw new ValidationException("Indica qué se compró o pagó");
+        }
+        if (monto == null || monto.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ValidationException("El monto debe ser mayor a cero");
+        }
+        if (fecha == null) {
+            throw new ValidationException("Indica la fecha");
         }
         Gasto gasto = obtenerEntidad(id);
-        if (entregaComisionRepository.existsByGastoId(id)) {
-            throw new ConflictException(
-                    "Este gasto viene de una entrega de comisión: anula la entrega en Finanzas para eliminarlo");
+        boolean hayTicketNuevo = ticket != null && !ticket.isEmpty();
+        // Se valida el archivo antes de tocar nada: así un comprobante inválido no deja el egreso a medias.
+        String extensionNueva = hayTicketNuevo ? extensionValida(ticket) : null;
+
+        if (gasto.getOrigen() == OrigenGasto.COMISION) {
+            comisionService.corregirEntregaDeGasto(id, fecha, monto);
+        }
+        gasto.actualizar(concepto.trim(), fecha, monto);
+
+        if (hayTicketNuevo) {
+            borrarArchivoTicket(gasto);
+            escribirTicket(gasto.getId(), ticket, extensionNueva);
+            gasto.setTicketExtension(extensionNueva);
+        } else if (quitarTicket && gasto.getTicketExtension() != null) {
+            borrarArchivoTicket(gasto);
+            gasto.setTicketExtension(null);
+        }
+        return GastoDto.from(gasto);
+    }
+
+    /** Elimina un egreso (Admin y Administración, con su contraseña). Si es el egreso de una entrega de comisión, anula
+     * la entrega: la comisión vuelve a quedar pendiente por pagar y su ticket deja de existir. El pago de un gasto
+     * recurrente no se borra aquí: se deshace desde Gastos recurrentes para que el vencimiento vuelva a pendiente. */
+    public void eliminar(Long id, String password) {
+        Usuario actual = exigirAdminOLider();
+        if (password == null || !passwordEncoder.matches(password, actual.getPassword())) {
+            throw new ForbiddenOperationException("Contraseña incorrecta");
+        }
+        Gasto gasto = obtenerEntidad(id);
+        if (gasto.getOrigen() == OrigenGasto.COMISION && entregaComisionRepository.existsByGastoId(id)) {
+            borrarArchivoTicket(gasto);
+            comisionService.anularEntregaDeGasto(id);
+            return;
         }
         if (pagoRecurrenteRepository.existsByGastoId(id)) {
             throw new ConflictException(
@@ -167,7 +212,30 @@ public class GastoService {
         if (extension == null) {
             throw new ValidationException("El ticket debe ser una imagen PNG, JPG, WEBP o un PDF");
         }
+        escribirBytes(gastoId, bytes, extension);
+        return extension;
+    }
 
+    /** La extensión del comprobante según su firma; lanza ValidationException si no es PNG, JPG, WEBP ni PDF. */
+    private String extensionValida(MultipartFile archivo) {
+        try {
+            String extension = detectarExtension(archivo.getBytes());
+            if (extension == null) throw new ValidationException("El ticket debe ser una imagen PNG, JPG, WEBP o un PDF");
+            return extension;
+        } catch (IOException e) {
+            throw new UncheckedIOException("No se pudo leer el ticket", e);
+        }
+    }
+
+    private void escribirTicket(Long gastoId, MultipartFile archivo, String extension) {
+        try {
+            escribirBytes(gastoId, archivo.getBytes(), extension);
+        } catch (IOException e) {
+            throw new UncheckedIOException("No se pudo leer el ticket", e);
+        }
+    }
+
+    private void escribirBytes(Long gastoId, byte[] bytes, String extension) {
         try {
             Path destino = rutaTicket(gastoId, extension);
             Files.createDirectories(destino.getParent());
@@ -175,8 +243,15 @@ public class GastoService {
         } catch (IOException e) {
             throw new UncheckedIOException("No se pudo guardar el ticket", e);
         }
+    }
 
-        return extension;
+    private void borrarArchivoTicket(Gasto gasto) {
+        if (gasto.getTicketExtension() == null) return;
+        try {
+            Files.deleteIfExists(rutaTicket(gasto.getId(), gasto.getTicketExtension()));
+        } catch (IOException ignored) {
+            // Si ya no estaba no pasa nada.
+        }
     }
 
     private static MediaType mediaTypeDe(String extension) {

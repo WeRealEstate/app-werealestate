@@ -34,8 +34,24 @@ export class GastosService {
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }
 
-  eliminar(id: number): Promise<void> {
-    return firstValueFrom(this.http.delete<void>(`${this.baseUrl}/${id}`));
+  /** Corrige un egreso. Si viene de una entrega de comisión, el servidor corrige también la entrega y su ticket.
+   * `quitarTicket` borra el comprobante actual; un archivo nuevo lo reemplaza. */
+  actualizar(
+    id: number,
+    concepto: string,
+    fecha: string,
+    monto: number,
+    ticket: File | null,
+    quitarTicket: boolean,
+  ): Promise<Gasto> {
+    const formData = formularioGasto({ concepto, fecha, monto }, ticket);
+    if (quitarTicket) formData.append('quitarTicket', 'true');
+    return firstValueFrom(this.http.put<Gasto>(`${this.baseUrl}/${id}`, formData));
+  }
+
+  /** Elimina un egreso (pide la contraseña de quien lo hace). Si es de una entrega de comisión, la anula. */
+  eliminar(id: number, password: string): Promise<void> {
+    return firstValueFrom(this.http.post<void>(`${this.baseUrl}/${id}/eliminar`, { password }));
   }
 
   // ---- Resumen y gastos recurrentes ----
