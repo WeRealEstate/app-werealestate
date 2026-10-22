@@ -61,6 +61,11 @@ public class VentaComisionDevengo {
         return comision;
     }
 
+    /** El abono que generó esta porción; null cuando es la comisión completa de una exhibición. */
+    public PagoVenta getPagoVenta() {
+        return pagoVenta;
+    }
+
     public LocalDate getFechaOrigen() {
         return fechaOrigen;
     }

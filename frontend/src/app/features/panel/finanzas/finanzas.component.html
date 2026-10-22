@@ -332,9 +332,25 @@
                                   <li class="flex items-start justify-between gap-3">
                                     <span class="text-ink-muted">
                                       {{ fecha(e.fecha) }} · {{ e.registradaPor }}{{ e.notas ? ' · ' + e.notas : '' }}
+                                      @if (e.conTicket && e.formaPago) {
+                                        <span class="block text-xs">
+                                          {{ formaPagoLabels[e.formaPago] }} · {{ e.conIva ? 'Con IVA' : 'Sin IVA' }} · {{ e.conFactura ? 'Con factura' : 'Sin factura' }}
+                                        </span>
+                                      }
                                     </span>
                                     <span class="flex items-center gap-3 whitespace-nowrap">
                                       <span class="font-medium text-ink">${{ money(e.monto) }}</span>
+                                      @if (e.conTicket) {
+                                        <button
+                                          type="button"
+                                          (click)="descargarTicket(c.id, e.id)"
+                                          [disabled]="generandoTicket() !== null"
+                                          class="text-xs font-semibold text-we-primary hover:underline disabled:opacity-60"
+                                          title="Descargar el ticket de pago en PDF"
+                                        >
+                                          {{ generandoTicket() === e.id ? 'Generando…' : 'Ticket' }}
+                                        </button>
+                                      }
                                       <button type="button" (click)="anularEntrega(c, e.id)" class="text-xs font-semibold text-red-600 hover:underline dark:text-red-400">Anular</button>
                                     </span>
                                   </li>
@@ -467,7 +483,7 @@
   @if (entregando(); as c) {
     <button type="button" (click)="cerrarEntrega()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
     <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="entregar-comision-titulo">
-      <form (ngSubmit)="confirmarEntrega()" class="modal-panel-enter w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
+      <form (ngSubmit)="confirmarEntrega()" class="modal-panel-enter max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto rounded-xl border border-border bg-surface p-5 shadow-lg">
         <h2 id="entregar-comision-titulo" class="font-heading text-lg font-semibold text-ink">Entregar comisión</h2>
         <p class="mt-1 text-sm text-ink-muted">
           {{ c.cliente }} · {{ c.asesorNombre }}<br />
@@ -490,6 +506,54 @@
               class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
             />
           </div>
+          <fieldset>
+            <legend class="mb-1 block text-xs font-medium text-ink-muted">IVA</legend>
+            <div class="grid grid-cols-2 gap-2" role="radiogroup" aria-label="IVA">
+              @for (op of opcionesIva; track op.label) {
+                <button
+                  type="button" role="radio"
+                  [attr.aria-checked]="entregaConIva() === op.valor"
+                  (click)="entregaConIva.set(op.valor)"
+                  [class.border-we-primary]="entregaConIva() === op.valor"
+                  [class.bg-we-primary/10]="entregaConIva() === op.valor"
+                  [class.text-we-primary]="entregaConIva() === op.valor"
+                  class="rounded-lg border border-border px-3 py-2 text-sm font-medium text-ink hover:border-we-primary active:scale-[0.97] transition-transform duration-150"
+                >{{ op.label }}</button>
+              }
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend class="mb-1 block text-xs font-medium text-ink-muted">Factura</legend>
+            <div class="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Factura">
+              @for (op of opcionesFactura; track op.label) {
+                <button
+                  type="button" role="radio"
+                  [attr.aria-checked]="entregaConFactura() === op.valor"
+                  (click)="entregaConFactura.set(op.valor)"
+                  [class.border-we-primary]="entregaConFactura() === op.valor"
+                  [class.bg-we-primary/10]="entregaConFactura() === op.valor"
+                  [class.text-we-primary]="entregaConFactura() === op.valor"
+                  class="rounded-lg border border-border px-3 py-2 text-sm font-medium text-ink hover:border-we-primary active:scale-[0.97] transition-transform duration-150"
+                >{{ op.label }}</button>
+              }
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend class="mb-1 block text-xs font-medium text-ink-muted">Forma de pago</legend>
+            <div class="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Forma de pago">
+              @for (forma of formasPago; track forma) {
+                <button
+                  type="button" role="radio"
+                  [attr.aria-checked]="entregaFormaPago() === forma"
+                  (click)="entregaFormaPago.set(forma)"
+                  [class.border-we-primary]="entregaFormaPago() === forma"
+                  [class.bg-we-primary/10]="entregaFormaPago() === forma"
+                  [class.text-we-primary]="entregaFormaPago() === forma"
+                  class="rounded-lg border border-border px-3 py-2 text-sm font-medium text-ink hover:border-we-primary active:scale-[0.97] transition-transform duration-150"
+                >{{ formaPagoLabels[forma] }}</button>
+              }
+            </div>
+          </fieldset>
           <div>
             <label for="en-notas" class="mb-1 block text-xs font-medium text-ink-muted">Nota (opcional)</label>
             <input
@@ -499,7 +563,7 @@
             />
           </div>
         </div>
-        <p class="mt-2 text-xs text-ink-muted">Se registra también como gasto de tipo "Comisiones".</p>
+        <p class="mt-2 text-xs text-ink-muted">Se registra también como gasto de tipo "Comisiones" y se descarga su ticket de pago. IVA y factura solo se marcan: no cambian el monto.</p>
         @if (errorModal(); as error) {
           <p class="mt-3 text-xs text-red-600 dark:text-red-400" role="alert">{{ error }}</p>
         }

@@ -100,6 +100,14 @@ export interface ComisionDevengo {
   monto: number;
 }
 
+/** Cómo se le pagó la comisión al asesor (las mismas dos que la modalidad de pago de la venta). */
+export type FormaPagoComision = 'EFECTIVO' | 'TRANSFERENCIA';
+
+export const FORMA_PAGO_COMISION_LABELS: Record<FormaPagoComision, string> = {
+  EFECTIVO: 'Efectivo',
+  TRANSFERENCIA: 'Transferencia',
+};
+
 export interface ComisionEntrega {
   id: number;
   fecha: string;
@@ -108,6 +116,50 @@ export interface ComisionEntrega {
   gastoId: number | null;
   registradaPor: string;
   fechaCreacion: string;
+  /** null en las entregas anteriores a los tickets de pago (conTicket = false). */
+  conIva: boolean | null;
+  conFactura: boolean | null;
+  formaPago: FormaPagoComision | null;
+  conTicket: boolean;
+}
+
+/** Lo que se elige al entregar, además de monto, fecha y nota. Solo se marca: no cambia el monto. */
+export interface ComisionEntregaRequest {
+  monto: number;
+  fecha: string | null;
+  notas: string | null;
+  conIva: boolean;
+  conFactura: boolean;
+  formaPago: FormaPagoComision;
+}
+
+/** Datos del ticket de pago de una entrega (backend ComisionTicketDto). folio = id de la entrega. Los
+ * montos de la comisión son los que tenía al entregar. */
+export interface ComisionTicket {
+  folio: number;
+  emitido: string;
+  fechaEntrega: string;
+  monto: number;
+  conIva: boolean;
+  conFactura: boolean;
+  formaPago: FormaPagoComision;
+  gastoId: number | null;
+  gastoFecha: string | null;
+  gastoTipo: string | null;
+  asesorNombre: string;
+  asesorExterno: boolean;
+  /** Comisión del copropietario: su monto va en "Comisión secundaria". */
+  secundaria: boolean;
+  ventaNumero: number | null;
+  ventaEliminada: boolean;
+  cliente: string;
+  desarrollo: string | null;
+  lotes: string | null;
+  porcentaje: number;
+  comisionTotal: number;
+  /** Lo entregado de la comisión hasta esta entrega incluida. */
+  entregadoAcumulado: number;
+  abonos: { fecha: string; concepto: string; monto: number }[];
 }
 
 export interface ComisionDevolucion {

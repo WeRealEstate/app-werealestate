@@ -5,6 +5,7 @@ import com.werealestate.backend.dto.ComisionDto;
 import com.werealestate.backend.dto.ComisionDevolucionRequest;
 import com.werealestate.backend.dto.ComisionEntregaRequest;
 import com.werealestate.backend.dto.ComisionResumenDto;
+import com.werealestate.backend.dto.ComisionTicketDto;
 import com.werealestate.backend.dto.ComisionUpdateRequest;
 import com.werealestate.backend.dto.ComisionesPorEntregarDto;
 import com.werealestate.backend.exception.ConflictException;
@@ -27,12 +28,14 @@ import com.werealestate.backend.model.VentaComision;
 import com.werealestate.backend.model.VentaComisionDevengo;
 import com.werealestate.backend.model.VentaComisionDevolucion;
 import com.werealestate.backend.model.VentaComisionEntrega;
+import com.werealestate.backend.model.VentaComisionEntregaAbono;
 import com.werealestate.backend.model.VentaLote;
 import com.werealestate.backend.repository.GastoRepository;
 import com.werealestate.backend.repository.PagoVentaRepository;
 import com.werealestate.backend.repository.TipoGastoRepository;
 import com.werealestate.backend.repository.VentaComisionDevengoRepository;
 import com.werealestate.backend.repository.VentaComisionDevolucionRepository;
+import com.werealestate.backend.repository.VentaComisionEntregaAbonoRepository;
 import com.werealestate.backend.repository.VentaComisionEntregaRepository;
 import com.werealestate.backend.repository.VentaComisionRepository;
 import com.werealestate.backend.repository.VentaLoteRepository;
@@ -48,6 +51,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -66,6 +70,8 @@ import org.springframework.transaction.annotation.Transactional;
  *       completarla (PARCIALIDADES): se paga solo hasta donde el cliente ha pagado.
  *   <li>Lo ganado se entrega el sábado siguiente al día del abono (siempre posterior, nunca el
  *       mismo día). Entregar es manual y genera un gasto "Comisiones" ligado a la entrega.
+ *   <li>Cada entrega tiene su ticket de pago (PDF que arma el frontend con {@link #ticket}): al entregar se
+ *       marca con o sin IVA, con o sin factura y la forma de pago, y se guarda qué abonos cubrió.
  * </ul>
  * Lo ganado ({@link VentaComisionDevengo}) se reconstruye por completo a partir de los abonos cada
  * vez que algo cambia, así que siempre es consistente con ellos.
@@ -86,6 +92,7 @@ public class ComisionService {
     private final VentaComisionRepository comisionRepository;
     private final VentaComisionDevengoRepository devengoRepository;
     private final VentaComisionEntregaRepository entregaRepository;
+    private final VentaComisionEntregaAbonoRepository entregaAbonoRepository;
     private final VentaComisionDevolucionRepository devolucionRepository;
     private final VentaRepository ventaRepository;
     private final VentaLoteRepository ventaLoteRepository;
@@ -99,6 +106,7 @@ public class ComisionService {
             VentaComisionRepository comisionRepository,
             VentaComisionDevengoRepository devengoRepository,
             VentaComisionEntregaRepository entregaRepository,
+            VentaComisionEntregaAbonoRepository entregaAbonoRepository,
             VentaComisionDevolucionRepository devolucionRepository,
             VentaRepository ventaRepository,
             VentaLoteRepository ventaLoteRepository,
@@ -110,6 +118,7 @@ public class ComisionService {
         this.comisionRepository = comisionRepository;
         this.devengoRepository = devengoRepository;
         this.entregaRepository = entregaRepository;
+        this.entregaAbonoRepository = entregaAbonoRepository;
         this.devolucionRepository = devolucionRepository;
         this.ventaRepository = ventaRepository;
         this.ventaLoteRepository = ventaLoteRepository;
@@ -351,7 +360,9 @@ public class ComisionService {
     }
 
     /** Registra una entrega al asesor. No puede pasar de lo ya ganado y aún no entregado ("se paga
-     * hasta donde el cliente pagó"); puede ser menos (parcial). Crea el gasto "Comisiones". */
+     * hasta donde el cliente pagó"); puede ser menos (parcial). Crea el gasto "Comisiones" y guarda lo
+     * que necesita su ticket: IVA, factura y forma de pago elegidos, cómo estaba la comisión y qué abonos
+     * cubre (las entregas cubren lo ganado en orden, ver {@link #repartirEntrega}). */
     public ComisionDetalleDto entregar(Long id, ComisionEntregaRequest request) {
         Usuario actual = exigirAdminOLider();
         VentaComision comision = obtenerEntidad(id);
@@ -361,7 +372,8 @@ public class ComisionService {
             throw new ConflictException("El contrato de esta venta no está firmado: la comisión se acumula, "
                     + "pero no se puede entregar hasta registrar la firma en la venta");
         }
-        BigDecimal porEntregar = totales.devengado(id).subtract(totales.entregado(id));
+        BigDecimal yaEntregado = totales.entregado(id);
+        BigDecimal porEntregar = totales.devengado(id).subtract(yaEntregado);
         if (request.monto().compareTo(porEntregar) > 0) {
             throw new ConflictException("Solo hay $" + porEntregar.max(BigDecimal.ZERO)
                     + " ganados por entregar en esta comisión; el cliente no ha pagado más");
@@ -375,8 +387,69 @@ public class ComisionService {
                         : "");
         Gasto gasto = gastoRepository.save(new Gasto(
                 concepto, OrigenGasto.COMISION, tipoGastoComisiones(), fecha, request.monto(), actual));
-        entregaRepository.save(new VentaComisionEntrega(comision, fecha, request.monto(), notas, gasto, actual));
+        VentaComisionEntrega entrega = new VentaComisionEntrega(
+                comision, fecha, request.monto(), notas, gasto, actual,
+                request.conIva(), request.conFactura(), request.formaPago());
+        List<VentaLote> lotes = comision.getVenta() != null
+                ? ventaLoteRepository.findByVentaId(comision.getVenta().getId())
+                : List.of();
+        entrega.fijarDatosDelTicket(
+                comision.getMonto(), comision.getPorcentaje(), yaEntregado.add(request.monto()),
+                desarrollosDe(lotes), lotesDe(lotes));
+        entrega = entregaRepository.save(entrega);
+
+        List<Porcion> ganado = devengoRepository.findByComisionIdOrderByFechaEntregaAscIdAsc(id).stream()
+                .map(d -> new Porcion(d.getFechaOrigen(), conceptoDe(d), d.getMonto()))
+                .toList();
+        for (Porcion p : repartirEntrega(ganado, yaEntregado, request.monto())) {
+            entregaAbonoRepository.save(new VentaComisionEntregaAbono(entrega, p.fecha(), p.concepto(), p.monto()));
+        }
         return detalle(comision);
+    }
+
+    /** Datos del ticket de pago de una entrega (solo las registradas desde que existen los tickets). */
+    @Transactional(readOnly = true)
+    public ComisionTicketDto ticket(Long comisionId, Long entregaId) {
+        exigirAdminOLider();
+        VentaComisionEntrega entrega = entregaRepository
+                .findById(entregaId)
+                .filter(e -> e.getComision().getId().equals(comisionId))
+                .orElseThrow(() -> new ResourceNotFoundException("Entrega no encontrada"));
+        if (!entrega.tieneTicket()) {
+            throw new ConflictException("Esta entrega se registró antes de que existieran los tickets de pago: no tiene ticket");
+        }
+        VentaComision comision = entrega.getComision();
+        Venta venta = comision.getVenta();
+        Gasto gasto = entrega.getGasto();
+        boolean externo = comision.getAsesorExterno() != null;
+        List<ComisionTicketDto.Abono> abonos = entregaAbonoRepository
+                .findByEntregaIdOrderByFechaAbonoAscIdAsc(entregaId)
+                .stream()
+                .map(a -> new ComisionTicketDto.Abono(a.getFechaAbono(), a.getConcepto(), a.getMonto()))
+                .toList();
+        return new ComisionTicketDto(
+                entrega.getId(),
+                entrega.getFechaCreacion(),
+                entrega.getFecha(),
+                entrega.getMonto(),
+                entrega.getConIva(),
+                entrega.getConFactura(),
+                entrega.getFormaPago(),
+                gasto != null ? gasto.getId() : null,
+                gasto != null ? gasto.getFecha() : null,
+                gasto != null && gasto.getTipoGasto() != null ? gasto.getTipoGasto().getNombre() : null,
+                externo ? comision.getAsesorExterno().getNombre() : comision.getUsuarioAsesor().getNombre(),
+                externo,
+                comision.isSecundaria(),
+                venta != null ? venta.getNumero() : comision.getVentaNumero(),
+                venta == null,
+                comision.getCliente(),
+                entrega.getDesarrollo(),
+                entrega.getLotes(),
+                entrega.getComisionPorcentaje(),
+                entrega.getComisionMonto(),
+                entrega.getEntregadoAcumulado(),
+                abonos);
     }
 
     /** El asesor devuelve (total o parcialmente) una comisión ya entregada. Se captura a mano. No toca
@@ -397,7 +470,7 @@ public class ComisionService {
         return detalle(comision);
     }
 
-    /** Anula una entrega y borra el gasto que generó. */
+    /** Anula una entrega y borra el gasto que generó (y su desglose de ticket, por ON DELETE CASCADE). */
     public ComisionDetalleDto anularEntrega(Long comisionId, Long entregaId) {
         exigirAdminOLider();
         VentaComisionEntrega entrega = entregaRepository
@@ -413,6 +486,62 @@ public class ComisionService {
     }
 
     // ---------------------------------------------------------------- cálculo
+
+    /** Una porción de lo ganado (o de una entrega) con la fecha y el tipo del abono de donde sale. */
+    record Porcion(LocalDate fecha, String concepto, BigDecimal monto) {
+    }
+
+    /** Qué parte de una entrega sale de cada porción de lo ganado. Las entregas van cubriendo lo ganado en
+     * orden (la primera porción primero), así que esta cubre el tramo que va de lo ya entregado antes
+     * (yaEntregado, neto de devoluciones) a yaEntregado + monto. */
+    static List<Porcion> repartirEntrega(List<Porcion> ganado, BigDecimal yaEntregado, BigDecimal monto) {
+        BigDecimal desde = yaEntregado.max(BigDecimal.ZERO);
+        BigDecimal hasta = desde.add(monto);
+        BigDecimal acumulado = BigDecimal.ZERO;
+        List<Porcion> partes = new ArrayList<>();
+        for (Porcion p : ganado) {
+            BigDecimal inicio = acumulado;
+            acumulado = acumulado.add(p.monto());
+            BigDecimal parte = acumulado.min(hasta).subtract(inicio.max(desde));
+            if (parte.signum() > 0) partes.add(new Porcion(p.fecha(), p.concepto(), parte));
+            if (acumulado.compareTo(hasta) >= 0) break;
+        }
+        return partes;
+    }
+
+    /** Cómo se llama en el ticket el abono de donde sale una porción de lo ganado. */
+    private static String conceptoDe(VentaComisionDevengo devengo) {
+        PagoVenta pago = devengo.getPagoVenta();
+        if (pago == null) return "Venta"; // comisión completa de una exhibición (regla anterior)
+        if (pago.getTipo() == null) return "Abono";
+        return switch (pago.getTipo()) {
+            case ENGANCHE -> "Enganche";
+            case MENSUALIDAD -> "Mensualidad";
+            case APORTACION -> "Aportación";
+            case APARTADO -> "Apartado";
+        };
+    }
+
+    /** Desarrollo(s) de los lotes de la venta, para el ticket ("Samai Campestre"). */
+    private static String desarrollosDe(List<VentaLote> lotes) {
+        String texto = lotes.stream()
+                .map(vl -> vl.getLote().getDesarrollo().getNombre())
+                .distinct()
+                .collect(Collectors.joining(", "));
+        return texto.isEmpty() ? null : recortar(texto, 200);
+    }
+
+    /** Lotes de la venta, para el ticket ("Mz 4 Lt 12, Mz 4 Lt 13"). */
+    private static String lotesDe(List<VentaLote> lotes) {
+        String texto = lotes.stream()
+                .map(vl -> "Mz " + vl.getLote().getManzana() + " Lt " + vl.getLote().getNumeroLote())
+                .collect(Collectors.joining(", "));
+        return texto.isEmpty() ? null : recortar(texto, 300);
+    }
+
+    private static String recortar(String texto, int maximo) {
+        return texto.length() <= maximo ? texto : texto.substring(0, maximo - 1) + "…";
+    }
 
     /** Borra y vuelve a calcular lo ganado: la comisión completa en la fecha de venta si es una
      * exhibición, o la mitad de cada abono (en orden) hasta completar el monto. */
@@ -696,7 +825,11 @@ public class ComisionService {
                         e.getNotas(),
                         e.getGasto() != null ? e.getGasto().getId() : null,
                         e.getRegistradaPor().getNombre(),
-                        e.getFechaCreacion()))
+                        e.getFechaCreacion(),
+                        e.getConIva(),
+                        e.getConFactura(),
+                        e.getFormaPago(),
+                        e.tieneTicket()))
                 .toList();
         List<ComisionDetalleDto.Devolucion> devoluciones = devolucionRepository
                 .findByComisionIdOrderByFechaAscIdAsc(comision.getId())

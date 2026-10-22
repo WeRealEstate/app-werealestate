@@ -5,6 +5,7 @@ import com.werealestate.backend.dto.ComisionDto;
 import com.werealestate.backend.dto.ComisionDevolucionRequest;
 import com.werealestate.backend.dto.ComisionEntregaRequest;
 import com.werealestate.backend.dto.ComisionResumenDto;
+import com.werealestate.backend.dto.ComisionTicketDto;
 import com.werealestate.backend.dto.ComisionUpdateRequest;
 import com.werealestate.backend.dto.ComisionesPorEntregarDto;
 import com.werealestate.backend.service.ComisionService;
@@ -71,6 +72,12 @@ public class ComisionController {
     @PostMapping("/{id}/entregas")
     public ComisionDetalleDto entregar(@PathVariable Long id, @Valid @RequestBody ComisionEntregaRequest request) {
         return comisionService.entregar(id, request);
+    }
+
+    /** Datos del ticket de pago de una entrega (el PDF se arma en el frontend). */
+    @GetMapping("/{id}/entregas/{entregaId}/ticket")
+    public ComisionTicketDto ticket(@PathVariable Long id, @PathVariable Long entregaId) {
+        return comisionService.ticket(id, entregaId);
     }
 
     /** El asesor devuelve (total o parcialmente) una comisión ya entregada. */

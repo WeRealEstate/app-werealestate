@@ -13,11 +13,14 @@ import {
   ESTADO_PAGO_CLIENTE_LABELS,
   ESTADO_COMISION_LABELS,
   EstadoComision,
+  FORMA_PAGO_COMISION_LABELS,
+  FormaPagoComision,
   MODALIDAD_COMISION_LABELS,
 } from '../../../core/models/finanzas.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { FinanzasService } from '../../../core/services/finanzas.service';
+import { PdfComisionService } from '../../../core/services/pdf-comision.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { GastosListComponent } from '../gastos/gastos-list/gastos-list.component';
 import { FinanzasIngresosComponent } from './finanzas-ingresos.component';
@@ -40,6 +43,7 @@ const ESTADOS: EstadoComision[] = ['PENDIENTE', 'ACUMULANDO', 'PARCIAL', 'PAGADA
 })
 export class FinanzasComponent {
   private readonly finanzasService = inject(FinanzasService);
+  private readonly pdfComision = inject(PdfComisionService);
   private readonly toast = inject(ToastService);
   private readonly confirmService = inject(ConfirmService);
   private readonly auth = inject(AuthService);
@@ -67,6 +71,7 @@ export class FinanzasComponent {
   readonly modalidadLabels = MODALIDAD_COMISION_LABELS;
   readonly pagoClienteLabels = ESTADO_PAGO_CLIENTE_LABELS;
   readonly pagoClienteClases = ESTADO_PAGO_CLIENTE_CLASES;
+  readonly formaPagoLabels = FORMA_PAGO_COMISION_LABELS;
 
   readonly isLoading = signal(true);
   readonly errorMessage = signal<string | null>(null);
@@ -101,12 +106,28 @@ export class FinanzasComponent {
   readonly editMonto = signal<number | null>(null);
   private editCampo: 'porcentaje' | 'monto' = 'porcentaje';
 
-  // Entregar: monto (hasta lo ganado sin entregar), fecha y nota.
+  // Entregar: monto (hasta lo ganado sin entregar), fecha y nota; IVA, factura y forma de pago se eligen
+  // siempre (empiezan vacíos), solo se marcan y salen en el ticket de pago.
   readonly entregando = signal<Comision | null>(null);
   readonly entregaMonto = signal<number | null>(null);
   readonly entregaFecha = signal(hoyIso());
   readonly entregaNotas = signal('');
   readonly entregaMax = signal(0);
+  readonly entregaConIva = signal<boolean | null>(null);
+  readonly entregaConFactura = signal<boolean | null>(null);
+  readonly entregaFormaPago = signal<FormaPagoComision | null>(null);
+  readonly opcionesIva = [
+    { valor: true, label: 'Con IVA' },
+    { valor: false, label: 'Sin IVA' },
+  ];
+  readonly opcionesFactura = [
+    { valor: true, label: 'Con factura' },
+    { valor: false, label: 'Sin factura' },
+  ];
+  readonly formasPago: FormaPagoComision[] = ['EFECTIVO', 'TRANSFERENCIA'];
+
+  /** Entrega cuyo ticket PDF se está generando (para el "Generando…" del botón). */
+  readonly generandoTicket = signal<number | null>(null);
 
   // Devolución: el asesor devuelve (total o parcial) una comisión ya entregada; se captura a mano.
   readonly devolviendo = signal<Comision | null>(null);
@@ -251,6 +272,9 @@ export class FinanzasComponent {
     this.entregaMonto.set(sugerido ?? c.porEntregar);
     this.entregaFecha.set(hoyIso());
     this.entregaNotas.set('');
+    this.entregaConIva.set(null);
+    this.entregaConFactura.set(null);
+    this.entregaFormaPago.set(null);
     this.errorModal.set(null);
   }
 
@@ -270,23 +294,49 @@ export class FinanzasComponent {
       this.errorModal.set(`Solo hay $${dinero(this.entregaMax())} ganados por entregar: el cliente no ha pagado más.`);
       return;
     }
+    const conIva = this.entregaConIva();
+    const conFactura = this.entregaConFactura();
+    const formaPago = this.entregaFormaPago();
+    if (conIva === null || conFactura === null || formaPago === null) {
+      this.errorModal.set('Elige si va con o sin IVA, con o sin factura y la forma de pago.');
+      return;
+    }
     this.guardando.set(true);
     this.errorModal.set(null);
     try {
-      const actualizado = await this.finanzasService.entregarComision(
-        c.id,
+      const actualizado = await this.finanzasService.entregarComision(c.id, {
         monto,
-        this.entregaFecha() || null,
-        this.entregaNotas().trim() || null,
-      );
+        fecha: this.entregaFecha() || null,
+        notas: this.entregaNotas().trim() || null,
+        conIva,
+        conFactura,
+        formaPago,
+      });
       this.entregando.set(null);
-      this.toast.success('Entrega registrada y agregada a Gastos.');
+      this.toast.success('Entrega registrada y agregada a Gastos. Se descarga su ticket de pago.');
       if (this.expandidaId() === c.id) this.detalle.set(actualizado);
+      // La entrega recién hecha es la de id más alto (la lista viene por fecha, que puede ser anterior).
+      const nueva = actualizado.entregas.reduce((mayor, e) => (e.id > mayor ? e.id : mayor), 0);
+      if (nueva) void this.descargarTicket(c.id, nueva);
       await this.refrescar();
     } catch (error) {
       this.errorModal.set(mensajeDe(error, 'No se pudo registrar la entrega.'));
     } finally {
       this.guardando.set(false);
+    }
+  }
+
+  /** Ticket (comprobante) de pago de una entrega, en PDF. */
+  async descargarTicket(comisionId: number, entregaId: number): Promise<void> {
+    if (this.generandoTicket() !== null) return;
+    this.generandoTicket.set(entregaId);
+    try {
+      const ticket = await this.finanzasService.ticketEntrega(comisionId, entregaId);
+      await this.pdfComision.descargarTicket(ticket);
+    } catch (error) {
+      this.toast.error(mensajeDe(error, 'No se pudo generar el ticket de pago.'));
+    } finally {
+      this.generandoTicket.set(null);
     }
   }
 

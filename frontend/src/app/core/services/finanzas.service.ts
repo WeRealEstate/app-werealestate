@@ -5,7 +5,9 @@ import { environment } from '../../../environments/environment';
 import {
   Comision,
   ComisionDetalle,
+  ComisionEntregaRequest,
   ComisionResumen,
+  ComisionTicket,
   ComisionesPorEntregar,
   FinanzasIngresos,
   FinanzasValor,
@@ -49,8 +51,13 @@ export class FinanzasService {
     return firstValueFrom(this.http.post<ComisionDetalle>(`${this.baseUrl}/${id}/reactivar`, {}));
   }
 
-  entregarComision(id: number, monto: number, fecha: string | null, notas: string | null): Promise<ComisionDetalle> {
-    return firstValueFrom(this.http.post<ComisionDetalle>(`${this.baseUrl}/${id}/entregas`, { monto, fecha, notas }));
+  entregarComision(id: number, entrega: ComisionEntregaRequest): Promise<ComisionDetalle> {
+    return firstValueFrom(this.http.post<ComisionDetalle>(`${this.baseUrl}/${id}/entregas`, entrega));
+  }
+
+  /** Datos del ticket de pago de una entrega (solo las que tienen conTicket). */
+  ticketEntrega(comisionId: number, entregaId: number): Promise<ComisionTicket> {
+    return firstValueFrom(this.http.get<ComisionTicket>(`${this.baseUrl}/${comisionId}/entregas/${entregaId}/ticket`));
   }
 
   devolverComision(id: number, monto: number, fecha: string | null, notas: string | null): Promise<ComisionDetalle> {

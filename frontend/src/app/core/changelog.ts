@@ -15,6 +15,13 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '10.3.1', fecha: '2026-10-22', cambios: [
+    "Material (panel): ahora está separado por pestañas — SAMAI Campestre, Aldea Nanuu y Compartido (lo marcado 'Ambos desarrollos'), cada una con su contador. 'Nuevo material' nace en el proyecto de la pestaña abierta y, al guardar en otro proyecto, te lleva a su pestaña. Se quitó el filtro por desarrollo.",
+  ] },
+  { version: '10.3.0', fecha: '2026-10-21', cambios: [
+    "Finanzas → Comisiones: al entregar una comisión se elige si va con o sin IVA, con o sin factura y la forma de pago (efectivo o transferencia). Las tres son obligatorias; IVA y factura solo se marcan, no cambian el monto.",
+    "Cada entrega tiene su ticket de pago en PDF (folio COM-…): total entregado con monto en letras, desglose por abono, cuánto falta por pagar de la comisión, método de entrega, totales y talón para el asesor. Se descarga solo al entregar y se puede volver a bajar con el botón 'Ticket' en el detalle de la comisión. Las entregas hechas antes de este cambio no tienen ticket.",
+  ] },
   { version: '10.2.0', fecha: '2026-10-20', cambios: [
     "Formas de pago combinables en el Cotizador (panel y público), Registrar venta y We Forms: a Sin enganche, Con enganche o Pago inicial se les puede sumar Con anualidades o Con aportaciones. Lo que no se combina queda apagado hasta desmarcar lo elegido, y Contado va solo. Al abrir no viene nada marcado.",
     "El enganche o pago inicial se resta primero y el saldo se reparte entre las anualidades o aportaciones y las mensualidades. El resumen, la tabla de pagos y el PDF muestran el enganche y las anualidades o aportaciones por separado.",

@@ -91,12 +91,23 @@ export class MaterialListComponent {
   readonly isLoading = signal(true);
   readonly errorMessage = signal<string | null>(null);
 
-  readonly filtroProyecto = signal<ProyectoMaterial | ''>('');
+  /** Pestañas por proyecto: SAMAI, Aldea Nanuu y lo compartido ("Ambos"), para no revolver el material. */
+  readonly pestanas: { valor: ProyectoMaterial; etiqueta: string }[] = [
+    { valor: 'SAMAI', etiqueta: 'SAMAI Campestre' },
+    { valor: 'NANUU', etiqueta: 'Aldea Nanuu' },
+    { valor: 'AMBOS', etiqueta: 'Compartido' },
+  ];
+  readonly pestana = signal<ProyectoMaterial>('SAMAI');
+  readonly cantidadPorPestana = computed(() => {
+    const cuenta: Record<ProyectoMaterial, number> = { SAMAI: 0, NANUU: 0, AMBOS: 0 };
+    for (const m of this.items()) cuenta[m.proyecto]++;
+    return cuenta;
+  });
   readonly filtroCategoria = signal<CategoriaMaterial | ''>('');
   readonly visibles = computed(() =>
     this.items().filter(
       (m) =>
-        (!this.filtroProyecto() || m.proyecto === this.filtroProyecto() || m.proyecto === 'AMBOS') &&
+        m.proyecto === this.pestana() &&
         (!this.filtroCategoria() || m.categoria === this.filtroCategoria()),
     ),
   );
@@ -144,7 +155,8 @@ export class MaterialListComponent {
     this.titulo.set('');
     this.descripcion.set('');
     this.categoria.set('FLYER');
-    this.proyecto.set('AMBOS');
+    // Nace en el proyecto de la pestaña que se está viendo.
+    this.proyecto.set(this.pestana());
     this.texto.set('');
     this.archivo.set(null);
     this.quitarArchivo.set(false);
@@ -338,6 +350,8 @@ export class MaterialListComponent {
       this.items.update((lista) =>
         lista.some((m) => m.id === guardado.id) ? lista.map((m) => (m.id === guardado.id ? guardado : m)) : [guardado, ...lista],
       );
+      // Si se guardó en otro proyecto, se pasa a su pestaña para que se vea dónde quedó.
+      this.pestana.set(guardado.proyecto);
       if (this.galeria().some((e) => e.estado === 'error')) {
         this.errorForm.set('Algunas imágenes no se subieron (marcadas en rojo). Quítalas o vuelve a guardar para reintentar.');
         return;

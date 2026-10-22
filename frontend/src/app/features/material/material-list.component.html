@@ -25,25 +25,24 @@
 
   @if (isLoading()) {
     <app-we-loader texto="Cargando material…" />
-  } @else if (items().length === 0 && !errorMessage()) {
-    <div class="mt-8 rounded-xl border border-dashed border-border p-10 text-center">
-      <p class="text-sm text-ink-muted">Todavía no hay material. Agrega el primero con "Nuevo material".</p>
-    </div>
   } @else {
-    <div class="mt-6 flex flex-wrap gap-3">
-      <select
-        [ngModel]="filtroProyecto()"
-        (ngModelChange)="filtroProyecto.set($event)"
-        aria-label="Filtrar por desarrollo"
-        class="rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
-      >
-        <option value="">Todos los desarrollos</option>
-        @for (p of proyectos; track p.valor) {
-          @if (p.valor !== 'AMBOS') {
-            <option [value]="p.valor">{{ p.etiqueta }}</option>
-          }
-        }
-      </select>
+    <div class="mt-6 flex gap-1 overflow-x-auto border-b border-border" role="tablist" aria-label="Proyecto">
+      @for (p of pestanas; track p.valor) {
+        <button
+          type="button"
+          role="tab"
+          [attr.aria-selected]="pestana() === p.valor"
+          (click)="pestana.set(p.valor)"
+          [attr.data-testid]="'pestana-' + p.valor"
+          class="-mb-px flex min-h-[44px] shrink-0 items-center gap-2 border-b-2 px-4 py-2 text-sm font-semibold transition-colors"
+          [class]="pestana() === p.valor ? 'border-we-primary text-we-primary dark:text-we-blue-light' : 'border-transparent text-ink-muted hover:text-ink'"
+        >
+          {{ p.etiqueta }}
+          <span class="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-medium text-ink-muted">{{ cantidadPorPestana()[p.valor] }}</span>
+        </button>
+      }
+    </div>
+    <div class="mt-4 flex flex-wrap gap-3">
       <select
         [ngModel]="filtroCategoria()"
         (ngModelChange)="filtroCategoria.set($event)"
@@ -58,7 +57,11 @@
     </div>
 
     @if (visibles().length === 0) {
-      <p class="mt-6 text-sm text-ink-muted">Ningún material coincide con los filtros.</p>
+      <div class="mt-6 rounded-xl border border-dashed border-border p-10 text-center" data-testid="pestana-vacia">
+        <p class="text-sm text-ink-muted">
+          {{ cantidadPorPestana()[pestana()] === 0 ? 'Todavía no hay material en esta pestaña. Agrega el primero con "Nuevo material".' : 'Ningún material coincide con el filtro.' }}
+        </p>
+      </div>
     }
     <div class="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       @for (m of visibles(); track m.id) {

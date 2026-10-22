@@ -1,5 +1,6 @@
 package com.werealestate.backend.dto;
 
+import com.werealestate.backend.model.ModalidadPago;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -15,6 +16,7 @@ public record ComisionDetalleDto(
     public record Devengo(LocalDate fechaOrigen, LocalDate fechaEntrega, BigDecimal monto) {
     }
 
+    /** conIva, conFactura y formaPago son null en las entregas anteriores a los tickets (conTicket = false). */
     public record Entrega(
             Long id,
             LocalDate fecha,
@@ -22,6 +24,10 @@ public record ComisionDetalleDto(
             String notas,
             Long gastoId,
             String registradaPor,
-            LocalDateTime fechaCreacion) {
+            LocalDateTime fechaCreacion,
+            Boolean conIva,
+            Boolean conFactura,
+            ModalidadPago formaPago,
+            boolean conTicket) {
     }
 }
