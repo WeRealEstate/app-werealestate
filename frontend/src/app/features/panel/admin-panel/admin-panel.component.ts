@@ -23,12 +23,13 @@ const ESTADO_BARRA_CLASES: Record<EstadoLote, string> = {
   APARTADO_A_PLAZO: 'bg-[#a855f7] dark:bg-[#c084fc]',
   APARTADO_CON_DINERO: 'bg-[#94a3b8] dark:bg-[#cbd5e1]',
   EN_PROCESO_DE_FIRMA: 'bg-[#243fb8] dark:bg-[#5b7cf0]',
+  RESERVADO_WE: 'bg-[#0d9488] dark:bg-[#2dd4bf]',
   VENDIDO: 'bg-[#ef4444] dark:bg-[#f87171]',
 };
 
-/** "Reservado por We" no es un estado del lote (en la BD son VENDIDO sin venta registrada) pero en el inicio
- * del admin se muestra como uno más, entre "En proceso de firma" y "Vendido". Verde azulado, validado junto a
- * los otros seis colores igual que ellos. */
+/** "Reservado por We" en el inicio del admin: el estado propio (RESERVADO_WE) más, como antes, los VENDIDO sin venta
+ * registrada; se muestra entre "En proceso de firma" y "Vendido". Verde azulado, validado junto a los otros seis
+ * colores igual que ellos. */
 const RESERVADO_WE_CLASE = 'bg-[#0d9488] dark:bg-[#2dd4bf]';
 
 /** Un tramo de la barra de inventario y su renglón en la lista. */

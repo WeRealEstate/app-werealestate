@@ -10,6 +10,8 @@ import {
   ESTADO_LOTE_LABELS,
   ESTADO_LOTE_POLIGONO_CLASSES,
   ESTADOS_LOTE_ADMIN_O_LIDER,
+  ESTADOS_LOTE_ORDEN,
+  ESTADOS_LOTE_ORDEN_ADMIN,
   ESTADOS_LOTE_SOLO_ADMIN,
   EstadoLote,
   Lote,
@@ -57,6 +59,7 @@ const ESTADOS_TODOS: EstadoLote[] = [
   'APARTADO_A_PLAZO',
   'APARTADO_CON_DINERO',
   'EN_PROCESO_DE_FIRMA',
+  'RESERVADO_WE',
   'VENDIDO',
 ];
 
@@ -248,7 +251,10 @@ export class PlanoComponent implements OnDestroy {
   readonly estadoLabels = ESTADO_LOTE_LABELS;
   readonly badgeClases = ESTADO_LOTE_BADGE_CLASSES;
   readonly poligonoClases = ESTADO_LOTE_POLIGONO_CLASSES;
-  readonly estadosLote = Object.keys(ESTADO_LOTE_LABELS) as EstadoLote[];
+  /** Leyenda y PDF: los 6 estados de siempre; admin y administración ven además "Reservado por We". */
+  get estadosLote(): EstadoLote[] {
+    return this.esAdmin() || this.esLider() ? ESTADOS_LOTE_ORDEN_ADMIN : ESTADOS_LOTE_ORDEN;
+  }
   readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
   readonly esLider = computed(() => this.auth.currentUser()?.rol === 'LIDER_AREA');
 

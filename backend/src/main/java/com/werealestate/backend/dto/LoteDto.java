@@ -2,6 +2,7 @@ package com.werealestate.backend.dto;
 
 import com.werealestate.backend.model.EstadoLote;
 import com.werealestate.backend.model.Lote;
+import com.werealestate.backend.model.VisibilidadLote;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -31,7 +32,7 @@ public record LoteDto(
                 lote.getManzana(),
                 lote.getNumeroLote(),
                 lote.getSuperficie(),
-                lote.getEstado(),
+                VisibilidadLote.visible(lote.getEstado()),
                 lote.getFechaCambioEstado(),
                 lote.getCambiadoPor() != null ? UsuarioResumenDto.from(lote.getCambiadoPor()) : null,
                 PoligonoMapaJson.deserializar(lote.getMapaPoligonoJson()),

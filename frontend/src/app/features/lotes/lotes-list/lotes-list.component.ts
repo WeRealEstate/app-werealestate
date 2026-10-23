@@ -27,6 +27,7 @@ import {
   ESTADO_LOTE_BADGE_CLASSES,
   ESTADO_LOTE_LABELS,
   ESTADOS_LOTE_ADMIN_O_LIDER,
+  ESTADOS_LOTE_ORDEN,
   ESTADOS_LOTE_SOLO_ADMIN,
   EstadoLote,
   Lote,
@@ -45,6 +46,7 @@ const ESTADOS_TODOS: EstadoLote[] = [
   'APARTADO_A_PLAZO',
   'APARTADO_CON_DINERO',
   'EN_PROCESO_DE_FIRMA',
+  'RESERVADO_WE',
   'VENDIDO',
 ];
 
@@ -81,7 +83,8 @@ export class LotesListComponent {
 
   readonly estadoLabels = ESTADO_LOTE_LABELS;
   readonly badgeClases = ESTADO_LOTE_BADGE_CLASSES;
-  readonly estadosLote = ESTADOS_TODOS;
+  /** Opciones del filtro: los 6 de siempre; "Reservado por We" se agrega aparte, solo para admin y administración. */
+  readonly estadosLote = ESTADOS_LOTE_ORDEN;
   readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
   readonly esLider = computed(() => this.auth.currentUser()?.rol === 'LIDER_AREA');
   /** Mismo permiso que el módulo de ventas (roleGuard ADMIN/LIDER_AREA): solo ellos pueden ver la
@@ -107,9 +110,6 @@ export class LotesListComponent {
   readonly filtroNumeroLote = signal('');
   readonly filtroDesarrolloId = signal<number | null>(null);
   readonly filtroEstado = signal<EstadoLote | null>(null);
-  /** Dentro de "Vendido": solo los reservados por We (lotes que la empresa se guarda y afuera se ven
-   * vendidos). Solo lo usan admin y administración; ver LoteService.puedeVerReservadosWe en el backend. */
-  readonly soloReservadosWe = signal(false);
   readonly superficieMin = signal<number | null>(null);
   readonly superficieMax = signal<number | null>(null);
 
@@ -132,10 +132,7 @@ export class LotesListComponent {
     const desarrolloId = Number(params.get('desarrolloId'));
     if (Number.isInteger(desarrolloId) && desarrolloId > 0) this.filtroDesarrolloId.set(desarrolloId);
     const estado = params.get('estado');
-    if (estado === 'RESERVADO_WE') {
-      this.filtroEstado.set('VENDIDO');
-      this.soloReservadosWe.set(true);
-    } else if (estado && estado in ESTADO_LOTE_LABELS) {
+    if (estado && estado in ESTADO_LOTE_LABELS) {
       this.filtroEstado.set(estado as EstadoLote);
     }
 
@@ -217,8 +214,7 @@ export class LotesListComponent {
   }
 
   onEstadoChange(valor: string): void {
-    this.soloReservadosWe.set(valor === 'RESERVADO_WE');
-    this.filtroEstado.set(valor === '' ? null : valor === 'RESERVADO_WE' ? 'VENDIDO' : (valor as EstadoLote));
+    this.filtroEstado.set(valor === '' ? null : (valor as EstadoLote));
     this.recargarDesdeInicio();
   }
 
@@ -275,7 +271,7 @@ export class LotesListComponent {
       superficieMin: this.superficieMin(),
       superficieMax: this.superficieMax(),
       // Para admin y administración "Vendido" son solo los vendidos de verdad; los reservados por We tienen su opción.
-      reservadoWe: this.puedeVerInfoLote() && this.filtroEstado() === 'VENDIDO' ? this.soloReservadosWe() : null,
+      reservadoWe: this.puedeVerInfoLote() && this.filtroEstado() === 'VENDIDO' ? false : null,
       pagina,
       tamano: TAMANO_PAGINA,
     });

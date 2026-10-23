@@ -238,6 +238,7 @@ public class NotificacionService {
             case APARTADO_A_PLAZO -> "Apartado a plazo";
             case APARTADO_CON_DINERO -> "Apartado con dinero";
             case EN_PROCESO_DE_FIRMA -> "En proceso de firma";
+            case RESERVADO_WE -> "Reservado por We";
             case VENDIDO -> "Vendido";
         };
     }

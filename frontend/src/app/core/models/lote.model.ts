@@ -6,6 +6,8 @@ export type EstadoLote =
   | 'APARTADO_A_PLAZO'
   | 'APARTADO_CON_DINERO'
   | 'EN_PROCESO_DE_FIRMA'
+  /** Solo lo reciben admin y administración; para el resto el servidor lo manda como 'VENDIDO'. */
+  | 'RESERVADO_WE'
   | 'VENDIDO';
 
 export const ESTADO_LOTE_LABELS: Record<EstadoLote, string> = {
@@ -14,6 +16,7 @@ export const ESTADO_LOTE_LABELS: Record<EstadoLote, string> = {
   APARTADO_A_PLAZO: 'Apartado a plazo',
   APARTADO_CON_DINERO: 'Apartado con dinero',
   EN_PROCESO_DE_FIRMA: 'En proceso de firma',
+  RESERVADO_WE: 'Reservado por We',
   VENDIDO: 'Vendido',
 };
 
@@ -25,6 +28,7 @@ export const MAX_LOTES_APARTADO_MULTIPLE = 5;
 export const ESTADOS_LOTE_SOLO_ADMIN: ReadonlySet<EstadoLote> = new Set([
   'APARTADO_CON_DINERO',
   'EN_PROCESO_DE_FIRMA',
+  'RESERVADO_WE',
   'VENDIDO',
 ]);
 
@@ -38,6 +42,7 @@ export const ESTADO_LOTE_BADGE_CLASSES: Record<EstadoLote, string> = {
   APARTADO_A_PLAZO: 'bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-300',
   APARTADO_CON_DINERO: 'bg-gray-100 text-gray-600 dark:bg-gray-400/15 dark:text-gray-300',
   EN_PROCESO_DE_FIRMA: 'bg-we-primary/15 text-we-primary dark:text-we-blue-light',
+  RESERVADO_WE: 'bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300',
   VENDIDO: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300',
 };
 
@@ -49,6 +54,7 @@ export const ESTADO_LOTE_POLIGONO_CLASSES: Record<EstadoLote, string> = {
   APARTADO_A_PLAZO: 'fill-purple-500/35 stroke-purple-500 dark:fill-purple-400/30 dark:stroke-purple-400',
   APARTADO_CON_DINERO: 'fill-gray-400/35 stroke-gray-400 dark:fill-gray-300/30 dark:stroke-gray-300',
   EN_PROCESO_DE_FIRMA: 'fill-we-primary/35 stroke-we-primary',
+  RESERVADO_WE: 'fill-teal-600/35 stroke-teal-600 dark:fill-teal-400/30 dark:stroke-teal-400',
   VENDIDO: 'fill-red-500/35 stroke-red-500 dark:fill-red-400/30 dark:stroke-red-400',
 };
 
@@ -60,16 +66,29 @@ export const ESTADO_LOTE_COLOR_RGB: Record<EstadoLote, [number, number, number]>
   APARTADO_A_PLAZO: [168, 85, 247],
   APARTADO_CON_DINERO: [156, 163, 175],
   EN_PROCESO_DE_FIRMA: [36, 63, 184],
+  RESERVADO_WE: [13, 148, 136],
   VENDIDO: [239, 68, 68],
 };
 
-/** Orden en que se listan los estados (el mismo del plano y del enum del backend). */
+/** Orden en que se listan los estados que ve cualquiera (leyendas, filtros, cifras): los 6 de siempre, sin
+ * "Reservado por We", que es solo de admin y administración. */
 export const ESTADOS_LOTE_ORDEN: EstadoLote[] = [
   'DISPONIBLE',
   'APARTADO',
   'APARTADO_A_PLAZO',
   'APARTADO_CON_DINERO',
   'EN_PROCESO_DE_FIRMA',
+  'VENDIDO',
+];
+
+/** Los mismos más "Reservado por We" (justo antes de Vendido): lo que ven y pueden elegir admin y administración. */
+export const ESTADOS_LOTE_ORDEN_ADMIN: EstadoLote[] = [
+  'DISPONIBLE',
+  'APARTADO',
+  'APARTADO_A_PLAZO',
+  'APARTADO_CON_DINERO',
+  'EN_PROCESO_DE_FIRMA',
+  'RESERVADO_WE',
   'VENDIDO',
 ];
 

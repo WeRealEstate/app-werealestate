@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '10.4.1', fecha: '2026-10-23', cambios: [
+    "Lotes: nuevo estado 'Reservado por We', para los lotes que la empresa se guarda. Solo Admin y Administración lo ven y lo pueden poner o quitar (con nota), en el plano, en Lotes y en las cifras del inicio. Para asesores, planos públicos y cotizador público el lote aparece como Vendido: lo oculta el servidor, y en el historial el movimiento sale sin nota, cliente ni quién lo hizo. Un lote reservado no se puede apartar ni cotizar.",
+  ] },
   { version: '10.3.4', fecha: '2026-10-22', cambios: [
     "Gastos: ahora se pueden modificar y eliminar los egresos, también los de pago de comisiones (Admin y Administración). 'Modificar' cambia concepto, fecha, monto y comprobante; si es el egreso de una entrega de comisión, la entrega y su ticket se actualizan igual (el monto nuevo no puede pasar de lo ganado). 'Eliminar' pide tu contraseña y, en una comisión, anula la entrega: vuelve a quedar pendiente por pagar. Los pagos de gastos recurrentes siguen deshaciéndose con 'Deshacer pago'.",
   ] },

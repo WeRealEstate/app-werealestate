@@ -68,6 +68,7 @@ public class LoteService {
             EstadoLote.APARTADO_A_PLAZO,
             EstadoLote.APARTADO_CON_DINERO,
             EstadoLote.EN_PROCESO_DE_FIRMA,
+            EstadoLote.RESERVADO_WE,
             EstadoLote.VENDIDO);
 
     /** Nota que queda en el historial del lote al pasar a "En proceso de firma" desde We Forms. */
@@ -179,10 +180,33 @@ public class LoteService {
         }
         if (estado != null && !estado.isBlank()) {
             EstadoLote estadoEnum = EstadoLote.valueOf(estado);
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("estado"), estadoEnum));
+            boolean veReservados = puedeVerReservadosWe();
+            if (!veReservados) {
+                // Para quien no ve los reservados por We son simplemente "Vendido": pedir uno u otro es lo mismo y
+                // "Vendido" los incluye.
+                if (estadoEnum == EstadoLote.RESERVADO_WE) estadoEnum = EstadoLote.VENDIDO;
+                final EstadoLote pedido = estadoEnum;
+                spec = spec.and((root, query, cb) -> pedido == EstadoLote.VENDIDO
+                        ? root.get("estado").in(EstadoLote.VENDIDO, EstadoLote.RESERVADO_WE)
+                        : cb.equal(root.get("estado"), pedido));
+            } else if (estadoEnum == EstadoLote.RESERVADO_WE) {
+                // "Reservado por We" para admin y administración: los marcados con ese estado y, como antes, los
+                // vendidos que no tienen ninguna venta registrada.
+                spec = spec.and((root, query, cb) -> {
+                    Subquery<Long> conVenta = query.subquery(Long.class);
+                    var ventaLote = conVenta.from(VentaLote.class);
+                    conVenta.select(ventaLote.get("id")).where(cb.equal(ventaLote.get("lote"), root));
+                    return cb.or(
+                            cb.equal(root.get("estado"), EstadoLote.RESERVADO_WE),
+                            cb.and(cb.equal(root.get("estado"), EstadoLote.VENDIDO), cb.not(cb.exists(conVenta))));
+                });
+            } else {
+                final EstadoLote pedido = estadoEnum;
+                spec = spec.and((root, query, cb) -> cb.equal(root.get("estado"), pedido));
+            }
             // Dentro de "Vendido", admin y administración pueden pedir solo los reservados por We (true) o
             // solo los vendidos de verdad (false). Para cualquier otro rol el filtro se ignora.
-            if (estadoEnum == EstadoLote.VENDIDO && reservadoWe != null && puedeVerReservadosWe()) {
+            if (estadoEnum == EstadoLote.VENDIDO && reservadoWe != null && veReservados) {
                 spec = spec.and((root, query, cb) -> {
                     Subquery<Long> conVenta = query.subquery(Long.class);
                     var ventaLote = conVenta.from(VentaLote.class);
@@ -259,8 +283,9 @@ public class LoteService {
             conteos.computeIfAbsent(c.getDesarrolloId(), id -> new EnumMap<>(EstadoLote.class))
                     .put(c.getEstado(), c.getTotal());
         }
+        boolean veReservados = puedeVerReservadosWe();
         Map<Long, Long> reservados = new HashMap<>();
-        if (puedeVerReservadosWe()) {
+        if (veReservados) {
             for (LoteRepository.ConteoPorDesarrollo c : loteRepository.contarReservadosWePorDesarrollo()) {
                 reservados.put(c.getDesarrolloId(), c.getTotal());
             }
@@ -275,9 +300,19 @@ public class LoteService {
                         porEstado.put(estado, delDesarrollo.getOrDefault(estado, 0L));
                     }
                     long total = porEstado.values().stream().mapToLong(Long::longValue).sum();
-                    long reservadosWe = reservados.getOrDefault(d.getId(), 0L);
-                    porEstado.put(EstadoLote.VENDIDO, porEstado.get(EstadoLote.VENDIDO) - reservadosWe);
-                    return new ResumenLotesDto(d.getId(), d.getNombre(), total, porEstado, reservadosWe);
+                    long conEstadoReservado = porEstado.get(EstadoLote.RESERVADO_WE);
+                    long sinVenta = reservados.getOrDefault(d.getId(), 0L);
+                    if (veReservados) {
+                        // Admin y administración: "Reservado por We" va aparte (el estado propio y los vendidos sin
+                        // venta registrada); porEstado[RESERVADO_WE] queda en 0 porque ya van en reservadosWe.
+                        porEstado.put(EstadoLote.VENDIDO, porEstado.get(EstadoLote.VENDIDO) - sinVenta);
+                        porEstado.put(EstadoLote.RESERVADO_WE, 0L);
+                        return new ResumenLotesDto(d.getId(), d.getNombre(), total, porEstado, sinVenta + conEstadoReservado);
+                    }
+                    // El resto: los reservados cuentan como vendidos y el estado ni aparece en el resumen.
+                    porEstado.put(EstadoLote.VENDIDO, porEstado.get(EstadoLote.VENDIDO) + conEstadoReservado);
+                    porEstado.remove(EstadoLote.RESERVADO_WE);
+                    return new ResumenLotesDto(d.getId(), d.getNombre(), total, porEstado, 0);
                 })
                 .toList();
     }

@@ -8,6 +8,8 @@ import {
   ESTADO_LOTE_COLOR_RGB,
   ESTADO_LOTE_LABELS,
   ESTADO_LOTE_POLIGONO_CLASSES,
+  ESTADOS_LOTE_ORDEN,
+  ESTADOS_LOTE_ORDEN_ADMIN,
   ESTADOS_LOTE_SOLO_ADMIN,
   EstadoLote,
   Lote,
@@ -173,7 +175,11 @@ export class PlanoPublicoComponent implements OnDestroy {
   readonly estadoLabels = ESTADO_LOTE_LABELS;
   readonly badgeClases = ESTADO_LOTE_BADGE_CLASSES;
   readonly poligonoClases = ESTADO_LOTE_POLIGONO_CLASSES;
-  readonly estadosLote = Object.keys(ESTADO_LOTE_LABELS) as EstadoLote[];
+  /** Leyenda y PDF: los 6 estados de siempre. Solo si quien mira es admin o administración con sesión y hay lotes
+   * "Reservado por We" (el servidor los manda como Vendido a todos los demás) se agrega esa entrada. */
+  get estadosLote(): EstadoLote[] {
+    return this.lotes().some((l) => l.estado === 'RESERVADO_WE') ? ESTADOS_LOTE_ORDEN_ADMIN : ESTADOS_LOTE_ORDEN;
+  }
 
   readonly lotes = signal<Lote[]>([]);
   readonly isLoading = signal(true);

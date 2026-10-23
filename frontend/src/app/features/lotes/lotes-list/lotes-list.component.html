@@ -85,10 +85,10 @@
     >
       <option value="" [selected]="filtroEstado() === null">Todos los estados</option>
       @for (e of estadosLote; track e) {
-        <option [value]="e" [selected]="e === filtroEstado() && !soloReservadosWe()">{{ estadoLabels[e] }}</option>
+        <option [value]="e" [selected]="e === filtroEstado()">{{ estadoLabels[e] }}</option>
       }
       @if (puedeVerInfoLote()) {
-        <option value="RESERVADO_WE" [selected]="soloReservadosWe()">Reservado por We</option>
+        <option value="RESERVADO_WE" [selected]="filtroEstado() === 'RESERVADO_WE'">Reservado por We</option>
       }
     </select>
     <div class="flex items-center gap-1.5">
