@@ -12,6 +12,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface WeFormRespuestaRepository extends JpaRepository<WeFormRespuesta, Long> {
 
+    boolean existsByAsesorExternoId(Long asesorExternoId);
+
     Page<WeFormRespuesta> findByFormIdOrderByFechaEnvioDesc(Long formId, Pageable pageable);
 
     List<WeFormRespuesta> findByFormIdOrderByFechaEnvioDesc(Long formId);

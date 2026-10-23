@@ -48,6 +48,16 @@ export class ComercializadorasListComponent {
   readonly integrantes = signal<IntegranteComercializadora[]>([]);
   readonly cargandoIntegrantes = signal(false);
 
+  // Edición de un integrante (modal sobre el de integrantes)
+  readonly integranteEnEdicion = signal<IntegranteComercializadora | null>(null);
+  readonly intNombre = signal('');
+  readonly intCelular = signal('');
+  readonly intCorreo = signal('');
+  readonly intPin = signal('');
+  readonly intPinNuevo = signal(false);
+  readonly guardandoIntegrante = signal(false);
+  readonly errorIntegrante = signal<string | null>(null);
+
   /** Quién puede ser líder: asesores externos activos que no reportan a nadie (independientes o líderes), y que no
    * lo sean ya de otra comercializadora. */
   readonly lideresPosibles = computed(() => {
@@ -167,6 +177,89 @@ export class ComercializadorasListComponent {
       this.toast.success('Comercializadora eliminada.');
     } catch (e) {
       this.toast.error(mensajeDe(e, 'No se pudo eliminar.'));
+    }
+  }
+
+  // ---- Editar / quitar un integrante ----
+
+  abrirEditarIntegrante(i: IntegranteComercializadora): void {
+    this.integranteEnEdicion.set(i);
+    this.intNombre.set(i.nombre);
+    this.intCelular.set(i.celular ?? '');
+    this.intCorreo.set(i.correo ?? '');
+    this.intPin.set(i.pin ?? '');
+    this.intPinNuevo.set(false);
+    this.errorIntegrante.set(null);
+  }
+
+  /** Alterna entre dejar el PIN actual y pedir uno nuevo al azar (se genera en el servidor al guardar). */
+  alternarPinNuevo(i: IntegranteComercializadora): void {
+    if (this.intPinNuevo()) {
+      this.intPinNuevo.set(false);
+      this.intPin.set(i.pin ?? '');
+    } else {
+      this.intPinNuevo.set(true);
+      this.intPin.set('');
+    }
+  }
+
+  async guardarIntegrante(): Promise<void> {
+    const c = this.verIntegrantes();
+    const i = this.integranteEnEdicion();
+    if (!c || !i || this.guardandoIntegrante()) return;
+    if (this.intNombre().trim().length < 3) {
+      this.errorIntegrante.set('Escribe el nombre completo.');
+      return;
+    }
+    if (this.intCelular().replace(/\D/g, '').length !== 10) {
+      this.errorIntegrante.set('El celular debe tener 10 dígitos.');
+      return;
+    }
+    const pinEscrito = this.intPin().trim();
+    // Sin cambios en el PIN no se manda; "nuevo" lo genera el servidor; si lo escribieron, se manda tal cual.
+    const pin = this.intPinNuevo() ? '' : pinEscrito.toUpperCase() === (i.pin ?? '') ? null : pinEscrito;
+    this.guardandoIntegrante.set(true);
+    this.errorIntegrante.set(null);
+    try {
+      const guardado = await this.service.actualizarIntegrante(c.id, i.id, {
+        nombre: this.intNombre().trim(),
+        celular: this.intCelular().trim(),
+        correo: this.intCorreo().trim(),
+        pin,
+      });
+      this.integrantes.update((lista) => lista.map((x) => (x.id === guardado.id ? guardado : x)));
+      this.integranteEnEdicion.set(null);
+      this.toast.success(this.intPinNuevo() ? `Datos guardados. Su PIN nuevo es ${guardado.pin}.` : 'Integrante actualizado.');
+    } catch (e) {
+      this.errorIntegrante.set(mensajeDe(e, 'No se pudo guardar. Intenta de nuevo.'));
+    } finally {
+      this.guardandoIntegrante.set(false);
+    }
+  }
+
+  async quitarIntegrante(i: IntegranteComercializadora): Promise<void> {
+    const c = this.verIntegrantes();
+    if (!c) return;
+    const ok = await this.confirmService.confirm({
+      titulo: 'Quitar integrante',
+      mensaje: `¿Quitar a ${i.nombre} del equipo de ${c.liderNombre}? Si no tiene ventas ni comisiones se elimina por completo (sale de Comunidades We); si ya tiene historial solo se desactiva y su PIN deja de servir.`,
+      textoConfirmar: 'Quitar',
+      peligroso: true,
+    });
+    if (!ok) return;
+    try {
+      const r = await this.service.quitarIntegrante(c.id, i.id);
+      this.toast.success(
+        r.resultado === 'ELIMINADO'
+          ? `${r.nombre} se eliminó del sistema.`
+          : `${r.nombre} tiene historial (ventas, comisiones…): se desactivó y su PIN ya no sirve.`,
+      );
+      this.integrantes.set(await this.service.integrantes(c.id));
+      const items = await this.service.listar();
+      this.items.set(items);
+      this.verIntegrantes.set(items.find((x) => x.id === c.id) ?? c);
+    } catch (e) {
+      this.toast.error(mensajeDe(e, 'No se pudo quitar al integrante.'));
     }
   }
 

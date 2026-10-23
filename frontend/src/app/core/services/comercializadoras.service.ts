@@ -7,6 +7,8 @@ import {
   ComercializadoraPublica,
   ComercializadoraRequest,
   IntegranteComercializadora,
+  IntegranteRequest,
+  QuitarIntegranteResultado,
   UnirseResultado,
 } from '../models/comercializadora.model';
 
@@ -24,6 +26,17 @@ export class ComercializadorasService {
 
   integrantes(id: number): Promise<IntegranteComercializadora[]> {
     return firstValueFrom(this.http.get<IntegranteComercializadora[]>(`${this.baseUrl}/${id}/integrantes`));
+  }
+
+  actualizarIntegrante(id: number, asesorId: number, request: IntegranteRequest): Promise<IntegranteComercializadora> {
+    return firstValueFrom(
+      this.http.put<IntegranteComercializadora>(`${this.baseUrl}/${id}/integrantes/${asesorId}`, request),
+    );
+  }
+
+  /** Sin historial se elimina; con ventas, comisiones, etc. solo se desactiva (lo dice el resultado). */
+  quitarIntegrante(id: number, asesorId: number): Promise<QuitarIntegranteResultado> {
+    return firstValueFrom(this.http.delete<QuitarIntegranteResultado>(`${this.baseUrl}/${id}/integrantes/${asesorId}`));
   }
 
   crear(request: ComercializadoraRequest): Promise<Comercializadora> {
@@ -48,7 +61,7 @@ export class ComercializadorasService {
     return firstValueFrom(this.http.get<ComercializadoraPublica>(`${this.publicoUrl}/${encodeURIComponent(token)}`));
   }
 
-  unirse(token: string, datos: { nombre: string; celular: string; correo: string }): Promise<UnirseResultado> {
+  unirse(token: string, datos: { nombre: string; celular: string; correo: string; pin: string }): Promise<UnirseResultado> {
     return firstValueFrom(
       this.http.post<UnirseResultado>(`${this.publicoUrl}/${encodeURIComponent(token)}/unirse`, datos),
     );

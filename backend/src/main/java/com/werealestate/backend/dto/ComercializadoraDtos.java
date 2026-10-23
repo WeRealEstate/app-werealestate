@@ -42,14 +42,23 @@ public final class ComercializadoraDtos {
             @NotBlank @Size(max = 200) String nombre, @NotNull Long liderId, @Size(max = 1000) String notas,
             boolean activa) {}
 
+    /** pin: null = no cambia; vacío = generar uno nuevo al azar; 4 letras o números = ese PIN (único). */
+    public record ActualizarIntegranteRequest(
+            @NotBlank @Size(max = 200) String nombre, @NotBlank @Size(max = 20) String celular,
+            @Size(max = 150) String correo, @Size(max = 4) String pin) {}
+
+    /** ELIMINADO: salió del sistema. DESACTIVADO: tiene historial (ventas, comisiones…) y solo se desactivó. */
+    public record QuitarIntegranteResultado(String resultado, String nombre) {}
+
     // ------------------------------------------------------------------ público
 
     /** Lo que ve quien abre el enlace: a qué comercializadora se va a unir. */
     public record PublicoInfo(String comercializadora, String lider) {}
 
+    /** pin: el que elige el integrante (4 letras o números); vacío o null = se le genera uno al azar. */
     public record UnirseRequest(
             @NotBlank @Size(max = 200) String nombre, @NotBlank @Size(max = 20) String celular,
-            @Size(max = 150) String correo) {}
+            @Size(max = 150) String correo, @Size(max = 4) String pin) {}
 
     /** El PIN se muestra una sola vez, en la pantalla de bienvenida. */
     public record UnirseResultado(String nombre, String pin, String comercializadora, String lider) {}

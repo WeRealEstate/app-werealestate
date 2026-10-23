@@ -1,6 +1,7 @@
 package com.werealestate.backend.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -38,7 +39,7 @@ class ComercializadoraPublicoServiceTest {
         repo = mock(ComercializadoraRepository.class);
         asesores = mock(AsesorExternoRepository.class);
         usuarios = mock(UsuarioRepository.class);
-        service = new ComercializadoraPublicoService(repo, asesores, usuarios);
+        service = new ComercializadoraPublicoService(repo, asesores, new PinAsesor(asesores, usuarios));
         lider = new AsesorExterno("Laura Líder", "9511111111", null);
         lider.setTipo(TipoAsesorExterno.LIDER);
         comercializadora = new Comercializadora("Inmobiliaria Sol", lider, null, "tok-abc");
@@ -50,7 +51,7 @@ class ComercializadoraPublicoServiceTest {
     }
 
     private static ComercializadoraDtos.UnirseRequest datos(String nombre, String celular, String correo) {
-        return new ComercializadoraDtos.UnirseRequest(nombre, celular, correo);
+        return new ComercializadoraDtos.UnirseRequest(nombre, celular, correo, null);
     }
 
     @Test
@@ -113,6 +114,49 @@ class ComercializadoraPublicoServiceTest {
         assertEquals(429, e.getStatusCode().value());
         // otra IP sí puede
         service.unirse("tok-abc", datos("Otra Ip Prueba", "9518888888", null), "8.8.8.8");
+    }
+
+    private static ComercializadoraDtos.UnirseRequest conPin(String nombre, String celular, String pin) {
+        return new ComercializadoraDtos.UnirseRequest(nombre, celular, null, pin);
+    }
+
+    @Test
+    void usaElPinQueEligeElIntegranteEnMayusculas() {
+        var r = service.unirse("tok-abc", conPin("Ana Pérez", "9512223344", " k7m2 "), "1.1.1.1");
+        assertEquals("K7M2", r.pin());
+    }
+
+    @Test
+    void conPinVacioSeGeneraUnoAlAzar() {
+        assertTrue(service.unirse("tok-abc", conPin("Ana Pérez", "9512223344", "  "), "1.1.1.1").pin().matches("[A-HJ-NP-Z2-9]{4}"));
+    }
+
+    @Test
+    void rechazaUnPinConFormatoInvalido() {
+        assertThrows(ValidationException.class, () -> service.unirse("tok-abc", conPin("Ana Pérez", "9512223344", "AB"), "9.9.9.5"));
+        assertThrows(ValidationException.class, () -> service.unirse("tok-abc", conPin("Ana Pérez", "9512223344", "AB-1"), "9.9.9.5"));
+    }
+
+    @Test
+    void unPinEnUsoNoDiceDeQuienEs() {
+        AsesorExterno otro = new AsesorExterno("Beto Secreto", "9519999999", null);
+        org.springframework.test.util.ReflectionTestUtils.setField(otro, "id", 9L);
+        when(asesores.findByPin("ABCD")).thenReturn(Optional.of(otro));
+        ConflictException e = assertThrows(ConflictException.class, () -> service.unirse("tok-abc", conPin("Ana Pérez", "9512223344", "abcd"), "9.9.9.6"));
+        assertFalse(e.getMessage().contains("Beto"), e.getMessage());
+    }
+
+    @Test
+    void probarPinesEnUsoTieneTopeParaNoAveriguarCualesExisten() {
+        AsesorExterno otro = new AsesorExterno("Beto Secreto", "9519999999", null);
+        org.springframework.test.util.ReflectionTestUtils.setField(otro, "id", 9L);
+        when(asesores.findByPin(any())).thenReturn(Optional.of(otro));
+        for (int i = 0; i < ComercializadoraPublicoService.MAX_PINES_RECHAZADOS_POR_IP; i++) {
+            assertThrows(ConflictException.class, () -> service.unirse("tok-abc", conPin("Ana Pérez", "9512223344", "ZZZZ"), "6.6.6.6"));
+        }
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+                () -> service.unirse("tok-abc", conPin("Ana Pérez", "9512223344", "YYYY"), "6.6.6.6"));
+        assertEquals(429, e.getStatusCode().value());
     }
 
     @Test

@@ -15,6 +15,12 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.2.2', fecha: '2026-10-23', cambios: [
+    "Comercializadoras: en el formulario del enlace, cada integrante ahora puede elegir su propio PIN de 4 letras o números (lo escribe dos veces para no equivocarse). Si lo deja vacío, el sistema le asigna uno como antes. Si el PIN ya lo tiene otra persona, se le pide elegir otro sin decir de quién es, y hay un tope de intentos para que nadie use el formulario para averiguar qué PINs existen.",
+  ] },
+  { version: '11.2.1', fecha: '2026-10-23', cambios: [
+    "Comercializadoras: ahora se pueden modificar y quitar integrantes desde su ventana de 'Integrantes'. Modificar cambia nombre, celular, correo y PIN (se puede escribir uno o pedir uno nuevo al azar; el anterior deja de servir). Quitar elimina a la persona del sistema y de Comunidades We; si ya tiene ventas, comisiones, clientes o registros de venta, solo se desactiva (su PIN deja de servir) y aparece como Inactivo. El contador cuenta solo a los activos.",
+  ] },
   { version: '11.2.0', fecha: '2026-10-23', cambios: [
     "Clientes: el número de cliente ahora es por desarrollo, con su propia numeración en SAMAI (S-1, S-2…) y en Aldea Nanuu (N-1, N-2…). Un cliente que compró en los dos tiene uno en cada uno (por ejemplo 'S-40 · N-12').",
     "El número se recibe con la primera venta en ese desarrollo; registrar un cliente sin venta ya no le da número. Los copropietarios toman el mismo número del titular, y quien ya tiene número en un desarrollo lo conserva aunque vuelva a comprar.",

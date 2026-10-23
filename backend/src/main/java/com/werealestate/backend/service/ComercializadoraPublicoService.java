@@ -10,8 +10,6 @@ import com.werealestate.backend.model.EstadoContratoAsesor;
 import com.werealestate.backend.model.TipoAsesorExterno;
 import com.werealestate.backend.repository.AsesorExternoRepository;
 import com.werealestate.backend.repository.ComercializadoraRepository;
-import com.werealestate.backend.repository.UsuarioRepository;
-import java.security.SecureRandom;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
@@ -33,23 +31,23 @@ public class ComercializadoraPublicoService {
 
     static final int MAX_ALTAS_POR_IP = 10;
     static final int MAX_ALTAS_POR_ENLACE = 60;
+    /** PINs rechazados por estar en uso, por IP y hora: sin tope, probar PINs serviría para descubrir cuáles existen. */
+    static final int MAX_PINES_RECHAZADOS_POR_IP = 5;
     private static final long VENTANA_MS = 60 * 60 * 1000L;
-    private static final String ALFABETO_PIN = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private static final Pattern CORREO = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
-    private static final SecureRandom ALEATORIO = new SecureRandom();
 
     private final ComercializadoraRepository repository;
     private final AsesorExternoRepository asesorRepository;
-    private final UsuarioRepository usuarioRepository;
+    private final PinAsesor pinAsesor;
     private final Map<String, Deque<Long>> altasRecientes = new ConcurrentHashMap<>();
 
     public ComercializadoraPublicoService(
             ComercializadoraRepository repository,
             AsesorExternoRepository asesorRepository,
-            UsuarioRepository usuarioRepository) {
+            PinAsesor pinAsesor) {
         this.repository = repository;
         this.asesorRepository = asesorRepository;
-        this.usuarioRepository = usuarioRepository;
+        this.pinAsesor = pinAsesor;
     }
 
     @Transactional(readOnly = true)
@@ -82,6 +80,7 @@ public class ComercializadoraPublicoService {
         if (yaRegistrado) {
             throw new ConflictException("Ese celular ya está registrado. Si es tuyo, pídele tu PIN a tu líder.");
         }
+        String pin = elegirPin(request.pin(), ip);
         registrarAlta("ip:" + ip);
         registrarAlta("enlace:" + c.getId());
 
@@ -94,7 +93,7 @@ public class ComercializadoraPublicoService {
         nuevo.setAccesoNanuu(true);
         nuevo.setComercializadora(c);
         nuevo.actualizarFicha(null, null, null, null, null, null, null, lider, null, null);
-        nuevo.setPin(pinLibre());
+        nuevo.setPin(pin);
         asesorRepository.save(nuevo);
         return new ComercializadoraDtos.UnirseResultado(nuevo.getNombre(), nuevo.getPin(), c.getNombre(), lider.getNombre());
     }
@@ -110,15 +109,21 @@ public class ComercializadoraPublicoService {
         return c;
     }
 
-    /** 4 letras o números, sin los que se confunden (0/O, 1/I), que ningún asesor ni usuario tenga ya. */
-    private String pinLibre() {
-        for (int intento = 0; intento < 500; intento++) {
-            StringBuilder sb = new StringBuilder(4);
-            for (int i = 0; i < 4; i++) sb.append(ALFABETO_PIN.charAt(ALEATORIO.nextInt(ALFABETO_PIN.length())));
-            String pin = sb.toString();
-            if (asesorRepository.findByPin(pin).isEmpty() && usuarioRepository.findByPin(pin).isEmpty()) return pin;
+    /** El PIN que escribió el integrante, o uno al azar si lo dejó vacío. Un PIN que ya está en uso cuenta contra un tope
+     * por IP, para que el formulario no sirva para averiguar qué PINs existen. */
+    private String elegirPin(String escrito, String ip) {
+        if (escrito == null || escrito.isBlank()) return pinAsesor.generarLibre();
+        String clave = "pin:" + ip;
+        if (superaLimite(clave, MAX_PINES_RECHAZADOS_POR_IP)) {
+            throw new ResponseStatusException(
+                    HttpStatus.TOO_MANY_REQUESTS, "Demasiados intentos con el PIN. Inténtalo de nuevo más tarde.");
         }
-        throw new IllegalStateException("No se pudo generar un PIN libre");
+        try {
+            return pinAsesor.validarElegido(escrito);
+        } catch (ConflictException e) {
+            registrarAlta(clave);
+            throw e;
+        }
     }
 
     private boolean superaLimite(String clave, int maximo) {

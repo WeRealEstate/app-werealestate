@@ -131,12 +131,29 @@
         } @else {
           <ul class="mt-4 divide-y divide-border rounded-lg border border-border" data-testid="lista-integrantes">
             @for (i of integrantes(); track i.id) {
-              <li class="flex items-start justify-between gap-3 px-3 py-2.5">
+              <li class="flex items-center justify-between gap-3 px-3 py-2.5" [class.opacity-60]="!i.activo" data-testid="integrante">
                 <div class="min-w-0">
-                  <p class="truncate text-sm font-medium text-ink">{{ i.nombre }}</p>
+                  <p class="truncate text-sm font-medium text-ink">
+                    {{ i.nombre }}
+                    @if (!i.activo) {
+                      <span class="ml-1 rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-ink-muted">Inactivo</span>
+                    }
+                  </p>
                   <p class="text-xs text-ink-muted">{{ i.celular }}{{ i.correo ? ' · ' + i.correo : '' }}</p>
                 </div>
-                <span class="shrink-0 rounded-md bg-surface-2 px-2 py-1 font-mono text-sm font-semibold tracking-widest text-ink">{{ i.pin ?? '—' }}</span>
+                <div class="flex shrink-0 items-center gap-1">
+                  <span class="rounded-md bg-surface-2 px-2 py-1 font-mono text-sm font-semibold tracking-widest text-ink">{{ i.pin ?? '—' }}</span>
+                  <button type="button" (click)="abrirEditarIntegrante(i)" aria-label="Modificar integrante" title="Modificar" data-testid="editar-integrante"
+                    class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2 hover:text-we-primary transition-colors duration-150 active:scale-90">
+                    <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                  </button>
+                  @if (i.activo) {
+                    <button type="button" (click)="quitarIntegrante(i)" aria-label="Quitar integrante" title="Quitar" data-testid="quitar-integrante"
+                      class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink-muted hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400 transition-colors duration-150 active:scale-90">
+                      <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                    </button>
+                  }
+                </div>
               </li>
             }
           </ul>
@@ -145,6 +162,54 @@
           <button type="button" (click)="verIntegrantes.set(null)" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cerrar</button>
         </div>
       </div>
+    </div>
+  }
+
+  @if (integranteEnEdicion(); as ie) {
+    <button type="button" (click)="integranteEnEdicion.set(null)" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-[60] bg-black/40"></button>
+    <div class="fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="editar-integrante-titulo">
+      <form (ngSubmit)="guardarIntegrante()" class="modal-panel-enter max-h-[92dvh] w-full max-w-sm overflow-y-auto rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <h2 id="editar-integrante-titulo" class="font-heading text-lg font-semibold text-ink">Modificar integrante</h2>
+        <div class="mt-4 space-y-3">
+          <div>
+            <label for="in-nombre" class="mb-1 block text-xs font-medium text-ink-muted">Nombre completo *</label>
+            <input id="in-nombre" name="nombre" maxlength="200" [ngModel]="intNombre()" (ngModelChange)="intNombre.set($event)"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+          </div>
+          <div>
+            <label for="in-celular" class="mb-1 block text-xs font-medium text-ink-muted">Celular (10 dígitos) *</label>
+            <input id="in-celular" name="celular" type="tel" maxlength="20" [ngModel]="intCelular()" (ngModelChange)="intCelular.set($event)"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+          </div>
+          <div>
+            <label for="in-correo" class="mb-1 block text-xs font-medium text-ink-muted">Correo (opcional)</label>
+            <input id="in-correo" name="correo" type="email" maxlength="150" [ngModel]="intCorreo()" (ngModelChange)="intCorreo.set($event)"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+          </div>
+          <div>
+            <label for="in-pin" class="mb-1 block text-xs font-medium text-ink-muted">PIN (4 letras o números)</label>
+            <div class="flex gap-2">
+              <input id="in-pin" name="pin" maxlength="4" autocomplete="off" [disabled]="intPinNuevo()" [ngModel]="intPin()" (ngModelChange)="intPin.set($event.toUpperCase())"
+                [placeholder]="intPinNuevo() ? 'Se genera al guardar' : ''"
+                class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 font-mono text-sm uppercase tracking-widest text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50 disabled:opacity-60" />
+              <button type="button" (click)="alternarPinNuevo(ie)" data-testid="pin-nuevo"
+                class="shrink-0 rounded-lg border border-border px-3 py-2.5 text-xs font-semibold text-ink hover:border-we-primary">
+                {{ intPinNuevo() ? 'Dejar el actual' : 'Generar nuevo' }}
+              </button>
+            </div>
+            <p class="mt-1 text-xs text-ink-muted">Si lo cambias, el PIN anterior deja de servir.</p>
+          </div>
+        </div>
+        @if (errorIntegrante()) {
+          <p class="mt-3 text-sm text-red-600 dark:text-red-400" role="alert">{{ errorIntegrante() }}</p>
+        }
+        <div class="mt-5 flex justify-end gap-2.5">
+          <button type="button" (click)="integranteEnEdicion.set(null)" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cancelar</button>
+          <button type="submit" [disabled]="guardandoIntegrante()" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
+            {{ guardandoIntegrante() ? 'Guardando…' : 'Guardar' }}
+          </button>
+        </div>
+      </form>
     </div>
   }
 </div>

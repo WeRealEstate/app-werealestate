@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface VentaComisionRepository extends JpaRepository<VentaComision, Long> {
 
+    boolean existsByAsesorExternoId(Long asesorExternoId);
+
     /** La comisión del asesor principal de la venta. */
     Optional<VentaComision> findByVentaIdAndSecundariaFalse(Long ventaId);
 

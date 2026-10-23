@@ -29,4 +29,7 @@ public interface AsesorExternoRepository extends JpaRepository<AsesorExterno, Lo
     List<AsesorExterno> findByComercializadoraIdOrderByNombreAsc(Long comercializadoraId);
 
     long countByComercializadoraId(Long comercializadoraId);
+
+    /** Solo los activos: lo que se muestra como "integrantes" (los desactivados siguen contando para no poder eliminar). */
+    long countByComercializadoraIdAndActivoTrue(Long comercializadoraId);
 }

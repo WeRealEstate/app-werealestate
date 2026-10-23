@@ -21,6 +21,19 @@ export interface IntegranteComercializadora {
   fechaAlta: string;
 }
 
+export interface IntegranteRequest {
+  nombre: string;
+  celular: string;
+  correo: string;
+  /** null = no cambia; '' = generar uno nuevo; 4 letras o números = ese PIN. */
+  pin: string | null;
+}
+
+export interface QuitarIntegranteResultado {
+  resultado: 'ELIMINADO' | 'DESACTIVADO';
+  nombre: string;
+}
+
 export interface ComercializadoraRequest {
   nombre: string;
   liderId: number;

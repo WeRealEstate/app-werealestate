@@ -46,6 +46,20 @@ public class ComercializadoraController {
         return service.actualizar(id, request);
     }
 
+    @PutMapping("/{id}/integrantes/{asesorId}")
+    public ComercializadoraDtos.Integrante actualizarIntegrante(
+            @PathVariable Long id,
+            @PathVariable Long asesorId,
+            @Valid @RequestBody ComercializadoraDtos.ActualizarIntegranteRequest request) {
+        return service.actualizarIntegrante(id, asesorId, request);
+    }
+
+    @DeleteMapping("/{id}/integrantes/{asesorId}")
+    public ComercializadoraDtos.QuitarIntegranteResultado quitarIntegrante(
+            @PathVariable Long id, @PathVariable Long asesorId) {
+        return service.quitarIntegrante(id, asesorId);
+    }
+
     @PostMapping("/{id}/regenerar-enlace")
     public ComercializadoraDtos.Item regenerarEnlace(@PathVariable Long id) {
         return service.regenerarEnlace(id);

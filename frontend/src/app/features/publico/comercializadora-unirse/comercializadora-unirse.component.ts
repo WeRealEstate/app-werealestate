@@ -27,6 +27,9 @@ export class ComercializadoraUnirseComponent {
   readonly nombre = signal('');
   readonly celular = signal('');
   readonly correo = signal('');
+  /** PIN que elige el integrante (opcional: vacío = el sistema le asigna uno) y su repetición. */
+  readonly pin = signal('');
+  readonly pinRepetido = signal('');
   readonly enviando = signal(false);
   readonly error = signal<string | null>(null);
 
@@ -57,6 +60,17 @@ export class ComercializadoraUnirseComponent {
       this.error.set('El celular debe tener 10 dígitos.');
       return;
     }
+    const pin = this.pin().trim();
+    if (pin || this.pinRepetido().trim()) {
+      if (!/^[A-Za-z0-9]{4}$/.test(pin)) {
+        this.error.set('Tu PIN debe tener exactamente 4 letras o números (sin espacios ni símbolos).');
+        return;
+      }
+      if (pin.toUpperCase() !== this.pinRepetido().trim().toUpperCase()) {
+        this.error.set('Los dos PIN no coinciden. Escríbelos de nuevo.');
+        return;
+      }
+    }
     this.enviando.set(true);
     this.error.set(null);
     try {
@@ -65,6 +79,7 @@ export class ComercializadoraUnirseComponent {
           nombre: this.nombre().trim(),
           celular: this.celular().trim(),
           correo: this.correo().trim(),
+          pin,
         }),
       );
     } catch (e) {
