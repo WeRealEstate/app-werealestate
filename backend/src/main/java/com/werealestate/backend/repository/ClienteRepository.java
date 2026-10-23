@@ -59,4 +59,18 @@ public interface ClienteRepository extends JpaRepository<Cliente, Long> {
     boolean existsByCaptadoPorUsuarioId(Long usuarioId);
 
     boolean existsByCaptadoPorAsesorId(Long asesorId);
+
+    /** Al cambiar de cuenta de Drive (sin archivos subidos) las carpetas de la anterior ya no sirven. */
+    @Modifying
+    @Query("update Cliente c set c.driveCarpetaId = null where c.driveCarpetaId is not null")
+    int olvidarCarpetasDrive();
+
+    /** Quita los enlaces de expediente que puso el sistema (los que apuntan a la carpeta de Drive del cliente), para
+     * que se llenen con las carpetas nuevas. Los puestos a mano no se tocan. Llamar antes de olvidarCarpetasDrive. */
+    @Modifying
+    @Query("""
+            update Cliente c set c.expedienteDriveUrl = null
+            where c.driveCarpetaId is not null
+              and c.expedienteDriveUrl = concat('https://drive.google.com/drive/folders/', c.driveCarpetaId)""")
+    int quitarEnlacesAutomaticosDrive();
 }

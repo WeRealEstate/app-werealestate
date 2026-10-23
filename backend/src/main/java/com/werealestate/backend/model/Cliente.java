@@ -118,6 +118,10 @@ public class Cliente {
     @Column(name = "expediente_drive_url", length = 500)
     private String expedienteDriveUrl;
 
+    /** Carpeta del cliente que creó la app en Google Drive para los archivos de sus registros de venta. */
+    @Column(name = "drive_carpeta_id", length = 100)
+    private String driveCarpetaId;
+
     @Column(nullable = false)
     private boolean activo = true;
 
@@ -244,6 +248,27 @@ public class Cliente {
     public String getNotas() { return notas; }
     public UbicacionDocumento getExpedienteUbicacion() { return expedienteUbicacion; }
     public String getExpedienteDriveUrl() { return expedienteDriveUrl; }
+    public String getDriveCarpetaId() { return driveCarpetaId; }
+
+    /** Guarda la carpeta que creó la app en Drive. Si el expediente no tiene enlace, queda con el de esta carpeta y
+     * en Drive; un enlace puesto a mano se respeta (puede ser una carpeta que la app no puede usar). */
+    public void asignarCarpetaDrive(String carpetaId, String url) {
+        this.driveCarpetaId = carpetaId;
+        if (this.expedienteDriveUrl == null || this.expedienteDriveUrl.isBlank()) {
+            this.expedienteDriveUrl = url;
+            this.expedienteUbicacion = UbicacionDocumento.DRIVE;
+        }
+    }
+
+    /** La carpeta ya no existe en Drive (la borraron): la próxima subida busca o crea otra. Si el enlace del expediente
+     * era el que puso el sistema para esa carpeta ({@code urlAnterior}), también se quita para que se llene con el de la
+     * nueva y no quede apuntando a una carpeta borrada; uno puesto a mano no se toca. */
+    public void olvidarCarpetaDrive(String urlAnterior) {
+        if (urlAnterior != null && urlAnterior.equals(this.expedienteDriveUrl)) {
+            this.expedienteDriveUrl = null;
+        }
+        this.driveCarpetaId = null;
+    }
     public boolean isActivo() { return activo; }
     public void setActivo(boolean activo) { this.activo = activo; }
     public LocalDateTime getFechaCreacion() { return fechaCreacion; }

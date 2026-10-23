@@ -15,6 +15,11 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.0.0', fecha: '2026-10-23', cambios: [
+    "We Forms: el administrador puede conectar una cuenta de Google Drive y elegir, con el selector de Google, la carpeta donde van los expedientes. Desde entonces, los archivos que se suben al registrar una venta (INE, comprobantes) se guardan ahí, con una carpeta por cliente ('#0012 · Nombre del cliente') y cada archivo con su número de venta ('Venta #0148 · INE frente.jpg'). Los de registros anteriores también se suben solos.",
+    "Ya subido a Drive, el archivo deja de guardarse en el servidor; desde el registro de venta se sigue abriendo igual. Si Drive no responde o se desconecta la cuenta, los archivos esperan en el servidor y no se pierden.",
+    "Clientes: si el expediente no tiene enlace, la 'Carpeta de Drive' se llena sola con la carpeta del cliente y la ubicación queda en Drive. Un enlace puesto a mano no se cambia.",
+  ] },
   { version: '10.4.1', fecha: '2026-10-23', cambios: [
     "Lotes: nuevo estado 'Reservado por We', para los lotes que la empresa se guarda. Solo Admin y Administración lo ven y lo pueden poner o quitar (con nota), en el plano, en Lotes y en las cifras del inicio. Para asesores, planos públicos y cotizador público el lote aparece como Vendido: lo oculta el servidor, y en el historial el movimiento sale sin nota, cliente ni quién lo hizo. Un lote reservado no se puede apartar ni cotizar.",
   ] },

@@ -11,6 +11,8 @@ skills-lock.json
 /backend/uploads/
 # Archivos privados (documentos de clientes de We Forms, tickets de gastos): nunca van al repositorio
 /backend/uploads-privados/
+# Credenciales locales de Google Drive (client secret): nunca van al repositorio
+/backend/*.local.properties
 
 # OS / editor
 .DS_Store

@@ -1,0 +1,126 @@
+<section class="@container mt-6 rounded-xl border border-border bg-surface p-4 shadow-sm" data-testid="drive-conexion" aria-labelledby="drive-titulo">
+  <div class="flex flex-col gap-3 @4xl:flex-row @4xl:items-start @4xl:justify-between">
+    <div class="flex min-w-0 flex-1 items-start gap-3">
+      <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-we-primary/10 text-we-primary dark:bg-we-primary/25 dark:text-we-blue-light">
+        <svg lucideHardDrive [size]="18" aria-hidden="true"></svg>
+      </span>
+      <div class="min-w-0">
+        <h2 id="drive-titulo" class="text-sm font-semibold text-ink">Google Drive</h2>
+
+        @if (cargando()) {
+          <p class="mt-0.5 text-sm text-ink-muted">Revisando la conexión…</p>
+        } @else if (errorCarga()) {
+          <p class="mt-0.5 text-sm text-ink-muted">No se pudo revisar la conexión.</p>
+        } @else if (estado(); as e) {
+          @if (!e.configurado) {
+            <p class="mt-0.5 text-sm text-ink-muted">
+              Falta configurar las credenciales de Google en el servidor. Mientras tanto, los archivos de los registros de
+              venta se guardan en el servidor.
+            </p>
+          } @else if (!e.conectado) {
+            <p class="mt-0.5 text-sm text-ink-muted">
+              Conecta la cuenta de Google para guardar los archivos de los registros de venta en una carpeta por cliente.
+              @if (e.pendientes > 0) {
+                Hay <strong class="text-ink">{{ e.pendientes }}</strong> {{ e.pendientes === 1 ? 'archivo esperando' : 'archivos esperando' }} en el servidor.
+              }
+            </p>
+          } @else {
+            <p class="mt-0.5 text-sm text-ink-muted">
+              Conectado como <strong class="text-ink">{{ e.cuenta }}</strong>
+              @if (e.conectadoEn) { <span class="ml-1">desde el {{ e.conectadoEn | date: 'd MMM y' }}</span> }
+            </p>
+            @if (e.carpetaNombre) {
+              <p class="mt-1 text-sm text-ink-muted">
+                Expedientes en <strong class="text-ink" data-testid="drive-carpeta">{{ e.carpetaNombre }}</strong>, una carpeta por cliente.
+              </p>
+              <p class="mt-1 text-sm text-ink-muted" data-testid="drive-conteos">
+                <strong class="text-ink">{{ e.subidos }}</strong> en Drive
+                · <strong class="text-ink">{{ e.pendientes }}</strong> {{ e.pendientes === 1 ? 'pendiente' : 'pendientes' }}
+                @if (e.fallidos > 0) {
+                  · <strong class="text-red-600 dark:text-red-400">{{ e.fallidos }}</strong> con error
+                }
+              </p>
+            } @else {
+              <p class="mt-1 text-sm font-medium text-amber-700 dark:text-amber-300" data-testid="drive-sin-carpeta">
+                Falta elegir la carpeta de Drive donde van los expedientes.
+                @if (e.pendientes > 0) {
+                  Mientras, {{ e.pendientes }} {{ e.pendientes === 1 ? 'archivo espera' : 'archivos esperan' }} en el servidor.
+                }
+              </p>
+            }
+            @if (!e.selectorConfigurado) {
+              <p class="mt-1 text-xs text-ink-muted">Para elegir la carpeta falta la clave del selector de Google en el servidor (GOOGLE_PICKER_API_KEY).</p>
+            }
+          }
+          @if (e.ultimoError) {
+            <p class="mt-1.5 text-xs text-red-600 dark:text-red-400" role="alert">
+              {{ e.ultimoError }}
+              @if (e.ultimoErrorEn) { <span class="text-ink-muted">({{ e.ultimoErrorEn | date: 'd MMM, HH:mm' }})</span> }
+            </p>
+          }
+        }
+      </div>
+    </div>
+
+    @if (estado(); as e) {
+      @if (e.configurado) {
+        <div class="flex shrink-0 flex-wrap items-center gap-2 @4xl:justify-end">
+          @if (!e.conectado) {
+            <button
+              type="button"
+              (click)="conectar()"
+              [disabled]="trabajando()"
+              data-testid="drive-conectar"
+              class="inline-flex min-h-[40px] items-center justify-center rounded-lg bg-we-primary px-4 py-2 text-sm font-semibold text-white
+                     hover:bg-we-primary/90 active:scale-[0.97] transition disabled:opacity-60"
+            >
+              {{ trabajando() ? 'Abriendo Google…' : 'Conectar Google Drive' }}
+            </button>
+          } @else {
+            @if (e.selectorConfigurado) {
+              <button
+                type="button"
+                (click)="elegirCarpeta()"
+                [disabled]="trabajando()"
+                data-testid="drive-elegir-carpeta"
+                [class]="e.carpetaNombre
+                  ? 'boton-secundario px-3.5 font-medium text-ink'
+                  : 'bg-we-primary px-4 font-semibold text-white hover:bg-we-primary/90'"
+                class="inline-flex min-h-[40px] items-center rounded-lg py-2 text-sm active:scale-[0.97] transition disabled:opacity-60"
+              >
+                {{ e.carpetaNombre ? 'Cambiar carpeta' : 'Elegir carpeta' }}
+              </button>
+            }
+            @if (e.carpetaUrl) {
+              <a
+                [href]="e.carpetaUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="boton-secundario inline-flex min-h-[40px] items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium text-ink active:scale-[0.97] transition"
+              >
+                <svg lucideExternalLink [size]="14" aria-hidden="true"></svg>
+                Abrir carpeta
+              </a>
+            }
+            <!-- Sin carpeta elegida las subidas están en pausa: no se ofrece "Subir ahora" ni "Reintentar". -->
+            @if (e.carpetaNombre && e.fallidos > 0) {
+              <button type="button" (click)="reintentar()" [disabled]="trabajando()"
+                class="boton-secundario inline-flex min-h-[40px] items-center rounded-lg px-3.5 py-2 text-sm font-medium text-ink active:scale-[0.97] transition disabled:opacity-60">
+                Reintentar
+              </button>
+            } @else if (e.carpetaNombre && e.pendientes > 0) {
+              <button type="button" (click)="subirAhora()" [disabled]="trabajando()"
+                class="boton-secundario inline-flex min-h-[40px] items-center rounded-lg px-3.5 py-2 text-sm font-medium text-ink active:scale-[0.97] transition disabled:opacity-60">
+                {{ trabajando() ? 'Subiendo…' : 'Subir ahora' }}
+              </button>
+            }
+            <button type="button" (click)="desconectar()" [disabled]="trabajando()"
+              class="inline-flex min-h-[40px] items-center rounded-lg px-3 py-2 text-sm font-medium text-ink-muted hover:text-red-600 transition disabled:opacity-60">
+              Desconectar
+            </button>
+          }
+        </div>
+      }
+    }
+  </div>
+</section>

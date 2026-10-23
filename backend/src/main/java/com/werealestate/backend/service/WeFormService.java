@@ -64,6 +64,7 @@ public class WeFormService {
     private final WeFormRespuestaItemRepository itemRepository;
     private final DesarrolloRepository desarrolloRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final DriveService driveService;
     private final String uploadsPrivadosDir;
 
     public WeFormService(
@@ -73,6 +74,7 @@ public class WeFormService {
             WeFormRespuestaItemRepository itemRepository,
             DesarrolloRepository desarrolloRepository,
             CurrentUserProvider currentUserProvider,
+            DriveService driveService,
             @Value("${app.uploads-privados.dir:uploads-privados}") String uploadsPrivadosDir) {
         this.formRepository = formRepository;
         this.preguntaRepository = preguntaRepository;
@@ -80,6 +82,7 @@ public class WeFormService {
         this.itemRepository = itemRepository;
         this.desarrolloRepository = desarrolloRepository;
         this.currentUserProvider = currentUserProvider;
+        this.driveService = driveService;
         this.uploadsPrivadosDir = uploadsPrivadosDir;
     }
 
@@ -281,6 +284,11 @@ public class WeFormService {
                 .filter(i -> i.getRespuesta().getId().equals(respuestaId))
                 .filter(i -> i.getArchivoExtension() != null)
                 .orElseThrow(() -> new ResourceNotFoundException("Archivo no encontrado"));
+        // Ya subido a Google Drive, el servidor no guarda copia: se lee de allá (ver DriveService).
+        if (item.getDriveArchivoId() != null) {
+            byte[] bytes = driveService.descargar(item.getDriveArchivoId());
+            return ResponseEntity.ok().contentType(mediaTypeDe(item.getArchivoExtension())).body(bytes);
+        }
         try {
             byte[] bytes = Files.readAllBytes(rutaArchivo(respuestaId, itemId, item.getArchivoExtension()));
             return ResponseEntity.ok().contentType(mediaTypeDe(item.getArchivoExtension())).body(bytes);
@@ -398,10 +406,15 @@ public class WeFormService {
     }
 
     Path rutaArchivo(Long respuestaId, Long itemId, String extension) {
+        return rutaArchivo(uploadsPrivadosDir, respuestaId, itemId, extension);
+    }
+
+    /** Dónde vive el archivo en el servidor mientras no se haya subido a Google Drive (ver DriveService). */
+    static Path rutaArchivo(String uploadsPrivadosDir, Long respuestaId, Long itemId, String extension) {
         return Path.of(uploadsPrivadosDir, "we-forms", "resp-" + respuestaId + "-" + itemId + "." + extension);
     }
 
-    private static MediaType mediaTypeDe(String extension) {
+    static MediaType mediaTypeDe(String extension) {
         return switch (extension) {
             case "png" -> MediaType.IMAGE_PNG;
             case "jpg" -> MediaType.IMAGE_JPEG;

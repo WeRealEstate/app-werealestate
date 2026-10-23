@@ -1,24 +1,30 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Desarrollo } from '../../../core/models/lead.model';
 import { ResumenGeneralForm, WeFormLista } from '../../../core/models/we-form.model';
+import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { WeFormsService } from '../../../core/services/we-forms.service';
 import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
+import { DriveConexionComponent } from '../drive-conexion/drive-conexion.component';
 
 /** We Forms: lista de formularios (registros de venta), cada uno con su link público. */
 @Component({
   selector: 'app-we-forms-list',
   standalone: true,
-  imports: [FormsModule, RouterLink, WeLoaderComponent],
+  imports: [FormsModule, RouterLink, WeLoaderComponent, DriveConexionComponent],
   templateUrl: './we-forms-list.component.html',
 })
 export class WeFormsListComponent {
   private readonly service = inject(WeFormsService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
+  private readonly auth = inject(AuthService);
+
+  /** La conexión con Google Drive (dónde se guardan los archivos de los registros) solo la maneja el admin. */
+  readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
 
   readonly formularios = signal<WeFormLista[]>([]);
   readonly resumen = signal<ResumenGeneralForm | null>(null);
