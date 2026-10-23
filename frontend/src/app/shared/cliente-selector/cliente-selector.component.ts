@@ -1,7 +1,7 @@
 import { Component, OnDestroy, inject, model, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideSearch, LucideUserPlus, LucideX } from '@lucide/angular';
-import { Cliente, ClienteLista } from '../../core/models/cliente.model';
+import { Cliente, ClienteLista, etiquetaNumeros } from '../../core/models/cliente.model';
 import { ClientesService } from '../../core/services/clientes.service';
 import { ClienteFormModalComponent } from '../cliente-form-modal/cliente-form-modal.component';
 
@@ -20,6 +20,7 @@ export class ClienteSelectorComponent implements OnDestroy {
 
   readonly texto = signal('');
   readonly resultados = signal<ClienteLista[]>([]);
+  readonly etiquetaNumeros = etiquetaNumeros;
   readonly abierto = signal(false);
   readonly buscando = signal(false);
   readonly registrando = signal(false);
@@ -91,6 +92,7 @@ export class ClienteSelectorComponent implements OnDestroy {
     return {
       id: c.id,
       numero: c.numero,
+      numeros: c.numeros ?? [],
       nombreCompleto: c.nombreCompleto,
       telefono: c.telefono,
       correo: c.correo,

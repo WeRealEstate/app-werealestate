@@ -4,6 +4,7 @@ import com.werealestate.backend.dto.ClienteDto;
 import com.werealestate.backend.dto.ClienteListaDto;
 import com.werealestate.backend.dto.ClienteRequest;
 import com.werealestate.backend.dto.NumeracionClienteDto;
+import com.werealestate.backend.dto.NumeroClienteDto;
 import com.werealestate.backend.exception.ClienteDuplicadoException;
 import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
@@ -68,6 +69,7 @@ public class ClienteService {
     private final UsuarioRepository usuarioRepository;
     private final AsesorExternoRepository asesorExternoRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final ClienteNumeracionService numeracion;
 
     public ClienteService(
             ClienteRepository clienteRepository,
@@ -78,7 +80,8 @@ public class ClienteService {
             VentaComisionRepository comisionRepository,
             UsuarioRepository usuarioRepository,
             AsesorExternoRepository asesorExternoRepository,
-            CurrentUserProvider currentUserProvider) {
+            CurrentUserProvider currentUserProvider,
+            ClienteNumeracionService numeracion) {
         this.clienteRepository = clienteRepository;
         this.ventaRepository = ventaRepository;
         this.ventaLoteRepository = ventaLoteRepository;
@@ -88,6 +91,7 @@ public class ClienteService {
         this.usuarioRepository = usuarioRepository;
         this.asesorExternoRepository = asesorExternoRepository;
         this.currentUserProvider = currentUserProvider;
+        this.numeracion = numeracion;
     }
 
     // ---------------------------------------------------------------- consultas
@@ -99,8 +103,8 @@ public class ClienteService {
         return clienteRepository.findAllByOrderByNombreAscApellidoPaternoAsc().stream().map(r::lista).toList();
     }
 
-    /** Hasta 20 clientes activos que coinciden con el texto (nombre, teléfono o CURP): para elegir el
-     * cliente de una venta. Sin texto devuelve los primeros por orden alfabético. */
+    /** Hasta 20 clientes activos que coinciden con el texto (número "S-40"/"N-12"/"40", nombre, teléfono o CURP):
+     * para elegir el cliente de una venta. Sin texto devuelve los primeros por orden alfabético. */
     @Transactional(readOnly = true)
     public List<ClienteListaDto> buscar(String q) {
         exigirAdminOLider();
@@ -109,7 +113,7 @@ public class ClienteService {
         return clienteRepository.findAllByOrderByNombreAscApellidoPaternoAsc().stream()
                 .filter(Cliente::isActivo)
                 .filter(c -> buscado.isEmpty()
-                        || buscado.equals(String.valueOf(c.getNumero()))
+                        || ClienteNumeracionService.coincide(r.numerosDe(c.getId()), q)
                         || normalizar(c.nombreCompleto()).contains(buscado)
                         || (c.getTelefono() != null && c.getTelefono().replaceAll("\\D", "").contains(buscado.replaceAll("\\D", "")) && !buscado.replaceAll("\\D", "").isEmpty())
                         || (c.getCurp() != null && c.getCurp().toLowerCase(Locale.ROOT).contains(buscado)))
@@ -126,6 +130,8 @@ public class ClienteService {
 
     // ---------------------------------------------------------------- escritura
 
+    /** Registra un cliente sin venta: todavía no tiene número de cliente (lo recibe con su primera venta en SAMAI o
+     * Nanuu, ver ClienteNumeracionService). El consecutivo de siempre se sigue llenando como respaldo. */
     public ClienteDto crear(ClienteRequest r) {
         exigirAdminOLider();
         Cliente c = new Cliente(r.nombre().trim(), r.apellidoPaterno().trim(), limpio(r.apellidoMaterno()));
@@ -134,55 +140,28 @@ public class ClienteService {
         return detalle(clienteRepository.save(c));
     }
 
-    /** Cambia el número de un cliente. Si otro ya lo tiene, ese y los consecutivos que le siguen se recorren
-     * +1 (se detiene en el primer hueco), igual que el número de venta; el lugar que deja queda libre. */
-    public ClienteDto cambiarNumero(Long id, Long numero) {
+    /** Cambia el número de un cliente en un desarrollo (se mueve junto con quienes lo comparten). Si otro ya lo tiene,
+     * ese y los consecutivos que le siguen se recorren +1 (ver ClienteNumeracionService.cambiarNumero). */
+    public ClienteDto cambiarNumero(Long id, Long desarrolloId, Long numero) {
         exigirAdminOLider();
         if (numero == null || numero < 1) throw new ValidationException("El número de cliente debe ser 1 o mayor");
         Cliente c = obtenerEntidad(id);
-        long actual = c.getNumero();
-        if (numero == actual) return detalle(c);
-        clienteRepository.bloquearNumeracion();
-        long hasta = finDeLaRacha(numero, actual);
-        if (hasta >= numero) {
-            clienteRepository.apartarDeSuLugar(id);
-            clienteRepository.negarRango(numero, hasta, id);
-            clienteRepository.subirNegados(-hasta, -numero);
-        }
-        clienteRepository.fijarNumero(id, numero);
+        numeracion.cambiarNumero(c.getId(), desarrolloId, numero);
         return detalle(obtenerEntidad(id));
     }
 
-    /** Para el aviso previo: el siguiente número automático y, si el consultado lo tiene otro cliente
+    /** Para el aviso previo: el siguiente número automático del desarrollo y, si el consultado lo tiene otro cliente
      * (distinto de excluirId), cuál es y cuántos se recorrerían. */
     @Transactional(readOnly = true)
-    public NumeracionClienteDto consultarNumeracion(Long numero, Long excluirId) {
+    public NumeracionClienteDto consultarNumeracion(Long desarrolloId, Long numero, Long excluirId) {
         exigirAdminOLider();
-        long siguiente = clienteRepository.maxNumero() + 1;
-        if (numero == null || numero < 1) return new NumeracionClienteDto(siguiente, null, null, 0);
-        Cliente ocupante = clienteRepository.findByNumero(numero).orElse(null);
-        if (ocupante == null || ocupante.getId().equals(excluirId)) {
-            return new NumeracionClienteDto(siguiente, null, null, 0);
-        }
-        Long ignorado = excluirId == null ? null : clienteRepository.findById(excluirId).map(Cliente::getNumero).orElse(null);
-        long fin = finDeLaRacha(numero, ignorado == null ? -1L : ignorado);
-        return new NumeracionClienteDto(siguiente, ocupante.getId(), ocupante.nombreCompleto(), (int) (fin - numero + 1));
+        return numeracion.consultar(desarrolloId, numero, excluirId);
     }
 
     /** El número de un cliente nuevo: el mayor en uso + 1. Con candado para que dos altas simultáneas no repitan. */
     private long siguienteNumero() {
         clienteRepository.bloquearNumeracion();
         return clienteRepository.maxNumero() + 1;
-    }
-
-    /** Último número de la racha de consecutivos que empieza en "desde" (sin contar el que se está moviendo,
-     * que se va de su lugar); desde - 1 si "desde" está libre. */
-    private long finDeLaRacha(long desde, long numeroIgnorado) {
-        java.util.Set<Long> enUso = new java.util.HashSet<>(clienteRepository.numerosDesde(desde));
-        enUso.remove(numeroIgnorado);
-        long fin = desde - 1;
-        while (enUso.contains(fin + 1)) fin++;
-        return fin;
     }
 
     /** El cliente de un registro de venta de We Forms (sin sesión: ya se validó el PIN del asesor). La CURP manda:
@@ -391,6 +370,7 @@ public class ClienteService {
                     porNombre.put(clave, c);
                 }
                 v.ligarCliente(c);
+                numeracion.asignarPorVenta(v);
             }
         } catch (RuntimeException e) {
             log.warn("No se pudieron crear los clientes de las ventas existentes", e);
@@ -419,6 +399,12 @@ public class ClienteService {
         private final Map<Long, BigDecimal> abonadoPorVenta = new HashMap<>();
         /** "clienteId:ventaId" de las ventas en las que el cliente es copropietario (no el principal). */
         private final java.util.Set<String> copropiedades = new java.util.HashSet<>();
+        /** Número de cada cliente en cada desarrollo (S-40, N-12). */
+        private final Map<Long, List<NumeroClienteDto>> numeros = numeracion.todos();
+
+        List<NumeroClienteDto> numerosDe(Long clienteId) {
+            return numeros.getOrDefault(clienteId, List.of());
+        }
 
         Resumenes() {
             for (Venta v : ventaRepository.findAll()) {
@@ -468,6 +454,7 @@ public class ClienteService {
             return new ClienteListaDto(
                     c.getId(),
                     c.getNumero(),
+                    numerosDe(c.getId()),
                     c.nombreCompleto(),
                     c.getTelefono(),
                     c.getCorreo(),
@@ -480,7 +467,7 @@ public class ClienteService {
     }
 
     private ClienteDto detalle(Cliente c) {
-        return ClienteDto.from(c, new Resumenes().ventasDe(c.getId()));
+        return ClienteDto.from(c, new Resumenes().ventasDe(c.getId()), numeracion.numerosDe(c.getId()));
     }
 
     public Cliente obtenerEntidad(Long id) {

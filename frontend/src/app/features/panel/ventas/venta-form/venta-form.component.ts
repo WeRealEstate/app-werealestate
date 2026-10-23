@@ -298,7 +298,7 @@ export class VentaFormComponent {
     if (clienteId) {
       this.clientesService.obtener(clienteId).then((c) =>
         this.clienteElegido.set({
-          id: c.id, nombreCompleto: c.nombreCompleto, telefono: c.telefono, correo: c.correo, activo: c.activo,
+          id: c.id, numeros: c.numeros ?? [], nombreCompleto: c.nombreCompleto, telefono: c.telefono, correo: c.correo, activo: c.activo,
           datosIncompletos: c.datosIncompletos, compras: c.compras,
           desarrollos: [...new Set(c.ventas.flatMap((v) => v.desarrollos))], saldoPendiente: c.saldoPendiente,
         }),

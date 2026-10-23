@@ -19,11 +19,30 @@ export const FUENTE_CLIENTE_LABELS: Record<FuenteCliente, string> = {
   PRECONTRATO: 'Registro de venta We Forms',
 };
 
+/** El número de un cliente en un desarrollo: "S-40" (SAMAI) o "N-12" (Aldea Nanuu). Lo recibe con su primera venta
+ * ahí; los copropietarios comparten el del titular. */
+export interface NumeroCliente {
+  desarrolloId: number;
+  desarrollo: string;
+  /** "S" o "N". */
+  prefijo: string;
+  numero: number;
+  /** Cómo se muestra: "S-40". */
+  etiqueta: string;
+}
+
+/** "S-40 · N-12" (SAMAI primero); '' si aún no tiene número (no ha comprado). */
+export function etiquetaNumeros(numeros: NumeroCliente[] | null | undefined): string {
+  return (numeros ?? []).map((n) => n.etiqueta).join(' · ');
+}
+
 /** Una fila de la lista de clientes y del buscador de la venta. */
 export interface ClienteLista {
   id: number;
-  /** Número de cliente (consecutivo). */
+  /** Consecutivo de siempre: ya no se muestra (queda de respaldo). */
   numero?: number;
+  /** Su número en cada desarrollo donde compró, SAMAI primero; vacío si aún no compra. */
+  numeros: NumeroCliente[];
   nombreCompleto: string;
   telefono: string | null;
   correo: string | null;
@@ -60,7 +79,10 @@ export interface ClienteVenta {
 
 export interface Cliente {
   id: number;
+  /** Consecutivo de siempre: ya no se muestra (queda de respaldo). */
   numero: number;
+  /** Su número en cada desarrollo donde compró (S-40, N-12), SAMAI primero. */
+  numeros: NumeroCliente[];
   nombre: string;
   apellidoPaterno: string;
   apellidoMaterno: string | null;

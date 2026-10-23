@@ -15,6 +15,11 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.2.0', fecha: '2026-10-23', cambios: [
+    "Clientes: el número de cliente ahora es por desarrollo, con su propia numeración en SAMAI (S-1, S-2…) y en Aldea Nanuu (N-1, N-2…). Un cliente que compró en los dos tiene uno en cada uno (por ejemplo 'S-40 · N-12').",
+    "El número se recibe con la primera venta en ese desarrollo; registrar un cliente sin venta ya no le da número. Los copropietarios toman el mismo número del titular, y quien ya tiene número en un desarrollo lo conserva aunque vuelva a comprar.",
+    "Los clientes que ya existían se numeraron por desarrollo en el orden de su número anterior. La lista ordena SAMAI primero y luego Nanuu, se puede buscar por 'S-40' o 'N-12', y en la ficha se edita cada número por separado.",
+  ] },
   { version: '11.1.0', fecha: '2026-10-23', cambios: [
     "Nuevo apartado 'Comercializadoras' (menú, debajo de Asesores externos): se crea una comercializadora con su líder (un asesor externo) y se copia su enlace. La líder lo comparte con su equipo de ventas: cada integrante escribe su nombre, celular y correo, entra directo al equipo de la líder en Comunidades We y ve su PIN de asesor (el mismo con el que entra a los planos y a Registrar venta). Se puede ver quién se unió, generar un enlace nuevo si se filtra o desactivar la comercializadora.",
     "We Forms: nueva sección 'Altas de comercializadoras' con el enlace de cada una y cuántos integrantes se han unido.",

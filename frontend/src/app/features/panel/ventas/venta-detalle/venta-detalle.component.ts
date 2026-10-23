@@ -221,7 +221,7 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
     const v = this.venta();
     if (!v) return;
     this.clienteEdicion.set(
-      v.clienteId === null ? null : { id: v.clienteId, nombreCompleto: v.cliente, telefono: null, correo: null, activo: true, datosIncompletos: false, compras: 0, desarrollos: [], saldoPendiente: 0 },
+      v.clienteId === null ? null : { id: v.clienteId, numeros: [], nombreCompleto: v.cliente, telefono: null, correo: null, activo: true, datosIncompletos: false, compras: 0, desarrollos: [], saldoPendiente: 0 },
     );
     this.edicionForm.reset({
       asesor: asesorSeleccionDe(v.asesor),
@@ -236,7 +236,7 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
       notas: v.notas ?? '',
     });
     this.copropietariosEdicion.set(
-      v.copropietarios.map((c) => ({ id: c.id, nombreCompleto: c.nombreCompleto, telefono: null, correo: null, activo: true, datosIncompletos: false, compras: 0, desarrollos: [], saldoPendiente: 0 })),
+      v.copropietarios.map((c) => ({ id: c.id, numeros: [], nombreCompleto: c.nombreCompleto, telefono: null, correo: null, activo: true, datosIncompletos: false, compras: 0, desarrollos: [], saldoPendiente: 0 })),
     );
     this.edicionPrimeraMensualidadMesVenta.set(v.primeraMensualidadMesVenta);
     this.errorEdicion.set(null);

@@ -43,12 +43,14 @@ public class ClienteController {
         return clienteService.buscar(q);
     }
 
-    /** Siguiente número de cliente automático y, si "numero" ya lo tiene otro cliente (distinto de excluirId),
-     * cuál es y cuántos se recorrerían: para avisarlo antes de guardar. */
+    /** Siguiente número de cliente automático de ese desarrollo y, si "numero" ya lo tiene otro cliente (distinto de
+     * excluirId), cuál es y cuántos se recorrerían: para avisarlo antes de guardar. */
     @GetMapping("/numeracion")
     public NumeracionClienteDto numeracion(
-            @RequestParam(required = false) Long numero, @RequestParam(required = false) Long excluirId) {
-        return clienteService.consultarNumeracion(numero, excluirId);
+            @RequestParam Long desarrolloId,
+            @RequestParam(required = false) Long numero,
+            @RequestParam(required = false) Long excluirId) {
+        return clienteService.consultarNumeracion(desarrolloId, numero, excluirId);
     }
 
     @GetMapping("/{id}")
@@ -70,7 +72,7 @@ public class ClienteController {
 
     @PutMapping("/{id}/numero")
     public ClienteDto cambiarNumero(@PathVariable Long id, @Valid @RequestBody ClienteNumeroRequest request) {
-        return clienteService.cambiarNumero(id, request.numero());
+        return clienteService.cambiarNumero(id, request.desarrolloId(), request.numero());
     }
 
     @PutMapping("/{id}")

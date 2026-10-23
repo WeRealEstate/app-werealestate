@@ -23,9 +23,10 @@ export class ClientesService {
     return firstValueFrom(this.http.get<Cliente>(`${this.baseUrl}/${id}`));
   }
 
-  /** Siguiente número de cliente y, si "numero" ya lo tiene otro cliente, quién y cuántos se recorrerían. */
-  numeracion(numero: number | null, excluirId: number): Promise<NumeracionCliente> {
-    let params = new HttpParams().set('excluirId', excluirId);
+  /** Siguiente número de cliente de ese desarrollo y, si "numero" ya lo tiene otro cliente, quién y cuántos se
+   * recorrerían. */
+  numeracion(desarrolloId: number, numero: number | null, excluirId: number): Promise<NumeracionCliente> {
+    let params = new HttpParams().set('desarrolloId', desarrolloId).set('excluirId', excluirId);
     if (numero !== null) params = params.set('numero', numero);
     return firstValueFrom(this.http.get<NumeracionCliente>(`${this.baseUrl}/numeracion`, { params }));
   }
@@ -36,8 +37,9 @@ export class ClientesService {
     return firstValueFrom(this.http.put<Venta>(`${this.baseUrl}/ventas/${ventaId}/numero-contrato`, { numeroContrato }));
   }
 
-  cambiarNumero(id: number, numero: number): Promise<Cliente> {
-    return firstValueFrom(this.http.put<Cliente>(`${this.baseUrl}/${id}/numero`, { numero }));
+  /** Cambia el número del cliente en un desarrollo (se mueve junto con quienes lo comparten). */
+  cambiarNumero(id: number, desarrolloId: number, numero: number): Promise<Cliente> {
+    return firstValueFrom(this.http.put<Cliente>(`${this.baseUrl}/${id}/numero`, { desarrolloId, numero }));
   }
 
   crear(request: ClienteRequest): Promise<Cliente> {

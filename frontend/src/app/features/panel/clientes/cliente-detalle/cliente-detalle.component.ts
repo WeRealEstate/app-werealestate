@@ -4,7 +4,14 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LucideExternalLink, LucidePencil } from '@lucide/angular';
 import { UBICACION_DOCUMENTO_LABELS } from '../../../../core/models/asesor-externo.model';
-import { Cliente, ClienteVenta, ESTADO_CIVIL_LABELS, FUENTE_CLIENTE_LABELS, NumeracionCliente } from '../../../../core/models/cliente.model';
+import {
+  Cliente,
+  ClienteVenta,
+  ESTADO_CIVIL_LABELS,
+  FUENTE_CLIENTE_LABELS,
+  NumeracionCliente,
+  NumeroCliente,
+} from '../../../../core/models/cliente.model';
 import { ClientesService } from '../../../../core/services/clientes.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { ClienteFormModalComponent } from '../../../../shared/cliente-form-modal/cliente-form-modal.component';
@@ -24,16 +31,19 @@ export class ClienteDetalleComponent {
   readonly error = signal<string | null>(null);
   readonly editando = signal(false);
 
-  // --- Cambiar el número de cliente (misma lógica que el número de venta: si otro ya lo tiene, se recorre +1).
+  // --- Cambiar su número en un desarrollo (S-… o N-…; misma lógica que el número de venta: si otro ya lo tiene, se
+  // recorre +1). Se mueve junto con quienes lo comparten (el titular y los copropietarios de esa compra).
   private readonly toast = inject(ToastService);
   readonly cambiandoNumero = signal(false);
+  readonly numeroEditando = signal<NumeroCliente | null>(null);
   readonly numeroNuevo = signal<number | null>(null);
   readonly numeracion = signal<NumeracionCliente | null>(null);
   readonly guardandoNumero = signal(false);
   readonly errorNumero = signal<string | null>(null);
 
-  abrirCambioNumero(c: Cliente): void {
-    this.numeroNuevo.set(c.numero);
+  abrirCambioNumero(n: NumeroCliente): void {
+    this.numeroEditando.set(n);
+    this.numeroNuevo.set(n.numero);
     this.numeracion.set(null);
     this.errorNumero.set(null);
     this.cambiandoNumero.set(true);
@@ -49,9 +59,10 @@ export class ClienteDetalleComponent {
     this.numeroNuevo.set(numero);
     this.errorNumero.set(null);
     this.numeracion.set(null);
-    if (numero === null) return;
+    const editando = this.numeroEditando();
+    if (numero === null || !editando) return;
     try {
-      const info = await this.clientesService.numeracion(numero, this.id);
+      const info = await this.clientesService.numeracion(editando.desarrolloId, numero, this.id);
       // Solo vale si el asesor no siguió escribiendo mientras tanto.
       if (this.numeroNuevo() === numero) this.numeracion.set(info);
     } catch {
@@ -61,18 +72,18 @@ export class ClienteDetalleComponent {
 
   async guardarNumero(): Promise<void> {
     const numero = this.numeroNuevo();
-    const actual = this.cliente();
-    if (numero === null || !actual || this.guardandoNumero()) return;
-    if (numero === actual.numero) {
+    const editando = this.numeroEditando();
+    if (numero === null || !editando || this.guardandoNumero()) return;
+    if (numero === editando.numero) {
       this.cambiandoNumero.set(false);
       return;
     }
     this.guardandoNumero.set(true);
     this.errorNumero.set(null);
     try {
-      this.cliente.set(await this.clientesService.cambiarNumero(this.id, numero));
+      this.cliente.set(await this.clientesService.cambiarNumero(this.id, editando.desarrolloId, numero));
       this.cambiandoNumero.set(false);
-      this.toast.success(`Ahora es el cliente n.º ${numero}.`);
+      this.toast.success(`Ahora es el cliente ${editando.prefijo}-${numero} en ${editando.desarrollo}.`);
     } catch (e) {
       this.errorNumero.set(
         e instanceof HttpErrorResponse && typeof e.error?.message === 'string' ? e.error.message : 'No se pudo cambiar el número.',

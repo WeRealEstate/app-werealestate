@@ -13,7 +13,9 @@ import java.util.List;
 /** Ficha completa de un cliente, con el resumen y el historial de sus compras. */
 public record ClienteDto(
         Long id,
+        // El consecutivo de siempre (respaldo, ya no se muestra) y su número en cada desarrollo (S-40, N-12).
         Long numero,
+        List<NumeroClienteDto> numeros,
         String nombre,
         String apellidoPaterno,
         String apellidoMaterno,
@@ -70,7 +72,7 @@ public record ClienteDto(
             String numeroContrato) {
     }
 
-    public static ClienteDto from(Cliente c, List<ClienteVentaDto> ventas) {
+    public static ClienteDto from(Cliente c, List<ClienteVentaDto> ventas, List<NumeroClienteDto> numeros) {
         String tipo = null;
         Long id = null;
         String nombre = null;
@@ -88,6 +90,7 @@ public record ClienteDto(
         return new ClienteDto(
                 c.getId(),
                 c.getNumero(),
+                numeros,
                 c.getNombre(),
                 c.getApellidoPaterno(),
                 c.getApellidoMaterno(),

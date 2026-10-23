@@ -88,6 +88,7 @@ public class VentaService {
     private final ReciboVentaHistorialRepository reciboHistorialRepository;
     private final ComisionService comisionService;
     private final ClienteService clienteService;
+    private final ClienteNumeracionService clienteNumeracionService;
     private final VentaCopropietarioRepository copropietarioRepository;
     private final com.werealestate.backend.repository.WeFormRespuestaRepository weFormRespuestaRepository;
     private final PasswordEncoder passwordEncoder;
@@ -106,6 +107,7 @@ public class VentaService {
             ReciboVentaHistorialRepository reciboHistorialRepository,
             ComisionService comisionService,
             ClienteService clienteService,
+            ClienteNumeracionService clienteNumeracionService,
             VentaCopropietarioRepository copropietarioRepository,
             com.werealestate.backend.repository.WeFormRespuestaRepository weFormRespuestaRepository,
             PasswordEncoder passwordEncoder,
@@ -122,6 +124,7 @@ public class VentaService {
         this.reciboHistorialRepository = reciboHistorialRepository;
         this.comisionService = comisionService;
         this.clienteService = clienteService;
+        this.clienteNumeracionService = clienteNumeracionService;
         this.copropietarioRepository = copropietarioRepository;
         this.weFormRespuestaRepository = weFormRespuestaRepository;
         this.passwordEncoder = passwordEncoder;
@@ -222,6 +225,8 @@ public class VentaService {
             venta.setFechaProvisional(true);
             venta.setDepositoPendiente(depositoPendiente.signum() > 0 ? depositoPendiente : null);
         }
+        // Número de cliente en el desarrollo de sus lotes (S-… / N-…) para el titular y los copropietarios que no tengan.
+        clienteNumeracionService.asignarPorVenta(venta);
 
         // Una venta nueva usa la regla de comisión por tipo de abono (las existentes conservan la suya).
         comisionService.sincronizarVentaNueva(
@@ -398,6 +403,11 @@ public class VentaService {
             copropietarioRepository.deleteAll(copropietarioRepository.findByVentaIdOrderByOrdenAsc(venta.getId()).stream()
                     .filter(cp -> cp.getCliente().getId().equals(venta.getClienteRef().getId()))
                     .toList());
+        }
+        // Un titular o copropietario nuevo recibe su número de cliente en ese desarrollo (quien ya tenía, lo conserva).
+        if (request.clienteId() != null || request.copropietariosIds() != null) {
+            copropietarioRepository.flush();
+            clienteNumeracionService.asignarPorVenta(venta);
         }
         comisionService.sincronizar(venta);
         // Si se pidió otro número, se mueve (recorriendo las consecutivas si estaba ocupado) y se vuelve a
