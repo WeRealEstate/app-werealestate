@@ -94,6 +94,9 @@ public class SecurityConfig {
                         // We Forms: el link público del registro de venta (cada petición exige el PIN del asesor).
                         .requestMatchers(HttpMethod.GET, "/api/forms-publico/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/forms-publico/**").permitAll()
+                        // Alta del equipo de una comercializadora por su enlace secreto (el token va en la URL).
+                        .requestMatchers(HttpMethod.GET, "/api/comercializadoras-publico/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/comercializadoras-publico/**").permitAll()
                         // Material de venta del plano público (cada petición exige el PIN del asesor).
                         .requestMatchers(HttpMethod.GET, "/api/material-publico/**").permitAll()
                         // Regreso de Google al conectar Drive: es una redirección del navegador (sin el token de la

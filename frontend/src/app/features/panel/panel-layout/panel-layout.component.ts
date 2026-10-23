@@ -1,6 +1,7 @@
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import {
+  LucideBuilding2,
   LucideCalendar,
   LucideHandCoins,
   LucideHandshake,
@@ -36,7 +37,7 @@ interface NavItem {
   modulo?: Modulo;
   /** Alternativa: el item también se muestra a quien tenga este otro módulo (Finanzas incluye la pestaña Gastos). */
   tambienConModulo?: Modulo;
-  icon: 'home' | 'leads' | 'usuarios' | 'asesores' | 'comunidades' | 'calendario' | 'pipeline' | 'cotizador' | 'lotes' | 'plano' | 'ventas' | 'clientes' | 'finanzas' | 'gastos' | 'forms' | 'material';
+  icon: 'home' | 'leads' | 'usuarios' | 'asesores' | 'comunidades' | 'calendario' | 'pipeline' | 'cotizador' | 'lotes' | 'plano' | 'ventas' | 'clientes' | 'finanzas' | 'gastos' | 'forms' | 'material' | 'comercializadoras';
 }
 
 const ASESORES_EXTERNOS_NAV_ITEM: NavItem = {
@@ -44,6 +45,12 @@ const ASESORES_EXTERNOS_NAV_ITEM: NavItem = {
   route: '/panel/asesores-externos',
   modulo: 'ASESORES_EXTERNOS',
   icon: 'asesores',
+};
+const COMERCIALIZADORAS_NAV_ITEM: NavItem = {
+  label: 'Comercializadoras',
+  route: '/panel/comercializadoras',
+  modulo: 'ASESORES_EXTERNOS',
+  icon: 'comercializadoras',
 };
 const TEAMS_NAV_ITEM: NavItem = { label: 'Comunidades We', route: '/panel/teams', modulo: 'COMUNIDADES', icon: 'comunidades' };
 const WE_FORMS_NAV_ITEM: NavItem = { label: 'We Forms', route: '/panel/we-forms', modulo: 'WE_FORMS', icon: 'forms' };
@@ -92,6 +99,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
       label: 'Administración',
       items: [
         ASESORES_EXTERNOS_NAV_ITEM,
+        COMERCIALIZADORAS_NAV_ITEM,
         TEAMS_NAV_ITEM,
         WE_FORMS_NAV_ITEM,
         MATERIAL_NAV_ITEM,
@@ -128,6 +136,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
       items: [
         { label: 'Usuarios', route: '/panel/usuarios', icon: 'usuarios' },
         ASESORES_EXTERNOS_NAV_ITEM,
+        COMERCIALIZADORAS_NAV_ITEM,
         TEAMS_NAV_ITEM,
         WE_FORMS_NAV_ITEM,
         MATERIAL_NAV_ITEM,
@@ -157,6 +166,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
     LucideMap,
     LucideBadgeDollarSign,
     LucideContactRound,
+    LucideBuilding2,
     LucideClipboardList,
     LucideFolderOpen,
     LucideUser,

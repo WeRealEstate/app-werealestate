@@ -1,0 +1,55 @@
+<div class="flex min-h-dvh flex-col items-center bg-canvas px-4 py-10">
+  <img src="/images/we-logo-color.png" alt="We Real Estate" class="mb-6 h-12 w-auto dark:hidden" />
+  <img src="/images/we-logo.png" alt="" aria-hidden="true" class="mb-6 hidden h-12 w-auto dark:block" />
+
+  @if (cargando()) {
+    <p class="text-sm text-ink-muted">Cargando…</p>
+  } @else if (enlaceInvalido()) {
+    <div class="w-full max-w-sm rounded-xl border border-border bg-surface p-6 text-center shadow-lg" data-testid="enlace-invalido">
+      <h1 class="font-heading text-lg font-semibold text-ink">Este enlace no es válido</h1>
+      <p class="mt-2 text-sm text-ink-muted">Puede que haya cambiado o que la comercializadora ya no lo use. Pídele a tu líder que te comparta el enlace actual.</p>
+    </div>
+  } @else if (resultado(); as r) {
+    <div class="w-full max-w-sm rounded-xl border border-border bg-surface p-6 text-center shadow-lg" data-testid="bienvenida">
+      <p class="text-sm font-medium text-we-primary dark:text-we-blue-light">¡Listo, {{ r.nombre }}!</p>
+      <h1 class="mt-1 font-heading text-xl font-semibold text-ink">Ya eres parte del equipo de {{ r.lider }}</h1>
+      <p class="mt-1 text-sm text-ink-muted">{{ r.comercializadora }}</p>
+      <p class="mt-5 text-xs font-medium uppercase tracking-wide text-ink-muted">Tu PIN de asesor</p>
+      <p class="mt-1 font-mono text-4xl font-bold tracking-[0.3em] text-ink" data-testid="pin-asignado">{{ r.pin }}</p>
+      <button type="button" (click)="copiarPin()" class="mt-3 min-h-[44px] rounded-lg border border-border px-4 py-2 text-sm font-semibold text-ink hover:border-we-primary">
+        {{ pinCopiado() ? 'PIN copiado' : 'Copiar PIN' }}
+      </button>
+      <p class="mt-4 rounded-lg bg-surface-2 p-3 text-left text-xs text-ink-muted">
+        Guárdalo: con este PIN entras como asesor en los planos de SAMAI y Aldea Nanuu y registras tus ventas. Si lo pierdes, pídeselo a tu líder.
+      </p>
+    </div>
+  } @else {
+    <form (ngSubmit)="enviar()" class="w-full max-w-sm rounded-xl border border-border bg-surface p-6 shadow-lg" data-testid="form-unirse">
+      <h1 class="font-heading text-lg font-semibold text-ink">Únete al equipo de {{ info()?.lider }}</h1>
+      <p class="mt-1 text-sm text-ink-muted">{{ info()?.comercializadora }}. Escribe tus datos y recibirás tu PIN de asesor.</p>
+      <div class="mt-5 space-y-3">
+        <div>
+          <label for="un-nombre" class="mb-1 block text-xs font-medium text-ink-muted">Nombre completo *</label>
+          <input id="un-nombre" name="nombre" maxlength="200" autocomplete="name" [ngModel]="nombre()" (ngModelChange)="nombre.set($event)"
+            class="w-full rounded-lg border border-border bg-surface px-3 py-3 text-base text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+        </div>
+        <div>
+          <label for="un-celular" class="mb-1 block text-xs font-medium text-ink-muted">Celular (10 dígitos) *</label>
+          <input id="un-celular" name="celular" type="tel" inputmode="numeric" autocomplete="tel" maxlength="20" [ngModel]="celular()" (ngModelChange)="celular.set($event)"
+            class="w-full rounded-lg border border-border bg-surface px-3 py-3 text-base text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+        </div>
+        <div>
+          <label for="un-correo" class="mb-1 block text-xs font-medium text-ink-muted">Correo (opcional)</label>
+          <input id="un-correo" name="correo" type="email" autocomplete="email" maxlength="150" [ngModel]="correo()" (ngModelChange)="correo.set($event)"
+            class="w-full rounded-lg border border-border bg-surface px-3 py-3 text-base text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+        </div>
+      </div>
+      @if (error()) {
+        <p class="mt-3 text-sm text-red-600 dark:text-red-400" role="alert" data-testid="error-unirse">{{ error() }}</p>
+      }
+      <button type="submit" [disabled]="enviando()" class="mt-5 min-h-[48px] w-full rounded-lg bg-we-primary px-4 py-3 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
+        {{ enviando() ? 'Registrando…' : 'Unirme al equipo' }}
+      </button>
+    </form>
+  }
+</div>

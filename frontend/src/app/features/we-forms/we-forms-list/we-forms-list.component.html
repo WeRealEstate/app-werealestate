@@ -81,6 +81,45 @@
     </div>
   }
 
+  <!-- Altas de comercializadoras: no son formularios del constructor, el enlace es fijo y pide nombre, celular y correo. -->
+  @if (!isLoading() && comercializadoras().length > 0) {
+    <section class="mt-10" data-testid="altas-comercializadoras">
+      <h2 class="font-heading text-lg font-semibold text-ink">Altas de comercializadoras</h2>
+      <p class="mt-1 text-sm text-ink-muted">
+        La líder comparte este enlace con su equipo de ventas: cada integrante se da de alta, recibe su PIN y entra al equipo de la líder en Comunidades We. Se crean y editan en Comercializadoras.
+      </p>
+      <div class="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        @for (c of comercializadoras(); track c.id) {
+          <div class="flex flex-col rounded-xl border border-border bg-surface p-5 shadow-sm" data-testid="alta-comercializadora-card">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <h3 class="truncate font-heading text-base font-semibold text-ink">{{ c.nombre }}</h3>
+                <p class="mt-0.5 text-xs text-ink-muted">Líder: {{ c.liderNombre }}</p>
+              </div>
+              <span
+                class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold"
+                [class]="c.activa ? 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300' : 'bg-surface-2 text-ink-muted'"
+              >
+                {{ c.activa ? 'Activa' : 'Inactiva' }}
+              </span>
+            </div>
+            <p class="mt-4 text-sm text-ink"><span class="font-semibold">{{ c.integrantes }}</span> {{ c.integrantes === 1 ? 'integrante se unió' : 'integrantes se unieron' }}</p>
+            <div class="mt-4">
+              <button
+                type="button"
+                (click)="copiarEnlaceComercializadora(c)"
+                [disabled]="!c.activa"
+                class="inline-flex items-center justify-center rounded-lg border border-border px-3.5 py-2 text-sm font-semibold text-ink hover:border-we-primary active:scale-[0.97] transition-transform duration-150 disabled:opacity-50"
+              >
+                Copiar enlace
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
   @if (mostrarNuevo()) {
     <button type="button" (click)="mostrarNuevo.set(false)" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
     <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="nuevo-form-titulo">

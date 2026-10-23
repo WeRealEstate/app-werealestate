@@ -7,8 +7,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.werealestate.backend.model.Cliente;
-import com.werealestate.backend.model.Venta;
-import com.werealestate.backend.model.WeFormRespuesta;
 import com.werealestate.backend.model.WeFormRespuestaItem;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
@@ -17,28 +15,19 @@ import tools.jackson.databind.ObjectMapper;
 class DriveServiceNombresTest {
 
     @Test
-    void carpetaDelClienteConSuNumero() {
+    void carpetaConSoloElNombreDelCliente() {
         Cliente c = mock(Cliente.class);
         when(c.getNumero()).thenReturn(12L);
         when(c.nombreCompleto()).thenReturn("  Laura   Méndez Ruiz ");
-        assertEquals("#0012 · Laura Méndez Ruiz", DriveService.nombreDeCarpeta(c));
+        assertEquals("Laura Méndez Ruiz", DriveService.nombreDeCarpeta(c));
     }
 
     @Test
-    void archivoConNumeroDeVentaOConElRegistroSiLaVentaSeElimino() {
+    void archivoConSoloElTituloDeLaPregunta() {
         WeFormRespuestaItem item = mock(WeFormRespuestaItem.class);
         when(item.getPreguntaTitulo()).thenReturn("INE frente");
         when(item.getArchivoExtension()).thenReturn("jpg");
-
-        WeFormRespuesta conVenta = mock(WeFormRespuesta.class);
-        Venta venta = mock(Venta.class);
-        when(venta.getNumero()).thenReturn(148L);
-        when(conVenta.getVenta()).thenReturn(venta);
-        assertEquals("Venta #0148 · INE frente.jpg", DriveService.nombreDelArchivo(conVenta, item));
-
-        WeFormRespuesta sinVenta = mock(WeFormRespuesta.class);
-        when(sinVenta.getId()).thenReturn(37L);
-        assertEquals("Registro 37 · INE frente.jpg", DriveService.nombreDelArchivo(sinVenta, item));
+        assertEquals("INE frente.jpg", DriveService.nombreDelArchivo(item));
     }
 
     @Test

@@ -1,0 +1,150 @@
+<div class="page-enter">
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="font-heading text-2xl font-semibold text-ink">Comercializadoras</h1>
+      <p class="mt-1 text-sm text-ink-muted">
+        Cada comercializadora tiene una líder y un enlace. La líder lo comparte con su equipo de ventas: quien lo abre se da de alta, recibe su PIN y aparece en el equipo de la líder en Comunidades We.
+      </p>
+    </div>
+    <button
+      type="button"
+      (click)="abrirNueva()"
+      data-testid="nueva-comercializadora"
+      class="inline-flex shrink-0 items-center justify-center rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white
+             hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150 min-h-[44px]"
+    >
+      + Nueva comercializadora
+    </button>
+  </div>
+
+  @if (errorMessage()) {
+    <div class="mt-6 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  @if (isLoading()) {
+    <app-we-loader texto="Cargando comercializadoras…" />
+  } @else if (items().length === 0 && !errorMessage()) {
+    <div class="mt-8 rounded-xl border border-dashed border-border p-10 text-center">
+      <p class="text-sm text-ink-muted">Todavía no hay comercializadoras. Crea la primera con "Nueva comercializadora".</p>
+    </div>
+  } @else {
+    <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      @for (c of items(); track c.id) {
+        <div class="flex flex-col rounded-xl border border-border bg-surface p-5 shadow-sm" data-testid="comercializadora-card">
+          <div class="flex items-start justify-between gap-3">
+            <h2 class="min-w-0 font-heading text-base font-semibold text-ink">{{ c.nombre }}</h2>
+            <span
+              class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold"
+              [class]="c.activa ? 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300' : 'bg-surface-2 text-ink-muted'"
+            >
+              {{ c.activa ? 'Activa' : 'Inactiva' }}
+            </span>
+          </div>
+          <p class="mt-1 text-sm text-ink-muted">Líder: <span class="font-medium text-ink">{{ c.liderNombre }}</span></p>
+          <p class="mt-3 text-sm text-ink">
+            <span class="font-semibold">{{ c.integrantes }}</span> {{ c.integrantes === 1 ? 'integrante' : 'integrantes' }}
+          </p>
+          @if (c.notas) {
+            <p class="mt-2 line-clamp-2 text-xs text-ink-muted">{{ c.notas }}</p>
+          }
+          <div class="mt-4 flex flex-wrap gap-2">
+            <button type="button" (click)="copiarEnlace(c)" [disabled]="!c.activa" data-testid="copiar-enlace-comercializadora" class="min-h-[40px] rounded-lg bg-we-primary px-3.5 py-2 text-sm font-semibold text-white hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150 disabled:opacity-50">Copiar enlace</button>
+            <button type="button" (click)="abrirIntegrantes(c)" data-testid="ver-integrantes" class="min-h-[40px] rounded-lg border border-border px-3.5 py-2 text-sm font-semibold text-ink hover:border-we-primary active:scale-[0.97] transition-transform duration-150">Integrantes</button>
+            <button type="button" (click)="abrirEditar(c)" class="min-h-[40px] rounded-lg border border-border px-3.5 py-2 text-sm font-semibold text-ink hover:border-we-primary active:scale-[0.97] transition-transform duration-150">Editar</button>
+          </div>
+          <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+            <button type="button" (click)="regenerar(c)" class="text-ink-muted underline underline-offset-2 hover:text-ink">Generar enlace nuevo</button>
+            @if (c.integrantes === 0) {
+              <button type="button" (click)="eliminar(c)" class="text-red-600 underline underline-offset-2 hover:text-red-700 dark:text-red-400">Eliminar</button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  @if (mostrarForm()) {
+    <button type="button" (click)="mostrarForm.set(false)" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="comercializadora-titulo">
+      <form (ngSubmit)="guardar()" class="modal-panel-enter max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <h2 id="comercializadora-titulo" class="font-heading text-lg font-semibold text-ink">{{ editando() ? 'Editar comercializadora' : 'Nueva comercializadora' }}</h2>
+        <div class="mt-4 space-y-3">
+          <div>
+            <label for="co-nombre" class="mb-1 block text-xs font-medium text-ink-muted">Nombre *</label>
+            <input id="co-nombre" name="nombre" maxlength="200" [ngModel]="nombre()" (ngModelChange)="nombre.set($event)" placeholder="Ej. Inmobiliaria Sol"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+          </div>
+          <div>
+            <label for="co-lider" class="mb-1 block text-xs font-medium text-ink-muted">Líder *</label>
+            <select id="co-lider" name="lider" [ngModel]="liderId()" (ngModelChange)="liderId.set($event)"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50">
+              <option [ngValue]="null">Elige un asesor externo</option>
+              @for (a of lideresPosibles(); track a.id) {
+                <option [ngValue]="a.id">{{ a.nombre }}</option>
+              }
+            </select>
+            <p class="mt-1 text-xs text-ink-muted">
+              @if (editando() && editando()!.integrantes > 0) {
+                Ya tiene integrantes, así que la líder no se puede cambiar.
+              } @else {
+                Si todavía no está registrada, primero créala en Asesores externos. Pasará a ser Líder en Comunidades We.
+              }
+            </p>
+          </div>
+          <div>
+            <label for="co-notas" class="mb-1 block text-xs font-medium text-ink-muted">Notas (opcional)</label>
+            <textarea id="co-notas" name="notas" rows="2" maxlength="1000" [ngModel]="notas()" (ngModelChange)="notas.set($event)"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"></textarea>
+          </div>
+          @if (editando()) {
+            <label class="flex items-center gap-2 text-sm text-ink">
+              <input type="checkbox" name="activa" [ngModel]="activa()" (ngModelChange)="activa.set($event)" />
+              Activa (si la desactivas, su enlace deja de recibir altas)
+            </label>
+          }
+        </div>
+        @if (errorForm()) {
+          <p class="mt-3 text-sm text-red-600 dark:text-red-400">{{ errorForm() }}</p>
+        }
+        <div class="mt-5 flex justify-end gap-2.5">
+          <button type="button" (click)="mostrarForm.set(false)" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cancelar</button>
+          <button type="submit" [disabled]="guardando()" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
+            {{ guardando() ? 'Guardando…' : 'Guardar' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+
+  @if (verIntegrantes(); as c) {
+    <button type="button" (click)="verIntegrantes.set(null)" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="integrantes-titulo">
+      <div class="modal-panel-enter max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <h2 id="integrantes-titulo" class="font-heading text-lg font-semibold text-ink">Integrantes de {{ c.nombre }}</h2>
+        <p class="mt-1 text-sm text-ink-muted">Líder: {{ c.liderNombre }}. Para moverlos o editarlos usa Comunidades We o Asesores externos.</p>
+        @if (cargandoIntegrantes()) {
+          <app-we-loader texto="Cargando integrantes…" />
+        } @else if (integrantes().length === 0) {
+          <p class="mt-6 rounded-lg border border-dashed border-border p-6 text-center text-sm text-ink-muted">Todavía nadie se ha unido con su enlace.</p>
+        } @else {
+          <ul class="mt-4 divide-y divide-border rounded-lg border border-border" data-testid="lista-integrantes">
+            @for (i of integrantes(); track i.id) {
+              <li class="flex items-start justify-between gap-3 px-3 py-2.5">
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-medium text-ink">{{ i.nombre }}</p>
+                  <p class="text-xs text-ink-muted">{{ i.celular }}{{ i.correo ? ' · ' + i.correo : '' }}</p>
+                </div>
+                <span class="shrink-0 rounded-md bg-surface-2 px-2 py-1 font-mono text-sm font-semibold tracking-widest text-ink">{{ i.pin ?? '—' }}</span>
+              </li>
+            }
+          </ul>
+        }
+        <div class="mt-5 flex justify-end">
+          <button type="button" (click)="verIntegrantes.set(null)" class="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink-muted hover:border-we-primary">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

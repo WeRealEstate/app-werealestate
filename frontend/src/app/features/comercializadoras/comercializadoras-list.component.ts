@@ -1,0 +1,189 @@
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import {
+  Comercializadora,
+  IntegranteComercializadora,
+  enlaceDeComercializadora,
+} from '../../core/models/comercializadora.model';
+import { AsesorExterno } from '../../core/models/asesor-externo.model';
+import { AsesoresExternosService } from '../../core/services/asesores-externos.service';
+import { ComercializadorasService } from '../../core/services/comercializadoras.service';
+import { ConfirmService } from '../../core/services/confirm.service';
+import { ToastService } from '../../core/services/toast.service';
+import { WeLoaderComponent } from '../../shared/we-loader/we-loader.component';
+
+/** Comercializadoras (menú, debajo de Asesores externos): cada una tiene una líder (asesor externo) y un enlace
+ * que la líder comparte para que cada integrante de su equipo se dé de alta solo y aparezca en su equipo de
+ * Comunidades We. */
+@Component({
+  selector: 'app-comercializadoras-list',
+  standalone: true,
+  imports: [FormsModule, WeLoaderComponent],
+  templateUrl: './comercializadoras-list.component.html',
+})
+export class ComercializadorasListComponent {
+  private readonly service = inject(ComercializadorasService);
+  private readonly asesoresService = inject(AsesoresExternosService);
+  private readonly toast = inject(ToastService);
+  private readonly confirmService = inject(ConfirmService);
+
+  readonly items = signal<Comercializadora[]>([]);
+  readonly asesores = signal<AsesorExterno[]>([]);
+  readonly isLoading = signal(true);
+  readonly errorMessage = signal<string | null>(null);
+
+  // Formulario (crear o editar)
+  readonly mostrarForm = signal(false);
+  readonly editando = signal<Comercializadora | null>(null);
+  readonly nombre = signal('');
+  readonly liderId = signal<number | null>(null);
+  readonly notas = signal('');
+  readonly activa = signal(true);
+  readonly guardando = signal(false);
+  readonly errorForm = signal<string | null>(null);
+
+  // Integrantes (modal)
+  readonly verIntegrantes = signal<Comercializadora | null>(null);
+  readonly integrantes = signal<IntegranteComercializadora[]>([]);
+  readonly cargandoIntegrantes = signal(false);
+
+  /** Quién puede ser líder: asesores externos activos que no reportan a nadie (independientes o líderes), y que no
+   * lo sean ya de otra comercializadora. */
+  readonly lideresPosibles = computed(() => {
+    const ocupados = new Set(
+      this.items()
+        .filter((c) => c.id !== this.editando()?.id)
+        .map((c) => c.liderId),
+    );
+    return this.asesores().filter(
+      (a) => a.activo && a.usuarioId === null && a.tipo !== 'LINEA' && !ocupados.has(a.id),
+    );
+  });
+
+  readonly enlaceDe = enlaceDeComercializadora;
+
+  constructor() {
+    void this.cargar();
+  }
+
+  private async cargar(): Promise<void> {
+    try {
+      const [items, asesores] = await Promise.all([this.service.listar(), this.asesoresService.listar()]);
+      this.items.set(items);
+      this.asesores.set(asesores);
+    } catch {
+      this.errorMessage.set('No se pudieron cargar las comercializadoras. Intenta de nuevo.');
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  abrirNueva(): void {
+    this.editando.set(null);
+    this.nombre.set('');
+    this.liderId.set(null);
+    this.notas.set('');
+    this.activa.set(true);
+    this.errorForm.set(null);
+    this.mostrarForm.set(true);
+  }
+
+  abrirEditar(c: Comercializadora): void {
+    this.editando.set(c);
+    this.nombre.set(c.nombre);
+    this.liderId.set(c.liderId);
+    this.notas.set(c.notas ?? '');
+    this.activa.set(c.activa);
+    this.errorForm.set(null);
+    this.mostrarForm.set(true);
+  }
+
+  async guardar(): Promise<void> {
+    if (this.guardando()) return;
+    const liderId = this.liderId();
+    if (!this.nombre().trim() || liderId === null) {
+      this.errorForm.set('El nombre y la líder son obligatorios.');
+      return;
+    }
+    this.guardando.set(true);
+    this.errorForm.set(null);
+    const base = { nombre: this.nombre().trim(), liderId, notas: this.notas().trim() || null };
+    try {
+      const editando = this.editando();
+      const guardada = editando
+        ? await this.service.actualizar(editando.id, { ...base, activa: this.activa() })
+        : await this.service.crear(base);
+      this.items.update((lista) =>
+        editando ? lista.map((c) => (c.id === guardada.id ? guardada : c)) : [guardada, ...lista],
+      );
+      // Si la líder era independiente ahora es Líder: se refresca la lista de asesores para el selector.
+      this.asesores.set(await this.asesoresService.listar());
+      this.mostrarForm.set(false);
+      this.toast.success(editando ? 'Comercializadora actualizada.' : 'Comercializadora creada. Ya puedes copiar su enlace.');
+    } catch (e) {
+      this.errorForm.set(mensajeDe(e, 'No se pudo guardar. Intenta de nuevo.'));
+    } finally {
+      this.guardando.set(false);
+    }
+  }
+
+  async copiarEnlace(c: Comercializadora): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(enlaceDeComercializadora(c.token));
+      this.toast.success('Enlace copiado. Compártelo con la líder de la comercializadora.');
+    } catch {
+      this.toast.error('No se pudo copiar el enlace.');
+    }
+  }
+
+  async regenerar(c: Comercializadora): Promise<void> {
+    const ok = await this.confirmService.confirm({
+      titulo: 'Generar un enlace nuevo',
+      mensaje: `El enlace actual de ${c.nombre} dejará de funcionar y tendrás que compartir el nuevo. Los integrantes que ya se unieron no se afectan.`,
+      textoConfirmar: 'Generar enlace nuevo',
+    });
+    if (!ok) return;
+    try {
+      const nueva = await this.service.regenerarEnlace(c.id);
+      this.items.update((lista) => lista.map((x) => (x.id === nueva.id ? nueva : x)));
+      this.toast.success('Enlace nuevo generado. Ya puedes copiarlo.');
+    } catch (e) {
+      this.toast.error(mensajeDe(e, 'No se pudo generar el enlace nuevo.'));
+    }
+  }
+
+  async eliminar(c: Comercializadora): Promise<void> {
+    const ok = await this.confirmService.confirm({
+      titulo: 'Eliminar comercializadora',
+      mensaje: `¿Eliminar a ${c.nombre}? Su enlace dejará de funcionar. Esta acción no se puede deshacer.`,
+      textoConfirmar: 'Eliminar',
+      peligroso: true,
+    });
+    if (!ok) return;
+    try {
+      await this.service.eliminar(c.id);
+      this.items.update((lista) => lista.filter((x) => x.id !== c.id));
+      this.toast.success('Comercializadora eliminada.');
+    } catch (e) {
+      this.toast.error(mensajeDe(e, 'No se pudo eliminar.'));
+    }
+  }
+
+  async abrirIntegrantes(c: Comercializadora): Promise<void> {
+    this.verIntegrantes.set(c);
+    this.integrantes.set([]);
+    this.cargandoIntegrantes.set(true);
+    try {
+      this.integrantes.set(await this.service.integrantes(c.id));
+    } catch {
+      this.toast.error('No se pudieron cargar los integrantes.');
+    } finally {
+      this.cargandoIntegrantes.set(false);
+    }
+  }
+}
+
+function mensajeDe(error: unknown, porDefecto: string): string {
+  return error instanceof HttpErrorResponse && typeof error.error?.message === 'string' ? error.error.message : porDefecto;
+}

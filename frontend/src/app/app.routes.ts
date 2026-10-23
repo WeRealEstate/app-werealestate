@@ -252,6 +252,12 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'comercializadoras',
+        canActivate: [roleGuard(['ADMIN', 'LIDER_AREA']), moduloGuard(['ASESORES_EXTERNOS'])],
+        loadComponent: () =>
+          import('./features/comercializadoras/comercializadoras-list.component').then((m) => m.ComercializadorasListComponent),
+      },
+      {
         path: 'we-forms',
         canActivate: [roleGuard(['ADMIN', 'LIDER_AREA']), moduloGuard(['WE_FORMS'])],
         loadComponent: () => import('./features/we-forms/we-forms-list/we-forms-list.component').then((m) => m.WeFormsListComponent),
@@ -282,6 +288,12 @@ export const routes: Routes = [
     path: 'material',
     title: 'We Real Estate | Material',
     loadComponent: () => import('./features/publico/material-publico/material-publico.component').then((m) => m.MaterialPublicoComponent),
+  },
+  {
+    path: 'unirse/:token',
+    title: 'We Real Estate | Únete a tu equipo',
+    loadComponent: () =>
+      import('./features/publico/comercializadora-unirse/comercializadora-unirse.component').then((m) => m.ComercializadoraUnirseComponent),
   },
   {
     path: 'we-forms/:slug',

@@ -25,4 +25,8 @@ public interface AsesorExternoRepository extends JpaRepository<AsesorExterno, Lo
     boolean existsByTraidoPorAsesorId(Long asesorId);
 
     boolean existsByTraidoPorUsuarioId(Long usuarioId);
+
+    List<AsesorExterno> findByComercializadoraIdOrderByNombreAsc(Long comercializadoraId);
+
+    long countByComercializadoraId(Long comercializadoraId);
 }

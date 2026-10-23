@@ -124,6 +124,11 @@ public class AsesorExterno {
     @Column(length = 1000)
     private String notas;
 
+    /** Si se dio de alta por el enlace de una comercializadora, cuál (null = no viene de una). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "comercializadora_id")
+    private Comercializadora comercializadora;
+
     @Column(name = "fecha_creacion", nullable = false)
     private LocalDateTime fechaCreacion = LocalDateTime.now();
 
@@ -139,6 +144,14 @@ public class AsesorExterno {
 
     public Long getId() {
         return id;
+    }
+
+    public Comercializadora getComercializadora() {
+        return comercializadora;
+    }
+
+    public void setComercializadora(Comercializadora comercializadora) {
+        this.comercializadora = comercializadora;
     }
 
     public String getNombre() {

@@ -15,8 +15,12 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.1.0', fecha: '2026-10-23', cambios: [
+    "Nuevo apartado 'Comercializadoras' (menú, debajo de Asesores externos): se crea una comercializadora con su líder (un asesor externo) y se copia su enlace. La líder lo comparte con su equipo de ventas: cada integrante escribe su nombre, celular y correo, entra directo al equipo de la líder en Comunidades We y ve su PIN de asesor (el mismo con el que entra a los planos y a Registrar venta). Se puede ver quién se unió, generar un enlace nuevo si se filtra o desactivar la comercializadora.",
+    "We Forms: nueva sección 'Altas de comercializadoras' con el enlace de cada una y cuántos integrantes se han unido.",
+  ] },
   { version: '11.0.0', fecha: '2026-10-23', cambios: [
-    "We Forms: el administrador puede conectar una cuenta de Google Drive y elegir, con el selector de Google, la carpeta donde van los expedientes. Desde entonces, los archivos que se suben al registrar una venta (INE, comprobantes) se guardan ahí, con una carpeta por cliente ('#0012 · Nombre del cliente') y cada archivo con su número de venta ('Venta #0148 · INE frente.jpg'). Los de registros anteriores también se suben solos.",
+    "We Forms: el administrador puede conectar una cuenta de Google Drive y elegir, con el selector de Google, la carpeta donde van los expedientes. Desde entonces, los archivos que se suben al registrar una venta (INE, comprobantes) se guardan ahí, con una carpeta por cliente que lleva su nombre ('Laura Méndez Ruiz') y cada archivo con el nombre de su pregunta ('INE frente.jpg'). Los de registros anteriores también se suben solos.",
     "Ya subido a Drive, el archivo deja de guardarse en el servidor; desde el registro de venta se sigue abriendo igual. Si Drive no responde o se desconecta la cuenta, los archivos esperan en el servidor y no se pierden.",
     "Clientes: si el expediente no tiene enlace, la 'Carpeta de Drive' se llena sola con la carpeta del cliente y la ubicación queda en Drive. Un enlace puesto a mano no se cambia.",
   ] },

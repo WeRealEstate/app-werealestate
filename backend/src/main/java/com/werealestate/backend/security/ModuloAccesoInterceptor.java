@@ -50,6 +50,9 @@ public class ModuloAccesoInterceptor implements HandlerInterceptor {
                 EnumSet.of(Modulo.VENTAS, Modulo.ASESORES_EXTERNOS, Modulo.COMUNIDADES));
         MODULOS_POR_PREFIJO.put(
                 "/api/asesores-externos", EnumSet.of(Modulo.ASESORES_EXTERNOS, Modulo.COMUNIDADES));
+        // Comercializadoras (panel): mismo módulo que Asesores externos. El alta del equipo vive en
+        // /api/comercializadoras-publico, fuera de este prefijo (sin sesión, por el token del enlace).
+        MODULOS_POR_PREFIJO.put("/api/comercializadoras", EnumSet.of(Modulo.ASESORES_EXTERNOS));
         MODULOS_POR_PREFIJO.put("/api/eventos-calendario", EnumSet.of(Modulo.CALENDARIO));
         // We Forms (panel). El link público de los asesores vive en /api/forms-publico, fuera de este prefijo.
         MODULOS_POR_PREFIJO.put("/api/we-forms", EnumSet.of(Modulo.WE_FORMS));

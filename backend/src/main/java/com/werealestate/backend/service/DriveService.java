@@ -39,7 +39,7 @@ import org.springframework.web.server.ResponseStatusException;
  * Archivos de Registrar venta (We Forms) en Google Drive. El admin conecta una vez la cuenta (OAuth, permiso
  * {@code drive.file}) y elige con el selector de Google la carpeta existente donde van los expedientes. Desde entonces
  * {@link DriveSyncScheduler} sube cada archivo pendiente —los nuevos y los de registros anteriores— a
- * "carpeta elegida › #0012 · Nombre del cliente". Ya confirmado por Google, el archivo se borra del servidor y el panel
+ * "carpeta elegida › Nombre del cliente". Ya confirmado por Google, el archivo se borra del servidor y el panel
  * lo lee de Drive.
  *
  * <p>Reglas para no entrar en bucles ni dejar cosas a medias:
@@ -462,7 +462,7 @@ public class DriveService {
                 item.getId(),
                 WeFormService.rutaArchivo(uploadsPrivadosDir, r.getId(), item.getId(), item.getArchivoExtension()),
                 item.getArchivoExtension(),
-                nombreDelArchivo(r, item),
+                nombreDelArchivo(item),
                 cliente == null ? null : cliente.getId(),
                 cliente == null ? null : cliente.getDriveCarpetaId(),
                 cliente == null ? null : nombreDeCarpeta(cliente));
@@ -475,19 +475,18 @@ public class DriveService {
         return item.getDriveUltimoIntento().plusMinutes(espera).isBefore(LocalDateTime.now());
     }
 
-    /** "#0012 · Laura Méndez Ruiz" (por número de cliente: renombrarlo o un homónimo no la confunden). */
+    /** Solo el nombre del cliente ("Laura Méndez Ruiz"). Dos clientes con el mismo nombre tienen dos carpetas que se
+     * ven iguales, pero el sistema no las confunde: cada una se reconoce por el id guardado y su etiqueta interna. */
     static String nombreDeCarpeta(Cliente c) {
-        String nombre = recortar(c.nombreCompleto(), 180);
-        return c.getNumero() == null ? nombre : String.format("#%04d · %s", c.getNumero(), nombre);
+        String nombre = recortar(c.nombreCompleto(), 200);
+        return nombre.isEmpty() ? "Cliente" : nombre;
     }
 
-    /** "Venta #0148 · INE frente.jpg"; si la venta se eliminó, "Registro 37 · INE frente.jpg". */
-    static String nombreDelArchivo(WeFormRespuesta r, WeFormRespuestaItem item) {
-        String titulo = recortar(item.getPreguntaTitulo(), 150);
-        String prefijo = r.getVenta() != null && r.getVenta().getNumero() != null
-                ? String.format("Venta #%04d", r.getVenta().getNumero())
-                : "Registro " + r.getId();
-        return prefijo + " · " + titulo + "." + item.getArchivoExtension();
+    /** Solo el título de la pregunta ("INE frente.jpg"). Si el cliente registra otra venta, puede haber dos archivos con
+     * el mismo nombre en su carpeta; Drive lo permite y el sistema reconoce cada uno por su etiqueta. */
+    static String nombreDelArchivo(WeFormRespuestaItem item) {
+        String titulo = recortar(item.getPreguntaTitulo(), 200);
+        return (titulo.isEmpty() ? "Archivo" : titulo) + "." + item.getArchivoExtension();
     }
 
     private static String recortar(String s, int max) {

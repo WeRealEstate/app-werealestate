@@ -7,6 +7,8 @@ import { ResumenGeneralForm, WeFormLista } from '../../../core/models/we-form.mo
 import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { WeFormsService } from '../../../core/services/we-forms.service';
+import { Comercializadora, enlaceDeComercializadora } from '../../../core/models/comercializadora.model';
+import { ComercializadorasService } from '../../../core/services/comercializadoras.service';
 import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 import { DriveConexionComponent } from '../drive-conexion/drive-conexion.component';
 
@@ -21,6 +23,7 @@ export class WeFormsListComponent {
   private readonly service = inject(WeFormsService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
+  private readonly comercializadorasService = inject(ComercializadorasService);
   private readonly auth = inject(AuthService);
 
   /** La conexión con Google Drive (dónde se guardan los archivos de los registros) solo la maneja el admin. */
@@ -28,6 +31,8 @@ export class WeFormsListComponent {
 
   readonly formularios = signal<WeFormLista[]>([]);
   readonly resumen = signal<ResumenGeneralForm | null>(null);
+  /** Altas de equipos de comercializadoras: solo se llena si quien mira también tiene Asesores externos. */
+  readonly comercializadoras = signal<Comercializadora[]>([]);
   readonly isLoading = signal(true);
   readonly errorMessage = signal<string | null>(null);
 
@@ -47,6 +52,8 @@ export class WeFormsListComponent {
     try {
       this.formularios.set(await this.service.listar());
       this.resumen.set(await this.service.resumen());
+      // Sin el módulo Asesores externos el servidor responde 403: simplemente no se muestra la sección.
+      this.comercializadoras.set(await this.comercializadorasService.listar().catch(() => []));
     } catch {
       this.errorMessage.set('No se pudieron cargar los formularios. Intenta de nuevo.');
     } finally {
@@ -57,6 +64,15 @@ export class WeFormsListComponent {
   /** El link público que se comparte con los asesores (pide su PIN al abrirse). */
   linkDe(slug: string): string {
     return `${window.location.origin}/we-forms/${slug}`;
+  }
+
+  async copiarEnlaceComercializadora(c: Comercializadora): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(enlaceDeComercializadora(c.token));
+      this.toast.success('Enlace copiado. Compártelo con la líder de la comercializadora.');
+    } catch {
+      this.toast.error('No se pudo copiar el enlace.');
+    }
   }
 
   async copiarLink(slug: string): Promise<void> {
