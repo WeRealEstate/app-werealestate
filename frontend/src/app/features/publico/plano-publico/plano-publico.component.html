@@ -155,7 +155,7 @@
                     data-testid="descargar-pdf"
                     class="flex w-full items-center rounded-md px-2.5 py-2.5 text-left text-sm font-semibold text-ink hover:bg-surface-2 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50"
                   >
-                    {{ generandoPdf() ? 'Generando plano…' : 'Descargar plano' }}
+                    {{ generandoPdf() ? 'Generando plano…' : 'Compartir plano' }}
                   </button>
                 </li>
                 <!-- Material de venta: página aparte (grid), en otra pestaña para no perder el plano. -->
@@ -168,7 +168,7 @@
                     data-testid="material"
                     class="flex w-full items-center rounded-md px-2.5 py-2.5 text-sm font-semibold text-ink hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50"
                   >
-                    Material
+                    Ver material de venta
                   </a>
                 </li>
                 <!-- We Forms: el registro de venta se llena en otra pestaña; el PIN no viaja en el enlace, pero este dispositivo ya lo recuerda. -->
@@ -256,7 +256,7 @@
             </button>
           </div>
         } @else {
-          <button type="button" (click)="abrirAcceso()" class="plano-btn" style="--e: 0">Asesor</button>
+          <button type="button" (click)="abrirAcceso()" class="plano-btn" style="--e: 0">Ingrsar al modo asesor</button>
         }
       </div>
 
