@@ -10,11 +10,12 @@ const IMAGEN = `${SITIO}/images/we-logo-color.png`;
 const CARPETA = new URL('../dist/frontend/browser/', import.meta.url);
 
 // Mismos títulos que el `title` de cada ruta en src/app/app.routes.ts. `imagen` (opcional) es un archivo de
-// public/images de 1200x630 y menos de 300 KB (WhatsApp ignora las más pesadas); sin ella se usa el logo.
+// public/images de 1200x630 y menos de 300 KB (WhatsApp ignora las más pesadas); sin ella se usa el logo de We.
+// Los planos de SAMAI y Nanuu usan una tarjeta con el logo de su desarrollo sobre el fondo oscuro de su marca.
 const PAGINAS = [
   { ruta: 'cotizador-publico', titulo: 'We Real Estate | Cotizador asesores', descripcion: 'Cotiza tu terreno en SAMAI Campestre o Aldea Nanuu' },
-  { ruta: 'samai', titulo: 'We Real Estate | Plano Samai', descripcion: 'Consulta la disponibilidad de lotes de SAMAI Campestre en el plano', imagen: 'samai-og.jpg' },
-  { ruta: 'aldea-nanuu', titulo: 'We Real Estate | Plano Nanuu', descripcion: 'Consulta la disponibilidad de lotes de Aldea Nanuu en el plano', imagen: 'nanuu-og.jpg' },
+  { ruta: 'samai', titulo: 'We Real Estate | Plano Samai', descripcion: 'Consulta la disponibilidad de lotes de SAMAI Campestre en el plano', imagen: 'samai-logo-og.png' },
+  { ruta: 'aldea-nanuu', titulo: 'We Real Estate | Plano Nanuu', descripcion: 'Consulta la disponibilidad de lotes de Aldea Nanuu en el plano', imagen: 'nanuu-logo-og.png' },
   { ruta: 'we-forms', titulo: 'We Real Estate | Registrar venta', descripcion: 'Registra la venta de tu cliente' },
   { ruta: 'material', titulo: 'We Real Estate | Material', descripcion: 'Material de venta para asesores' },
 ];
