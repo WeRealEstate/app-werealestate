@@ -26,13 +26,23 @@ public record LoteDto(
         BigDecimal precio) {
 
     public static LoteDto from(Lote lote) {
+        return de(lote, VisibilidadLote.visible(lote.getEstado()));
+    }
+
+    /** Para los endpoints públicos (/api/lotes/publico/**): el estado siempre como lo ve el público, aunque la petición
+     * traiga la sesión de un admin (ver {@link VisibilidadLote#comoPublico}). */
+    public static LoteDto paraPublico(Lote lote) {
+        return de(lote, VisibilidadLote.comoPublico(lote.getEstado()));
+    }
+
+    private static LoteDto de(Lote lote, EstadoLote estadoVisible) {
         return new LoteDto(
                 lote.getId(),
                 DesarrolloDto.from(lote.getDesarrollo()),
                 lote.getManzana(),
                 lote.getNumeroLote(),
                 lote.getSuperficie(),
-                VisibilidadLote.visible(lote.getEstado()),
+                estadoVisible,
                 lote.getFechaCambioEstado(),
                 lote.getCambiadoPor() != null ? UsuarioResumenDto.from(lote.getCambiadoPor()) : null,
                 PoligonoMapaJson.deserializar(lote.getMapaPoligonoJson()),

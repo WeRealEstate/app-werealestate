@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.2.8', fecha: '2026-10-26', cambios: [
+    "Planos públicos y cotizador público: los lotes 'Reservado por We' ahora salen siempre como 'Vendido' en esos links, sin importar la sesión que haya en el navegador. Antes, quien tenía abierta una sesión de Administración o Admin en el mismo navegador veía 'Reservado por We' al abrir /samai o /aldea-nanuu. Ese estado solo se ve dentro del panel (Lotes y Plano).",
+  ] },
   { version: '11.2.7', fecha: '2026-10-26', cambios: [
     "Planos públicos (/samai y /aldea-nanuu) más rápidos: los lotes y la imagen del plano ahora se piden desde que se abre la página, en paralelo con la descarga de la app, en lugar de esperar a que esta arranque. El plano aparece con un fundido corto (antes se revelaba con una máscara y un filtro animados durante 2.4 s que se sentían pesados en equipos modestos) y los botones entran más pronto.",
   ] },

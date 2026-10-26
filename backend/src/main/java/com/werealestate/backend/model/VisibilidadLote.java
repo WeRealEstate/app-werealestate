@@ -26,6 +26,13 @@ public final class VisibilidadLote {
         return estado == EstadoLote.RESERVADO_WE && !veReservadosWe() ? EstadoLote.VENDIDO : estado;
     }
 
+    /** El estado como lo ve el público: RESERVADO_WE siempre se disfraza de VENDIDO, sin mirar el rol de la petición.
+     * Para los endpoints públicos (/api/lotes/publico/**): aunque el navegador mande la sesión de un admin (por ejemplo, un
+     * admin que abre /samai en el mismo navegador donde usa el panel), el link público se ve igual para todos. */
+    public static EstadoLote comoPublico(EstadoLote estado) {
+        return estado == EstadoLote.RESERVADO_WE ? EstadoLote.VENDIDO : estado;
+    }
+
     /** true si ese estado, para quien pide, es en realidad un RESERVADO_WE disfrazado (no debe verse su detalle). */
     public static boolean estaDisfrazado(EstadoLote real) {
         return real == EstadoLote.RESERVADO_WE && !veReservadosWe();

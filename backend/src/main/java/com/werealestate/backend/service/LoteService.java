@@ -342,7 +342,7 @@ public class LoteService {
 
         return loteRepository.findByDesarrolloId(desarrollo.getId()).stream()
                 .sorted(ORDEN_NATURAL_LOTES)
-                .map(LoteDto::from)
+                .map(LoteDto::paraPublico)
                 .toList();
     }
 
@@ -382,7 +382,7 @@ public class LoteService {
                         "Falta el usuario de sistema del cotizador público (migración V17)"));
 
         cambiarEstadoConHistorial(lote, request.estado(), sistema, nombreAsesor, nombreCliente, null, nota);
-        return LoteDto.from(lote);
+        return LoteDto.paraPublico(lote);
     }
 
     /** Tope de lotes en un apartado múltiple (el plano interno y el público). */

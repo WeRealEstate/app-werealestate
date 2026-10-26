@@ -69,12 +69,11 @@
         document.documentElement.style.background='#000';document.write('<style>#we-splash{display:none!important}body{background:#000}</style>');
         // Los lotes se piden desde ya, mientras se descarga el JavaScript (la imagen del plano no puede empezar antes de que
         // llegue esta respuesta, que trae su URL). LotesService.listarPublicoPorProyecto la recoge una sola vez; si falla o
-        // tarda demasiado, la app hace la petición normal. Lleva el mismo token que el interceptor: con sesión, el admin
-        // ve el estado real de los lotes y no el que se muestra al público.
+        // tarda demasiado, la app hace la petición normal. Va sin sesión a propósito (igual que el interceptor de la app):
+        // el link público se ve igual para todos, también para un admin que lo abre en su navegador con sesión.
         try{
-          var proy=/^\/aldea-nanuu/.test(p)?'nanuu':'samai',tk=localStorage.getItem('we_auth_token'),h={Accept:'application/json'};
-          if(tk)h.Authorization='Bearer '+tk;
-          window.__lotesPrecargados={proyecto:proy,desde:Date.now(),promesa:fetch('/api/lotes/publico?proyecto='+proy,{headers:h}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){
+          var proy=/^\/aldea-nanuu/.test(p)?'nanuu':'samai';
+          window.__lotesPrecargados={proyecto:proy,desde:Date.now(),promesa:fetch('/api/lotes/publico?proyecto='+proy,{headers:{Accept:'application/json'}}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){
             // En cuanto se sabe cuál es el plano, su descarga (lo más pesado) arranca sin esperar a que la app esté lista.
             var u=d&&d[0]&&d[0].desarrollo&&d[0].desarrollo.planoUrl;
             if(u){var l=document.createElement('link');l.rel='preload';l.as='image';l.href=u;l.setAttribute('fetchpriority','high');document.head.appendChild(l)}

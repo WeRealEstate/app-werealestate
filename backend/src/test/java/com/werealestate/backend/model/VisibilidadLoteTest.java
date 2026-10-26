@@ -62,6 +62,25 @@ class VisibilidadLoteTest {
     }
 
     @Test
+    void losEndpointsPublicosSiempreVenVendidoAunConSesionDeAdmin() {
+        for (String rol : new String[] {"ADMIN", "LIDER_AREA", "ASESOR"}) {
+            entrarComo(rol);
+            assertEquals(EstadoLote.VENDIDO, LoteDto.paraPublico(loteReservado()).estado(), rol);
+        }
+        SecurityContextHolder.clearContext();
+        assertEquals(EstadoLote.VENDIDO, LoteDto.paraPublico(loteReservado()).estado());
+    }
+
+    @Test
+    void paraPublicoNoCambiaLosOtrosEstados() {
+        entrarComo("ADMIN");
+        for (EstadoLote e : EstadoLote.values()) {
+            if (e == EstadoLote.RESERVADO_WE) continue;
+            assertEquals(e, VisibilidadLote.comoPublico(e));
+        }
+    }
+
+    @Test
     void losOtrosEstadosNuncaCambian() {
         for (EstadoLote e : EstadoLote.values()) {
             if (e == EstadoLote.RESERVADO_WE) continue;
