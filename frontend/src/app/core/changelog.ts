@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.2.4', fecha: '2026-10-26', cambios: [
+    "Menú lateral: las secciones (Desarrollos, Inventario, Administración) ahora son desplegables, como la lista de estados del plano público. Con la flechita de cada título se pliega o se abre su lista, con animación; pueden estar varias abiertas a la vez y el menú recuerda cuáles dejaste plegadas.",
+  ] },
   { version: '11.2.3', fecha: '2026-10-26', cambios: [
     "Comisiones: el comprobante en PDF de cada entrega ahora trae, dentro del talón del asesor, un espacio para que firme de recibido: leyenda de conformidad con el monto en número y letra, línea de firma y su nombre debajo. Para que todo siga cabiendo en una hoja, el bloque de abajo se subió un poco; si la entrega cubre más de 4 abonos, ese bloque pasa a una segunda hoja.",
   ] },
