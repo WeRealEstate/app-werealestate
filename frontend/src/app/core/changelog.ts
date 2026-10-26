@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.2.7', fecha: '2026-10-26', cambios: [
+    "Planos públicos (/samai y /aldea-nanuu) más rápidos: los lotes y la imagen del plano ahora se piden desde que se abre la página, en paralelo con la descarga de la app, en lugar de esperar a que esta arranque. El plano aparece con un fundido corto (antes se revelaba con una máscara y un filtro animados durante 2.4 s que se sentían pesados en equipos modestos) y los botones entran más pronto.",
+  ] },
   { version: '11.2.6', fecha: '2026-10-26', cambios: [
     "Vista previa al compartir por WhatsApp: el link del plano de SAMAI (/samai) ahora muestra el logo de SAMAI Campestre y el de Aldea Nanuu (/aldea-nanuu) el logo de Nanuu, sobre fondo oscuro, en lugar de la foto del desarrollo.",
   ] },

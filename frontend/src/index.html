@@ -65,7 +65,23 @@
       var p=location.pathname,d=null,tema=null;
       // Los planos públicos (/samai, /aldea-nanuu) no llevan pantalla de carga: se ve negro hasta que llega el plano
       // y entonces se revela (ver plano-publico). Sin esto saldría el pantallazo genérico de We.
-      if(/^\/(samai|aldea-nanuu)(\/|$)/.test(p)){document.documentElement.style.background='#000';document.write('<style>#we-splash{display:none!important}body{background:#000}</style>');return}
+      if(/^\/(samai|aldea-nanuu)(\/|$)/.test(p)){
+        document.documentElement.style.background='#000';document.write('<style>#we-splash{display:none!important}body{background:#000}</style>');
+        // Los lotes se piden desde ya, mientras se descarga el JavaScript (la imagen del plano no puede empezar antes de que
+        // llegue esta respuesta, que trae su URL). LotesService.listarPublicoPorProyecto la recoge una sola vez; si falla o
+        // tarda demasiado, la app hace la petición normal. Lleva el mismo token que el interceptor: con sesión, el admin
+        // ve el estado real de los lotes y no el que se muestra al público.
+        try{
+          var proy=/^\/aldea-nanuu/.test(p)?'nanuu':'samai',tk=localStorage.getItem('we_auth_token'),h={Accept:'application/json'};
+          if(tk)h.Authorization='Bearer '+tk;
+          window.__lotesPrecargados={proyecto:proy,desde:Date.now(),promesa:fetch('/api/lotes/publico?proyecto='+proy,{headers:h}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){
+            // En cuanto se sabe cuál es el plano, su descarga (lo más pesado) arranca sin esperar a que la app esté lista.
+            var u=d&&d[0]&&d[0].desarrollo&&d[0].desarrollo.planoUrl;
+            if(u){var l=document.createElement('link');l.rel='preload';l.as='image';l.href=u;l.setAttribute('fetchpriority','high');document.head.appendChild(l)}
+            return d})};
+          window.__lotesPrecargados.promesa.catch(function(){});
+        }catch(e){}
+        return}
       if(/^\/we-forms(\/|$)/.test(p)){var q=new URLSearchParams(location.search).get('proyecto');if(q==='samai'||q==='nanuu')d=q}
       if(!d)return;
       if(tema)document.documentElement.style.background='#000';

@@ -186,7 +186,6 @@ export class PlanoPublicoComponent implements OnDestroy {
   /** Carga del plano (ver CSS .plano-*): la imagen ya llegó; la pantalla de carga sale y el plano se revela. */
   readonly imagenLista = signal(false);
   private cargaProgramada = false;
-  readonly revelado = signal(false);
   readonly errorMessage = signal<string | null>(null);
 
   /** El plano/nombre del desarrollo vienen anidados en cualquiera de sus lotes (todos comparten el
@@ -694,21 +693,20 @@ export class PlanoPublicoComponent implements OnDestroy {
     this.naturalWidth = img.naturalWidth;
     this.naturalHeight = img.naturalHeight;
     this.ajustarZoomParaVerCompleto();
-    this.terminarCarga(true);
+    this.terminarCarga();
   }
 
   /** Si la imagen no carga, igual se quita la pantalla de carga (el visor queda vacío y negro). */
   onImagenError(): void {
-    this.terminarCarga(false);
+    this.terminarCarga();
   }
 
-  /** En cuanto llega el plano (o falla) se muestra: sin pantalla de carga ni espera mínima. Con el plano se
-   * dispara la animación de revelado (`plano-revelar`), que dura ~2.4 s. */
-  private terminarCarga(conAnimacion: boolean): void {
+  /** En cuanto llega el plano (o falla) se muestra: sin pantalla de carga ni espera mínima. Con el plano entra
+   * un fundido corto (`plano-fundido`, solo opacidad). */
+  private terminarCarga(): void {
     if (this.cargaProgramada) return;
     this.cargaProgramada = true;
     this.imagenLista.set(true);
-    setTimeout(() => this.revelado.set(true), conAnimacion ? 2600 : 0);
   }
 
   @HostListener('window:resize')

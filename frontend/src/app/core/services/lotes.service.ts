@@ -36,6 +36,22 @@ export interface BuscarMovimientosParams {
   tamano: number;
 }
 
+/** Lotes que index.html pidió por adelantado (solo en /samai y /aldea-nanuu). */
+interface LotesPrecargados {
+  proyecto: 'samai' | 'nanuu';
+  desde: number;
+  promesa: Promise<unknown>;
+}
+
+declare global {
+  interface Window {
+    __lotesPrecargados?: LotesPrecargados;
+  }
+}
+
+/** Pasado este tiempo la respuesta precargada ya no se usa (los estados de los lotes cambian). */
+const LOTES_PRECARGADOS_VIGENCIA_MS = 60_000;
+
 @Injectable({ providedIn: 'root' })
 export class LotesService {
   private readonly http = inject(HttpClient);
@@ -66,7 +82,18 @@ export class LotesService {
   }
 
   /** Para /cotizador-publico/lotes: sin sesión, ver LoteController/SecurityConfig. */
-  listarPublicoPorProyecto(proyecto: 'samai' | 'nanuu'): Promise<Lote[]> {
+  async listarPublicoPorProyecto(proyecto: 'samai' | 'nanuu'): Promise<Lote[]> {
+    // index.html ya pidió estos lotes en cuanto abrió /samai o /aldea-nanuu (ver window.__lotesPrecargados): se usa esa
+    // respuesta una sola vez, y solo si es del mismo plano y reciente. Si falló o no aplica, va la petición de siempre.
+    const precargados = window.__lotesPrecargados;
+    window.__lotesPrecargados = undefined;
+    if (precargados && precargados.proyecto === proyecto && Date.now() - precargados.desde < LOTES_PRECARGADOS_VIGENCIA_MS) {
+      try {
+        return (await precargados.promesa) as Lote[];
+      } catch {
+        // cae a la petición normal
+      }
+    }
     return firstValueFrom(this.http.get<Lote[]>(`${this.baseUrl}/publico`, { params: { proyecto } }));
   }
 
