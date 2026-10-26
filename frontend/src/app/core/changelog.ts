@@ -15,6 +15,12 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.2.7', fecha: '2026-10-26', cambios: [
+    "Planos públicos (/samai y /aldea-nanuu) más rápidos: los lotes y la imagen del plano ahora se piden desde que se abre la página, en paralelo con la descarga de la app, en lugar de esperar a que esta arranque. El plano aparece con un fundido corto (antes se revelaba con una máscara y un filtro animados durante 2.4 s que se sentían pesados en equipos modestos) y los botones entran más pronto.",
+  ] },
+  { version: '11.2.6', fecha: '2026-10-26', cambios: [
+    "Vista previa al compartir por WhatsApp: el link del plano de SAMAI (/samai) ahora muestra el logo de SAMAI Campestre y el de Aldea Nanuu (/aldea-nanuu) el logo de Nanuu, sobre fondo oscuro, en lugar de la foto del desarrollo.",
+  ] },
   { version: '11.2.5', fecha: '2026-10-26', cambios: [
     "Páginas públicas más rápidas: la foto de portada del cotizador público pasó de 2.2 MB a unos 160 KB (WebP, con JPG de respaldo) sin pérdida visible, el script del captcha ya solo se descarga en la pantalla de inicio de sesión (antes lo bajaban todas las páginas públicas) y las fuentes de Google ya no retrasan el primer pintado.",
   ] },

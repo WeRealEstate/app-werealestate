@@ -34,7 +34,7 @@
           decoding="async"
           fetchpriority="high"
           [class.opacity-0]="!imagenLista()"
-          [class.plano-revelar]="imagenLista() && !revelado()"
+          [class.plano-fundido]="imagenLista()"
           (load)="onImagenCargada($event)"
           (error)="onImagenError()"
         />
@@ -78,7 +78,7 @@
       <div
         class="plano-ui absolute left-[max(0.75rem,env(safe-area-inset-left))] top-[max(0.75rem,env(safe-area-inset-top))] rounded-lg border border-border bg-surface/95 shadow-lg"
         [class.plano-ui-in]="imagenLista()"
-        style="--d: 1.3s"
+        style="--d: 0.5s"
         (click)="$event.stopPropagation()"
         (pointerdown)="$event.stopPropagation()"
       >
@@ -133,7 +133,7 @@
       <div
         class="plano-ui absolute bottom-[calc(max(0.75rem,env(safe-area-inset-bottom))+3.5rem)] left-[max(0.75rem,env(safe-area-inset-left))] flex max-w-[calc(100%-1.5rem)] flex-col items-start gap-2.5 sm:bottom-[max(0.75rem,env(safe-area-inset-bottom))] sm:max-w-[calc(100%-9rem)]"
         [class.plano-ui-in]="imagenLista()"
-        style="--d: 1.4s"
+        style="--d: 0.6s"
         (click)="$event.stopPropagation()"
         (pointerdown)="$event.stopPropagation()"
       >
@@ -264,7 +264,7 @@
       <div
         class="plano-ui absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] flex items-center gap-1 rounded-lg border border-border bg-surface/95 p-1 shadow-lg"
         [class.plano-ui-in]="imagenLista()"
-        style="--d: 1.5s"
+        style="--d: 0.7s"
         (click)="$event.stopPropagation()"
         (pointerdown)="$event.stopPropagation()"
       >

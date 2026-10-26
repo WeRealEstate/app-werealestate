@@ -762,17 +762,9 @@ select.rounded-full:not([multiple]):not([size]) {
   .we-dot { animation-duration: 3.6s; }
 }
 
-/* ---- Carga del plano público: revelado del plano desde la parte baja ---- */
-@property --r {
-  syntax: '<length-percentage>';
-  inherits: false;
-  initial-value: 0%;
-}
-@keyframes plano-revelar {
-  0% { --r: 0%; filter: grayscale(1) brightness(0.7); }
-  62% { --r: 140%; filter: grayscale(1) brightness(0.7); }
-  100% { --r: 140%; filter: grayscale(0) brightness(1); }
-}
+/* ---- Carga del plano público: el plano aparece con un fundido corto ----
+   Antes se revelaba con una máscara circular y un filtro gris→color animados (2.4 s): obligaban a repintar la imagen
+   completa en cada cuadro, y en equipos modestos el plano llegaba trabado. Solo opacidad: la resuelve la GPU. */
 @keyframes plano-ui-in {
   0% { opacity: 0; transform: translateY(8px); }
   100% { opacity: 1; transform: translateY(0); }
@@ -783,14 +775,10 @@ select.rounded-full:not([multiple]):not([size]) {
   animation: we-spinE 1.8s cubic-bezier(0.7, 0, 0.3, 1) infinite;
 }
 .we-e-grande img { position: absolute; width: 99.3px; max-width: none; left: -55.1px; top: 0; }
-.plano-revelar {
-  -webkit-mask-image: radial-gradient(circle at 44% 93%, #000 var(--r), transparent calc(var(--r) + 14%));
-  mask-image: radial-gradient(circle at 44% 93%, #000 var(--r), transparent calc(var(--r) + 14%));
-  animation: plano-revelar 2.4s cubic-bezier(0.45, 0, 0.25, 1) forwards;
-}
+.plano-fundido { animation: plano-fade-in 0.6s ease-out; }
 .plano-ui { opacity: 0; pointer-events: none; }
 .plano-ui-in { pointer-events: auto; animation: plano-ui-in 0.6s ease-out var(--d, 1.3s) forwards; }
-.plano-fade-in { animation: plano-fade-in 0.8s ease-out 1.5s forwards; }
+.plano-fade-in { animation: plano-fade-in 0.6s ease-out 0.4s forwards; }
 
 /* Botones del plano público (asesor, PDF, registrar venta, seleccionar varios): azul de la marca sólido con
    borde claro para que se vean como botones sobre el plano blanco. Al pasar el mouse solo se aclaran y
@@ -843,7 +831,7 @@ select.rounded-full:not([multiple]):not([size]) {
   .plano-btn:hover:not(:disabled) { transform: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .plano-revelar { animation: none; -webkit-mask-image: none; mask-image: none; }
+  .plano-fundido { animation: none; }
   .plano-ui-in, .plano-fade-in { animation-duration: 0.01s; animation-delay: 0s; }
 }
 .we-dot-claro { background: #85b4f0 !important; }
