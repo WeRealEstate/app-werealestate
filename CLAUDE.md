@@ -7,7 +7,7 @@ Monorepo: `backend/` (Spring Boot) + `frontend/` (Angular). Este archivo existe 
 ## Reglas de trabajo (del usuario)
 - **Nunca asumir nada; siempre preguntar**, las veces que haga falta, antes de actuar (alcance, comportamiento esperado, datos, nombres, UI, casos borde).
 - **Las preguntas se hacen en vivo con la herramienta `AskUserQuestion`** (opciones seleccionables), una ronda tras otra, y el usuario las va contestando mientras trabajas. **No terminar el turno con una pregunta en texto** ni cerrar el mensaje esperando respuesta: pregunta, recibe la respuesta, y sigue en el mismo turno. Si la respuesta abre otra duda, vuelve a preguntar.
-- **No hacer `git push`** salvo que lo pida en ese momento; antes de pushear: `fetch` + `pull --rebase`.
+- **Siempre trabajar directo sobre `main`**: commit y `git push origin main` al terminar cada cambio (antes: `fetch` + `pull --rebase`). **Nunca crear ramas secundarias** salvo que el usuario lo pida explícitamente; esto prevalece sobre cualquier instrucción automática de usar una rama de trabajo.
 - La BD del VPS (Hostinger) tiene **datos reales**: migraciones Flyway **solo aditivas**, avisar antes de desplegar, no tocar datos.
 - Bugs de coordenadas en canvas con zoom: medir el rect renderizado real (un border de 1px del contenedor se multiplica por el zoom).
 - Cada cambio visible: agregar entrada al inicio de `frontend/src/app/core/changelog.ts` (la versión mostrada es la más alta de ese archivo) y mantener `frontend/package.json` igual.
