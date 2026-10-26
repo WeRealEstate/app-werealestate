@@ -33,44 +33,13 @@
     </div>
 
     <nav class="mt-1 flex-1 space-y-4 px-4 overflow-y-auto py-1">
-      @for (section of navSections(); track section.label ?? '_inicio'; let i = $index) {
+      @for (section of navSections(); track section.label ?? '_inicio') {
         <div class="space-y-1">
           @if (section.label) {
-            <!-- Encabezado desplegable, como la leyenda "Estados" del plano público: la flechita pliega la sección. -->
-            <button
-              type="button"
-              (click)="alternarSeccion(section.label)"
-              [attr.aria-expanded]="seccionAbierta(section.label)"
-              [attr.aria-controls]="'nav-seccion-' + i"
-              class="flex w-full items-center justify-between gap-3 rounded-lg px-3.5 pt-1 pb-1 text-[11px] font-semibold uppercase tracking-wider
-                     text-[var(--sb-muted)] hover:text-[var(--sb-fg)] transition-colors duration-150
-                     focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sb-ring)]"
-            >
+            <p class="px-3.5 pt-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--sb-muted)]">
               {{ section.label }}
-              <svg
-                viewBox="0 0 24 24"
-                class="h-4 w-4 shrink-0 transition-transform duration-200"
-                [class.rotate-180]="!seccionAbierta(section.label)"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="m18 15-6-6-6 6" />
-              </svg>
-            </button>
+            </p>
           }
-          <div
-            [id]="'nav-seccion-' + i"
-            class="grid transition-[grid-template-rows] duration-200 ease-out"
-            [class.grid-rows-[1fr]]="!section.label || seccionAbierta(section.label)"
-            [class.grid-rows-[0fr]]="section.label && !seccionAbierta(section.label)"
-            [attr.inert]="section.label && !seccionAbierta(section.label) ? '' : null"
-          >
-            <!-- Márgenes negativos con relleno igual: el overflow-hidden de la animación no recorta el aro de foco. -->
-            <div class="-mx-1 -my-0.5 min-h-0 space-y-1 overflow-hidden px-1 py-0.5">
           @for (item of section.items; track item.route) {
             <a
               [routerLink]="item.route"
@@ -121,8 +90,6 @@
               {{ item.label }}
             </a>
           }
-            </div>
-          </div>
         </div>
       }
     </nav>

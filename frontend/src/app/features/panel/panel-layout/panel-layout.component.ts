@@ -62,17 +62,6 @@ interface NavSection {
   items: NavItem[];
 }
 
-const CLAVE_SECCIONES_PLEGADAS = 'we_nav_secciones_plegadas';
-
-function leerSeccionesPlegadas(): ReadonlySet<string> {
-  try {
-    const guardado: unknown = JSON.parse(localStorage.getItem(CLAVE_SECCIONES_PLEGADAS) ?? '[]');
-    return new Set(Array.isArray(guardado) ? guardado.filter((x): x is string => typeof x === 'string') : []);
-  } catch {
-    return new Set();
-  }
-}
-
 const NAV_BY_ROLE: Record<Role, NavSection[]> = {
   ASESOR: [
     { label: null, items: [{ label: 'Inicio', route: '/panel/asesor', icon: 'home' }] },
@@ -218,10 +207,6 @@ export class PanelLayoutComponent {
       .filter((seccion) => seccion.items.length > 0);
   });
 
-  /** Secciones del menú que el usuario plegó (varias pueden estar abiertas a la vez; por defecto todas lo están).
-   * Se recuerdan en este navegador para que sigan igual al recargar. */
-  private readonly seccionesPlegadas = signal<ReadonlySet<string>>(leerSeccionesPlegadas());
-
   readonly sidebarOpen = signal(false);
   /** Versión de la app (la más alta del historial, core/changelog.ts) y fecha en que se compiló. */
   readonly versionApp =`v${VERSION_ACTUAL} · ${FECHA_COMPILACION.split('-').reverse().join('/')}`;
@@ -238,21 +223,6 @@ export class PanelLayoutComponent {
     if (typeof window !== 'undefined') {
       const consulta = window.matchMedia('(min-width: 1024px)');
       consulta.addEventListener('change', (e) => this.esEscritorio.set(e.matches));
-    }
-  }
-
-  seccionAbierta(etiqueta: string): boolean {
-    return !this.seccionesPlegadas().has(etiqueta);
-  }
-
-  alternarSeccion(etiqueta: string): void {
-    const nuevas = new Set(this.seccionesPlegadas());
-    if (!nuevas.delete(etiqueta)) nuevas.add(etiqueta);
-    this.seccionesPlegadas.set(nuevas);
-    try {
-      localStorage.setItem(CLAVE_SECCIONES_PLEGADAS, JSON.stringify([...nuevas]));
-    } catch {
-      // Sin almacenamiento (ventana privada o bloqueado): el menú funciona igual, solo no recuerda el estado.
     }
   }
 
