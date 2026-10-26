@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.2.3', fecha: '2026-10-26', cambios: [
+    "Comisiones: el comprobante en PDF de cada entrega ahora trae, dentro del talón del asesor, un espacio para que firme de recibido: leyenda de conformidad con el monto en número y letra, línea de firma y su nombre debajo. Para que todo siga cabiendo en una hoja, el bloque de abajo se subió un poco; si la entrega cubre más de 4 abonos, ese bloque pasa a una segunda hoja.",
+  ] },
   { version: '11.2.2', fecha: '2026-10-23', cambios: [
     "Comercializadoras: en el formulario del enlace, cada integrante ahora puede elegir su propio PIN de 4 letras o números (lo escribe dos veces para no equivocarse). Si lo deja vacío, el sistema le asigna uno como antes. Si el PIN ya lo tiene otra persona, se le pide elegir otro sin decir de quién es, y hay un tope de intentos para que nadie use el formulario para averiguar qué PINs existen.",
   ] },

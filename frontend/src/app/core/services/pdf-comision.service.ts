@@ -33,7 +33,11 @@ const X0 = px(47);
 const X1 = px(956);
 const ALTO_FILA = px(58);
 /** El bloque de abajo (comisión por pagar, método, totales y talón) va pegado al pie, como en el diseño. */
-const Y_BLOQUE_FINAL = px(808);
+const Y_BLOQUE_FINAL = px(686);
+/** Cuánto se subió el bloque final respecto al diseño original (que lo tenía en 808) para dar lugar a la firma de
+ * recibido dentro del talón. `py` pasa una coordenada vertical del diseño a mm ya con ese desplazamiento. */
+const DESPLAZA_BLOQUE = px(-122);
+const py = (n: number): number => px(n) + DESPLAZA_BLOQUE;
 /** Hasta dónde llegan los renglones del desglose en una hoja antes de pasar a la siguiente. */
 const Y_LIMITE_FILAS = px(1235);
 
@@ -278,7 +282,7 @@ export class PdfComisionService {
     doc.setLineWidth(0.3);
     doc.roundedRect(X0, Y_BLOQUE_FINAL, X1 - X0, px(141), px(10), px(10), 'S');
     const venta = t.ventaNumero !== null ? ` · VENTA ${numeroVenta(t.ventaNumero)}` : '';
-    this.etiqueta(doc, `COMISIÓN POR PAGAR${venta}`, xi, px(838));
+    this.etiqueta(doc, `COMISIÓN POR PAGAR${venta}`, xi, py(838));
     const falta = Math.max(0, redondear(t.comisionTotal - t.entregadoAcumulado));
     const avance = t.comisionTotal > 0 ? (t.entregadoAcumulado / t.comisionTotal) * 100 : 0;
     // Mientras falte algo no se muestra 100%, aunque el redondeo dé 100.
@@ -286,9 +290,9 @@ export class PdfComisionService {
     doc.setFont(FUENTE, 'normal');
     doc.setFontSize(8.3);
     doc.setTextColor(...GRIS);
-    doc.text(`${pct}% pagado`, xd, px(838), { align: 'right' });
+    doc.text(`${pct}% pagado`, xd, py(838), { align: 'right' });
 
-    const by = px(857);
+    const by = py(857);
     const bh = px(8);
     const bw = xd - xi;
     doc.setFillColor(...AZUL_CLARO);
@@ -303,31 +307,31 @@ export class PdfComisionService {
     doc.setFont(FUENTE, 'normal');
     doc.setFontSize(9);
     doc.setTextColor(...GRIS);
-    doc.text('Pendiente por pagar', xd, px(893), { align: 'right' });
+    doc.text('Pendiente por pagar', xd, py(893), { align: 'right' });
     doc.setFont(FUENTE, 'bold');
     doc.setFontSize(13);
     doc.setTextColor(...AZUL);
-    doc.text(dinero(falta), xd, px(922), { align: 'right' });
+    doc.text(dinero(falta), xd, py(922), { align: 'right' });
 
     // Método de entrega: solo cómo se entregó (efectivo o transferencia). Con/sin IVA, con/sin factura y el gasto
     // se guardan y se ven dentro del sistema, no en el ticket.
-    const yb = px(966);
+    const yb = py(966);
     const hb = px(159);
     doc.setDrawColor(...BORDE);
     doc.roundedRect(X0, yb, px(491) - X0, hb, px(10), px(10), 'S');
-    this.etiqueta(doc, 'MÉTODO DE ENTREGA', xi, px(994));
+    this.etiqueta(doc, 'MÉTODO DE ENTREGA', xi, py(994));
     doc.setFont(FUENTE, 'bold');
     doc.setFontSize(15);
     doc.setTextColor(...TINTA);
-    doc.text(FORMA_PAGO_COMISION_LABELS[t.formaPago], xi, px(1055));
+    doc.text(FORMA_PAGO_COMISION_LABELS[t.formaPago], xi, py(1055));
 
     // Totales: la comisión del copropietario va en "Comisión secundaria".
     const xt = px(531);
     doc.setFillColor(...AZUL_CLARO);
     doc.roundedRect(px(511), yb, X1 - px(511), hb, px(10), px(10), 'F');
     const totales: [string, number, number][] = [
-      ['Subtotal comisiones', t.secundaria ? 0 : t.monto, px(999)],
-      ['Comisión secundaria', t.secundaria ? t.monto : 0, px(1028)],
+      ['Subtotal comisiones', t.secundaria ? 0 : t.monto, py(999)],
+      ['Comisión secundaria', t.secundaria ? t.monto : 0, py(1028)],
     ];
     for (const [etiqueta, valor, yf] of totales) {
       doc.setFont(FUENTE, 'normal');
@@ -338,17 +342,17 @@ export class PdfComisionService {
       doc.text(dinero(valor), xd, yf, { align: 'right' });
     }
     doc.setDrawColor(...AZUL_LINEA);
-    doc.line(xt, px(1045), xd, px(1045));
+    doc.line(xt, py(1045), xd, py(1045));
     doc.setFont(FUENTE, 'bold');
     doc.setFontSize(9.5);
     doc.setTextColor(...TINTA);
-    doc.text('Total', xt, px(1082));
+    doc.text('Total', xt, py(1082));
     doc.setFontSize(15);
     doc.setTextColor(...AZUL);
-    doc.text(dinero(t.monto), xd, px(1084), { align: 'right' });
+    doc.text(dinero(t.monto), xd, py(1084), { align: 'right' });
 
     // Talón del asesor, separado con línea punteada.
-    const yl = px(1148);
+    const yl = py(1148);
     const titulo = 'TALÓN DEL ASESOR';
     const centro = (X0 + X1) / 2;
     const anchoTitulo = this.espaciado(doc, titulo, centro, yl + px(4), {
@@ -364,26 +368,44 @@ export class PdfComisionService {
     doc.line(centro + anchoTitulo / 2 + px(12), yl, X1, yl);
     doc.setLineDashPattern([], 0);
 
-    const yt = px(1171);
+    const yt = py(1171);
     doc.setFillColor(...AZUL_CLARO);
-    doc.roundedRect(X0, yt, X1 - X0, px(67), px(12), px(12), 'F');
-    doc.addImage(logo, 'PNG', px(72), px(1188), px(73), px(73) / LOGO_PROPORCION, 'logo-we');
-    this.espaciado(doc, 'FOLIO', px(173), px(1197), { tamano: 6.8, color: GRIS_AZUL, espacio: 0.5 });
+    doc.roundedRect(X0, yt, X1 - X0, px(189), px(12), px(12), 'F');
+    doc.addImage(logo, 'PNG', px(72), py(1188), px(73), px(73) / LOGO_PROPORCION, 'logo-we');
+    this.espaciado(doc, 'FOLIO', px(173), py(1197), { tamano: 6.8, color: GRIS_AZUL, espacio: 0.5 });
     doc.setFont(MONO, 'bold');
     doc.setFontSize(10);
     doc.setTextColor(...TINTA);
-    doc.text(folio, px(173), px(1218));
-    this.espaciado(doc, 'ASESOR', px(299), px(1197), { tamano: 6.8, color: GRIS_AZUL, espacio: 0.5 });
-    this.textoQueQuepa(doc, t.asesorNombre, px(299), px(1218), px(488) - px(299), { tamano: 9.5, negrita: true, color: TINTA });
-    this.espaciado(doc, 'ENTREGA', px(500), px(1197), { tamano: 6.8, color: GRIS_AZUL, espacio: 0.5 });
+    doc.text(folio, px(173), py(1218));
+    this.espaciado(doc, 'ASESOR', px(299), py(1197), { tamano: 6.8, color: GRIS_AZUL, espacio: 0.5 });
+    this.textoQueQuepa(doc, t.asesorNombre, px(299), py(1218), px(488) - px(299), { tamano: 9.5, negrita: true, color: TINTA });
+    this.espaciado(doc, 'ENTREGA', px(500), py(1197), { tamano: 6.8, color: GRIS_AZUL, espacio: 0.5 });
     const [anio, mes, dia] = partesFecha(t.fechaEntrega);
     doc.setFont(FUENTE, 'bold');
     doc.setFontSize(9.5);
     doc.setTextColor(...TINTA);
-    doc.text(`${diaSemana(t.fechaEntrega)} ${dia} ${MESES[mes - 1]} ${anio}`, px(500), px(1218));
+    doc.text(`${diaSemana(t.fechaEntrega)} ${dia} ${MESES[mes - 1]} ${anio}`, px(500), py(1218));
     doc.setFontSize(16);
     doc.setTextColor(...AZUL);
-    doc.text(dinero(t.monto), px(932), px(1214), { align: 'right' });
+    doc.text(dinero(t.monto), px(932), py(1214), { align: 'right' });
+
+    // Firma de recibido: el asesor firma el talón que se queda la empresa como comprobante de que recibió la entrega.
+    doc.setDrawColor(...AZUL_LINEA);
+    doc.setLineWidth(0.3);
+    doc.line(px(72), py(1245), px(932), py(1245));
+    doc.setFont(FUENTE, 'normal');
+    doc.setFontSize(7.8);
+    doc.setTextColor(...GRIS);
+    const leyenda = `Recibí de We Real Estate la cantidad de ${dinero(t.monto)} (${montoEnLetras(t.monto)}) por concepto de comisión.`;
+    doc.text(doc.splitTextToSize(leyenda, px(860)).slice(0, 2) as string[], px(72), py(1266), { lineHeightFactor: 1.5 });
+
+    const xf0 = px(299);
+    const xf1 = px(705);
+    doc.setDrawColor(...TINTA);
+    doc.setLineWidth(0.3);
+    doc.line(xf0, py(1308), xf1, py(1308));
+    this.textoQueQuepa(doc, t.asesorNombre, (xf0 + xf1) / 2, py(1330), xf1 - xf0, { tamano: 9.5, negrita: true, color: TINTA }, 'center');
+    this.espaciado(doc, 'FIRMA DE RECIBIDO', (xf0 + xf1) / 2, py(1346), { tamano: 6.8, color: GRIS_AZUL, espacio: 0.5, alinear: 'center' });
   }
 
   private encabezadoContinuacion(doc: jsPDF, folio: string): void {
@@ -439,11 +461,11 @@ export class PdfComisionService {
     doc.setFont(FUENTE, 'normal');
     doc.setFontSize(9);
     doc.setTextColor(...GRIS);
-    doc.text(etiqueta, x, px(893));
+    doc.text(etiqueta, x, py(893));
     doc.setFont(FUENTE, 'bold');
     doc.setFontSize(10);
     doc.setTextColor(...TINTA);
-    doc.text(valor, x, px(918));
+    doc.text(valor, x, py(918));
   }
 
   /** Achica la letra hasta que el texto quepa (un nombre largo); si ni así, lo recorta con "…". */
@@ -454,6 +476,7 @@ export class PdfComisionService {
     y: number,
     anchoMax: number,
     o: { tamano: number; negrita: boolean; color: Rgb },
+    alinear: 'left' | 'center' = 'left',
   ): void {
     doc.setFont(FUENTE, o.negrita ? 'bold' : 'normal');
     doc.setTextColor(...o.color);
@@ -463,7 +486,7 @@ export class PdfComisionService {
       tamano -= 0.5;
       doc.setFontSize(tamano);
     }
-    doc.text(recortar(doc, texto, anchoMax), x, y);
+    doc.text(recortar(doc, texto, anchoMax), x, y, { align: alinear });
   }
 
   // ---- recursos ----
