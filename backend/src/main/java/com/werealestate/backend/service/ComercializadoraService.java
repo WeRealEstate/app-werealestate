@@ -26,7 +26,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Comercializadoras en el panel (Admin y Administración con el módulo Asesores externos): crear una, elegir a su
- * líder (un asesor externo, que pasa a ser LIDER en Comunidades We), ver a sus integrantes y manejar el enlace
+ * líder (un asesor externo o un asesor interno, por su ficha de Comunidades We; pasa a ser LIDER ahí), ver a sus
+ * integrantes y manejar el enlace
  * secreto que la líder comparte con su equipo. El alta de los integrantes está en ComercializadoraPublicoService.
  */
 @Service
@@ -190,9 +191,6 @@ public class ComercializadoraService {
                 .findById(liderId)
                 .filter(AsesorExterno::isActivo)
                 .orElseThrow(() -> new ValidationException("La líder elegida no existe o está inactiva"));
-        if (lider.getUsuarioId() != null) {
-            throw new ValidationException("La líder debe ser un asesor externo, no un usuario interno");
-        }
         if (lider.getTipo() == TipoAsesorExterno.LINEA) {
             throw new ConflictException(
                     lider.getNombre() + " reporta a otra persona en Comunidades We: solo puede ser líder quien encabeza su propio equipo");

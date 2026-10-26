@@ -58,8 +58,8 @@ export class ComercializadorasListComponent {
   readonly guardandoIntegrante = signal(false);
   readonly errorIntegrante = signal<string | null>(null);
 
-  /** Quién puede ser líder: asesores externos activos que no reportan a nadie (independientes o líderes), y que no
-   * lo sean ya de otra comercializadora. */
+  /** Quién puede ser líder: asesores activos, externos o internos (la ficha de comunidad de un usuario con rol Asesor),
+   * que no reportan a nadie (independientes o líderes) y que no lo sean ya de otra comercializadora. */
   readonly lideresPosibles = computed(() => {
     const ocupados = new Set(
       this.items()
@@ -67,7 +67,7 @@ export class ComercializadorasListComponent {
         .map((c) => c.liderId),
     );
     return this.asesores().filter(
-      (a) => a.activo && a.usuarioId === null && a.tipo !== 'LINEA' && !ocupados.has(a.id),
+      (a) => a.activo && a.tipo !== 'LINEA' && !ocupados.has(a.id),
     );
   });
 

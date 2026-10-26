@@ -80,16 +80,16 @@
             <label for="co-lider" class="mb-1 block text-xs font-medium text-ink-muted">Líder *</label>
             <select id="co-lider" name="lider" [ngModel]="liderId()" (ngModelChange)="liderId.set($event)"
               class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50">
-              <option [ngValue]="null">Elige un asesor externo</option>
+              <option [ngValue]="null">Elige un asesor</option>
               @for (a of lideresPosibles(); track a.id) {
-                <option [ngValue]="a.id">{{ a.nombre }}</option>
+                <option [ngValue]="a.id">{{ a.nombre }}{{ a.usuarioId !== null ? ' (interno)' : '' }}</option>
               }
             </select>
             <p class="mt-1 text-xs text-ink-muted">
               @if (editando() && editando()!.integrantes > 0) {
                 Ya tiene integrantes, así que la líder no se puede cambiar.
               } @else {
-                Si todavía no está registrada, primero créala en Asesores externos. Pasará a ser Líder en Comunidades We.
+                Puede ser un asesor externo o uno interno. Si todavía no está registrado, primero créalo en Asesores externos (o como usuario con rol Asesor). Pasará a ser Líder en Comunidades We.
               }
             </p>
           </div>

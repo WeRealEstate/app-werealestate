@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.2.9', fecha: '2026-10-26', cambios: [
+    "Comercializadoras: la líder ahora también puede ser un asesor interno (usuario con rol Asesor), no solo un asesor externo. En el selector aparece con la etiqueta '(interno)'. Al elegirlo pasa a ser Líder en Comunidades We y, como con una líder externa, quienes se unan por el enlace de la comercializadora quedan debajo de él. Un asesor interno que ya reporta a alguien en Comunidades We no se puede elegir, y no se puede quitar de Comunidades We (ni borrar su usuario) mientras sea líder de una comercializadora.",
+  ] },
   { version: '11.2.8', fecha: '2026-10-26', cambios: [
     "Planos públicos y cotizador público: los lotes 'Reservado por We' ahora salen siempre como 'Vendido' en esos links, sin importar la sesión que haya en el navegador. Antes, quien tenía abierta una sesión de Administración o Admin en el mismo navegador veía 'Reservado por We' al abrir /samai o /aldea-nanuu. Ese estado solo se ve dentro del panel (Lotes y Plano).",
   ] },

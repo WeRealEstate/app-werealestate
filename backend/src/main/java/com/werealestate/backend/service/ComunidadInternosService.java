@@ -6,6 +6,7 @@ import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.TipoAsesorExterno;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.repository.AsesorExternoRepository;
+import com.werealestate.backend.repository.ComercializadoraRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,9 +22,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class ComunidadInternosService {
 
     private final AsesorExternoRepository asesorExternoRepository;
+    private final ComercializadoraRepository comercializadoraRepository;
 
-    public ComunidadInternosService(AsesorExternoRepository asesorExternoRepository) {
+    public ComunidadInternosService(
+            AsesorExternoRepository asesorExternoRepository, ComercializadoraRepository comercializadoraRepository) {
         this.asesorExternoRepository = asesorExternoRepository;
+        this.comercializadoraRepository = comercializadoraRepository;
     }
 
     /** Crea o actualiza la ficha si el usuario es ASESOR; si dejó de serlo, la quita del árbol. */
@@ -50,6 +54,12 @@ public class ComunidadInternosService {
     }
 
     private void quitarDelArbol(AsesorExterno ficha) {
+        if (comercializadoraRepository.existsByLiderId(ficha.getId())) {
+            // Una comercializadora la tiene como líder (el vínculo es obligatorio): borrarla dejaría la comercializadora sin líder.
+            throw new ConflictException(
+                    "No se puede quitar a " + ficha.getNombre()
+                            + " de Comunidades We: es líder de una comercializadora. Cambia su líder o elimina la comercializadora primero.");
+        }
         if (asesorExternoRepository.existsByLiderDirectoId(ficha.getId())) {
             throw new ConflictException(
                     "No se puede quitar a " + ficha.getNombre()
