@@ -126,10 +126,10 @@
         </div>
       </div>
 
-      <!-- Zona de botones, abajo a la izquierda y apilados de arriba abajo. Sin asesor verificado solo está
-           el candado "Asesor" (pide el nombre de un asesor registrado). Ya verificado: nombre con "salir",
-           Descargar plano, Registrar venta y, al final, la selección de varios lotes (con lotes elegidos
-           aparece "Apartar N"). -->
+      <!-- Menú del asesor, abajo a la izquierda y desplegable como la leyenda "Estados". Sin asesor verificado solo
+           está el candado "Asesor" (pide el nombre de un asesor registrado). Ya verificado: un botón con su nombre
+           que abre la lista (Descargar plano, Material, Registrar venta, selección de varios lotes y "salir").
+           El botón queda fijo abajo y la lista crece hacia arriba; arranca plegada y se cierra al elegir una opción. -->
       <div
         class="plano-ui absolute bottom-[calc(max(0.75rem,env(safe-area-inset-bottom))+3.5rem)] left-[max(0.75rem,env(safe-area-inset-left))] flex max-w-[calc(100%-1.5rem)] flex-col items-start gap-2.5 sm:bottom-[max(0.75rem,env(safe-area-inset-bottom))] sm:max-w-[calc(100%-9rem)]"
         [class.plano-ui-in]="imagenLista()"
@@ -138,73 +138,122 @@
         (pointerdown)="$event.stopPropagation()"
       >
         @if (asesorVerificado(); as asesor) {
-          <button
-            type="button"
-            (click)="cerrarSesionAsesor()"
-            title="Salir del modo asesor"
-            class="plano-btn max-w-full truncate"
-            style="--e: 0"
-          >
-            {{ asesor }} · salir
-          </button>
-          <button
-            type="button"
-            (click)="descargarPdf()"
-            [disabled]="generandoPdf()"
-            data-testid="descargar-pdf"
-            class="plano-btn"
-            style="--e: 1"
-          >
-            {{ generandoPdf() ? 'Generando plano…' : 'Descargar plano' }}
-          </button>
-          <!-- Material de venta: página aparte (grid), en otra pestaña para no perder el plano. -->
-          <a
-            [href]="'/material?proyecto=' + proyecto"
-            target="_blank"
-            rel="noopener"
-            data-testid="material"
-            class="plano-btn"
-            style="--e: 2"
-          >
-            Material
-          </a>
-          <!-- We Forms: el registro de venta se llena en otra pestaña; el PIN no viaja en el enlace, pero este dispositivo ya lo recuerda. -->
-          <a
-            [href]="'/we-forms?proyecto=' + proyecto"
-            target="_blank"
-            rel="noopener"
-            data-testid="registrar-venta"
-            class="plano-btn"
-            style="--e: 3"
-          >
-            Registrar venta
-          </a>
-          <div class="flex flex-wrap items-center gap-2.5">
+          <div class="max-w-full rounded-lg border border-border bg-surface/95 shadow-lg">
+            <div
+              id="menu-asesor"
+              class="grid transition-[grid-template-rows] duration-200 ease-out"
+              [class.grid-rows-[1fr]]="menuAsesorAbierto()"
+              [class.grid-rows-[0fr]]="!menuAsesorAbierto()"
+              [attr.inert]="menuAsesorAbierto() ? null : ''"
+            >
+              <ul class="flex min-h-0 flex-col gap-0.5 overflow-hidden px-1.5">
+                <li class="pt-1.5">
+                  <button
+                    type="button"
+                    (click)="cerrarMenuAsesor(); descargarPdf()"
+                    [disabled]="generandoPdf()"
+                    data-testid="descargar-pdf"
+                    class="flex w-full items-center rounded-md px-2.5 py-2.5 text-left text-sm font-semibold text-ink hover:bg-surface-2 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50"
+                  >
+                    {{ generandoPdf() ? 'Generando plano…' : 'Descargar plano' }}
+                  </button>
+                </li>
+                <!-- Material de venta: página aparte (grid), en otra pestaña para no perder el plano. -->
+                <li>
+                  <a
+                    [href]="'/material?proyecto=' + proyecto"
+                    target="_blank"
+                    rel="noopener"
+                    (click)="cerrarMenuAsesor()"
+                    data-testid="material"
+                    class="flex w-full items-center rounded-md px-2.5 py-2.5 text-sm font-semibold text-ink hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50"
+                  >
+                    Material
+                  </a>
+                </li>
+                <!-- We Forms: el registro de venta se llena en otra pestaña; el PIN no viaja en el enlace, pero este dispositivo ya lo recuerda. -->
+                <li>
+                  <a
+                    [href]="'/we-forms?proyecto=' + proyecto"
+                    target="_blank"
+                    rel="noopener"
+                    (click)="cerrarMenuAsesor()"
+                    data-testid="registrar-venta"
+                    class="flex w-full items-center rounded-md px-2.5 py-2.5 text-sm font-semibold text-ink hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50"
+                  >
+                    Registrar venta
+                  </a>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    (click)="cerrarMenuAsesor(); alternarModoSeleccion()"
+                    data-testid="seleccionar-varios"
+                    class="flex w-full items-center rounded-md px-2.5 py-2.5 text-left text-sm font-semibold hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50"
+                    [class.text-ink]="!modoSeleccion()"
+                    [class.text-red-600]="modoSeleccion()"
+                  >
+                    {{ modoSeleccion() ? 'Cancelar selección' : 'Seleccionar varios lotes' }}
+                  </button>
+                </li>
+                @if (modoSeleccion()) {
+                  <li class="px-2.5 py-1.5 text-xs text-ink-muted" data-testid="contador-seleccion">
+                    {{ seleccion().length }} de {{ maxSeleccion }} elegidos
+                  </li>
+                  @if (seleccion().length > 0) {
+                    <li>
+                      <button
+                        type="button"
+                        (click)="cerrarMenuAsesor(); abrirApartarVarios()"
+                        data-testid="apartar-seleccion"
+                        class="flex w-full items-center rounded-md px-2.5 py-2.5 text-left text-sm font-semibold text-green-700 hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50"
+                      >
+                        Apartar {{ seleccion().length }} {{ seleccion().length === 1 ? 'lote' : 'lotes' }}
+                      </button>
+                    </li>
+                  }
+                }
+                <li class="border-t border-border pb-1.5 pt-0.5">
+                  <button
+                    type="button"
+                    (click)="cerrarMenuAsesor(); cerrarSesionAsesor()"
+                    title="Salir del modo asesor"
+                    class="flex w-full items-center rounded-md px-2.5 py-2.5 text-left text-sm font-semibold text-ink-muted hover:bg-surface-2 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50"
+                  >
+                    Salir del modo asesor
+                  </button>
+                </li>
+              </ul>
+            </div>
             <button
               type="button"
-              (click)="alternarModoSeleccion()"
-              data-testid="seleccionar-varios"
-              class="plano-btn"
-              [class.plano-btn-peligro]="modoSeleccion()"
-              style="--e: 4"
+              (click)="alternarMenuAsesor()"
+              [attr.aria-expanded]="menuAsesorAbierto()"
+              aria-controls="menu-asesor"
+              [attr.aria-label]="menuAsesorAbierto() ? 'Cerrar menú del asesor' : 'Abrir menú del asesor'"
+              class="flex w-full max-w-full items-center justify-between gap-3 rounded-lg px-3 py-3 text-sm font-semibold text-ink
+                     hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50"
             >
-              {{ modoSeleccion() ? 'Cancelar selección' : 'Seleccionar varios lotes' }}
-            </button>
-            @if (modoSeleccion()) {
-              <span class="plano-btn-info" data-testid="contador-seleccion">
-                {{ seleccion().length }} de {{ maxSeleccion }} elegidos
-              </span>
-              @if (seleccion().length > 0) {
-                <button
-                  type="button"
-                  (click)="abrirApartarVarios()"
-                  data-testid="apartar-seleccion"
-                  class="plano-btn plano-btn-ok"
-                >
-                  Apartar {{ seleccion().length }} {{ seleccion().length === 1 ? 'lote' : 'lotes' }}
-                </button>
+              <span class="min-w-0 truncate">{{ generandoPdf() ? 'Generando plano…' : asesor }}</span>
+              @if (modoSeleccion()) {
+                <span class="shrink-0 rounded-full bg-we-primary px-2 py-0.5 text-[11px] font-semibold text-white">
+                  {{ seleccion().length }}/{{ maxSeleccion }}
+                </span>
               }
-            }
+              <svg
+                viewBox="0 0 24 24"
+                class="h-4 w-4 shrink-0 text-ink-muted transition-transform duration-200"
+                [class.rotate-180]="menuAsesorAbierto()"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="m18 15-6-6-6 6" />
+              </svg>
+            </button>
           </div>
         } @else {
           <button type="button" (click)="abrirAcceso()" class="plano-btn" style="--e: 0">Asesor</button>

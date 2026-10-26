@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.2.4', fecha: '2026-10-26', cambios: [
+    "Plano público: los botones del asesor (Descargar plano, Material, Registrar venta, Seleccionar varios lotes y Salir) ahora están en un menú desplegable con su nombre, como la lista de 'Estados'. Arranca plegado, se abre hacia arriba y se cierra solo al elegir una opción. Con la selección de varios lotes activa, el nombre muestra cuántos llevas (por ejemplo 2/5) y 'Apartar' aparece dentro del menú.",
+  ] },
   { version: '11.2.3', fecha: '2026-10-26', cambios: [
     "Comisiones: el comprobante en PDF de cada entrega ahora trae, dentro del talón del asesor, un espacio para que firme de recibido: leyenda de conformidad con el monto en número y letra, línea de firma y su nombre debajo. Para que todo siga cabiendo en una hoja, el bloque de abajo se subió un poco; si la entrega cubre más de 4 abonos, ese bloque pasa a una segunda hoja.",
   ] },

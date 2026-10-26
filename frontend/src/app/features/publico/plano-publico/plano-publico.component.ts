@@ -400,6 +400,17 @@ export class PlanoPublicoComponent implements OnDestroy {
     this.destroyRef.onDestroy(() => visual.removeEventListener('resize', alCambiar));
   }
 
+  /** Menú del asesor (nombre, descargar plano, material, registrar venta, selección): siempre arranca plegado. */
+  readonly menuAsesorAbierto = signal(false);
+
+  alternarMenuAsesor(): void {
+    this.menuAsesorAbierto.update((v) => !v);
+  }
+
+  cerrarMenuAsesor(): void {
+    this.menuAsesorAbierto.set(false);
+  }
+
   alternarLeyenda(): void {
     this.leyendaVisible.update((v) => !v);
   }
