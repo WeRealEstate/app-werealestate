@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.2.5', fecha: '2026-10-26', cambios: [
+    "Páginas públicas más rápidas: la foto de portada del cotizador público pasó de 2.2 MB a unos 160 KB (WebP, con JPG de respaldo) sin pérdida visible, el script del captcha ya solo se descarga en la pantalla de inicio de sesión (antes lo bajaban todas las páginas públicas) y las fuentes de Google ya no retrasan el primer pintado.",
+  ] },
   { version: '11.2.4', fecha: '2026-10-26', cambios: [
     "Plano público: los botones del asesor (Descargar plano, Material, Registrar venta, Seleccionar varios lotes y Salir) ahora están en un menú desplegable con su nombre, como la lista de 'Estados'. Arranca plegado, se abre hacia arriba y se cierra solo al elegir una opción. Con la selección de varios lotes activa, el nombre muestra cuántos llevas (por ejemplo 2/5) y 'Apartar' aparece dentro del menú.",
   ] },

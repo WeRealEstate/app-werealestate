@@ -3,13 +3,19 @@
      oscurece mientras el texto se desvanece, como transición hacia el formulario (ver hero-publico.ts). -->
 <section #hero class="relative h-[100svh] min-h-[560px] overflow-hidden bg-black text-white">
   <div #fotoMarco class="absolute inset-0 will-change-transform">
-    <img
-      #foto
-      src="/images/cotizador-hero.png"
-      alt=""
-      fetchpriority="high"
-      class="h-full w-full object-cover object-[62%_center] sm:object-center"
-    />
+    <!-- WebP (~160 KB) y, para navegadores que no lo abren, JPG (~260 KB): la foto original en PNG pesaba 2.2 MB. -->
+    <picture>
+      <source srcset="/images/cotizador-hero.webp" type="image/webp" />
+      <img
+        #foto
+        src="/images/cotizador-hero.jpg"
+        alt=""
+        width="1920"
+        height="1080"
+        fetchpriority="high"
+        class="h-full w-full object-cover object-[62%_center] sm:object-center"
+      />
+    </picture>
   </div>
 
   <!-- Velo para leer el texto blanco sobre la foto; abajo se oscurece un poco más para la flecha. -->

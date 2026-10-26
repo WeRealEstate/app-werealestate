@@ -29,9 +29,11 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&family=Jost:wght@300&display=swap" rel="stylesheet">
-  <!-- Cloudflare Turnstile (captcha del login, ver login.component.ts) -->
-  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  <!-- Fuentes de Google sin bloquear el primer pintado: la hoja se pide como "print" (no bloquea) y al llegar se
+       activa; mientras tanto se ve la fuente del sistema (font-display: swap). Sin JS, el noscript la carga normal. -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&family=Jost:wght@300&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&family=Jost:wght@300&display=swap" rel="stylesheet"></noscript>
+  <!-- El script de Cloudflare Turnstile (captcha) ya no está aquí: solo lo necesita /login, que lo carga por su cuenta. -->
 </head>
 <body>
   <app-root></app-root>

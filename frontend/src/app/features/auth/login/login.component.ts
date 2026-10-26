@@ -12,7 +12,26 @@ interface LoginForm {
   password: string;
 }
 
-/** API mínima del script de Cloudflare Turnstile (window.turnstile), cargado en index.html. */
+const TURNSTILE_SCRIPT = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+
+/** Trae el script de Cloudflare Turnstile una sola vez, solo cuando se abre el login (antes iba en index.html y lo
+ * descargaban todas las páginas públicas sin usarlo). */
+function cargarScriptTurnstile(): Promise<void> {
+  if (window.turnstile) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const existente = document.querySelector<HTMLScriptElement>(`script[src="${TURNSTILE_SCRIPT}"]`);
+    const script = existente ?? document.createElement('script');
+    script.addEventListener('load', () => resolve(), { once: true });
+    script.addEventListener('error', () => reject(new Error('No se pudo cargar Turnstile')), { once: true });
+    if (!existente) {
+      script.src = TURNSTILE_SCRIPT;
+      script.async = true;
+      document.head.appendChild(script);
+    }
+  });
+}
+
+/** API mínima del script de Cloudflare Turnstile (window.turnstile), cargado por cargarScriptTurnstile. */
 interface TurnstileApi {
   render(
     container: HTMLElement,
@@ -64,7 +83,8 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
   readonly currentYear = new Date().getFullYear();
 
   ngAfterViewInit(): void {
-    this.renderTurnstile();
+    // Si el script no llega, el login sigue funcionando (con el captcha desactivado en el servidor no hace falta).
+    cargarScriptTurnstile().then(() => this.renderTurnstile(), () => undefined);
   }
 
   ngOnDestroy(): void {
