@@ -1,8 +1,10 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { LucideTrophy } from '@lucide/angular';
 import { PosicionScore, RankingScore, TipoAsesorScore, conPosiciones } from '../../../core/models/score.model';
 import { ScoreService } from '../../../core/services/score.service';
+import { WeFormsPublicoService } from '../../../core/services/we-forms-publico.service';
 import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 
 type Periodo = 'semana' | 'mes' | 'anio' | 'todo' | 'rango';
@@ -11,7 +13,9 @@ type FiltroTipo = 'TODOS' | TipoAsesorScore;
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
 /** Score de ventas: quién lleva más ventas en el periodo (ver backend ScoreService). Arranca en el mes en curso; el
- * podio muestra los tres primeros lugares y la tabla, a todos los que vendieron. */
+ * podio muestra los tres primeros lugares y la tabla, a todos los que vendieron. La misma pantalla vive en el panel
+ * (/panel/score) y en el cotizador público (/cotizador-publico/score, data.publico): ahí se ve sin sesión y, si el
+ * dispositivo ya tiene guardado el PIN de un asesor (el de los planos, Material y Registrar venta), marca su fila. */
 @Component({
   selector: 'app-score',
   standalone: true,
@@ -20,6 +24,9 @@ const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', '
 })
 export class ScoreComponent {
   private readonly service = inject(ScoreService);
+  private readonly weFormsPublico = inject(WeFormsPublicoService);
+
+  readonly esPublico = inject(ActivatedRoute).snapshot.data['publico'] === true;
 
   readonly periodos: { valor: Periodo; etiqueta: string }[] = [
     { valor: 'semana', etiqueta: 'Esta semana' },
@@ -52,6 +59,13 @@ export class ScoreComponent {
     return conPosiciones(filtro === 'TODOS' ? asesores : asesores.filter((a) => a.tipo === filtro));
   });
   readonly podio = computed(() => this.filas().slice(0, 3));
+
+  /** Solo en la página pública: la fila de quien la ve, si su dispositivo tiene un PIN válido. */
+  readonly miClave = signal<string | null>(null);
+  readonly miFila = computed(() => {
+    const clave = this.miClave();
+    return clave ? (this.filas().find((f) => f.clave === clave) ?? null) : null;
+  });
 
   readonly periodoLabel = computed(() => {
     const hoy = new Date();
@@ -142,8 +156,18 @@ export class ScoreComponent {
     this.isLoading.set(true);
     this.errorMessage.set(null);
     try {
-      const ranking = await this.service.ranking(desde, hasta);
-      if (consulta === this.consulta) this.ranking.set(ranking);
+      if (this.esPublico) {
+        const publico = await this.service.rankingPublico(desde, hasta, this.weFormsPublico.pin());
+        if (consulta === this.consulta) {
+          this.ranking.set(publico.ranking);
+          this.miClave.set(publico.miClave);
+          // El PIN guardado ya no sirve (lo cambiaron o el asesor ya no está activo): se olvida para no volver a mandarlo.
+          if (publico.pinRechazado) this.weFormsPublico.guardarPin(null);
+        }
+      } else {
+        const ranking = await this.service.ranking(desde, hasta);
+        if (consulta === this.consulta) this.ranking.set(ranking);
+      }
     } catch {
       if (consulta === this.consulta) {
         this.ranking.set(null);

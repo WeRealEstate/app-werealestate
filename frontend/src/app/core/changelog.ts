@@ -15,6 +15,10 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.5.0', fecha: '2026-10-27', cambios: [
+    "Score de ventas en el cotizador público (/cotizador-publico/score), para una competencia sana entre asesores internos y externos: el mismo ranking del panel (podio, tabla, periodos y filtro), sin sesión ni PIN. Se entra desde 'Score de ventas' en la barra de arriba del cotizador o desde la portada; la página entra directo al ranking, sin la foto de portada.",
+    "Si el dispositivo ya tiene guardado el PIN de un asesor (el que usa en los planos, Material o Registrar venta), su fila se marca con 'Tú' y arriba ve en qué lugar va; esta página nunca pide el PIN. Si ese PIN ya no sirve, se olvida. Un PIN que no sirve cuenta en el mismo tope de intentos que las demás páginas públicas.",
+  ] },
   { version: '11.4.0', fecha: '2026-10-27', cambios: [
     "Nuevo módulo 'Score de ventas' (menú, debajo de Ventas): un ranking de quién lleva más ventas. Cuentan todas las ventas del módulo Ventas por su fecha de venta, también las que entran por We Forms. Arranca en el mes en curso y se puede cambiar a esta semana, este año, todo el historial o un rango de fechas.",
     "Arriba se ve el podio con los tres primeros lugares y abajo la tabla completa con el lugar, el asesor, si es interno o externo, sus ventas y sus lotes. Internos y externos compiten juntos, con un filtro para ver solo a unos u otros. Con las mismas ventas comparten lugar (1, 2, 2, 3).",

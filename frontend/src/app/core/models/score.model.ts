@@ -20,6 +20,14 @@ export interface RankingScore {
   asesores: AsesorScore[];
 }
 
+/** Página pública del cotizador: miClave = la fila de quien la ve (si su dispositivo mandó un PIN válido);
+ * pinRechazado = el PIN guardado ya no sirve y hay que olvidarlo. */
+export interface ScorePublico {
+  ranking: RankingScore;
+  miClave: string | null;
+  pinRechazado: boolean;
+}
+
 export interface PosicionScore extends AsesorScore {
   posicion: number;
 }

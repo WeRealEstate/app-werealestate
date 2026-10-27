@@ -74,6 +74,17 @@
         · <span class="font-semibold text-ink">{{ filas().length }}</span> {{ filas().length === 1 ? 'asesor' : 'asesores' }} con ventas
       </p>
 
+      @if (esPublico && miClave() && (miFila() || filtro() === 'TODOS')) {
+        <div class="mt-4 rounded-xl border border-we-primary/30 bg-we-primary/5 px-4 py-3 text-sm text-ink dark:bg-we-primary/10" data-testid="mi-lugar">
+          @if (miFila(); as yo) {
+            Vas en el <span class="font-semibold">{{ yo.posicion }}.º lugar</span> con {{ yo.ventas }} {{ yo.ventas === 1 ? 'venta' : 'ventas' }}
+            en {{ periodoLabel() }}.
+          } @else {
+            Aún no tienes ventas en {{ periodoLabel() }}.
+          }
+        </div>
+      }
+
       @if (filas().length === 0) {
         <div class="mt-6 rounded-xl border border-dashed border-border p-10 text-center">
           <p class="text-sm text-ink-muted">Nadie tiene ventas en {{ periodoLabel() }}.</p>
@@ -82,7 +93,14 @@
         <!-- Podio: los tres primeros. En pantalla ancha, el 1.º al centro y más alto. -->
         <div class="mt-4 grid gap-3 sm:items-end" [class]="columnasPodio()" data-testid="podio">
           @for (a of podio(); track a.clave; let i = $index) {
-            <div class="rounded-xl border border-border bg-surface px-4 pt-5 text-center shadow-sm" [class]="lugarEnPodio(i)">
+            <div
+              class="rounded-xl border bg-surface px-4 pt-5 text-center shadow-sm"
+              [class]="lugarEnPodio(i)"
+              [class.border-border]="a.clave !== miClave()"
+              [class.border-we-primary]="a.clave === miClave()"
+              [class.ring-2]="a.clave === miClave()"
+              [class.ring-we-primary/30]="a.clave === miClave()"
+            >
               <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full font-heading text-lg font-bold ring-2" [class]="medalla(a.posicion)">
                 @if (a.posicion === 1) {
                   <svg lucideTrophy [size]="22" aria-hidden="true"></svg>
@@ -92,6 +110,9 @@
               </div>
               <p class="mt-1.5 text-xs font-semibold text-ink-muted">{{ a.posicion }}.º lugar</p>
               <p class="mt-2 truncate font-heading text-base font-semibold text-ink" [title]="a.nombre">{{ a.nombre }}</p>
+              @if (a.clave === miClave()) {
+                <span class="mr-1 mt-1 inline-block rounded-full bg-we-primary px-2 py-0.5 text-[11px] font-semibold text-white">Tú</span>
+              }
               <span class="mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold" [class]="claseTipo(a.tipo)">
                 {{ a.tipo === 'INTERNO' ? 'Interno' : 'Externo' }}
               </span>
@@ -115,13 +136,21 @@
             </thead>
             <tbody class="divide-y divide-border">
               @for (a of filas(); track a.clave) {
-                <tr>
+                <tr [class.bg-we-primary/5]="a.clave === miClave()" [attr.data-yo]="a.clave === miClave() ? '' : null">
                   <td class="px-3 py-3 font-semibold tabular-nums text-ink sm:px-4">{{ a.posicion }}</td>
                   <td class="px-3 py-3 text-ink sm:px-4">
                     {{ a.nombre }}
-                    <!-- En celular la columna Tipo no cabe: la etiqueta va debajo del nombre. -->
-                    <span class="mt-1 block w-fit rounded-full px-2 py-0.5 text-[11px] font-semibold sm:hidden" [class]="claseTipo(a.tipo)">
-                      {{ a.tipo === 'INTERNO' ? 'Interno' : 'Externo' }}
+                    @if (a.clave === miClave()) {
+                      <span class="ml-1 hidden rounded-full bg-we-primary px-2 py-0.5 text-[11px] font-semibold text-white sm:inline">Tú</span>
+                    }
+                    <!-- En celular la columna Tipo no cabe: las etiquetas van juntas debajo del nombre. -->
+                    <span class="mt-1 flex flex-wrap gap-1 sm:hidden">
+                      @if (a.clave === miClave()) {
+                        <span class="rounded-full bg-we-primary px-2 py-0.5 text-[11px] font-semibold text-white">Tú</span>
+                      }
+                      <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" [class]="claseTipo(a.tipo)">
+                        {{ a.tipo === 'INTERNO' ? 'Interno' : 'Externo' }}
+                      </span>
                     </span>
                   </td>
                   <td class="hidden px-4 py-3 sm:table-cell">

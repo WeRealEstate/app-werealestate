@@ -48,6 +48,27 @@ public class LimitadorPinPublico {
         }
     }
 
+    /** Resultado de {@link #identificarSiViene}: el asesor del PIN (null si no vino, no sirvió o la IP ya agotó sus
+     * intentos) y si el PIN se revisó y no sirvió. */
+    public record Intento(AsesorPublicoService.Identificado asesor, boolean rechazado) {}
+
+    /** Para páginas que se ven sin PIN pero lo aprovechan si viene (Score de ventas): nunca lanza error. El PIN se revisa
+     * sin plano (solo que el asesor esté activo y, si es externo, con contrato vigente). Uno que no sirve cuenta como
+     * fallo igual que en {@link #exigir}: si no, esta página serviría para probar PINs sin límite. Con la IP sin
+     * intentos ni siquiera se revisa. */
+    public Intento identificarSiViene(HttpServletRequest http, String pin) {
+        if (pin == null || pin.isBlank()) return new Intento(null, false);
+        String ip = IpCliente.de(http);
+        if (fallosRecientes(ip) >= MAX_FALLOS) return new Intento(null, false);
+        AsesorPublicoService.Identificado id = asesorPublicoService.identificar(pin, null);
+        if (id.motivo() == AsesorPublicoService.Motivo.OK) {
+            fallosPorIp.remove(ip);
+            return new Intento(id, false);
+        }
+        registrarFallo(ip);
+        return new Intento(null, true);
+    }
+
     private int fallosRecientes(String ip) {
         Deque<Long> fallos = fallosPorIp.get(ip);
         if (fallos == null) return 0;

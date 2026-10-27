@@ -30,7 +30,8 @@ import org.springframework.transaction.annotation.Transactional;
  * así que deja de contar). Una venta compartida suma una venta completa, con todos sus lotes, a cada uno de sus dos
  * asesores: el principal y el copropietario, este último solo mientras su comisión secundaria no esté cancelada
  * (cancelarla es la forma de quitar a un copropietario puesto por error). Los asesores inactivos no aparecen.
- * Solo admin y Administración; el módulo SCORE lo revisa ModuloAccesoInterceptor.
+ * En el panel solo admin y Administración (el módulo SCORE lo revisa ModuloAccesoInterceptor); la página pública del
+ * cotizador muestra el mismo ranking a cualquiera con el link (ver ScorePublicoController).
  */
 @Service
 @Transactional(readOnly = true)
@@ -59,6 +60,23 @@ public class ScoreService {
     /** Ventas y lotes por asesor con fecha de venta entre desde y hasta (ambas inclusivas; null = sin límite). */
     public ScoreDtos.Ranking ranking(LocalDate desde, LocalDate hasta) {
         exigirAdminOLider();
+        return calcular(desde, hasta);
+    }
+
+    /** El mismo ranking para la página pública del cotizador (/cotizador-publico/score): se ve sin sesión ni PIN, para
+     * que los asesores internos y externos sigan la competencia. */
+    public ScoreDtos.Ranking rankingPublico(LocalDate desde, LocalDate hasta) {
+        return calcular(desde, hasta);
+    }
+
+    /** La clave con la que un asesor aparece en el ranking ("U-12" o "E-5"); null si no hay asesor. Sirve para que la
+     * página pública marque la fila de quien la ve (por el PIN guardado en su dispositivo). */
+    public static String claveDe(Usuario usuario, AsesorExterno externo) {
+        Participante p = participante(usuario, externo);
+        return p == null ? null : p.clave();
+    }
+
+    private ScoreDtos.Ranking calcular(LocalDate desde, LocalDate hasta) {
         if (desde != null && hasta != null && desde.isAfter(hasta)) {
             throw new ValidationException("La fecha inicial no puede ser posterior a la final");
         }

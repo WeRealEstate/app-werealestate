@@ -54,6 +54,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/publico/lotes-publico/lotes-publico.component').then((m) => m.LotesPublicoComponent),
       },
+      {
+        // Score de ventas para la competencia entre asesores: el mismo del panel, sin sesión ni PIN (ver ScoreComponent).
+        path: 'score',
+        title: 'We Real Estate | Score de ventas',
+        data: { publico: true },
+        loadComponent: () => import('./features/panel/score/score.component').then((m) => m.ScoreComponent),
+      },
     ],
   },
   {

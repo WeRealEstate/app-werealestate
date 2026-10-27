@@ -186,6 +186,27 @@ class ScoreServiceTest {
     }
 
     @Test
+    void elRankingPublicoSeVeSinRolYEsElMismo() {
+        when(actual.getRol()).thenReturn(Role.ASESOR);
+        Venta deAna = venta(10, interno(1, "Ana Interna", true), null, 2);
+        when(ventas.findByFechaVentaBetween(DESDE, HASTA)).thenReturn(List.of(deAna));
+        var r = service.rankingPublico(DESDE, HASTA);
+        assertEquals(1, r.totalVentas());
+        assertEquals(new ScoreDtos.Asesor("U-1", "Ana Interna", ScoreDtos.TipoAsesor.INTERNO, 1, 2), r.asesores().get(0));
+        assertThrows(ValidationException.class, () -> service.rankingPublico(HASTA, DESDE));
+    }
+
+    @Test
+    void laClaveDeUnAsesorEsLaMismaQueEnElRanking() {
+        assertEquals("U-1", ScoreService.claveDe(interno(1, "Ana", true), null));
+        assertEquals("E-5", ScoreService.claveDe(null, externo(5, "Beto")));
+        AsesorExterno ficha = externo(20, "Ana");
+        ficha.setUsuarioId(1L);
+        assertEquals("U-1", ScoreService.claveDe(null, ficha));
+        assertEquals(null, ScoreService.claveDe(null, null));
+    }
+
+    @Test
     void soloAdminYAdministracion() {
         when(actual.getRol()).thenReturn(Role.ASESOR);
         assertThrows(ForbiddenOperationException.class, () -> service.ranking(DESDE, HASTA));

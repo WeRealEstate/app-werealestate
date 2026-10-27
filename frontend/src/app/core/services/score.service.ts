@@ -1,8 +1,8 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { RankingScore } from '../models/score.model';
+import { RankingScore, ScorePublico } from '../models/score.model';
 
 @Injectable({ providedIn: 'root' })
 export class ScoreService {
@@ -15,5 +15,15 @@ export class ScoreService {
     if (desde) params = params.set('desde', desde);
     if (hasta) params = params.set('hasta', hasta);
     return firstValueFrom(this.http.get<RankingScore>(this.baseUrl, { params }));
+  }
+
+  /** El mismo ranking sin sesión, para /cotizador-publico/score. El PIN guardado en el dispositivo (si hay) va en una
+   * cabecera, nunca en la URL, y solo sirve para marcar la fila de quien lo ve. */
+  rankingPublico(desde?: string, hasta?: string, pin?: string | null): Promise<ScorePublico> {
+    let params = new HttpParams();
+    if (desde) params = params.set('desde', desde);
+    if (hasta) params = params.set('hasta', hasta);
+    const headers = pin ? new HttpHeaders({ 'X-Asesor-Pin': pin }) : undefined;
+    return firstValueFrom(this.http.get<ScorePublico>(`${environment.apiUrl}/score-publico`, { params, headers }));
   }
 }

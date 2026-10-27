@@ -38,7 +38,7 @@
         </span>
       </a>
 
-      <nav aria-label="Planos de los desarrollos" class="-mr-2.5 flex items-center text-[13px] font-medium sm:text-sm">
+      <nav aria-label="Planos y score de ventas" class="-mr-2.5 flex items-center text-[13px] font-medium sm:text-sm">
         <a
           routerLink="/samai"
           class="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg px-2.5 transition-colors duration-300
@@ -63,11 +63,29 @@
           <svg lucideMap [size]="15" aria-hidden="true"></svg>
           <span class="sm:hidden">Nanuu</span><span class="hidden sm:inline">Plano Aldea Nanuu</span>
         </a>
+        <a
+          routerLink="/cotizador-publico/score"
+          data-testid="enlace-score"
+          class="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg px-2.5 transition-colors duration-300
+                 focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50"
+          [class.text-white/85]="sobreHero()"
+          [class.hover:text-white]="sobreHero()"
+          [class.text-ink-muted]="!sobreHero()"
+          [class.hover:text-ink]="!sobreHero()"
+        >
+          <svg lucideTrophy [size]="15" aria-hidden="true"></svg>
+          <span class="sm:hidden">Score</span><span class="hidden sm:inline">Score de ventas</span>
+        </a>
       </nav>
     </div>
   </header>
 
-  <app-hero-publico />
+  @if (conPortada()) {
+    <app-hero-publico />
+  } @else {
+    <!-- Sin portada, el contenido arranca debajo de la barra fija. -->
+    <div class="h-[calc(3.25rem+env(safe-area-inset-top))]" aria-hidden="true"></div>
+  }
 
   <main id="cotizador" class="flex-1 p-4 sm:p-6 lg:p-10">
     <div class="mx-auto max-w-6xl">

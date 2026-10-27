@@ -21,4 +21,8 @@ public final class ScoreDtos {
      * venta compartida cuenta una vez aquí, aunque en el ranking sume a sus dos asesores. asesores: de más a menos
      * ventas y, con las mismas ventas, por nombre (comparten lugar; la posición la numera el panel). */
     public record Ranking(LocalDate desde, LocalDate hasta, long totalVentas, List<Asesor> asesores) {}
+
+    /** Página pública: el ranking, la clave de quien la ve si su dispositivo mandó un PIN válido (para marcar "Tú") y si
+     * ese PIN se revisó y no sirvió (la página lo olvida para no volver a mandarlo). */
+    public record Publico(Ranking ranking, String miClave, boolean pinRechazado) {}
 }
