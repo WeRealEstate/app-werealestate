@@ -204,6 +204,12 @@ export const routes: Routes = [
           import('./features/panel/promociones/promociones.component').then((m) => m.PromocionesComponent),
       },
       {
+        // Score de ventas: ranking de asesores por ventas en un periodo (ver backend ScoreService).
+        path: 'score',
+        canActivate: [roleGuard(['ADMIN', 'LIDER_AREA']), moduloGuard(['SCORE'])],
+        loadComponent: () => import('./features/panel/score/score.component').then((m) => m.ScoreComponent),
+      },
+      {
         path: 'ventas',
         canActivate: [roleGuard(['ADMIN', 'LIDER_AREA']), moduloGuard(['VENTAS'])],
         loadComponent: () =>

@@ -15,6 +15,11 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.4.0', fecha: '2026-10-27', cambios: [
+    "Nuevo módulo 'Score de ventas' (menú, debajo de Ventas): un ranking de quién lleva más ventas. Cuentan todas las ventas del módulo Ventas por su fecha de venta, también las que entran por We Forms. Arranca en el mes en curso y se puede cambiar a esta semana, este año, todo el historial o un rango de fechas.",
+    "Arriba se ve el podio con los tres primeros lugares y abajo la tabla completa con el lugar, el asesor, si es interno o externo, sus ventas y sus lotes. Internos y externos compiten juntos, con un filtro para ver solo a unos u otros. Con las mismas ventas comparten lugar (1, 2, 2, 3).",
+    "Una venta compartida cuenta completa para sus dos asesores (el copropietario, mientras su comisión no esté cancelada). Los asesores inactivos no aparecen. Lo ven el admin y Administración; el admin se lo puede quitar a quien quiera desde Usuarios.",
+  ] },
   { version: '11.3.0', fecha: '2026-10-27', cambios: [
     "We Forms: cada formulario tiene ahora un botón 'Duplicar'. Abre un diálogo donde eliges el desarrollo de la copia (viene elegido el otro: de SAMAI a Aldea Nanuu y al revés), el nombre y la descripción. La copia lleva todas las preguntas del original tal como están (orden, obligatorias, ocultas, opciones y su vínculo con el cliente o la venta), nace activa con su propio link y sin respuestas, y los lotes que ofrece son los del desarrollo elegido.",
   ] },

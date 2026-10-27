@@ -10,6 +10,7 @@ import {
   LucideContactRound,
   LucideFolderOpen,
   LucideHouse,
+  LucideTrophy,
   LucideKanban,
   LucideLandPlot,
   LucideMap,
@@ -37,7 +38,7 @@ interface NavItem {
   modulo?: Modulo;
   /** Alternativa: el item también se muestra a quien tenga este otro módulo (Finanzas incluye la pestaña Gastos). */
   tambienConModulo?: Modulo;
-  icon: 'home' | 'leads' | 'usuarios' | 'asesores' | 'comunidades' | 'calendario' | 'pipeline' | 'cotizador' | 'lotes' | 'plano' | 'ventas' | 'clientes' | 'finanzas' | 'gastos' | 'forms' | 'material' | 'comercializadoras';
+  icon: 'home' | 'leads' | 'usuarios' | 'asesores' | 'comunidades' | 'calendario' | 'pipeline' | 'cotizador' | 'lotes' | 'plano' | 'ventas' | 'clientes' | 'finanzas' | 'gastos' | 'forms' | 'material' | 'comercializadoras' | 'score';
 }
 
 const ASESORES_EXTERNOS_NAV_ITEM: NavItem = {
@@ -91,6 +92,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
         { label: 'Lotes', route: '/panel/lotes', modulo: 'LOTES', icon: 'lotes' },
         { label: 'Plano', route: '/panel/plano', modulo: 'PLANO', icon: 'plano' },
         { label: 'Ventas', route: '/panel/ventas', modulo: 'VENTAS', icon: 'ventas' },
+        { label: 'Score de ventas', route: '/panel/score', modulo: 'SCORE', icon: 'score' },
         { label: 'Clientes', route: '/panel/clientes', modulo: 'CLIENTES', icon: 'clientes' },
         { label: 'Finanzas', route: '/panel/finanzas', modulo: 'FINANZAS', tambienConModulo: 'GASTOS', icon: 'finanzas' },
       ],
@@ -127,6 +129,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
         { label: 'Lotes', route: '/panel/lotes', modulo: 'LOTES', icon: 'lotes' },
         { label: 'Plano', route: '/panel/plano', modulo: 'PLANO', icon: 'plano' },
         { label: 'Ventas', route: '/panel/ventas', modulo: 'VENTAS', icon: 'ventas' },
+        { label: 'Score de ventas', route: '/panel/score', modulo: 'SCORE', icon: 'score' },
         { label: 'Clientes', route: '/panel/clientes', modulo: 'CLIENTES', icon: 'clientes' },
         { label: 'Finanzas', route: '/panel/finanzas', modulo: 'FINANZAS', tambienConModulo: 'GASTOS', icon: 'finanzas' },
       ],
@@ -157,6 +160,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
     ToastContainerComponent,
     ConfirmDialogComponent,    NotificationBellComponent,
     LucideHouse,
+    LucideTrophy,
     LucideUsers,
     LucideCalendar,
     LucideHandCoins,

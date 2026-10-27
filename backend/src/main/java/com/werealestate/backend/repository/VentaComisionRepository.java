@@ -15,6 +15,9 @@ public interface VentaComisionRepository extends JpaRepository<VentaComision, Lo
     /** La comisión del copropietario (segundo asesor), si la venta lo tiene. */
     Optional<VentaComision> findByVentaIdAndSecundariaTrue(Long ventaId);
 
+    /** Comisiones vigentes de los copropietarios (segundo asesor) de esas ventas (para el Score de ventas). */
+    List<VentaComision> findByVentaIdInAndSecundariaTrueAndCanceladaFalse(java.util.Collection<Long> ventaIds);
+
     /** Las comisiones de la venta (principal y, si hay, la del copropietario). */
     List<VentaComision> findAllByVentaId(Long ventaId);
 

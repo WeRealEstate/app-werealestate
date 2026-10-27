@@ -1,0 +1,142 @@
+<div class="page-enter">
+  <div>
+    <h1 class="font-heading text-2xl font-semibold text-ink">Score de ventas</h1>
+    <p class="mt-1 text-sm text-ink-muted">
+      Quién lleva más ventas en el periodo. Cuentan todas las ventas del módulo Ventas por su fecha de venta, también las que
+      entran por We Forms. Una venta compartida cuenta completa para sus dos asesores, y con las mismas ventas se comparte el lugar.
+    </p>
+  </div>
+
+  <!-- Periodo -->
+  <div class="mt-5 flex flex-wrap items-center gap-2" role="group" aria-label="Periodo">
+    @for (p of periodos; track p.valor) {
+      <button
+        type="button"
+        (click)="cambiarPeriodo(p.valor)"
+        [attr.aria-pressed]="periodo() === p.valor"
+        class="min-h-11 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors duration-150"
+        [class.border-we-primary]="periodo() === p.valor"
+        [class.bg-we-primary]="periodo() === p.valor"
+        [class.text-white]="periodo() === p.valor"
+        [class.border-border]="periodo() !== p.valor"
+        [class.text-ink-muted]="periodo() !== p.valor"
+      >
+        {{ p.etiqueta }}
+      </button>
+    }
+  </div>
+
+  @if (periodo() === 'rango') {
+    <div class="mt-3 flex flex-wrap items-end gap-3">
+      <div>
+        <label for="score-desde" class="mb-1 block text-xs font-medium text-ink-muted">Desde</label>
+        <input id="score-desde" type="date" [ngModel]="rangoDesde()" (ngModelChange)="cambiarRango('desde', $event)"
+          class="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+      </div>
+      <div>
+        <label for="score-hasta" class="mb-1 block text-xs font-medium text-ink-muted">Hasta</label>
+        <input id="score-hasta" type="date" [ngModel]="rangoHasta()" (ngModelChange)="cambiarRango('hasta', $event)"
+          class="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+      </div>
+    </div>
+  }
+
+  <!-- Internos / externos -->
+  <div class="mt-3 inline-flex rounded-lg border border-border bg-surface p-1" role="group" aria-label="Tipo de asesor">
+    @for (f of filtros; track f.valor) {
+      <button
+        type="button"
+        (click)="filtro.set(f.valor)"
+        [attr.aria-pressed]="filtro() === f.valor"
+        data-testid="filtro-tipo"
+        class="min-h-9 rounded-md px-3 text-xs font-semibold transition-colors duration-150"
+        [class.bg-we-primary]="filtro() === f.valor"
+        [class.text-white]="filtro() === f.valor"
+        [class.text-ink-muted]="filtro() !== f.valor"
+      >
+        {{ f.etiqueta }}
+      </button>
+    }
+  </div>
+
+  @if (errorMessage()) {
+    <div class="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-300" role="alert">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  @if (isLoading() && !ranking()) {
+    <app-we-loader texto="Cargando el score…" />
+  } @else if (ranking(); as r) {
+    <div class="transition-opacity duration-150" [class.opacity-60]="isLoading()">
+      <p class="mt-5 text-sm text-ink-muted" data-testid="resumen-score">
+        <span class="font-semibold text-ink">{{ r.totalVentas }}</span> {{ r.totalVentas === 1 ? 'venta' : 'ventas' }} en {{ periodoLabel() }}
+        · <span class="font-semibold text-ink">{{ filas().length }}</span> {{ filas().length === 1 ? 'asesor' : 'asesores' }} con ventas
+      </p>
+
+      @if (filas().length === 0) {
+        <div class="mt-6 rounded-xl border border-dashed border-border p-10 text-center">
+          <p class="text-sm text-ink-muted">Nadie tiene ventas en {{ periodoLabel() }}.</p>
+        </div>
+      } @else {
+        <!-- Podio: los tres primeros. En pantalla ancha, el 1.º al centro y más alto. -->
+        <div class="mt-4 grid gap-3 sm:items-end" [class]="columnasPodio()" data-testid="podio">
+          @for (a of podio(); track a.clave; let i = $index) {
+            <div class="rounded-xl border border-border bg-surface px-4 pt-5 text-center shadow-sm" [class]="lugarEnPodio(i)">
+              <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full font-heading text-lg font-bold ring-2" [class]="medalla(a.posicion)">
+                @if (a.posicion === 1) {
+                  <svg lucideTrophy [size]="22" aria-hidden="true"></svg>
+                } @else {
+                  {{ a.posicion }}
+                }
+              </div>
+              <p class="mt-1.5 text-xs font-semibold text-ink-muted">{{ a.posicion }}.º lugar</p>
+              <p class="mt-2 truncate font-heading text-base font-semibold text-ink" [title]="a.nombre">{{ a.nombre }}</p>
+              <span class="mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold" [class]="claseTipo(a.tipo)">
+                {{ a.tipo === 'INTERNO' ? 'Interno' : 'Externo' }}
+              </span>
+              <p class="mt-3 font-heading text-3xl font-bold tabular-nums text-ink">{{ a.ventas }}</p>
+              <p class="text-xs text-ink-muted">{{ a.ventas === 1 ? 'venta' : 'ventas' }} · {{ a.lotes }} {{ a.lotes === 1 ? 'lote' : 'lotes' }}</p>
+            </div>
+          }
+        </div>
+
+        <!-- Tabla completa -->
+        <div class="mt-6 overflow-x-auto rounded-xl border border-border bg-surface">
+          <table class="w-full text-sm" data-testid="tabla-score">
+            <thead class="bg-surface-2 text-left text-xs uppercase tracking-wide text-ink-muted">
+              <tr>
+                <th scope="col" class="w-16 px-3 py-3 sm:w-20 sm:px-4">Lugar</th>
+                <th scope="col" class="px-3 py-3 sm:px-4">Asesor</th>
+                <th scope="col" class="hidden px-4 py-3 sm:table-cell">Tipo</th>
+                <th scope="col" class="px-3 py-3 text-right sm:px-4">Ventas</th>
+                <th scope="col" class="px-3 py-3 text-right sm:px-4">Lotes</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border">
+              @for (a of filas(); track a.clave) {
+                <tr>
+                  <td class="px-3 py-3 font-semibold tabular-nums text-ink sm:px-4">{{ a.posicion }}</td>
+                  <td class="px-3 py-3 text-ink sm:px-4">
+                    {{ a.nombre }}
+                    <!-- En celular la columna Tipo no cabe: la etiqueta va debajo del nombre. -->
+                    <span class="mt-1 block w-fit rounded-full px-2 py-0.5 text-[11px] font-semibold sm:hidden" [class]="claseTipo(a.tipo)">
+                      {{ a.tipo === 'INTERNO' ? 'Interno' : 'Externo' }}
+                    </span>
+                  </td>
+                  <td class="hidden px-4 py-3 sm:table-cell">
+                    <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" [class]="claseTipo(a.tipo)">
+                      {{ a.tipo === 'INTERNO' ? 'Interno' : 'Externo' }}
+                    </span>
+                  </td>
+                  <td class="px-3 py-3 text-right font-semibold tabular-nums text-ink sm:px-4">{{ a.ventas }}</td>
+                  <td class="px-3 py-3 text-right tabular-nums text-ink-muted sm:px-4">{{ a.lotes }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+</div>
