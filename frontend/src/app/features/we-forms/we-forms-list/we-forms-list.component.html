@@ -75,6 +75,14 @@
             >
               Copiar link
             </button>
+            <button
+              type="button"
+              (click)="abrirDuplicar(f)"
+              data-testid="duplicar-formulario"
+              class="boton-secundario inline-flex items-center justify-center rounded-lg px-3.5 py-2 text-sm font-semibold text-ink active:scale-[0.97] transition duration-150"
+            >
+              Duplicar
+            </button>
           </div>
         </div>
       }
@@ -118,6 +126,52 @@
         }
       </div>
     </section>
+  }
+
+  @if (duplicando(); as orig) {
+    <button type="button" (click)="duplicando.set(null)" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="dup-form-titulo">
+      <form (submit)="$event.preventDefault(); duplicar()" class="modal-panel-enter w-full max-w-md rounded-xl border border-border bg-surface p-5 shadow-lg">
+        <h2 id="dup-form-titulo" class="font-heading text-lg font-semibold text-ink">Duplicar formulario</h2>
+        <p class="mt-1 text-xs text-ink-muted">
+          Se copian las preguntas de «{{ orig.nombre }}» ({{ orig.desarrolloNombre }}) tal como están. No se copian las respuestas; la copia es un formulario nuevo, activo y con su propio link.
+        </p>
+
+        <div class="mt-4 space-y-3">
+          <div>
+            <label for="dup-desarrollo" class="mb-1 block text-xs font-medium text-ink-muted">Desarrollo de la copia *</label>
+            <select id="dup-desarrollo" name="desarrollo" [ngModel]="dupDesarrolloId()" (ngModelChange)="dupDesarrolloId.set($event)"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50">
+              <option [ngValue]="null">Selecciona un desarrollo</option>
+              @for (d of desarrollos(); track d.id) {
+                <option [ngValue]="d.id">{{ d.nombre }}</option>
+              }
+            </select>
+            <p class="mt-1 text-xs text-ink-muted">De aquí salen los lotes que se pueden elegir y el acceso del PIN del asesor.</p>
+          </div>
+          <div>
+            <label for="dup-nombre" class="mb-1 block text-xs font-medium text-ink-muted">Nombre *</label>
+            <input id="dup-nombre" name="nombre" maxlength="150" [ngModel]="dupNombre()" (ngModelChange)="dupNombre.set($event)"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+          </div>
+          <div>
+            <label for="dup-desc" class="mb-1 block text-xs font-medium text-ink-muted">Descripción (opcional)</label>
+            <textarea id="dup-desc" name="descripcion" rows="2" maxlength="1000" [ngModel]="dupDescripcion()" (ngModelChange)="dupDescripcion.set($event)"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"></textarea>
+          </div>
+        </div>
+
+        @if (errorDup()) {
+          <p class="mt-3 text-sm text-red-600 dark:text-red-400" role="alert">{{ errorDup() }}</p>
+        }
+        <div class="mt-5 flex justify-end gap-2.5">
+          <button type="button" (click)="duplicando.set(null)" class="boton-secundario rounded-lg px-4 py-2.5 text-sm font-medium text-ink-muted">Cancelar</button>
+          <button type="submit" [disabled]="guardandoDup() || cargandoDup()" data-testid="confirmar-duplicar" class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60">
+            {{ guardandoDup() ? 'Duplicando…' : cargandoDup() ? 'Cargando…' : 'Duplicar formulario' }}
+          </button>
+        </div>
+      </form>
+    </div>
   }
 
   @if (mostrarNuevo()) {

@@ -112,6 +112,12 @@ export interface WeFormCrearRequest {
   desarrolloId: number;
 }
 
+export interface WeFormDuplicarRequest {
+  nombre: string;
+  descripcion: string | null;
+  desarrolloId: number;
+}
+
 export interface WeFormActualizarRequest {
   nombre: string;
   descripcion: string | null;

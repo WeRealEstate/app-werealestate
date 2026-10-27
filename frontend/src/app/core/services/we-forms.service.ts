@@ -10,6 +10,7 @@ import {
   ResumenGeneralForm,
   WeFormActualizarRequest,
   WeFormCrearRequest,
+  WeFormDuplicarRequest,
   WeFormDetalle,
   WeFormLista,
   WeFormPregunta,
@@ -34,6 +35,11 @@ export class WeFormsService {
 
   crear(request: WeFormCrearRequest): Promise<WeFormDetalle> {
     return firstValueFrom(this.http.post<WeFormDetalle>(this.baseUrl, request));
+  }
+
+  /** Copia las preguntas de un formulario a uno nuevo (con su propio link) para el desarrollo elegido. */
+  duplicar(id: number, request: WeFormDuplicarRequest): Promise<WeFormDetalle> {
+    return firstValueFrom(this.http.post<WeFormDetalle>(`${this.baseUrl}/${id}/duplicar`, request));
   }
 
   obtener(id: number): Promise<WeFormDetalle> {

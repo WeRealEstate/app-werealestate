@@ -39,6 +39,12 @@ public class WeFormController {
         return service.crear(request);
     }
 
+    /** Copia las preguntas de un formulario a uno nuevo (con su propio link), por ejemplo para otro desarrollo. */
+    @PostMapping("/{id}/duplicar")
+    public WeFormDtos.Detalle duplicar(@PathVariable Long id, @Valid @RequestBody WeFormDtos.DuplicarRequest request) {
+        return service.duplicar(id, request);
+    }
+
     /** Desarrollos en los que se puede crear un formulario. */
     @GetMapping("/desarrollos")
     public List<com.werealestate.backend.dto.DesarrolloDto> desarrollos() {

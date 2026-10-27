@@ -84,6 +84,70 @@ export class WeFormsListComponent {
     }
   }
 
+  // --- Duplicar un formulario (mismas preguntas, otro desarrollo) ---
+  readonly duplicando = signal<WeFormLista | null>(null);
+  readonly dupNombre = signal('');
+  readonly dupDescripcion = signal('');
+  readonly dupDesarrolloId = signal<number | null>(null);
+  readonly guardandoDup = signal(false);
+  readonly cargandoDup = signal(false);
+  readonly errorDup = signal<string | null>(null);
+
+  /** Abre el diálogo con el nombre y la descripción del original; el desarrollo viene elegido en el OTRO desarrollo
+   * (para copiar el formulario de SAMAI a Aldea Nanuu y al revés). */
+  async abrirDuplicar(f: WeFormLista): Promise<void> {
+    this.duplicando.set(f);
+    this.dupNombre.set(f.nombre);
+    this.dupDescripcion.set('');
+    this.dupDesarrolloId.set(null);
+    this.errorDup.set(null);
+    // El diálogo se abre al instante; "Duplicar formulario" queda bloqueado hasta que lleguen los datos, así no se
+    // puede confirmar antes de que esté la descripción del original.
+    this.cargandoDup.set(true);
+    try {
+      if (this.desarrollos().length === 0) this.desarrollos.set(await this.service.desarrollos());
+      const otro = this.desarrollos().find((d) => d.id !== f.desarrolloId);
+      this.dupDesarrolloId.set((otro ?? this.desarrollos()[0])?.id ?? null);
+      // La lista no trae la descripción: se pide el detalle para que la copia parta de la del original.
+      this.dupDescripcion.set((await this.service.obtener(f.id)).descripcion ?? '');
+    } catch {
+      this.errorDup.set('No se pudieron cargar todos los datos del formulario. Revisa el desarrollo y la descripción.');
+    } finally {
+      this.cargandoDup.set(false);
+    }
+  }
+
+  async duplicar(): Promise<void> {
+    const original = this.duplicando();
+    const nombre = this.dupNombre().trim();
+    const desarrolloId = this.dupDesarrolloId();
+    if (!original || this.guardandoDup() || this.cargandoDup()) return;
+    if (!nombre || desarrolloId === null) {
+      this.errorDup.set('Escribe un nombre y elige el desarrollo.');
+      return;
+    }
+    this.guardandoDup.set(true);
+    this.errorDup.set(null);
+    try {
+      const copia = await this.service.duplicar(original.id, {
+        nombre,
+        descripcion: this.dupDescripcion().trim() || null,
+        desarrolloId,
+      });
+      this.toast.success('Formulario duplicado. Revisa sus preguntas y comparte su link.');
+      this.duplicando.set(null);
+      await this.router.navigate(['/panel/we-forms', copia.id]);
+    } catch (error) {
+      this.errorDup.set(
+        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+          ? error.error.message
+          : 'No se pudo duplicar el formulario.',
+      );
+    } finally {
+      this.guardandoDup.set(false);
+    }
+  }
+
   async abrirNuevo(): Promise<void> {
     this.nuevoNombre.set('');
     this.nuevoDescripcion.set('');

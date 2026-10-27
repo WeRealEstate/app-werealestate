@@ -316,6 +316,28 @@ public class WeFormService {
         return detalle(form);
     }
 
+    /** Copia un formulario: sus preguntas activas tal como están (orden, título, obligatoria, visible, opciones y vínculo
+     * con el cliente o la venta) en un formulario nuevo, Activo y con su propio link, para el desarrollo elegido. No copia
+     * respuestas ni preguntas archivadas. Los lotes que se ofrecen salen del desarrollo del formulario nuevo. */
+    public WeFormDtos.Detalle duplicar(Long id, WeFormDtos.DuplicarRequest request) {
+        Usuario actual = exigirAcceso();
+        WeForm original = obtenerEntidad(id);
+        Desarrollo desarrollo = desarrolloRepository.findById(request.desarrolloId())
+                .orElseThrow(() -> new ResourceNotFoundException("Desarrollo no encontrado"));
+        if (!PROYECTO_POR_DESARROLLO.containsKey(desarrollo.getNombre())) {
+            throw new ValidationException("Solo se pueden crear formularios para SAMAI Campestre o Aldea Nanuu");
+        }
+        WeForm copia = formRepository.save(new WeForm(
+                request.nombre().trim(), limpio(request.descripcion()), nuevoSlug(request.nombre()), desarrollo, actual));
+        int orden = 0;
+        for (WeFormPregunta p : preguntaRepository.findByFormIdAndArchivadaFalseOrderByOrdenAsc(original.getId())) {
+            preguntaRepository.save(new WeFormPregunta(
+                    copia, orden++, p.getTipo(), p.getTitulo(), p.getDescripcion(), p.isObligatoria(), p.getOpciones(),
+                    p.getDestino(), p.isVisible()));
+        }
+        return detalle(copia);
+    }
+
     public WeFormDtos.Detalle actualizar(Long id, WeFormDtos.ActualizarRequest request) {
         exigirAcceso();
         WeForm form = obtenerEntidad(id);

@@ -44,6 +44,13 @@ public final class WeFormDtos {
             @NotNull Long desarrolloId) {
     }
 
+    /** Copia de un formulario para otro desarrollo (o el mismo): nombre, descripción y desarrollo de la copia. */
+    public record DuplicarRequest(
+            @NotBlank @Size(max = 150) String nombre,
+            @Size(max = 1000) String descripcion,
+            @NotNull Long desarrolloId) {
+    }
+
     public record ActualizarRequest(
             @NotBlank @Size(max = 150) String nombre,
             @Size(max = 1000) String descripcion,

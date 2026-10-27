@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.3.0', fecha: '2026-10-27', cambios: [
+    "We Forms: cada formulario tiene ahora un botón 'Duplicar'. Abre un diálogo donde eliges el desarrollo de la copia (viene elegido el otro: de SAMAI a Aldea Nanuu y al revés), el nombre y la descripción. La copia lleva todas las preguntas del original tal como están (orden, obligatorias, ocultas, opciones y su vínculo con el cliente o la venta), nace activa con su propio link y sin respuestas, y los lotes que ofrece son los del desarrollo elegido.",
+  ] },
   { version: '11.2.9', fecha: '2026-10-26', cambios: [
     "Comercializadoras: la líder ahora también puede ser un asesor interno (usuario con rol Asesor), no solo un asesor externo. En el selector aparece con la etiqueta '(interno)'. Al elegirlo pasa a ser Líder en Comunidades We y, como con una líder externa, quienes se unan por el enlace de la comercializadora quedan debajo de él. Un asesor interno que ya reporta a alguien en Comunidades We no se puede elegir, y no se puede quitar de Comunidades We (ni borrar su usuario) mientras sea líder de una comercializadora.",
   ] },
