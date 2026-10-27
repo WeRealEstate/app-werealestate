@@ -82,6 +82,9 @@
 
   @if (conPortada()) {
     <app-hero-publico />
+    @if (enCotizador()) {
+      <app-score-resumen />
+    }
   } @else {
     <!-- Sin portada, el contenido arranca debajo de la barra fija. -->
     <div class="h-[calc(3.25rem+env(safe-area-inset-top))]" aria-hidden="true"></div>

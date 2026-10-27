@@ -2,13 +2,12 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { LucideTrophy } from '@lucide/angular';
-import { PosicionScore, RankingScore, TipoAsesorScore, conPosiciones } from '../../../core/models/score.model';
+import { PosicionScore, RankingScore, conPosiciones } from '../../../core/models/score.model';
 import { ScoreService } from '../../../core/services/score.service';
 import { WeFormsPublicoService } from '../../../core/services/we-forms-publico.service';
 import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 
 type Periodo = 'semana' | 'mes' | 'anio' | 'todo' | 'rango';
-type FiltroTipo = 'TODOS' | TipoAsesorScore;
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
@@ -35,16 +34,10 @@ export class ScoreComponent {
     { valor: 'todo', etiqueta: 'Todo' },
     { valor: 'rango', etiqueta: 'Rango de fechas' },
   ];
-  readonly filtros: { valor: FiltroTipo; etiqueta: string }[] = [
-    { valor: 'TODOS', etiqueta: 'Todos' },
-    { valor: 'INTERNO', etiqueta: 'Internos' },
-    { valor: 'EXTERNO', etiqueta: 'Externos' },
-  ];
 
   readonly periodo = signal<Periodo>('mes');
   readonly rangoDesde = signal('');
   readonly rangoHasta = signal('');
-  readonly filtro = signal<FiltroTipo>('TODOS');
 
   readonly ranking = signal<RankingScore | null>(null);
   readonly isLoading = signal(true);
@@ -52,12 +45,7 @@ export class ScoreComponent {
   /** Solo cuenta la respuesta de la última consulta: si cambian el periodo rápido, una vieja no pisa a la nueva. */
   private consulta = 0;
 
-  /** El filtro Internos/Externos vuelve a numerar los lugares entre los que quedan. */
-  readonly filas = computed<PosicionScore[]>(() => {
-    const asesores = this.ranking()?.asesores ?? [];
-    const filtro = this.filtro();
-    return conPosiciones(filtro === 'TODOS' ? asesores : asesores.filter((a) => a.tipo === filtro));
-  });
+  readonly filas = computed<PosicionScore[]>(() => conPosiciones(this.ranking()?.asesores ?? []));
   readonly podio = computed(() => this.filas().slice(0, 3));
 
   /** Solo en la página pública: la fila de quien la ve, si su dispositivo tiene un PIN válido. */
@@ -124,10 +112,6 @@ export class ScoreComponent {
   lugarEnPodio(indice: number): string {
     if (this.podio().length < 3) return indice === 0 ? 'pb-6' : 'pb-4';
     return ['pb-6 sm:order-2 sm:pb-10', 'pb-4 sm:order-1', 'pb-4 sm:order-3'][indice];
-  }
-
-  claseTipo(tipo: TipoAsesorScore): string {
-    return tipo === 'INTERNO' ? 'bg-we-primary/10 text-we-primary dark:bg-we-primary/20 dark:text-blue-300' : 'bg-surface-2 text-ink-muted';
   }
 
   /** Clases de la medalla de cada lugar del podio (oro, plata y bronce). */

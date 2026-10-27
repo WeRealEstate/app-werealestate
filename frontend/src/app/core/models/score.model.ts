@@ -33,7 +33,7 @@ export interface PosicionScore extends AsesorScore {
 }
 
 /** Numera el ranking (ya ordenado de más a menos ventas): con las mismas ventas comparten lugar y el siguiente lugar
- * no salta (1, 2, 2, 3). Se numera en el panel, no en el servidor, porque el filtro Internos/Externos cambia los lugares. */
+ * no salta (1, 2, 2, 3). Lo usan la pantalla del score y el resumen del cotizador público. */
 export function conPosiciones(asesores: AsesorScore[]): PosicionScore[] {
   let posicion = 0;
   let ventasAnteriores: number | null = null;

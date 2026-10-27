@@ -4,6 +4,7 @@ import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router
 import { LucideMap, LucideTrophy } from '@lucide/angular';
 import { filter } from 'rxjs';
 import { HeroPublicoComponent } from '../hero-publico/hero-publico.component';
+import { ScoreResumenComponent } from '../score-resumen/score-resumen.component';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { ToastContainerComponent } from '../../../shared/toast-container/toast-container.component';
 
@@ -15,7 +16,7 @@ import { ToastContainerComponent } from '../../../shared/toast-container/toast-c
 @Component({
   selector: 'app-cotizador-publico-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, LucideMap, LucideTrophy, HeroPublicoComponent, ConfirmDialogComponent, ToastContainerComponent],
+  imports: [RouterOutlet, RouterLink, LucideMap, LucideTrophy, HeroPublicoComponent, ScoreResumenComponent, ConfirmDialogComponent, ToastContainerComponent],
   templateUrl: './cotizador-publico-layout.component.html',
 })
 export class CotizadorPublicoLayoutComponent {
@@ -25,6 +26,8 @@ export class CotizadorPublicoLayoutComponent {
   /** La portada (foto a pantalla completa) va en el cotizador y en Lotes; el Score de ventas entra directo, sin ella,
    * para que su link compartido muestre el podio de inmediato. */
   readonly conPortada = signal(!esScore(window.location.pathname));
+  /** El resumen del score (top 5) va debajo de la portada solo en el cotizador, no en Lotes. */
+  readonly enCotizador = signal(esCotizador(window.location.pathname));
 
   /** true mientras la barra está encima de la foto de la portada: ahí va transparente con texto blanco;
    * después, translúcida con el texto del tema. Sin portada, siempre translúcida. */
@@ -37,6 +40,7 @@ export class CotizadorPublicoLayoutComponent {
         takeUntilDestroyed(),
       )
       .subscribe((e) => {
+        this.enCotizador.set(esCotizador(e.urlAfterRedirects));
         const conPortada = !esScore(e.urlAfterRedirects);
         if (conPortada !== this.conPortada()) {
           this.conPortada.set(conPortada);
@@ -54,6 +58,10 @@ export class CotizadorPublicoLayoutComponent {
     const sobre = this.conPortada() && window.scrollY < window.innerHeight - 64;
     if (sobre !== this.sobreHero()) this.sobreHero.set(sobre);
   }
+}
+
+function esCotizador(url: string): boolean {
+  return /^\/cotizador-publico\/?(?:[?#]|$)/.test(url);
 }
 
 function esScore(url: string): boolean {

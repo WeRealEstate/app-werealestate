@@ -41,24 +41,6 @@
     </div>
   }
 
-  <!-- Internos / externos -->
-  <div class="mt-3 inline-flex rounded-lg border border-border bg-surface p-1" role="group" aria-label="Tipo de asesor">
-    @for (f of filtros; track f.valor) {
-      <button
-        type="button"
-        (click)="filtro.set(f.valor)"
-        [attr.aria-pressed]="filtro() === f.valor"
-        data-testid="filtro-tipo"
-        class="min-h-9 rounded-md px-3 text-xs font-semibold transition-colors duration-150"
-        [class.bg-we-primary]="filtro() === f.valor"
-        [class.text-white]="filtro() === f.valor"
-        [class.text-ink-muted]="filtro() !== f.valor"
-      >
-        {{ f.etiqueta }}
-      </button>
-    }
-  </div>
-
   @if (errorMessage()) {
     <div class="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-300" role="alert">
       {{ errorMessage() }}
@@ -74,7 +56,7 @@
         · <span class="font-semibold text-ink">{{ filas().length }}</span> {{ filas().length === 1 ? 'asesor' : 'asesores' }} con ventas
       </p>
 
-      @if (esPublico && miClave() && (miFila() || filtro() === 'TODOS')) {
+      @if (esPublico && miClave()) {
         <div class="mt-4 rounded-xl border border-we-primary/30 bg-we-primary/5 px-4 py-3 text-sm text-ink dark:bg-we-primary/10" data-testid="mi-lugar">
           @if (miFila(); as yo) {
             Vas en el <span class="font-semibold">{{ yo.posicion }}.º lugar</span> con {{ yo.ventas }} {{ yo.ventas === 1 ? 'venta' : 'ventas' }}
@@ -111,11 +93,8 @@
               <p class="mt-1.5 text-xs font-semibold text-ink-muted">{{ a.posicion }}.º lugar</p>
               <p class="mt-2 truncate font-heading text-base font-semibold text-ink" [title]="a.nombre">{{ a.nombre }}</p>
               @if (a.clave === miClave()) {
-                <span class="mr-1 mt-1 inline-block rounded-full bg-we-primary px-2 py-0.5 text-[11px] font-semibold text-white">Tú</span>
+                <span class="mt-1 inline-block rounded-full bg-we-primary px-2 py-0.5 text-[11px] font-semibold text-white">Tú</span>
               }
-              <span class="mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold" [class]="claseTipo(a.tipo)">
-                {{ a.tipo === 'INTERNO' ? 'Interno' : 'Externo' }}
-              </span>
               <p class="mt-3 font-heading text-3xl font-bold tabular-nums text-ink">{{ a.ventas }}</p>
               <p class="text-xs text-ink-muted">{{ a.ventas === 1 ? 'venta' : 'ventas' }} · {{ a.lotes }} {{ a.lotes === 1 ? 'lote' : 'lotes' }}</p>
             </div>
@@ -129,7 +108,6 @@
               <tr>
                 <th scope="col" class="w-16 px-3 py-3 sm:w-20 sm:px-4">Lugar</th>
                 <th scope="col" class="px-3 py-3 sm:px-4">Asesor</th>
-                <th scope="col" class="hidden px-4 py-3 sm:table-cell">Tipo</th>
                 <th scope="col" class="px-3 py-3 text-right sm:px-4">Ventas</th>
                 <th scope="col" class="px-3 py-3 text-right sm:px-4">Lotes</th>
               </tr>
@@ -141,22 +119,8 @@
                   <td class="px-3 py-3 text-ink sm:px-4">
                     {{ a.nombre }}
                     @if (a.clave === miClave()) {
-                      <span class="ml-1 hidden rounded-full bg-we-primary px-2 py-0.5 text-[11px] font-semibold text-white sm:inline">Tú</span>
+                      <span class="ml-1 rounded-full bg-we-primary px-2 py-0.5 text-[11px] font-semibold text-white">Tú</span>
                     }
-                    <!-- En celular la columna Tipo no cabe: las etiquetas van juntas debajo del nombre. -->
-                    <span class="mt-1 flex flex-wrap gap-1 sm:hidden">
-                      @if (a.clave === miClave()) {
-                        <span class="rounded-full bg-we-primary px-2 py-0.5 text-[11px] font-semibold text-white">Tú</span>
-                      }
-                      <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" [class]="claseTipo(a.tipo)">
-                        {{ a.tipo === 'INTERNO' ? 'Interno' : 'Externo' }}
-                      </span>
-                    </span>
-                  </td>
-                  <td class="hidden px-4 py-3 sm:table-cell">
-                    <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" [class]="claseTipo(a.tipo)">
-                      {{ a.tipo === 'INTERNO' ? 'Interno' : 'Externo' }}
-                    </span>
                   </td>
                   <td class="px-3 py-3 text-right font-semibold tabular-nums text-ink sm:px-4">{{ a.ventas }}</td>
                   <td class="px-3 py-3 text-right tabular-nums text-ink-muted sm:px-4">{{ a.lotes }}</td>

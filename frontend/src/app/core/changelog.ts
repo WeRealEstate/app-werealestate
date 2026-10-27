@@ -15,6 +15,10 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.6.0', fecha: '2026-10-27', cambios: [
+    "Score de ventas: se quitó el filtro Todos / Internos / Externos y las etiquetas Interno / Externo (también la columna Tipo), en el panel y en el cotizador público. El ranking siempre muestra a todos juntos.",
+    "Cotizador público: debajo de la portada aparece un resumen corto del score, con el top 5 general (de todo el historial) y el enlace 'Ver score completo'. Si el dispositivo tiene guardado el PIN del asesor, marca 'Tú' o, si no está entre los cinco, dice en qué lugar va. Si todavía no hay ventas, no se muestra.",
+  ] },
   { version: '11.5.0', fecha: '2026-10-27', cambios: [
     "Score de ventas en el cotizador público (/cotizador-publico/score), para una competencia sana entre asesores internos y externos: el mismo ranking del panel (podio, tabla, periodos y filtro), sin sesión ni PIN. Se entra desde 'Score de ventas' en la barra de arriba del cotizador o desde la portada; la página entra directo al ranking, sin la foto de portada.",
     "Si el dispositivo ya tiene guardado el PIN de un asesor (el que usa en los planos, Material o Registrar venta), su fila se marca con 'Tú' y arriba ve en qué lugar va; esta página nunca pide el PIN. Si ese PIN ya no sirve, se olvida. Un PIN que no sirve cuenta en el mismo tope de intentos que las demás páginas públicas.",
