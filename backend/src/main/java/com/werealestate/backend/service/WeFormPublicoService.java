@@ -341,7 +341,7 @@ public class WeFormPublicoService {
                 asesor.usuario() != null ? asesor.usuario().getId() : null,
                 asesor.externo() != null ? asesor.externo().getId() : null,
                 formaPago, LocalDate.now(), mensualidad, plazo, engancheLabel, enganche, diaPago, false,
-                "Registrada desde el formulario «" + form.getNombre() + "» (We Forms).", aportaciones,
+                "Registrada desde el formulario «" + form.getNombre() + "» (We Forms).", false, aportaciones,
                 false, null, null, null, null, null, null, null, null);
         Venta venta = ventaService.crearDesdeRegistroDeVenta(ventaRequest, sistema);
 

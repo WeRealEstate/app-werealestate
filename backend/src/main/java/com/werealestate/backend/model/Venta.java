@@ -301,7 +301,7 @@ public class Venta {
     }
 
     /** Nombre a mostrar del asesor, sea interno o externo — para bitácoras/historiales de texto
-     * (ver LoteService.marcarPorVenta) que no necesitan distinguir cuál de los dos es. */
+     * (ver LoteService.marcarVendido) que no necesitan distinguir cuál de los dos es. */
     public String getAsesorNombre() {
         return usuarioAsesor != null ? usuarioAsesor.getNombre() : asesorExterno.getNombre();
     }

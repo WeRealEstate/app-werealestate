@@ -58,9 +58,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 /** Los estados APARTADO_A_PLAZO, APARTADO_CON_DINERO, EN_PROCESO_DE_FIRMA y VENDIDO (comprometidos
  * con dinero real o en firma) solo los puede establecer un admin o un líder de área; DISPONIBLE y
- * APARTADO los puede mover cualquiera (es el uso diario de un asesor). EN_PROCESO_DE_FIRMA y VENDIDO,
- * además, los pone la venta del lote y no se cambian a mano (ver validarContraVenta). Dar de
- * alta/editar/importar lotes es exclusivo de admin. */
+ * APARTADO los puede mover cualquiera (es el uso diario de un asesor). Dar de alta/editar/importar
+ * lotes es exclusivo de admin. */
 @Service
 @Transactional
 public class LoteService {
@@ -85,10 +84,6 @@ public class LoteService {
 
     private static final Set<EstadoLote> ESTADOS_APARTADO =
             Set.of(EstadoLote.APARTADO, EstadoLote.APARTADO_A_PLAZO, EstadoLote.APARTADO_CON_DINERO);
-
-    /** Los únicos estados de un lote que está en una venta, y a los que solo se llega registrándola: En proceso de
-     * firma mientras el contrato no esté firmado y Vendido ya firmado (ver VentaService). */
-    private static final Set<EstadoLote> ESTADOS_DE_VENTA = Set.of(EstadoLote.EN_PROCESO_DE_FIRMA, EstadoLote.VENDIDO);
 
     /** Compara manzana/número de lote como números cuando se puede (así "2" queda antes que "10"
      * en vez del orden alfabético de VARCHAR, donde "10" queda antes que "2"); si alguno no es
@@ -242,33 +237,30 @@ public class LoteService {
         Pageable pageable = PageRequest.of(Math.max(pagina, 0), Math.max(tamano, 1));
         Page<Lote> resultado = loteRepository.findAll(spec, pageable);
         List<LoteDto> lotes = resultado.getContent().stream().map(LoteDto::from).toList();
-        return new PaginaDto<>(marcarVentas(lotes), resultado.hasNext());
+        return new PaginaDto<>(marcarSinVentaRegistrada(lotes), resultado.hasNext());
     }
 
-    /** Para /panel/lotes, /panel/plano y el formulario de Ventas, solo admin y administración (los que ven Ventas):
-     * en qué venta está cada lote (ventaNumero: con venta su estado lo manda la venta, ver {@link #cambiarEstado}) y
-     * cuáles VENDIDO no tienen ninguna ("Reservado por We": lotes que la empresa se guarda y que a propósito se
-     * muestran como vendidos). Para el resto, y en todo lo público, los lotes van tal cual: "Vendido" y ya. */
-    private List<LoteDto> marcarVentas(List<LoteDto> lotes) {
-        if (lotes.isEmpty() || !puedeVerReservadosWe()) {
+    /** Marca "Reservado por We" en /panel/lotes y /panel/plano: de los lotes VENDIDO, cuáles no tienen
+     * ningún VentaLote asociado. Son lotes que la empresa se guarda para venderlos más adelante y que a
+     * propósito se muestran como vendidos: solo admin y administración reciben la marca; para el resto
+     * (y en todo lo público) siguen siendo simplemente "Vendido". */
+    private List<LoteDto> marcarSinVentaRegistrada(List<LoteDto> lotes) {
+        if (!puedeVerReservadosWe()) {
             return lotes;
         }
-        Map<Long, Long> numeroPorLote = new HashMap<>();
-        for (Object[] fila : ventaLoteRepository.numeroDeVentaPorLote(lotes.stream().map(LoteDto::id).toList())) {
-            numeroPorLote.put((Long) fila[0], (Long) fila[1]);
-        }
-        return lotes.stream()
-                .map(l -> {
-                    Long numero = numeroPorLote.get(l.id());
-                    boolean sinVenta = l.estado() == EstadoLote.VENDIDO && numero == null;
-                    return numero == null && !sinVenta ? l : l.conVenta(sinVenta, numero);
-                })
+        List<Long> idsVendidos = lotes.stream()
+                .filter(l -> l.estado() == EstadoLote.VENDIDO)
+                .map(LoteDto::id)
                 .toList();
-    }
-
-    /** {@link #marcarVentas} de un solo lote, para lo que se devuelve después de cambiarlo. */
-    private LoteDto conVentas(Lote lote) {
-        return marcarVentas(List.of(LoteDto.from(lote))).get(0);
+        if (idsVendidos.isEmpty()) {
+            return lotes;
+        }
+        Set<Long> conVenta = new HashSet<>(ventaLoteRepository.findLoteIdsConVenta(idsVendidos));
+        return lotes.stream()
+                .map(l -> l.estado() == EstadoLote.VENDIDO && !conVenta.contains(l.id())
+                        ? l.conSinVentaRegistrada(true)
+                        : l)
+                .toList();
     }
 
     /** Inventario de cada desarrollo contado por estado, para las cifras del inicio del admin. Los
@@ -365,8 +357,7 @@ public class LoteService {
 
         boolean tocaEstadoRestringido =
                 ESTADOS_ADMIN_O_LIDER.contains(request.estado()) || ESTADOS_ADMIN_O_LIDER.contains(lote.getEstado());
-        // Un lote con venta tampoco, aunque haya quedado en otro estado (datos de antes de que lo mandara la venta).
-        if (tocaEstadoRestringido || ventaLoteRepository.existsByLoteId(lote.getId())) {
+        if (tocaEstadoRestringido) {
             throw new ForbiddenOperationException("Este lote no se puede modificar desde la disponibilidad pública");
         }
         if (request.estado() == EstadoLote.DISPONIBLE && lote.getEstado() == EstadoLote.APARTADO) {
@@ -567,7 +558,6 @@ public class LoteService {
             throw new ForbiddenOperationException(
                     "Solo un administrador o personal de administración puede cambiar el estado de este lote");
         }
-        validarContraVenta(lote, request.estado(), actual);
 
         if (request.estado() == EstadoLote.APARTADO_A_PLAZO) {
             if (request.fechaExpiraApartado() == null || !request.fechaExpiraApartado().isAfter(LocalDateTime.now())) {
@@ -605,37 +595,7 @@ public class LoteService {
         lote.setFechaExpiraApartado(
                 request.estado() == EstadoLote.APARTADO_A_PLAZO ? request.fechaExpiraApartado() : null);
         lote.setMontoApartado(montoApartado);
-        return conVentas(lote);
-    }
-
-    /** El estado de un lote con venta lo manda la venta (ver VentaService): En proceso de firma sin el contrato
-     * firmado, Vendido ya firmado. Así que a mano no se saca de ahí (para liberarlo se elimina la venta) y a esos dos
-     * estados solo se llega registrando la venta, que es la que los pone. Un lote con venta que quedó en otro estado
-     * (datos de antes de esta regla) solo puede volver a uno de venta. */
-    private void validarContraVenta(Lote lote, EstadoLote nuevoEstado, Usuario actual) {
-        Long numeroVenta = ventaLoteRepository.findFirstByLoteIdOrderByIdDesc(lote.getId())
-                .map(vl -> vl.getVenta().getNumero())
-                .orElse(null);
-        boolean adminOLider = actual.getRol() == Role.ADMIN || actual.getRol() == Role.LIDER_AREA;
-        if (numeroVenta != null) {
-            if (!adminOLider) {
-                throw new ConflictException("Este lote ya tiene una venta registrada: pide a administración que lo revise");
-            }
-            if (ESTADOS_DE_VENTA.contains(lote.getEstado())) {
-                throw new ConflictException("Este lote está en la venta #" + numeroVenta + ": su estado lo manda la venta "
-                        + "(Vendido con el contrato firmado, En proceso de firma sin firmar). Para liberarlo, elimina la venta.");
-            }
-            if (!ESTADOS_DE_VENTA.contains(nuevoEstado)) {
-                throw new ConflictException(
-                        "Este lote está en la venta #" + numeroVenta + ": solo puede pasar a Vendido o En proceso de firma");
-            }
-            return;
-        }
-        if (ESTADOS_DE_VENTA.contains(nuevoEstado)) {
-            throw new ValidationException("Para marcar este lote como "
-                    + (nuevoEstado == EstadoLote.VENDIDO ? "Vendido" : "En proceso de firma")
-                    + ", registra su venta en Ventas: el lote cambia solo al guardarla");
-        }
+        return LoteDto.from(lote);
     }
 
     /** Nombre del asesor (interno o externo) elegido al apartar un lote desde el panel; exactamente uno. */
@@ -687,7 +647,7 @@ public class LoteService {
                 .map(LoteDto::from)
                 .toList();
         return new PlanoDesarrolloDto(
-                desarrollo.getId(), desarrollo.getNombre(), desarrollo.getPlanoUrl(), marcarVentas(lotes));
+                desarrollo.getId(), desarrollo.getNombre(), desarrollo.getPlanoUrl(), marcarSinVentaRegistrada(lotes));
     }
 
     /** Delimita (o borra, con una lista vacía o nula) el polígono de un lote sobre el plano de su
@@ -700,7 +660,7 @@ public class LoteService {
         }
         Lote lote = obtenerEntidad(id);
         lote.actualizarPoligonoMapa(PoligonoMapaJson.serializar(puntos));
-        return conVentas(lote);
+        return LoteDto.from(lote);
     }
 
     /** Borra la delimitación de TODOS los lotes de un desarrollo. Es destructivo (hay que volver a
@@ -725,22 +685,18 @@ public class LoteService {
         return limpiados;
     }
 
-    /** Devuelve a DISPONIBLE, con su historial, un lote que se quedó sin venta porque se eliminó la suya (VentaService.
-     * eliminar ya revisó que ninguna otra lo tenga): tanto si estaba Vendido como En proceso de firma, porque sin venta
-     * no puede seguir así. Se limpian el vencimiento y el dinero apartado, que ya no aplican. Si estaba en otro estado
-     * (datos de antes de que lo mandara la venta) se deja como está. */
+    /** Devuelve a DISPONIBLE un lote que quedó VENDIDO por una venta que se eliminó, con su historial
+     * de movimientos; si ya no está VENDIDO (alguien lo cambió a mano) se deja como está. */
     public void liberarPorVentaEliminada(Long id) {
         Lote lote = obtenerEntidad(id);
-        if (!ESTADOS_DE_VENTA.contains(lote.getEstado())) return;
+        if (lote.getEstado() != EstadoLote.VENDIDO) return;
         Usuario actual = currentUserProvider.getUsuarioActual();
         cambiarEstadoConHistorial(lote, EstadoLote.DISPONIBLE, actual, null, null, null, "Venta eliminada");
-        lote.setFechaExpiraApartado(null);
-        lote.setMontoApartado(null);
     }
 
     /** El lote pasa a EN_PROCESO_DE_FIRMA a raíz de un registro de venta de We Forms (ver VentaService.
      * crearDesdeRegistroDeVenta), sin sesión: el cambio queda en el historial a nombre del usuario de sistema.
-     * A diferencia de marcarPorVenta, el dinero con el que estuviera apartado NO se borra: queda pendiente
+     * A diferencia de marcarVendido, el dinero con el que estuviera apartado NO se borra: queda pendiente
      * de aplicar en la venta (ver Venta.depositoPendiente) y lo limpia {@link #limpiarMontoApartado}. */
     public void marcarEnProcesoDeFirma(Long id, String cliente, String asesor, Usuario actor) {
         Lote lote = obtenerEntidad(id);
@@ -790,34 +746,19 @@ public class LoteService {
                 .orElse(false);
     }
 
-    /** El lote entra a una venta registrada desde el panel (ver VentaService): Vendido si el contrato ya está firmado,
-     * En proceso de firma si no. Mismo historial que cualquier otro cambio de estado; no repite el chequeo de rol de
-     * {@link #cambiarEstado}: VentaService ya exige admin o administración para registrar una venta. */
-    public void marcarPorVenta(Long id, boolean contratoFirmado, String cliente, String asesor) {
+    /** Marca el lote como VENDIDO a raíz de un registro de {@code Venta} (ver VentaService), con el
+     * mismo mecanismo de historial que cualquier otro cambio de estado. No repite el chequeo de rol
+     * de {@link #cambiarEstado}: VentaService ya exige admin/líder de área para registrar una venta. */
+    public LoteDto marcarVendido(Long id, String cliente, String asesor) {
         Lote lote = obtenerEntidad(id);
         Usuario actual = currentUserProvider.getUsuarioActual();
-        EstadoLote estado = contratoFirmado ? EstadoLote.VENDIDO : EstadoLote.EN_PROCESO_DE_FIRMA;
-        cambiarEstadoConHistorial(lote, estado, actual, asesor, cliente, null,
-                contratoFirmado ? "Venta registrada" : "Venta registrada, contrato por firmar");
+        cambiarEstadoConHistorial(lote, EstadoLote.VENDIDO, actual, asesor, cliente, null, "Venta registrada");
         lote.setFechaExpiraApartado(null);
         // El formulario de Ventas ya leyó montoApartado (vía LoteDto) antes de llegar aquí, para
-        // decidir si ese dinero baja la mensualidad o el saldo; una vez en la venta, ya no representa
+        // decidir si ese dinero baja la mensualidad o el saldo; una vez Vendido, ya no representa
         // un depósito pendiente de aplicar.
         lote.setMontoApartado(null);
-    }
-
-    /** Pone el lote en el estado que le manda su venta cuando cambia la firma del contrato (ver VentaService.
-     * registrarContrato): Vendido al firmarse, En proceso de firma si se le quita la firma. Si ya está así no deja
-     * movimiento. No toca el dinero apartado: en una venta que vino de We Forms puede seguir pendiente de aplicar
-     * (Venta.depositoPendiente). */
-    public void ponerEstadoDeVenta(Long id, EstadoLote estado, String cliente, String nota) {
-        if (!ESTADOS_DE_VENTA.contains(estado)) {
-            throw new IllegalArgumentException("Un lote con venta solo puede estar Vendido o En proceso de firma");
-        }
-        Lote lote = obtenerEntidad(id);
-        if (lote.getEstado() == estado) return;
-        cambiarEstadoConHistorial(lote, estado, currentUserProvider.getUsuarioActual(), null, cliente, null, nota);
-        lote.setFechaExpiraApartado(null);
+        return LoteDto.from(lote);
     }
 
     private Usuario exigirAdmin(String accion) {

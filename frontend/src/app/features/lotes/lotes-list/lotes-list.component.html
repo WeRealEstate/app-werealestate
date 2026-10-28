@@ -154,9 +154,8 @@
                 <div class="flex items-center gap-1.5">
                   @if (estadosDisponiblesPara(lote).length > 1) {
                     <select
-                      #selectorEstado="ngModel"
                       [ngModel]="lote.estado"
-                      (ngModelChange)="cambiarEstado(lote, $event, selectorEstado)"
+                      (ngModelChange)="cambiarEstado(lote, $event)"
                       class="rounded-full border-0 px-2.5 py-1 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-we-primary/50"
                       [class]="badgeClases[lote.estado]"
                     >
@@ -165,25 +164,9 @@
                       }
                     </select>
                   } @else {
-                    <span
-                      class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium"
-                      [class]="badgeClases[lote.estado]"
-                      [title]="lote.ventaNumero
-                        ? 'Lo manda la venta: Vendido con el contrato firmado, En proceso de firma sin firmar. Para liberarlo, elimina la venta.'
-                        : 'Solo un administrador o personal de administración puede cambiar este estado'"
-                    >
+                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" [class]="badgeClases[lote.estado]" [title]="'Solo un administrador o personal de administración puede cambiar este estado'">
                       {{ estadoLabels[lote.estado] }}
                     </span>
-                  }
-                  @if (lote.ventaNumero) {
-                    <!-- Solo lo reciben admin y administración: el estado de este lote lo manda su venta. -->
-                    <a
-                      [routerLink]="['/panel/ventas', lote.ventaNumero]"
-                      class="inline-flex shrink-0 whitespace-nowrap rounded-full bg-we-primary/10 px-2 py-0.5 text-[11px] font-semibold text-we-primary hover:underline dark:bg-we-blue-light/15 dark:text-we-blue-light"
-                      title="Ver la venta de este lote"
-                    >
-                      Venta #{{ lote.ventaNumero }}
-                    </a>
                   }
                   @if (lote.sinVentaRegistrada) {
                     <!-- Solo lo reciben admin y administración: afuera este lote se ve vendido. -->

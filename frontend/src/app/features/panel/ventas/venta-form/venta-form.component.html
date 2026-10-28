@@ -677,18 +677,17 @@
       </div>
     </div>
 
-    <!-- El estado de los lotes lo manda la venta (backend: LoteService.marcarPorVenta): ya no se elige. -->
-    <p class="rounded-lg border border-border px-3.5 py-3 text-sm text-ink" data-testid="estado-lotes-venta">
-      Al guardar, {{ lotesAgregados().length > 1 ? 'los lotes quedan' : 'el lote queda' }}
-      <strong>{{ contratoFirmado() ? 'Vendido' : 'En proceso de firma' }}</strong>
-      <span class="block text-xs text-ink-muted mt-0.5">
-        @if (contratoFirmado()) {
-          Con el contrato firmado. Si después se le quita la firma, regresa{{ lotesAgregados().length > 1 ? 'n' : '' }} a En proceso de firma.
-        } @else {
-          Pasa{{ lotesAgregados().length > 1 ? 'n' : '' }} a Vendido cuando se marque el contrato como firmado. Queda en su historial de movimientos.
-        }
+    <label class="flex items-start gap-2.5 rounded-lg border border-border px-3.5 py-3 text-sm text-ink cursor-pointer">
+      <input
+        type="checkbox"
+        formControlName="marcarLoteVendido"
+        class="mt-0.5 h-4 w-4 rounded border-border text-we-primary focus:ring-we-primary/50"
+      />
+      <span>
+        Marcar {{ lotesAgregados().length > 1 ? 'los lotes' : 'el lote' }} como <strong>Vendido</strong> al guardar
+        <span class="block text-xs text-ink-muted mt-0.5">Actualiza el estado de cada lote y queda en su historial de movimientos.</span>
       </span>
-    </p>
+    </label>
 
     @if (errorMessage()) {
       <div class="rounded-lg bg-red-50 border border-red-200 px-3.5 py-2.5 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/25 dark:text-red-300">

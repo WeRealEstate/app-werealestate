@@ -275,6 +275,7 @@ export class VentaFormComponent {
       validators: [Validators.required, Validators.min(1), Validators.max(31)],
     }),
     notas: this.fb.control(''),
+    marcarLoteVendido: this.fb.control(true, { nonNullable: true }),
   });
 
   /** El asesor elegido arriba, como señal (para validar que el copropietario sea otra persona). */
@@ -285,11 +286,10 @@ export class VentaFormComponent {
   readonly loteParaAgregarId = signal<number | null>(null);
   readonly precioParaAgregar = signal<number | null>(null);
 
-  /** Lotes del desarrollo elegido que se pueden poner en la venta: los que no están ya en otra (el servidor tampoco lo
-   * deja: un lote solo está en una venta) y que todavía no se agregaron a esta. */
+  /** Lotes del desarrollo elegido que todavía no se agregaron, para no repetir uno en la misma venta. */
   readonly lotesDisponiblesParaAgregar = computed<Lote[]>(() => {
     const agregadosIds = new Set(this.lotesAgregados().map((l) => l.lote.id));
-    return this.lotesDelDesarrollo().filter((l) => l.ventaNumero == null && !agregadosIds.has(l.id));
+    return this.lotesDelDesarrollo().filter((l) => !agregadosIds.has(l.id));
   });
 
   constructor() {
@@ -304,10 +304,6 @@ export class VentaFormComponent {
         }),
       ).catch(() => undefined);
     }
-    // Desde Lotes o el Plano ("Registrar la venta" de un lote) llegan ?desarrolloId=&loteId=: ese lote ya agregado.
-    const desarrolloDelLote = Number(this.route.snapshot.queryParamMap.get('desarrolloId'));
-    const loteId = Number(this.route.snapshot.queryParamMap.get('loteId'));
-    if (desarrolloDelLote && loteId) void this.precargarLote(desarrolloDelLote, loteId);
     this.leadsService.listarDesarrollosGestionables().then((d) => this.desarrollos.set(d));
     this.usuariosService.paraVenta().then((u) => this.asesoresInternos.set(u));
     this.asesoresExternosService.listarActivos().then((a) => this.asesoresExternos.set(a));
@@ -521,19 +517,6 @@ export class VentaFormComponent {
     this.actualizarMensualidad();
   }
 
-  /** Deja elegidos el desarrollo y el lote, con su precio estimado (se puede quitar y volver a agregar con otro). */
-  private async precargarLote(desarrolloId: number, loteId: number): Promise<void> {
-    await this.onDesarrolloChange(String(desarrolloId));
-    const enOtraVenta = this.lotesDelDesarrollo().find((l) => l.id === loteId && l.ventaNumero != null);
-    if (enOtraVenta) {
-      this.errorMessage.set(`Ese lote ya está en la venta #${enOtraVenta.ventaNumero}.`);
-      return;
-    }
-    if (!this.lotesDisponiblesParaAgregar().some((l) => l.id === loteId)) return;
-    this.onLoteParaAgregarChange(String(loteId));
-    this.agregarLote();
-  }
-
   quitarLote(loteId: number): void {
     this.lotesAgregados.update((actuales) => actuales.filter((l) => l.lote.id !== loteId));
     this.aplicarDepositoA.set(null);
@@ -612,6 +595,7 @@ export class VentaFormComponent {
         diaPago: v.diaPago as number,
         primeraMensualidadMesVenta: this.primeraMensualidadMesVenta(),
         notas: v.notas?.trim() || null,
+        marcarLoteVendido: v.marcarLoteVendido,
         contratoFirmado: this.contratoFirmado(),
         contratoFechaFirma: this.contratoFirmado() ? this.contratoFecha() : null,
         contratoMedio: this.contratoFirmado() ? (this.contratoMedio() as MedioFirma) : null,

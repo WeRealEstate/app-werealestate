@@ -11,8 +11,8 @@ import {
   LucideTrash2,
   LucideUpload,
 } from '@lucide/angular';
-import { FormsModule, NgModel } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { LeadsService } from '../../../core/services/leads.service';
@@ -26,13 +26,11 @@ import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component
 import {
   ESTADO_LOTE_BADGE_CLASSES,
   ESTADO_LOTE_LABELS,
-  ESTADOS_DE_VENTA,
   ESTADOS_LOTE_ADMIN_O_LIDER,
   ESTADOS_LOTE_ORDEN,
   ESTADOS_LOTE_SOLO_ADMIN,
   EstadoLote,
   Lote,
-  estadosParaAdmin,
 } from '../../../core/models/lote.model';
 import { MonedaInputDirective } from '../../../shared/moneda-input/moneda-input.directive';
 
@@ -40,8 +38,17 @@ const TAMANO_PAGINA = 20;
 
 /** Los 6 estados los puede ver cualquiera; para elegir uno nuevo, un no-admin/líder solo puede
  * moverse entre Disponible/Apartado (y solo si el lote no está ya en un estado exclusivo de
- * admin, o de admin/líder). Admin y administración: ver estadosParaAdmin. */
+ * admin, o de admin/líder). */
 const ESTADOS_ASESOR: EstadoLote[] = ['DISPONIBLE', 'APARTADO'];
+const ESTADOS_TODOS: EstadoLote[] = [
+  'DISPONIBLE',
+  'APARTADO',
+  'APARTADO_A_PLAZO',
+  'APARTADO_CON_DINERO',
+  'EN_PROCESO_DE_FIRMA',
+  'RESERVADO_WE',
+  'VENDIDO',
+];
 
 @Component({
   selector: 'app-lotes-list',
@@ -73,7 +80,6 @@ export class LotesListComponent {
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly confirmService = inject(ConfirmService);
-  private readonly router = inject(Router);
 
   readonly estadoLabels = ESTADO_LOTE_LABELS;
   readonly badgeClases = ESTADO_LOTE_BADGE_CLASSES;
@@ -90,8 +96,8 @@ export class LotesListComponent {
 
   /** Cambio de estado que un admin o líder de área está por confirmar (ver
    * LoteCambioEstadoModalComponent); null cuando el modal está cerrado. Un asesor nunca pasa por
-   * aquí — su cambio se aplica directo. selector: el del renglón, para regresarlo si se cancela. */
-  readonly cambioEstadoPendiente = signal<{ lote: Lote; nuevoEstado: EstadoLote; selector?: NgModel } | null>(null);
+   * aquí — su cambio se aplica directo. */
+  readonly cambioEstadoPendiente = signal<{ lote: Lote; nuevoEstado: EstadoLote } | null>(null);
 
   readonly lotes = signal<Lote[]>([]);
   readonly desarrollos = signal<Desarrollo[]>([]);
@@ -189,7 +195,7 @@ export class LotesListComponent {
    * asesor solo se mueve entre Disponible/Apartado, y ni siquiera puede sacar un lote ya
    * comprometido (apartado a plazo, con dinero, en firma o vendido) de ese estado. */
   estadosDisponiblesPara(lote: Lote): EstadoLote[] {
-    if (this.esAdmin() || this.esLider()) return estadosParaAdmin(lote);
+    if (this.esAdmin() || this.esLider()) return ESTADOS_TODOS;
     const bloqueadoParaAsesor =
       ESTADOS_LOTE_SOLO_ADMIN.has(lote.estado) || ESTADOS_LOTE_ADMIN_O_LIDER.has(lote.estado);
     return bloqueadoParaAsesor ? [lote.estado] : ESTADOS_ASESOR;
@@ -275,17 +281,13 @@ export class LotesListComponent {
    * líder de área puede mover un lote a cualquier estado, así que se le pide justificar el cambio
    * con una nota (y, solo para "Apartado a plazo", también la fecha de vencimiento) en un modal
    * antes de llamar a la API. El <select> ya quedó visualmente en la nueva opción, pero como no
-   * tocamos `lote.estado` (el array `lotes()` no cambia), al cancelar se regresa el selector al estado real.
-   * Vendido y En proceso de firma los pone la venta: para un lote sin venta, elegirlos lleva a registrarla. */
-  async cambiarEstado(lote: Lote, nuevoEstado: string, selector?: NgModel): Promise<void> {
+   * tocamos `lote.estado` (el array `lotes()` no cambia) vuelve solo a mostrar el estado real si
+   * se cancela el modal. */
+  async cambiarEstado(lote: Lote, nuevoEstado: string): Promise<void> {
     if (nuevoEstado === lote.estado) return;
 
     if (this.esAdmin() || this.esLider()) {
-      if (lote.ventaNumero == null && ESTADOS_DE_VENTA.has(nuevoEstado as EstadoLote)) {
-        await this.irARegistrarVenta(lote, selector);
-        return;
-      }
-      this.cambioEstadoPendiente.set({ lote, nuevoEstado: nuevoEstado as EstadoLote, selector });
+      this.abrirModalCambioEstado(lote, nuevoEstado as EstadoLote);
       return;
     }
 
@@ -297,33 +299,11 @@ export class LotesListComponent {
     }
   }
 
-  /** Vendido y En proceso de firma solo los pone una venta: se confirma y se abre Nueva venta con el desarrollo y el
-   * lote ya elegidos; el lote cambia al guardarla (según el contrato). */
-  private async irARegistrarVenta(lote: Lote, selector?: NgModel): Promise<void> {
-    const ir = await this.confirmService.confirm({
-      titulo: 'Registrar la venta',
-      mensaje:
-        'Vendido y En proceso de firma los pone la venta: al registrarla, el lote queda En proceso de firma y, con el ' +
-        `contrato firmado, Vendido. ¿Abrir Nueva venta con el Lote ${lote.numeroLote} de la Manzana ${lote.manzana}?`,
-      textoConfirmar: 'Registrar venta',
-    });
-    if (!ir) {
-      this.regresarSelector(lote, selector);
-      return;
-    }
-    void this.router.navigate(['/panel/ventas/nueva'], {
-      queryParams: { desarrolloId: lote.desarrollo.id, loteId: lote.id },
-    });
-  }
-
-  /** El selector ya muestra la opción elegida; si el cambio no sigue, vuelve al estado real del lote. */
-  private regresarSelector(lote: Lote, selector?: NgModel): void {
-    selector?.control.setValue(lote.estado, { emitViewToModelChange: false });
+  abrirModalCambioEstado(lote: Lote, nuevoEstado: EstadoLote): void {
+    this.cambioEstadoPendiente.set({ lote, nuevoEstado });
   }
 
   cancelarCambioEstado(): void {
-    const pendiente = this.cambioEstadoPendiente();
-    if (pendiente) this.regresarSelector(pendiente.lote, pendiente.selector);
     this.cambioEstadoPendiente.set(null);
   }
 

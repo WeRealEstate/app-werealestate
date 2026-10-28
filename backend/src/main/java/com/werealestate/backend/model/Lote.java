@@ -61,7 +61,7 @@ public class Lote {
     /** Cuánto dinero se recibió al apartar, solo mientras estado == APARTADO_CON_DINERO. Se limpia
      * a null al salir de ese estado (ver LoteService.cambiarEstado). El formulario de Ventas lo lee
      * (vía LoteDto) antes de registrar la venta, para preguntar si ese dinero baja la mensualidad o
-     * el saldo; LoteService.marcarPorVenta lo limpia una vez que el lote ya está en la venta. */
+     * el saldo; LoteService.marcarVendido lo limpia una vez que el lote ya quedó Vendido. */
     @Column(name = "monto_apartado", precision = 14, scale = 2)
     private BigDecimal montoApartado;
 

@@ -20,9 +20,6 @@ public record LoteDto(
         LocalDateTime fechaExpiraApartado,
         BigDecimal montoApartado,
         boolean sinVentaRegistrada,
-        // Número de la venta en la que está el lote (null = en ninguna). Solo para admin y administración: con venta,
-        // su estado lo manda la venta y no se cambia a mano (ver LoteService.cambiarEstado).
-        Long ventaNumero,
         // Precio por m² que aplica (el propio del lote o el del desarrollo), el propio (null si no tiene) y el total.
         BigDecimal precioM2,
         BigDecimal precioM2Propio,
@@ -52,18 +49,18 @@ public record LoteDto(
                 lote.getFechaExpiraApartado(),
                 lote.getMontoApartado(),
                 false,
-                null,
                 lote.getPrecioM2Efectivo(),
                 lote.getPrecioM2(),
                 lote.getPrecioM2Efectivo().multiply(lote.getSuperficie()).setScale(2, java.math.RoundingMode.HALF_UP));
     }
 
-    /** Para /panel/lotes, /panel/plano y el formulario de Ventas (admin y administración): en qué venta está el lote
-     * y si es un VENDIDO sin ninguna ("Reservado por We"). Ver LoteService.marcarVentas; en cualquier otro contexto
-     * van en falso y null, no vale la pena la consulta extra. */
-    public LoteDto conVenta(boolean sinVentaRegistrada, Long ventaNumero) {
+    /** Para /panel/lotes: marca un lote VENDIDO que no tiene ningún VentaLote asociado, así el
+     * inventario puede señalar cuáles ventas todavía faltan por registrar en el sistema (ver
+     * LoteService.buscarPaginado). Falso en cualquier otro contexto — no vale la pena la consulta
+     * extra fuera del listado principal. */
+    public LoteDto conSinVentaRegistrada(boolean sinVentaRegistrada) {
         return new LoteDto(
-                id, desarrollo, manzana, numeroLote, superficie, estado, fechaCambioEstado, cambiadoPor, mapaPoligono,
-                fechaExpiraApartado, montoApartado, sinVentaRegistrada, ventaNumero, precioM2, precioM2Propio, precio);
+                id, desarrollo, manzana, numeroLote, superficie, estado, fechaCambioEstado, cambiadoPor,
+                mapaPoligono, fechaExpiraApartado, montoApartado, sinVentaRegistrada, precioM2, precioM2Propio, precio);
     }
 }
