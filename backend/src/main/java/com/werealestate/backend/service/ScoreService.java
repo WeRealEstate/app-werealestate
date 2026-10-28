@@ -25,11 +25,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Score de ventas: cuántas ventas lleva cada asesor (interno o externo) en un periodo. Cuentan todas las del módulo
- * Ventas por su fecha de venta, las capturadas a mano y las que entran por We Forms (una venta eliminada ya no existe,
- * así que deja de contar). Una venta compartida suma una venta completa, con todos sus lotes, a cada uno de sus dos
- * asesores: el principal y el copropietario, este último solo mientras su comisión secundaria no esté cancelada
- * (cancelarla es la forma de quitar a un copropietario puesto por error). Los asesores inactivos no aparecen.
+ * Score de ventas: cuántas ventas lleva cada asesor (interno o externo) en un periodo. Solo compiten asesores: los
+ * usuarios con rol Asesor y los asesores externos; un usuario con otro rol (Administrador, Administración, Equipo
+ * interno) no entra aunque figure como asesor de una venta. Cuentan las ventas del módulo Ventas por su fecha de venta,
+ * las capturadas a mano y las que entran por We Forms (una venta eliminada ya no existe, así que deja de contar). Una
+ * venta compartida suma una venta completa, con todos sus lotes, a cada uno de sus asesores que compiten: el principal
+ * y el copropietario, este último solo mientras su comisión secundaria no esté cancelada (cancelarla es la forma de
+ * quitar a un copropietario puesto por error); si uno de los dos es administrador, al otro le sigue contando. Los
+ * asesores inactivos no aparecen en el ranking, pero sus ventas sí suman al total del periodo; las ventas en las que
+ * no participa ningún asesor (solo administradores) no cuentan en ninguna parte.
  * En el panel solo admin y Administración (el módulo SCORE lo revisa ModuloAccesoInterceptor); la página pública del
  * cotizador muestra el mismo ranking a cualquiera con el link (ver ScorePublicoController).
  */
@@ -69,8 +73,9 @@ public class ScoreService {
         return calcular(desde, hasta);
     }
 
-    /** La clave con la que un asesor aparece en el ranking ("U-12" o "E-5"); null si no hay asesor. Sirve para que la
-     * página pública marque la fila de quien la ve (por el PIN guardado en su dispositivo). */
+    /** La clave con la que un asesor aparece en el ranking ("U-12" o "E-5"); null si no hay asesor o no compite (un
+     * usuario que no tiene el rol Asesor). Sirve para que la página pública marque la fila de quien la ve (por el PIN
+     * guardado en su dispositivo). */
     public static String claveDe(Usuario usuario, AsesorExterno externo) {
         Participante p = participante(usuario, externo);
         return p == null ? null : p.clave();
@@ -94,6 +99,7 @@ public class ScoreService {
                 .collect(Collectors.groupingBy(c -> c.getVenta().getId()));
 
         Map<String, Acumulado> porAsesor = new HashMap<>();
+        long totalVentas = 0;
         for (Venta venta : ventas) {
             // Por clave: el mismo asesor no suma dos veces una venta aunque figure como principal y como copropietario.
             Map<String, Participante> participantes = new LinkedHashMap<>();
@@ -101,6 +107,9 @@ public class ScoreService {
             for (VentaComision c : copropietarios.getOrDefault(venta.getId(), List.of())) {
                 agregar(participantes, participante(c.getUsuarioAsesor(), c.getAsesorExterno()));
             }
+            // Una venta solo de administradores no es de nadie que compita: no cuenta ni en el total.
+            if (participantes.isEmpty()) continue;
+            totalVentas++;
             long lotes = lotesPorVenta.getOrDefault(venta.getId(), 0L);
             for (Participante p : participantes.values()) {
                 if (p.activo()) porAsesor.computeIfAbsent(p.clave(), k -> new Acumulado(p)).sumar(lotes);
@@ -115,7 +124,7 @@ public class ScoreService {
                         .reversed()
                         .thenComparing(ScoreDtos.Asesor::nombre, porNombre))
                 .toList();
-        return new ScoreDtos.Ranking(desde, hasta, ventas.size(), asesores);
+        return new ScoreDtos.Ranking(desde, hasta, totalVentas, asesores);
     }
 
     // ---------------------------------------------------------------- internos
@@ -126,10 +135,13 @@ public class ScoreService {
         if (p != null) participantes.putIfAbsent(p.clave(), p);
     }
 
-    /** Quién es el asesor de una venta (o de una comisión): un usuario interno o un asesor externo. La ficha de comunidad
-     * de un usuario interno (asesor externo con usuarioId) es la misma persona que su usuario: cuenta en la misma fila. */
+    /** Quién es el asesor de una venta (o de una comisión): un usuario interno o un asesor externo; null si no hay o si
+     * no compite. Un usuario interno solo compite con el rol Asesor. La ficha de comunidad de un usuario interno (asesor
+     * externo con usuarioId) es la misma persona que su usuario y cuenta en la misma fila; esa ficha solo existe para
+     * usuarios con rol Asesor (ver ComunidadInternosService). */
     private static Participante participante(Usuario usuario, AsesorExterno externo) {
         if (usuario != null) {
+            if (usuario.getRol() != Role.ASESOR) return null;
             return new Participante(
                     "U-" + usuario.getId(), usuario.getNombre(), ScoreDtos.TipoAsesor.INTERNO, usuario.isActivo());
         }

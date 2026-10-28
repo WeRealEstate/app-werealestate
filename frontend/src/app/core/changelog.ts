@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.6.1', fecha: '2026-10-28', cambios: [
+    "Score de ventas (panel, página pública y resumen del cotizador): ahora solo compiten los asesores, es decir los usuarios con rol Asesor y los asesores externos. Las ventas de Administrador, Administración y Equipo interno ya no aparecen ni suman al total del periodo. Si uno de ellos compartió una venta con un asesor, al asesor le sigue contando. Las ventas de asesores inactivos siguen sumando al total, aunque ellos no aparezcan en el ranking.",
+  ] },
   { version: '11.6.0', fecha: '2026-10-27', cambios: [
     "Score de ventas: se quitó el filtro Todos / Internos / Externos y las etiquetas Interno / Externo (también la columna Tipo), en el panel y en el cotizador público. El ranking siempre muestra a todos juntos.",
     "Cotizador público: debajo de la portada aparece un resumen corto del score, con el top 5 general (de todo el historial) y el enlace 'Ver score completo'. Si el dispositivo tiene guardado el PIN del asesor, marca 'Tú' o, si no está entre los cinco, dice en qué lugar va. Si todavía no hay ventas, no se muestra.",

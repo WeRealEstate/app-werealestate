@@ -14,7 +14,8 @@ export interface RankingScore {
   /** yyyy-MM-dd; null = sin límite ("Todo"). */
   desde: string | null;
   hasta: string | null;
-  /** Ventas distintas del periodo: una compartida cuenta una vez aquí aunque sume a sus dos asesores. */
+  /** Ventas del periodo con al menos un asesor que compite, activo o no (las de solo administradores no cuentan); una
+   * compartida cuenta una vez aquí aunque sume a sus dos asesores. */
   totalVentas: number;
   /** De más a menos ventas; con las mismas, por nombre. */
   asesores: AsesorScore[];

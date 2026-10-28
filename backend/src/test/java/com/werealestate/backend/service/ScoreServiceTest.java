@@ -57,10 +57,15 @@ class ScoreServiceTest {
     }
 
     private static Usuario interno(long id, String nombre, boolean activo) {
+        return usuario(id, nombre, activo, Role.ASESOR);
+    }
+
+    private static Usuario usuario(long id, String nombre, boolean activo, Role rol) {
         Usuario u = mock(Usuario.class);
         when(u.getId()).thenReturn(id);
         when(u.getNombre()).thenReturn(nombre);
         when(u.isActivo()).thenReturn(activo);
+        when(u.getRol()).thenReturn(rol);
         return u;
     }
 
@@ -163,6 +168,33 @@ class ScoreServiceTest {
     }
 
     @Test
+    void lasVentasDeQuienNoEsAsesorNoCuentanNiEnElTotal() {
+        var r = conVentas(
+                venta(10, usuario(30, "Dirección", true, Role.ADMIN), null, 4),
+                venta(11, usuario(31, "Administración", true, Role.LIDER_AREA), null, 1),
+                venta(12, usuario(32, "Equipo", true, Role.EQUIPO_INTERNO), null, 1),
+                venta(13, interno(1, "Ana Interna", true), null, 1));
+        assertEquals(1, r.totalVentas());
+        assertEquals(List.of("Ana Interna"), r.asesores().stream().map(ScoreDtos.Asesor::nombre).toList());
+    }
+
+    @Test
+    void unaVentaCompartidaConUnAdministradorLeSigueContandoAlAsesor() {
+        Venta compartida = venta(10, usuario(30, "Dirección", true, Role.ADMIN), null, 2);
+        copropietario(compartida, null, externo(6, "Carla Copropietaria"));
+        Venta alReves = venta(11, interno(1, "Ana Interna", true), null, 1);
+        copropietario(alReves, usuario(30, "Dirección", true, Role.ADMIN), null);
+
+        var r = conVentas(compartida, alReves);
+        assertEquals(2, r.totalVentas());
+        assertEquals(
+                List.of(
+                        new ScoreDtos.Asesor("U-1", "Ana Interna", ScoreDtos.TipoAsesor.INTERNO, 1, 1),
+                        new ScoreDtos.Asesor("E-6", "Carla Copropietaria", ScoreDtos.TipoAsesor.EXTERNO, 1, 2)),
+                r.asesores());
+    }
+
+    @Test
     void sinVentasNoConsultaLotesNiComisiones() {
         when(ventas.findByFechaVentaBetween(DESDE, HASTA)).thenReturn(List.of());
         var r = service.ranking(DESDE, HASTA);
@@ -204,6 +236,8 @@ class ScoreServiceTest {
         ficha.setUsuarioId(1L);
         assertEquals("U-1", ScoreService.claveDe(null, ficha));
         assertEquals(null, ScoreService.claveDe(null, null));
+        // Un administrador con PIN no compite: la página pública no marca ninguna fila como suya.
+        assertEquals(null, ScoreService.claveDe(usuario(30, "Dirección", true, Role.ADMIN), null));
     }
 
     @Test

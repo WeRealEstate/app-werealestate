@@ -17,9 +17,10 @@ public final class ScoreDtos {
     /** clave: "U-12" (usuario interno) o "E-5" (asesor externo), única dentro del ranking. */
     public record Asesor(String clave, String nombre, TipoAsesor tipo, long ventas, long lotes) {}
 
-    /** desde/hasta: el periodo consultado (null = sin límite, "Todo"). totalVentas: ventas distintas del periodo; una
-     * venta compartida cuenta una vez aquí, aunque en el ranking sume a sus dos asesores. asesores: de más a menos
-     * ventas y, con las mismas ventas, por nombre (comparten lugar; la posición la numera el panel). */
+    /** desde/hasta: el periodo consultado (null = sin límite, "Todo"). totalVentas: ventas del periodo en las que
+     * participa al menos un asesor que compite, activo o no (las de solo administradores no cuentan); una venta compartida
+     * cuenta una vez aquí, aunque en el ranking sume a sus dos asesores. asesores: los activos, de más a menos ventas y,
+     * con las mismas ventas, por nombre (comparten lugar; la posición la numera el panel). */
     public record Ranking(LocalDate desde, LocalDate hasta, long totalVentas, List<Asesor> asesores) {}
 
     /** Página pública: el ranking, la clave de quien la ve si su dispositivo mandó un PIN válido (para marcar "Tú") y si
