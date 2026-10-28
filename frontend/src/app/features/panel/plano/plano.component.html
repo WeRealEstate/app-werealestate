@@ -445,8 +445,9 @@
           <label class="mb-1.5 block text-sm font-medium text-ink">Estado</label>
           @if (estadosDisponiblesPara(lote).length > 1) {
             <select
+              #selectorEstado="ngModel"
               [ngModel]="lote.estado"
-              (ngModelChange)="cambiarEstado(lote, $event)"
+              (ngModelChange)="cambiarEstado(lote, $event, selectorEstado)"
               class="w-full rounded-full border-0 px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-we-primary/50"
               [class]="badgeClases[lote.estado]"
             >
@@ -458,10 +459,23 @@
             <span
               class="inline-flex rounded-full px-3 py-1.5 text-sm font-medium"
               [class]="badgeClases[lote.estado]"
-              title="Solo un administrador o personal de administración puede cambiar este estado"
+              [title]="lote.ventaNumero ? 'Lo manda la venta del lote' : 'Solo un administrador o personal de administración puede cambiar este estado'"
             >
               {{ estadoLabels[lote.estado] }}
             </span>
+          }
+          @if (lote.ventaNumero) {
+            <!-- Solo lo reciben admin y administración (ver LoteService.marcarVentas). -->
+            <p class="mt-1.5 text-xs text-ink-muted">
+              @if (estadosDeVenta.has(lote.estado)) {
+                Lo manda su venta: Vendido con el contrato firmado, En proceso de firma sin firmar. Para liberarlo, elimina la venta.
+              } @else {
+                Está en una venta: solo puede pasar a Vendido o En proceso de firma.
+              }
+              <button type="button" (click)="verVenta(lote)" class="font-semibold text-we-primary hover:underline dark:text-we-blue-light">
+                Ver venta #{{ lote.ventaNumero }}
+              </button>
+            </p>
           }
           @if (lote.sinVentaRegistrada) {
             <!-- Solo lo reciben admin y administración (ver LoteService.puedeVerReservadosWe). -->

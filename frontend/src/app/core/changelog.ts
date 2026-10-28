@@ -15,6 +15,13 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.7.0', fecha: '2026-10-28', cambios: [
+    "Lotes, Plano y Ventas alineados: el estado de un lote que está en una venta lo manda la venta. Sin el contrato firmado queda En proceso de firma y, firmado, Vendido. En Lotes y en el Plano ese lote ya no tiene selector de estado: aparece 'Venta #N' para abrir su venta. Para liberarlo hay que eliminar la venta.",
+    "Un lote sin venta ya no se marca a mano como Vendido ni En proceso de firma: al elegir uno de esos estados en Lotes o en el Plano, la app ofrece abrir 'Nueva venta' con el desarrollo y el lote ya elegidos, y el lote cambia al guardar la venta.",
+    "Nueva venta: se quitó la casilla 'Marcar como Vendido'. Los lotes quedan En proceso de firma o, si el contrato ya está firmado, Vendido. Ya no se ofrecen lotes que estén en otra venta, y el servidor tampoco deja poner un lote en dos ventas.",
+    "Contrato de la venta: al marcarlo como firmado, sus lotes pasan a Vendido; si se le quita la firma, regresan a En proceso de firma. Corregir solo la fecha, el medio o el enlace de Drive no los mueve. Cada cambio queda en el historial del lote.",
+    "Eliminar una venta: sus lotes siempre vuelven a Disponible, también los que estaban En proceso de firma (antes se quedaban así, sin venta). Se quitó la casilla 'Dejar los lotes como Disponible'. Un lote con venta que haya quedado en otro estado (de antes de este cambio) solo puede volver a Vendido o En proceso de firma, no se puede apartar desde los planos públicos y no se libera solo por vencimiento.",
+  ] },
   { version: '11.6.1', fecha: '2026-10-28', cambios: [
     "Score de ventas (panel, página pública y resumen del cotizador): ahora solo compiten los asesores, es decir los usuarios con rol Asesor y los asesores externos. Las ventas de Administrador, Administración y Equipo interno ya no aparecen ni suman al total del periodo. Si uno de ellos compartió una venta con un asesor, al asesor le sigue contando. Las ventas de asesores inactivos siguen sumando al total, aunque ellos no aparezcan en el ranking.",
   ] },

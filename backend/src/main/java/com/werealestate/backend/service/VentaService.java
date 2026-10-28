@@ -24,6 +24,7 @@ import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.exception.ValidationException;
 import com.werealestate.backend.model.AsesorExterno;
 import com.werealestate.backend.model.Cliente;
+import com.werealestate.backend.model.EstadoLote;
 import com.werealestate.backend.model.Lote;
 import com.werealestate.backend.model.AccionRecibo;
 import com.werealestate.backend.model.MedioFirma;
@@ -156,6 +157,11 @@ public class VentaService {
             if (!loteIdsUnicos.add(item.loteId())) {
                 throw new ValidationException("El mismo lote no puede repetirse dentro de una venta");
             }
+            // Ni estar en dos ventas: la venta es la que manda el estado del lote (ver LoteService.cambiarEstado).
+            ventaLoteRepository.findFirstByLoteIdOrderByIdDesc(item.loteId()).ifPresent(otra -> {
+                throw new ConflictException("El lote Mz " + otra.getLote().getManzana() + " / Lote "
+                        + otra.getLote().getNumeroLote() + " ya está en la venta #" + otra.getVenta().getNumero());
+            });
         }
 
         AsesorResuelto asesor = resolverAsesor(request.usuarioAsesorId(), request.asesorExternoId());
@@ -217,8 +223,9 @@ public class VentaService {
             if (registroDeVenta) {
                 if (lote.getMontoApartado() != null) depositoPendiente = depositoPendiente.add(lote.getMontoApartado());
                 loteService.marcarEnProcesoDeFirma(lote.getId(), cliente, asesor.nombre(), registradaPor);
-            } else if (request.marcarLoteVendido()) {
-                loteService.marcarVendido(lote.getId(), cliente, asesor.nombre());
+            } else {
+                // Desde el panel, según el contrato: firmado, Vendido; sin firmar, En proceso de firma.
+                loteService.marcarPorVenta(lote.getId(), contratoFirmado, cliente, asesor.nombre());
             }
         }
         if (registroDeVenta) {
@@ -285,15 +292,34 @@ public class VentaService {
 
     /** Registra o corrige si el contrato de la venta ya está firmado y desde cuándo. Sin contrato
      * firmado, la comisión de una venta nueva se acumula pero no se puede entregar; al firmar queda
-     * disponible el sábado siguiente a la firma. */
+     * disponible el sábado siguiente a la firma. Si cambia la firma, cambian también sus lotes (ver
+     * {@link #alinearLotesConContrato}); corregir solo la fecha, el medio o el enlace no los mueve. */
     public VentaDto registrarContrato(Long ventaId, com.werealestate.backend.dto.ContratoRequest request) {
         exigirAdminOLider();
         Venta venta = obtenerEntidad(ventaId);
+        boolean estabaFirmado = venta.isContratoFirmado();
         String driveUrl = validarContrato(request.firmado(), request.fechaFirma(), request.medio(), request.driveUrl());
         venta.registrarContrato(request.firmado(), request.fechaFirma(), request.medio(), driveUrl);
         ventaRepository.save(venta);
+        if (estabaFirmado != request.firmado()) {
+            alinearLotesConContrato(venta);
+        }
         comisionService.sincronizar(venta);
         return toDto(venta);
+    }
+
+    /** El estado de los lotes lo manda su venta: con el contrato firmado pasan a Vendido y, si se le quita la firma,
+     * regresan a En proceso de firma, cada cambio con su historial. Si un lote quedó en más de una venta (datos de
+     * antes de que se impidiera), basta con que una esté firmada para que siga Vendido. */
+    private void alinearLotesConContrato(Venta venta) {
+        String nota = venta.isContratoFirmado() ? "Contrato firmado" : "Se quitó la firma del contrato";
+        for (VentaLote vl : ventaLoteRepository.findByVentaId(venta.getId())) {
+            Long loteId = vl.getLote().getId();
+            boolean firmada = ventaLoteRepository.findByLoteId(loteId).stream()
+                    .anyMatch(otra -> otra.getVenta().isContratoFirmado());
+            loteService.ponerEstadoDeVenta(
+                    loteId, firmada ? EstadoLote.VENDIDO : EstadoLote.EN_PROCESO_DE_FIRMA, venta.getCliente(), nota);
+        }
     }
 
     /** Con el contrato firmado: fecha (no futura) y medio (físico o DocuSign) obligatorios. El enlace a
@@ -468,7 +494,7 @@ public class VentaService {
     /**
      * Elimina una venta por completo. Es destructivo, así que es exclusivo de admin y de
      * administración (líder de área) y exige la contraseña de quien la elimina. Se borran la venta, sus lotes (la relación, no los lotes), sus abonos y sus
-     * aportaciones; los lotes que sigan VENDIDO vuelven a DISPONIBLE si se pide; la comisión se queda
+     * aportaciones; sus lotes Vendidos o En proceso de firma vuelven a DISPONIBLE; la comisión se queda
      * en el historial como "venta eliminada" (y lo ya ganado sigue pudiéndose entregar); y se
      * ventas con número mayor bajan 1 para no dejar hueco (si eliminas la 4, la 5 pasa a 4, y así).
      */
@@ -503,12 +529,11 @@ public class VentaService {
         ventaRepository.delete(venta);
         ventaRepository.flush();
 
-        if (request.liberarLotes()) {
-            for (Long loteId : loteIds) {
-                // Si otra venta todavía incluye ese lote, sigue vendido.
-                if (!ventaLoteRepository.existsByLoteId(loteId)) {
-                    loteService.liberarPorVentaEliminada(loteId);
-                }
+        // Sin venta un lote no puede seguir Vendido ni En proceso de firma: vuelve a Disponible. Si otra venta todavía
+        // lo incluye (datos de antes de que se impidiera), se queda como está.
+        for (Long loteId : loteIds) {
+            if (!ventaLoteRepository.existsByLoteId(loteId)) {
+                loteService.liberarPorVentaEliminada(loteId);
             }
         }
         // Las ventas con número mayor bajan 1: la numeración no queda con hueco.

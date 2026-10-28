@@ -20,6 +20,7 @@ import { VentasService } from '../../core/services/ventas.service';
           <h2 class="font-heading text-base font-semibold text-ink">Contrato</h2>
           <p class="mt-0.5 text-xs text-ink-muted">
             La comisión del asesor solo se puede entregar con el contrato firmado; mientras tanto se va acumulando.
+            Al firmarlo, los lotes de la venta pasan a Vendido; si se le quita la firma, regresan a En proceso de firma.
           </p>
         </div>
         @if (venta().contratoFirmado) {
@@ -200,6 +201,8 @@ export class ContratoVentaComponent {
     }
     this.guardando.set(true);
     this.error.set(null);
+    // La firma manda el estado de los lotes (backend: VentaService.registrarContrato).
+    const cambioFirma = this.firmado() !== this.venta().contratoFirmado;
     try {
       await this.ventasService.registrarContrato(this.venta().id, {
         firmado: this.firmado(),
@@ -207,7 +210,13 @@ export class ContratoVentaComponent {
         medio: this.firmado() ? (this.medio() as MedioFirma) : null,
         driveUrl: this.driveUrl().trim() || null,
       });
-      this.toast.success('Contrato guardado.');
+      this.toast.success(
+        !cambioFirma
+          ? 'Contrato guardado.'
+          : this.firmado()
+            ? 'Contrato guardado: los lotes pasaron a Vendido.'
+            : 'Contrato guardado: los lotes regresaron a En proceso de firma.',
+      );
       this.guardado.emit();
     } catch (e) {
       this.error.set(
