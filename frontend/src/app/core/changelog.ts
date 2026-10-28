@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.7.0', fecha: '2026-10-28', cambios: [
+    "Registrar venta (We Forms): cada registro que llega manda un correo a finanzas.weinmobiliaria@gmail.com con el asunto '¡Es hora de realizar un contrato!' y los datos del cliente, el asesor, el desarrollo, los lotes, el número de venta y el formulario. Sale de la cuenta de Gmail configurada en el servidor y solo cuando el registro ya quedó guardado; el asesor no espera al correo para terminar. Mientras no se configure esa cuenta, no se manda nada.",
+  ] },
   { version: '11.6.1', fecha: '2026-10-28', cambios: [
     "Score de ventas (panel, página pública y resumen del cotizador): ahora solo compiten los asesores, es decir los usuarios con rol Asesor y los asesores externos. Las ventas de Administrador, Administración y Equipo interno ya no aparecen ni suman al total del periodo. Si uno de ellos compartió una venta con un asesor, al asesor le sigue contando. Las ventas de asesores inactivos siguen sumando al total, aunque ellos no aparezcan en el ranking.",
   ] },
