@@ -46,7 +46,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -91,7 +90,6 @@ public class WeFormPublicoService {
     private final ClienteService clienteService;
     private final VentaService ventaService;
     private final UsuarioRepository usuarioRepository;
-    private final ApplicationEventPublisher eventos;
 
     public WeFormPublicoService(
             WeFormService formService,
@@ -103,8 +101,7 @@ public class WeFormPublicoService {
             LoteService loteService,
             ClienteService clienteService,
             VentaService ventaService,
-            UsuarioRepository usuarioRepository,
-            ApplicationEventPublisher eventos) {
+            UsuarioRepository usuarioRepository) {
         this.formService = formService;
         this.formRepository = formRepository;
         this.preguntaRepository = preguntaRepository;
@@ -115,7 +112,6 @@ public class WeFormPublicoService {
         this.clienteService = clienteService;
         this.ventaService = ventaService;
         this.usuarioRepository = usuarioRepository;
-        this.eventos = eventos;
     }
 
     // ---------------------------------------------------------------- consulta
@@ -375,11 +371,6 @@ public class WeFormPublicoService {
             borrar(escritos);
             throw e;
         }
-
-        // 7) Aviso por correo a finanzas: sale solo si todo lo anterior queda guardado (ver AvisoRegistroVentaCorreo).
-        eventos.publishEvent(new AvisoRegistroVentaCorreo.RegistroDeVentaRecibido(
-                resuelto.cliente().nombreCompleto(), asesor.nombre(), form.getDesarrollo().getNombre(), form.getNombre(),
-                venta.getNumero(), lotes.stream().map(l -> "Manzana " + l.getManzana() + ", Lote " + l.getNumeroLote()).toList()));
         return new WeFormDtos.EnvioResultado(
                 respuesta.getId(), venta.getNumero(), resuelto.cliente().nombreCompleto(), resuelto.nuevo());
     }
