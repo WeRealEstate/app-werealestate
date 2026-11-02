@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   Comision,
+  ComisionDesglose,
   ComisionDetalle,
   ComisionEntregaRequest,
   ComisionResumen,
@@ -26,6 +27,11 @@ export class FinanzasService {
 
   resumenComisiones(): Promise<ComisionResumen> {
     return firstValueFrom(this.http.get<ComisionResumen>(`${this.baseUrl}/resumen`));
+  }
+
+  /** Cómo se reparte el total de las comisiones, por asesor y por desarrollo. */
+  desgloseComisiones(): Promise<ComisionDesglose> {
+    return firstValueFrom(this.http.get<ComisionDesglose>(`${this.baseUrl}/desglose`));
   }
 
   /** Lo que toca entregar al sábado indicado (sin fecha: el próximo sábado, hoy si es sábado). */

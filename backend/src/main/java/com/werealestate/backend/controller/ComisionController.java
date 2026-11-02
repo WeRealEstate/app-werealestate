@@ -1,5 +1,6 @@
 package com.werealestate.backend.controller;
 
+import com.werealestate.backend.dto.ComisionDesgloseDto;
 import com.werealestate.backend.dto.ComisionDetalleDto;
 import com.werealestate.backend.dto.ComisionDto;
 import com.werealestate.backend.dto.ComisionDevolucionRequest;
@@ -41,6 +42,12 @@ public class ComisionController {
     @GetMapping("/resumen")
     public ComisionResumenDto resumen() {
         return comisionService.resumen();
+    }
+
+    /** Cómo se reparte el total de las comisiones, por asesor y por desarrollo (ver ComisionDesgloseDto). */
+    @GetMapping("/desglose")
+    public ComisionDesgloseDto desglose() {
+        return comisionService.desglose();
     }
 
     @GetMapping("/por-entregar")

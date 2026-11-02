@@ -4,8 +4,12 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
+  AbonoDeComision,
   Comision,
+  ComisionDesglose,
+  ComisionDesgloseFila,
   ComisionDetalle,
+  ComisionPorEntregar,
   ComisionResumen,
   ComisionesPorEntregar,
   ESTADO_COMISION_CLASES,
@@ -32,6 +36,29 @@ import { MonedaInputDirective } from '../../../shared/moneda-input/moneda-input.
 type Pestana = 'comisiones' | 'ingresos' | 'valor' | 'gastos';
 
 const ESTADOS: EstadoComision[] = ['PENDIENTE', 'ACUMULANDO', 'PARCIAL', 'PAGADA', 'CANCELADA'];
+
+type VistaDesglose = 'reparto' | 'asesor' | 'desarrollo';
+
+/** Con más abonos que estos, los más viejos se juntan en un solo renglón ("N abonos anteriores"). */
+const MAX_ABONOS_VISIBLES = 8;
+const ABONOS_RECIENTES = 6;
+
+const ORDEN_NOMBRES = new Intl.Collator('es-MX', { sensitivity: 'base' });
+
+/** Una comisión de la lista del sábado con sus abonos listos para mostrarse. */
+interface ItemSabado extends ComisionPorEntregar {
+  anteriores: { cantidad: number; total: number } | null;
+  abonosVisibles: AbonoDeComision[];
+}
+
+/** Lo que toca entregarle a un asesor el sábado: sus ventas y el total. */
+interface GrupoSabado {
+  clave: string;
+  nombre: string;
+  externo: boolean;
+  total: number;
+  items: ItemSabado[];
+}
 
 /** Finanzas — por ahora, comisiones de venta: el 5% de cada venta (editable), lo que ya ganó cada
  * una con los abonos del cliente y lo que se entrega los sábados. Ver backend ComisionService. */
@@ -78,6 +105,39 @@ export class FinanzasComponent {
   readonly comisiones = signal<Comision[]>([]);
   readonly resumen = signal<ComisionResumen | null>(null);
   readonly porEntregar = signal<ComisionesPorEntregar | null>(null);
+  readonly desglose = signal<ComisionDesglose | null>(null);
+
+  // Desglose bajo las tarjetas: cómo se reparte el total, por asesor y por desarrollo.
+  readonly vistasDesglose: { id: VistaDesglose; label: string }[] = [
+    { id: 'reparto', label: 'Cómo se reparte' },
+    { id: 'asesor', label: 'Por asesor' },
+    { id: 'desarrollo', label: 'Por desarrollo' },
+  ];
+  readonly vistaDesglose = signal<VistaDesglose>('reparto');
+  readonly filasDesglose = computed<ComisionDesgloseFila[]>(() => {
+    const d = this.desglose();
+    if (!d) return [];
+    return this.vistaDesglose() === 'asesor' ? d.porAsesor : d.porDesarrollo;
+  });
+
+  /** Lo que toca entregar el sábado, agrupado por asesor (por nombre), con el total a pagarle a cada uno. */
+  readonly gruposSabado = computed<GrupoSabado[]>(() => {
+    const grupos = new Map<string, GrupoSabado>();
+    for (const item of this.porEntregar()?.items ?? []) {
+      const c = item.comision;
+      let grupo = grupos.get(c.asesorClave);
+      if (!grupo) {
+        grupo = { clave: c.asesorClave, nombre: c.asesorNombre, externo: c.asesorExterno, total: 0, items: [] };
+        grupos.set(c.asesorClave, grupo);
+      }
+      grupo.items.push(conAbonosVisibles(item));
+      grupo.total += item.montoAlSabado;
+    }
+    return [...grupos.values()].sort((a, b) => ORDEN_NOMBRES.compare(a.nombre, b.nombre));
+  });
+
+  /** Ventas de la lista del sábado con sus abonos abiertos. */
+  readonly abonosAbiertos = signal<ReadonlySet<number>>(new Set());
 
   /** 'RETRASADA' no es un estado: filtra las que tienen entregas vencidas por pagar. */
   readonly filtroEstado = signal<'' | EstadoComision | 'RETRASADA'>('');
@@ -150,14 +210,16 @@ export class FinanzasComponent {
     this.isLoading.set(true);
     this.errorMessage.set(null);
     try {
-      const [comisiones, resumen, porEntregar] = await Promise.all([
+      const [comisiones, resumen, porEntregar, desglose] = await Promise.all([
         this.finanzasService.listarComisiones(),
         this.finanzasService.resumenComisiones(),
         this.finanzasService.comisionesPorEntregar(this.porEntregar()?.sabado),
+        this.finanzasService.desgloseComisiones(),
       ]);
       this.comisiones.set(comisiones);
       this.resumen.set(resumen);
       this.porEntregar.set(porEntregar);
+      this.desglose.set(desglose);
     } catch {
       this.errorMessage.set('No se pudieron cargar las comisiones. Intenta de nuevo.');
     } finally {
@@ -168,14 +230,16 @@ export class FinanzasComponent {
   /** Recarga lo que cambia al editar/entregar sin parpadeo de pantalla completa. */
   private async refrescar(): Promise<void> {
     try {
-      const [comisiones, resumen, porEntregar] = await Promise.all([
+      const [comisiones, resumen, porEntregar, desglose] = await Promise.all([
         this.finanzasService.listarComisiones(),
         this.finanzasService.resumenComisiones(),
         this.finanzasService.comisionesPorEntregar(this.porEntregar()?.sabado),
+        this.finanzasService.desgloseComisiones(),
       ]);
       this.comisiones.set(comisiones);
       this.resumen.set(resumen);
       this.porEntregar.set(porEntregar);
+      this.desglose.set(desglose);
     } catch {
       this.toast.error('No se pudieron actualizar los totales. Recarga la página.');
     }
@@ -191,6 +255,14 @@ export class FinanzasComponent {
     } catch {
       this.toast.error('No se pudo cargar ese sábado.');
     }
+  }
+
+  alternarAbonos(comisionId: number): void {
+    this.abonosAbiertos.update((abiertos) => {
+      const nuevos = new Set(abiertos);
+      if (!nuevos.delete(comisionId)) nuevos.add(comisionId);
+      return nuevos;
+    });
   }
 
   // ---- Detalle ----
@@ -410,8 +482,8 @@ export class FinanzasComponent {
     const confirmado = await this.confirmService.confirm({
       titulo: cancelar ? 'Cancelar comisión' : 'Reactivar comisión',
       mensaje: cancelar
-        ? `Se deja de acumular la comisión de ${c.cliente}. Lo ya ganado todavía se puede entregar.`
-        : `La comisión de ${c.cliente} vuelve a acumular con los abonos del cliente.`,
+        ? `Se deja de acumular la comisión de ${c.cliente} y ya no se puede entregar lo que tenía ganado: deja de contar en Retrasadas y en la lista del sábado. Si la reactivas, vuelve a contar.`
+        : `La comisión de ${c.cliente} vuelve a acumular con los abonos del cliente y lo ganado se puede entregar.`,
       textoConfirmar: cancelar ? 'Cancelar comisión' : 'Reactivar',
       peligroso: cancelar,
     });
@@ -436,6 +508,17 @@ export class FinanzasComponent {
   money(valor: number): string {
     return dinero(valor);
   }
+}
+
+/** Con muchos abonos, los más viejos van en un solo renglón para que la lista no crezca de más. */
+function conAbonosVisibles(item: ComisionPorEntregar): ItemSabado {
+  if (item.abonos.length <= MAX_ABONOS_VISIBLES) return { ...item, anteriores: null, abonosVisibles: item.abonos };
+  const ocultos = item.abonos.slice(0, item.abonos.length - ABONOS_RECIENTES);
+  return {
+    ...item,
+    anteriores: { cantidad: ocultos.length, total: ocultos.reduce((suma, a) => suma + a.aporte, 0) },
+    abonosVisibles: item.abonos.slice(-ABONOS_RECIENTES),
+  };
 }
 
 function hoyIso(): string {

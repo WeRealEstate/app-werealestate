@@ -15,6 +15,12 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.7.0', fecha: '2026-11-02', cambios: [
+    "Finanzas → Comisiones: nueva sección 'Desglose' debajo de las tarjetas, para que las cifras cuadren. 'Cómo se reparte' muestra de dónde sale cada número: las comisiones totales son lo que falta por generar más lo ganado por abonos, y lo ganado es lo entregado, lo por entregar (retrasado, lo del próximo sábado y lo de más adelante) y lo detenido porque el contrato de la venta no está firmado, que antes no aparecía en ninguna tarjeta.",
+    "'Por asesor' y 'Por desarrollo' muestran esas mismas cifras por cada asesor y por desarrollo; las ventas con lotes de SAMAI y de Nanuu van en 'Varios desarrollos' y las comisiones de ventas eliminadas en 'Venta eliminada'.",
+    "Por entregar el sábado: ahora va agrupado por asesor, con el total a pagarle a cada uno. En cada venta, '¿De qué abonos sale?' muestra los abonos del cliente que forman el monto (fecha, tipo, monto y si cuenta completo o la mitad) menos lo ya entregado.",
+    "Comisiones canceladas: ya no cuentan en 'Retrasadas', no salen en la lista del sábado y no se pueden entregar; si se reactivan, vuelven a contar.",
+  ] },
   { version: '11.6.1', fecha: '2026-10-28', cambios: [
     "Score de ventas (panel, página pública y resumen del cotizador): ahora solo compiten los asesores, es decir los usuarios con rol Asesor y los asesores externos. Las ventas de Administrador, Administración y Equipo interno ya no aparecen ni suman al total del periodo. Si uno de ellos compartió una venta con un asesor, al asesor le sigue contando. Las ventas de asesores inactivos siguen sumando al total, aunque ellos no aparezcan en el ranking.",
   ] },

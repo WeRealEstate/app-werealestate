@@ -1,5 +1,6 @@
 package com.werealestate.backend.service;
 
+import com.werealestate.backend.dto.ComisionDesgloseDto;
 import com.werealestate.backend.dto.ComisionDetalleDto;
 import com.werealestate.backend.dto.ComisionDto;
 import com.werealestate.backend.dto.ComisionDevolucionRequest;
@@ -43,14 +44,19 @@ import com.werealestate.backend.repository.VentaRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.Collator;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -258,12 +264,13 @@ public class ComisionService {
         BigDecimal montoRetrasado = BigDecimal.ZERO;
         LocalDate hoy = LocalDate.now();
         for (VentaComision c : comisionRepository.findAll()) {
+            // Una comisión cancelada no cuenta en nada, tampoco en las retrasadas: ya no se entrega.
+            if (c.isCancelada()) continue;
             BigDecimal vencido = totales.vencido(c.getId(), hoy);
             if (vencido.signum() > 0) {
                 retrasadas++;
                 montoRetrasado = montoRetrasado.add(vencido);
             }
-            if (c.isCancelada()) continue;
             BigDecimal dev = totales.devengado(c.getId());
             BigDecimal ent = totales.entregado(c.getId());
             cantidad++;
@@ -277,7 +284,8 @@ public class ComisionService {
                 cantidad, total, devengado, entregado, porEntregar, pendiente, retrasadas, montoRetrasado);
     }
 
-    /** Qué toca entregar al sábado indicado (null = el próximo sábado, hoy si es sábado). */
+    /** Qué toca entregar al sábado indicado (null = el próximo sábado, hoy si es sábado), sin las canceladas. De cada
+     * comisión van también los abonos de los que sale lo ganado hasta ese sábado y lo ya entregado. */
     @Transactional(readOnly = true)
     public ComisionesPorEntregarDto porEntregar(LocalDate fecha) {
         exigirAdminOLider();
@@ -288,15 +296,160 @@ public class ComisionService {
         List<ComisionesPorEntregarDto.Item> items = new ArrayList<>();
         BigDecimal total = BigDecimal.ZERO;
         for (VentaComision c : comisionRepository.findAllByOrderByIdDesc()) {
-            BigDecimal alSabado = totales.devengadoHasta(c.getId(), sabado)
-                    .subtract(totales.entregado(c.getId()))
-                    .max(BigDecimal.ZERO);
+            if (c.isCancelada()) continue;
+            BigDecimal ganadoAlSabado = totales.devengadoHasta(c.getId(), sabado);
+            BigDecimal yaEntregado = totales.entregado(c.getId());
+            BigDecimal alSabado = ganadoAlSabado.subtract(yaEntregado).max(BigDecimal.ZERO);
             if (alSabado.signum() > 0) {
-                items.add(new ComisionesPorEntregarDto.Item(aDto(c, totales), alSabado));
+                List<ComisionesPorEntregarDto.Abono> abonos = totales.devengos(c.getId()).stream()
+                        .filter(d -> !d.getFechaEntrega().isAfter(sabado))
+                        .map(d -> abonoDe(c, d))
+                        .toList();
+                items.add(new ComisionesPorEntregarDto.Item(aDto(c, totales), alSabado, ganadoAlSabado, yaEntregado, abonos));
                 total = total.add(alSabado);
             }
         }
         return new ComisionesPorEntregarDto(sabado, total, items);
+    }
+
+    /** De dónde sale una porción de lo ganado: el abono del cliente y la regla con la que cuenta. */
+    private static ComisionesPorEntregarDto.Abono abonoDe(VentaComision comision, VentaComisionDevengo devengo) {
+        PagoVenta pago = devengo.getPagoVenta();
+        if (pago == null) {
+            // Regla anterior, una exhibición: la comisión completa se ganó al vender.
+            return new ComisionesPorEntregarDto.Abono(
+                    devengo.getFechaOrigen(), "Venta", null, "Comisión completa al vender", devengo.getMonto(),
+                    devengo.getFechaEntrega());
+        }
+        boolean completo = comision.isReglaNueva() && pago.getTipo() == TipoAbono.ENGANCHE;
+        BigDecimal segunRegla = completo
+                ? pago.getMonto()
+                : pago.getMonto().divide(new BigDecimal("2"), 2, RoundingMode.HALF_UP);
+        String regla = completo ? "Cuenta completo" : "Cuenta la mitad";
+        // El último abono puede aportar menos: solo lo que faltaba para completar la comisión.
+        if (devengo.getMonto().compareTo(segunRegla) < 0) regla += " · hasta completar la comisión";
+        return new ComisionesPorEntregarDto.Abono(
+                devengo.getFechaOrigen(), conceptoDe(devengo), pago.getMonto(), regla, devengo.getMonto(),
+                devengo.getFechaEntrega());
+    }
+
+    private static final String VARIOS_DESARROLLOS = "Varios desarrollos";
+    private static final String VENTA_ELIMINADA = "Venta eliminada";
+
+    /** Cómo se reparte el total de las comisiones no canceladas, y lo mismo por asesor y por desarrollo (ver
+     * ComisionDesgloseDto: las cifras siempre suman). Una venta con lotes de dos desarrollos va en "Varios
+     * desarrollos"; la comisión de una venta eliminada, en "Venta eliminada". */
+    @Transactional(readOnly = true)
+    public ComisionDesgloseDto desglose() {
+        exigirAdminOLider();
+        Totales totales = totales();
+        LocalDate hoy = LocalDate.now();
+        LocalDate sabado = hoy.with(TemporalAdjusters.nextOrSame(DayOfWeek.SATURDAY));
+
+        Map<Long, Set<String>> desarrollosDeVenta = new HashMap<>();
+        for (Object[] fila : ventaLoteRepository.desarrollosPorVenta()) {
+            desarrollosDeVenta.computeIfAbsent((Long) fila[0], k -> new TreeSet<>()).add((String) fila[1]);
+        }
+
+        Suma total = new Suma();
+        Map<String, Suma> porAsesor = new LinkedHashMap<>();
+        Map<String, String> nombreAsesor = new HashMap<>();
+        Map<String, Suma> porDesarrollo = new LinkedHashMap<>();
+        long detenidas = 0;
+        for (VentaComision c : comisionRepository.findAll()) {
+            if (c.isCancelada()) continue;
+            ComisionDesgloseDto.Cifras cifras = cifrasDe(c, totales, hoy, sabado);
+            total.sumar(cifras);
+            if (cifras.detenido().signum() > 0) detenidas++;
+
+            String asesor = claveAsesor(c);
+            nombreAsesor.putIfAbsent(asesor, c.getAsesorExterno() != null
+                    ? c.getAsesorExterno().getNombre()
+                    : c.getUsuarioAsesor().getNombre());
+            porAsesor.computeIfAbsent(asesor, k -> new Suma()).sumar(cifras);
+
+            Set<String> desarrollos = c.getVenta() == null
+                    ? null
+                    : desarrollosDeVenta.getOrDefault(c.getVenta().getId(), Set.of());
+            String desarrollo = desarrollos == null ? VENTA_ELIMINADA
+                    : desarrollos.size() == 1 ? desarrollos.iterator().next()
+                    : desarrollos.isEmpty() ? "Sin lotes" : VARIOS_DESARROLLOS;
+            porDesarrollo.computeIfAbsent(desarrollo, k -> new Suma()).sumar(cifras);
+        }
+
+        Collator orden = Collator.getInstance(Locale.forLanguageTag("es-MX"));
+        orden.setStrength(Collator.PRIMARY);
+        List<ComisionDesgloseDto.Fila> filasAsesor = porAsesor.entrySet().stream()
+                .map(e -> new ComisionDesgloseDto.Fila(
+                        e.getKey(), nombreAsesor.get(e.getKey()), e.getKey().startsWith("E-"), e.getValue().cifras()))
+                .sorted(Comparator.comparing(ComisionDesgloseDto.Fila::nombre, orden))
+                .toList();
+        // Los desarrollos por nombre; al final las filas especiales.
+        List<String> especiales = List.of(VARIOS_DESARROLLOS, "Sin lotes", VENTA_ELIMINADA);
+        List<ComisionDesgloseDto.Fila> filasDesarrollo = porDesarrollo.entrySet().stream()
+                .map(e -> new ComisionDesgloseDto.Fila(e.getKey(), e.getKey(), false, e.getValue().cifras()))
+                .sorted(Comparator.<ComisionDesgloseDto.Fila>comparingInt(f -> especiales.indexOf(f.nombre()))
+                        .thenComparing(ComisionDesgloseDto.Fila::nombre, orden))
+                .toList();
+        return new ComisionDesgloseDto(sabado, total.cifras(), detenidas, filasAsesor, filasDesarrollo);
+    }
+
+    /** Las cifras de una comisión (no cancelada) para el desglose; ver ComisionDesgloseDto.Cifras. */
+    private static ComisionDesgloseDto.Cifras cifrasDe(VentaComision c, Totales totales, LocalDate hoy, LocalDate sabado) {
+        BigDecimal ganado = totales.devengado(c.getId());
+        BigDecimal entregado = totales.entregado(c.getId());
+        BigDecimal pendiente = ganado.subtract(entregado).max(BigDecimal.ZERO);
+        boolean bloqueada = totales.bloqueada(c.getId());
+        BigDecimal porEntregar = bloqueada ? BigDecimal.ZERO : pendiente;
+        // vencido y devengadoHasta ya dan 0 en una comisión detenida.
+        BigDecimal retrasado = totales.vencido(c.getId(), hoy);
+        BigDecimal alSabado = totales.devengadoHasta(c.getId(), sabado).subtract(entregado).max(BigDecimal.ZERO);
+        BigDecimal tocaSabado = alSabado.subtract(retrasado).max(BigDecimal.ZERO);
+        return new ComisionDesgloseDto.Cifras(
+                1,
+                c.getMonto(),
+                c.getMonto().subtract(ganado).max(BigDecimal.ZERO),
+                ganado,
+                entregado,
+                porEntregar,
+                retrasado,
+                tocaSabado,
+                porEntregar.subtract(retrasado).subtract(tocaSabado).max(BigDecimal.ZERO),
+                bloqueada ? pendiente : BigDecimal.ZERO,
+                entregado.subtract(ganado).max(BigDecimal.ZERO));
+    }
+
+    /** "U-5" (usuario interno) / "E-3" (asesor externo). */
+    private static String claveAsesor(VentaComision c) {
+        return c.getAsesorExterno() != null ? "E-" + c.getAsesorExterno().getId() : "U-" + c.getUsuarioAsesor().getId();
+    }
+
+    /** Acumula las cifras de varias comisiones. */
+    private static final class Suma {
+        private long comisiones;
+        private BigDecimal total = BigDecimal.ZERO, faltaPorGenerar = BigDecimal.ZERO, ganado = BigDecimal.ZERO,
+                entregado = BigDecimal.ZERO, porEntregar = BigDecimal.ZERO, retrasado = BigDecimal.ZERO,
+                tocaSabado = BigDecimal.ZERO, masAdelante = BigDecimal.ZERO, detenido = BigDecimal.ZERO,
+                entregadoDeMas = BigDecimal.ZERO;
+
+        void sumar(ComisionDesgloseDto.Cifras c) {
+            comisiones += c.comisiones();
+            total = total.add(c.total());
+            faltaPorGenerar = faltaPorGenerar.add(c.faltaPorGenerar());
+            ganado = ganado.add(c.ganado());
+            entregado = entregado.add(c.entregado());
+            porEntregar = porEntregar.add(c.porEntregar());
+            retrasado = retrasado.add(c.retrasado());
+            tocaSabado = tocaSabado.add(c.tocaSabado());
+            masAdelante = masAdelante.add(c.masAdelante());
+            detenido = detenido.add(c.detenido());
+            entregadoDeMas = entregadoDeMas.add(c.entregadoDeMas());
+        }
+
+        ComisionDesgloseDto.Cifras cifras() {
+            return new ComisionDesgloseDto.Cifras(comisiones, total, faltaPorGenerar, ganado, entregado, porEntregar,
+                    retrasado, tocaSabado, masAdelante, detenido, entregadoDeMas);
+        }
     }
 
     // ---------------------------------------------------------------- acciones
@@ -367,6 +520,9 @@ public class ComisionService {
         Usuario actual = exigirAdminOLider();
         VentaComision comision = obtenerEntidad(id);
 
+        if (comision.isCancelada()) {
+            throw new ConflictException("Esta comisión está cancelada: reactívala para poder entregarla");
+        }
         Totales totales = totales();
         if (totales.bloqueada(id)) {
             throw new ConflictException("El contrato de esta venta no está firmado: la comisión se acumula, "
@@ -708,7 +864,7 @@ public class ComisionService {
             for (PagoVenta p : pagoVentaRepository.findAllVigentes()) {
                 abonadoPorVenta.merge(p.getVenta().getId(), p.getMonto(), BigDecimal::add);
             }
-            for (VentaComisionDevengo d : devengoRepository.findAllByOrderByFechaEntregaAscIdAsc()) {
+            for (VentaComisionDevengo d : devengoRepository.findAllConPagoOrdenados()) {
                 devengos.computeIfAbsent(d.getComision().getId(), k -> new ArrayList<>()).add(d);
             }
             for (VentaComisionEntrega e : entregaRepository.findAll()) {
@@ -720,6 +876,11 @@ public class ComisionService {
             for (VentaComision c : comisionRepository.findAll()) {
                 if (c.isReglaNueva() && c.getVenta() != null && !c.getVenta().isContratoFirmado()) bloqueadas.add(c.getId());
             }
+        }
+
+        /** Lo ganado por una comisión, por porción, en el orden en que se entrega. */
+        List<VentaComisionDevengo> devengos(Long id) {
+            return devengos.getOrDefault(id, List.of());
         }
 
         BigDecimal devengado(Long id) {
@@ -794,7 +955,8 @@ public class ComisionService {
     private ComisionDto aDto(VentaComision c, Totales totales) {
         BigDecimal devengado = totales.devengado(c.getId());
         BigDecimal entregado = totales.entregado(c.getId());
-        BigDecimal porEntregar = totales.bloqueada(c.getId())
+        // Cancelada o detenida (contrato sin firmar): no hay nada que se pueda entregar.
+        BigDecimal porEntregar = c.isCancelada() || totales.bloqueada(c.getId())
                 ? BigDecimal.ZERO
                 : devengado.subtract(entregado).max(BigDecimal.ZERO);
 
@@ -805,7 +967,7 @@ public class ComisionService {
         else if (devengado.signum() > 0) estado = EstadoComision.ACUMULANDO;
         else estado = EstadoComision.PENDIENTE;
 
-        BigDecimal vencido = totales.vencido(c.getId(), LocalDate.now());
+        BigDecimal vencido = c.isCancelada() ? BigDecimal.ZERO : totales.vencido(c.getId(), LocalDate.now());
         Venta venta = c.getVenta();
         FinanzasService.CobroVenta cobro = totales.cobroDeVenta(venta != null ? venta.getId() : null);
         boolean externo = c.getAsesorExterno() != null;
@@ -818,6 +980,7 @@ public class ComisionService {
                 c.getCliente(),
                 asesor,
                 externo,
+                claveAsesor(c),
                 c.getBase(),
                 venta != null ? venta.getMensualidad() : null,
                 totales.abonadoDeVenta(venta != null ? venta.getId() : null),

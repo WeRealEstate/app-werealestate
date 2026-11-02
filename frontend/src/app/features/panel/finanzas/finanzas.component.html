@@ -91,6 +91,144 @@
       </div>
     }
 
+    <!-- Desglose: cómo se forman las cifras de arriba (backend ComisionService.desglose) -->
+    @if (desglose(); as d) {
+      <section class="mt-8" aria-labelledby="titulo-desglose">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 id="titulo-desglose" class="font-heading text-lg font-semibold text-ink">Desglose</h2>
+            <p class="text-xs text-ink-muted">Cómo se forman las cifras de arriba. Las comisiones canceladas no cuentan.</p>
+          </div>
+          <div class="inline-flex max-w-full overflow-x-auto rounded-lg border border-border bg-surface p-1 [scrollbar-width:none]" role="tablist" aria-label="Vista del desglose">
+            @for (v of vistasDesglose; track v.id) {
+              <button
+                type="button"
+                role="tab"
+                [attr.aria-selected]="vistaDesglose() === v.id"
+                (click)="vistaDesglose.set(v.id)"
+                class="shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-150"
+                [class.bg-we-primary]="vistaDesglose() === v.id"
+                [class.text-white]="vistaDesglose() === v.id"
+                [class.text-ink-muted]="vistaDesglose() !== v.id"
+                [class.hover:text-ink]="vistaDesglose() !== v.id"
+              >
+                {{ v.label }}
+              </button>
+            }
+          </div>
+        </div>
+
+        @if (vistaDesglose() === 'reparto') {
+          <div class="mt-3 rounded-xl border border-border bg-surface p-4 sm:p-5 text-sm" data-testid="desglose-reparto">
+            <div class="flex items-baseline justify-between gap-4">
+              <p class="font-semibold text-ink">Comisiones totales <span class="font-normal text-ink-muted">· {{ d.total.comisiones }} {{ d.total.comisiones === 1 ? 'comisión' : 'comisiones' }}</span></p>
+              <p class="font-semibold tabular-nums text-ink">${{ money(d.total.total) }}</p>
+            </div>
+            <div class="ml-1.5 mt-2 space-y-2 border-l border-border pl-4">
+              <div class="flex items-baseline justify-between gap-4">
+                <p class="text-ink">Falta por generar <span class="block text-xs text-ink-muted">El cliente todavía no paga lo que la genera.</span></p>
+                <p class="tabular-nums text-ink">${{ money(d.total.faltaPorGenerar) }}</p>
+              </div>
+              <div class="flex items-baseline justify-between gap-4">
+                <p class="font-medium text-ink">Ganado por abonos <span class="block text-xs font-normal text-ink-muted">Lo que ya respaldan los abonos del cliente.</span></p>
+                <p class="font-medium tabular-nums text-ink">${{ money(d.total.ganado) }}</p>
+              </div>
+              <div class="ml-1.5 space-y-2 border-l border-border pl-4">
+                <div class="flex items-baseline justify-between gap-4">
+                  <p class="text-ink">Entregado <span class="block text-xs text-ink-muted">Ya pagado a los asesores (sin lo que devolvieron).</span></p>
+                  <p class="tabular-nums text-green-600 dark:text-green-400">${{ money(d.total.entregado) }}</p>
+                </div>
+                <div class="flex items-baseline justify-between gap-4">
+                  <p class="text-ink">Por entregar <span class="block text-xs text-ink-muted">Ganado que ya se puede entregar.</span></p>
+                  <p class="tabular-nums text-amber-600 dark:text-amber-400">${{ money(d.total.porEntregar) }}</p>
+                </div>
+                <div class="ml-1.5 space-y-2 border-l border-border pl-4">
+                  <div class="flex items-baseline justify-between gap-4">
+                    <p class="text-ink">Retrasado <span class="block text-xs text-ink-muted">Su sábado de entrega ya pasó.</span></p>
+                    <p class="tabular-nums" [class.text-red-600]="d.total.retrasado > 0" [class.dark:text-red-400]="d.total.retrasado > 0" [class.text-ink]="d.total.retrasado === 0">${{ money(d.total.retrasado) }}</p>
+                  </div>
+                  <div class="flex items-baseline justify-between gap-4">
+                    <p class="text-ink">Toca el sábado {{ fecha(d.sabado) }}</p>
+                    <p class="tabular-nums text-ink">${{ money(d.total.tocaSabado) }}</p>
+                  </div>
+                  <div class="flex items-baseline justify-between gap-4">
+                    <p class="text-ink">Más adelante <span class="block text-xs text-ink-muted">Se entrega en los sábados siguientes.</span></p>
+                    <p class="tabular-nums text-ink">${{ money(d.total.masAdelante) }}</p>
+                  </div>
+                </div>
+                <div class="flex items-baseline justify-between gap-4">
+                  <p class="text-ink">
+                    Detenido: contrato sin firmar
+                    <span class="block text-xs text-ink-muted">
+                      {{ d.comisionesDetenidas }} {{ d.comisionesDetenidas === 1 ? 'comisión' : 'comisiones' }}. Se puede entregar cuando se registre la firma del contrato en la venta.
+                    </span>
+                  </p>
+                  <p class="tabular-nums text-ink">${{ money(d.total.detenido) }}</p>
+                </div>
+                @if (d.total.entregadoDeMas > 0) {
+                  <div class="flex items-baseline justify-between gap-4">
+                    <p class="text-ink">Entregado de más <span class="block text-xs text-ink-muted">Ya no lo respaldan abonos vigentes (p. ej. se anuló un recibo): el asesor lo debe devolver. Se resta del ganado.</span></p>
+                    <p class="tabular-nums text-amber-700 dark:text-amber-300">−${{ money(d.total.entregadoDeMas) }}</p>
+                  </div>
+                }
+              </div>
+            </div>
+            <p class="mt-4 text-xs text-ink-muted">Cada nivel suma la cifra de arriba.</p>
+          </div>
+        } @else {
+          <div class="mt-3 overflow-x-auto rounded-xl border border-border">
+            <table class="mobile-records min-w-full divide-y divide-border text-sm" [attr.data-testid]="'desglose-' + vistaDesglose()">
+              <thead class="bg-surface-2">
+                <tr class="text-left text-xs font-medium uppercase tracking-wide text-ink-muted">
+                  <th class="px-3 py-3">{{ vistaDesglose() === 'asesor' ? 'Asesor' : 'Desarrollo' }}</th>
+                  <th class="px-3 py-3 text-right">Comisiones</th>
+                  <th class="px-3 py-3 text-right">Ganado</th>
+                  <th class="px-3 py-3 text-right">Entregado</th>
+                  <th class="px-3 py-3 text-right">Por entregar</th>
+                  <th class="px-3 py-3 text-right">Detenido</th>
+                  <th class="px-3 py-3 text-right">Falta por generar</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border bg-surface">
+                @for (f of filasDesglose(); track f.clave) {
+                  <tr>
+                    <td [attr.data-label]="vistaDesglose() === 'asesor' ? 'Asesor' : 'Desarrollo'" class="px-3 py-3 font-medium text-ink">
+                      {{ f.nombre }}{{ f.externo ? ' (externo)' : '' }}
+                    </td>
+                    <td data-label="Comisiones" class="px-3 py-3 text-right tabular-nums text-ink-muted">{{ f.cifras.comisiones }}</td>
+                    <td data-label="Ganado" class="px-3 py-3 text-right tabular-nums text-ink">${{ money(f.cifras.ganado) }}</td>
+                    <td data-label="Entregado" class="px-3 py-3 text-right tabular-nums text-ink-muted">
+                      ${{ money(f.cifras.entregado) }}
+                      @if (f.cifras.entregadoDeMas > 0) {
+                        <span class="block text-xs text-amber-700 dark:text-amber-300">${{ money(f.cifras.entregadoDeMas) }} de más</span>
+                      }
+                    </td>
+                    <td data-label="Por entregar" class="px-3 py-3 text-right tabular-nums text-ink">
+                      ${{ money(f.cifras.porEntregar) }}
+                      @if (f.cifras.retrasado > 0) {
+                        <span class="block text-xs text-red-600 dark:text-red-400">${{ money(f.cifras.retrasado) }} retrasado</span>
+                      }
+                    </td>
+                    <td data-label="Detenido" class="px-3 py-3 text-right tabular-nums text-ink-muted">${{ money(f.cifras.detenido) }}</td>
+                    <td data-label="Falta por generar" class="px-3 py-3 text-right tabular-nums text-ink-muted">${{ money(f.cifras.faltaPorGenerar) }}</td>
+                  </tr>
+                }
+                <tr class="bg-surface-2 font-semibold">
+                  <td [attr.data-label]="vistaDesglose() === 'asesor' ? 'Asesor' : 'Desarrollo'" class="px-3 py-3 text-ink">Total</td>
+                  <td data-label="Comisiones" class="px-3 py-3 text-right tabular-nums text-ink">{{ d.total.comisiones }}</td>
+                  <td data-label="Ganado" class="px-3 py-3 text-right tabular-nums text-ink">${{ money(d.total.ganado) }}</td>
+                  <td data-label="Entregado" class="px-3 py-3 text-right tabular-nums text-ink">${{ money(d.total.entregado) }}</td>
+                  <td data-label="Por entregar" class="px-3 py-3 text-right tabular-nums text-ink">${{ money(d.total.porEntregar) }}</td>
+                  <td data-label="Detenido" class="px-3 py-3 text-right tabular-nums text-ink">${{ money(d.total.detenido) }}</td>
+                  <td data-label="Falta por generar" class="px-3 py-3 text-right tabular-nums text-ink">${{ money(d.total.faltaPorGenerar) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
+    }
+
     <!-- Por entregar el sábado -->
     @if (porEntregar(); as pe) {
       <section class="mt-8">
@@ -111,41 +249,90 @@
           </div>
         } @else {
           <div class="mt-3 overflow-x-auto rounded-xl border border-border">
-            <table class="min-w-full divide-y divide-border text-sm">
+            <table class="min-w-full divide-y divide-border text-sm" data-testid="tabla-sabado">
               <thead class="bg-surface-2">
                 <tr class="text-left text-xs font-medium uppercase tracking-wide text-ink-muted">
                   <th class="px-3 py-3">Venta</th>
                   <th class="px-3 py-3">Cliente</th>
-                  <th class="px-3 py-3">Asesor</th>
                   <th class="px-3 py-3 text-right">A entregar</th>
                   <th class="px-3 py-3"></th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-border bg-surface">
-                @for (i of pe.items; track i.comision.id) {
-                  <tr>
-                    <td class="px-3 py-3 text-ink-muted">#{{ i.comision.ventaNumero ?? '—' }}</td>
-                    <td class="px-3 py-3 font-medium text-ink">
-                      {{ i.comision.cliente }}
-                      @if (i.comision.retrasada) {
-                        <span class="ml-1.5 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-500/15 dark:text-red-300" title="Entrega vencida desde el sábado {{ fecha(i.comision.proximaEntrega) }}">Retrasada</span>
-                      }
-                      @if (i.comision.mensualidad) {
-                        <p class="text-xs font-normal text-ink-muted">Mensualidad ${{ money(i.comision.mensualidad) }}</p>
-                      }
+              <!-- Un bloque por asesor: lo que se le paga a cada uno de una vez. -->
+              @for (g of gruposSabado(); track g.clave) {
+                <tbody class="divide-y divide-border bg-surface" data-testid="grupo-sabado">
+                  <tr class="bg-surface-2/70">
+                    <td colspan="2" class="px-3 py-2.5 font-semibold text-ink">
+                      {{ g.nombre }}{{ g.externo ? ' (externo)' : '' }}
+                      <span class="ml-1 text-xs font-normal text-ink-muted">· {{ g.items.length }} {{ g.items.length === 1 ? 'venta' : 'ventas' }}</span>
                     </td>
-                    <td class="px-3 py-3 text-ink-muted">{{ i.comision.asesorNombre }}{{ i.comision.asesorExterno ? ' (externo)' : '' }}</td>
-                    <td class="px-3 py-3 text-right font-semibold text-ink">${{ money(i.montoAlSabado) }}</td>
-                    <td class="px-3 py-3 text-right">
-                      <button type="button" (click)="abrirEntrega(i.comision, i.montoAlSabado)" class="text-xs font-semibold text-we-primary hover:underline">Entregar</button>
-                    </td>
+                    <td class="px-3 py-2.5 text-right font-semibold tabular-nums text-ink">${{ money(g.total) }}</td>
+                    <td></td>
                   </tr>
-                }
-              </tbody>
+                  @for (i of g.items; track i.comision.id) {
+                    <tr>
+                      <td class="py-3 pl-6 pr-3 text-ink-muted">#{{ i.comision.ventaNumero ?? '—' }}</td>
+                      <td class="px-3 py-3 font-medium text-ink">
+                        {{ i.comision.cliente }}
+                        @if (i.comision.retrasada) {
+                          <span class="ml-1.5 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-500/15 dark:text-red-300" title="Entrega vencida desde el sábado {{ fecha(i.comision.proximaEntrega) }}">Retrasada</span>
+                        }
+                        @if (i.comision.mensualidad) {
+                          <p class="text-xs font-normal text-ink-muted">Mensualidad ${{ money(i.comision.mensualidad) }}</p>
+                        }
+                        <button
+                          type="button"
+                          (click)="alternarAbonos(i.comision.id)"
+                          [attr.aria-expanded]="abonosAbiertos().has(i.comision.id)"
+                          class="mt-0.5 text-xs font-semibold text-we-primary hover:underline dark:text-we-blue-light"
+                        >
+                          {{ abonosAbiertos().has(i.comision.id) ? 'Ocultar abonos' : '¿De qué abonos sale?' }}
+                        </button>
+                      </td>
+                      <td class="px-3 py-3 text-right font-semibold tabular-nums text-ink">${{ money(i.montoAlSabado) }}</td>
+                      <td class="px-3 py-3 text-right">
+                        <button type="button" (click)="abrirEntrega(i.comision, i.montoAlSabado)" class="text-xs font-semibold text-we-primary hover:underline">Entregar</button>
+                      </td>
+                    </tr>
+                    @if (abonosAbiertos().has(i.comision.id)) {
+                      <tr class="bg-surface-2/40">
+                        <td colspan="4" class="pb-3 pl-6 pr-3 pt-2">
+                          <ul class="max-w-2xl space-y-1 text-xs" data-testid="abonos-sabado">
+                            @if (i.anteriores; as ant) {
+                              <li class="flex justify-between gap-3">
+                                <span class="text-ink-muted">{{ ant.cantidad }} abonos anteriores</span>
+                                <span class="tabular-nums text-ink">${{ money(ant.total) }}</span>
+                              </li>
+                            }
+                            @for (a of i.abonosVisibles; track $index) {
+                              <li class="flex justify-between gap-3">
+                                <span class="text-ink-muted">
+                                  {{ a.concepto }} del {{ fecha(a.fecha) }}@if (a.montoAbono !== null) { · ${{ money(a.montoAbono) }}} · {{ a.regla }}
+                                </span>
+                                <span class="tabular-nums text-ink">${{ money(a.aporte) }}</span>
+                              </li>
+                            }
+                            @if (i.yaEntregado > 0) {
+                              <li class="flex justify-between gap-3">
+                                <span class="text-ink-muted">Ya entregado</span>
+                                <span class="tabular-nums text-ink">−${{ money(i.yaEntregado) }}</span>
+                              </li>
+                            }
+                            <li class="flex justify-between gap-3 border-t border-border pt-1 font-semibold">
+                              <span class="text-ink">A entregar</span>
+                              <span class="tabular-nums text-ink">${{ money(i.montoAlSabado) }}</span>
+                            </li>
+                          </ul>
+                        </td>
+                      </tr>
+                    }
+                  }
+                </tbody>
+              }
               <tfoot class="bg-surface-2">
                 <tr>
-                  <td colspan="3" class="px-3 py-3 text-right text-xs font-medium uppercase tracking-wide text-ink-muted">Total</td>
-                  <td class="px-3 py-3 text-right font-semibold text-ink">${{ money(pe.total) }}</td>
+                  <td colspan="2" class="px-3 py-3 text-right text-xs font-medium uppercase tracking-wide text-ink-muted">Total</td>
+                  <td class="px-3 py-3 text-right font-semibold tabular-nums text-ink">${{ money(pe.total) }}</td>
                   <td></td>
                 </tr>
               </tfoot>

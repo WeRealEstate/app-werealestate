@@ -16,6 +16,8 @@ public record ComisionDto(
         String cliente,
         String asesorNombre,
         boolean asesorExterno,
+        // "U-5" (usuario interno) / "E-3" (asesor externo): agrupa por asesor aunque dos se llamen igual.
+        String asesorClave,
         BigDecimal base,
         // Mensualidad pactada de la venta (null en una venta de contado o ya eliminada) y lo que el
         // cliente lleva abonado en total.

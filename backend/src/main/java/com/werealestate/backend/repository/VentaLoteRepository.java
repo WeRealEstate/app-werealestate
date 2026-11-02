@@ -17,6 +17,11 @@ public interface VentaLoteRepository extends JpaRepository<VentaLote, Long> {
 
     boolean existsByLoteId(Long loteId);
 
+    /** El desarrollo de cada lote de cada venta: filas [ventaId, nombre del desarrollo], sin repetir (desglose de
+     * comisiones por desarrollo). */
+    @Query("select distinct vl.venta.id, vl.lote.desarrollo.nombre from VentaLote vl")
+    List<Object[]> desarrollosPorVenta();
+
     @Query("select count(distinct vl.lote.id) from VentaLote vl")
     long countLotesVendidos();
 

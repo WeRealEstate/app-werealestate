@@ -49,6 +49,8 @@ export interface Comision {
   cliente: string;
   asesorNombre: string;
   asesorExterno: boolean;
+  /** "U-5" (interno) / "E-3" (externo): para agrupar por asesor aunque dos se llamen igual. */
+  asesorClave: string;
   base: number;
   /** Mensualidad pactada de la venta; null en una venta de contado o ya eliminada. */
   mensualidad: number | null;
@@ -193,7 +195,63 @@ export interface ComisionResumen {
 export interface ComisionesPorEntregar {
   sabado: string;
   total: number;
-  items: { comision: Comision; montoAlSabado: number }[];
+  items: ComisionPorEntregar[];
+}
+
+/** montoAlSabado = ganadoAlSabado - yaEntregado; abonos = de dónde sale ganadoAlSabado, en orden. */
+export interface ComisionPorEntregar {
+  comision: Comision;
+  montoAlSabado: number;
+  ganadoAlSabado: number;
+  yaEntregado: number;
+  abonos: AbonoDeComision[];
+}
+
+/** Lo que aporta a la comisión un abono del cliente. concepto: Enganche, Mensualidad… ("Venta" en una comisión de una
+ * exhibición de la regla anterior, sin montoAbono); regla: "Cuenta la mitad", "Cuenta completo"… */
+export interface AbonoDeComision {
+  fecha: string;
+  concepto: string;
+  montoAbono: number | null;
+  regla: string;
+  aporte: number;
+  entrega: string;
+}
+
+/** Desglose de las comisiones no canceladas (ver backend ComisionDesgloseDto). Siempre suma así: total =
+ * faltaPorGenerar + ganado; ganado = entregado + porEntregar + detenido - entregadoDeMas; porEntregar = retrasado +
+ * tocaSabado + masAdelante. */
+export interface ComisionCifras {
+  comisiones: number;
+  total: number;
+  faltaPorGenerar: number;
+  ganado: number;
+  entregado: number;
+  porEntregar: number;
+  retrasado: number;
+  tocaSabado: number;
+  masAdelante: number;
+  /** Ganado que no se puede entregar porque el contrato de la venta no está firmado. */
+  detenido: number;
+  /** Entregado de más: ya no lo respaldan abonos vigentes; el asesor lo debe devolver. */
+  entregadoDeMas: number;
+}
+
+export interface ComisionDesgloseFila {
+  /** Asesor ("U-5" / "E-3") o desarrollo (su nombre, "Varios desarrollos" o "Venta eliminada"). */
+  clave: string;
+  nombre: string;
+  externo: boolean;
+  cifras: ComisionCifras;
+}
+
+export interface ComisionDesglose {
+  /** El próximo sábado de entrega (hoy, si es sábado). */
+  sabado: string;
+  total: ComisionCifras;
+  comisionesDetenidas: number;
+  porAsesor: ComisionDesgloseFila[];
+  porDesarrollo: ComisionDesgloseFila[];
 }
 
 /** Valor vendido: suma del precio de los lotes vendidos (ver backend FinanzasService.valorVendido). */
