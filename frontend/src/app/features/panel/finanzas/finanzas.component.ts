@@ -1,4 +1,4 @@
-import { LucideHandCoins, LucideLandmark, LucideTrendingUp, LucideWallet } from '@lucide/angular';
+import { LucideCircleAlert, LucideHandCoins, LucideLandmark, LucideTrendingUp, LucideWallet } from '@lucide/angular';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -45,6 +45,25 @@ const ABONOS_RECIENTES = 6;
 
 const ORDEN_NOMBRES = new Intl.Collator('es-MX', { sensitivity: 'base' });
 
+/** Una parte de la barra de "Cómo se reparte". Colores validados con la skill de dataviz (verde, ámbar y violeta como
+ * categorías vecinas en claro sobre #ffffff y en oscuro sobre la tarjeta #131d3b; en claro el ámbar queda bajo 3:1 y
+ * lo compensan los nombres y montos visibles debajo). "Falta por generar" es el fondo de la barra, en gris. */
+interface ParteReparto {
+  clave: string;
+  etiqueta: string;
+  valor: number;
+  /** % del total de comisiones, ya redondeado para mostrarse ("8%", "<1%"). */
+  porcentaje: string;
+  clase: string;
+}
+
+const CLASES_REPARTO = {
+  entregado: 'bg-[#15803d]',
+  porEntregar: 'bg-[#f59e0b] dark:bg-[#c98500]',
+  detenido: 'bg-[#a855f7] dark:bg-[#9085e9]',
+  falta: 'bg-[#cbd5e1] dark:bg-[#334155]',
+} as const;
+
 /** Una comisión de la lista del sábado con sus abonos listos para mostrarse. */
 interface ItemSabado extends ComisionPorEntregar {
   anteriores: { cantidad: number; total: number } | null;
@@ -65,7 +84,7 @@ interface GrupoSabado {
 @Component({
   selector: 'app-finanzas',
   standalone: true,
-  imports: [LucideHandCoins, LucideTrendingUp, LucideLandmark, LucideWallet, MonedaInputDirective, WeLoaderComponent, SkeletonKpisComponent, FormsModule, RouterLink, FinanzasIngresosComponent, FinanzasValorComponent, GastosListComponent],
+  imports: [LucideCircleAlert, LucideHandCoins, LucideTrendingUp, LucideLandmark, LucideWallet, MonedaInputDirective, WeLoaderComponent, SkeletonKpisComponent, FormsModule, RouterLink, FinanzasIngresosComponent, FinanzasValorComponent, GastosListComponent],
   templateUrl: './finanzas.component.html',
 })
 export class FinanzasComponent {
@@ -118,6 +137,30 @@ export class FinanzasComponent {
     const d = this.desglose();
     if (!d) return [];
     return this.vistaDesglose() === 'asesor' ? d.porAsesor : d.porDesarrollo;
+  });
+
+  /** "Cómo se reparte": las partes de la barra en orden (las tres de lo ganado y lo que falta por generar). */
+  readonly reparto = computed(() => {
+    const d = this.desglose();
+    if (!d) return null;
+    const t = d.total;
+    const partes: ParteReparto[] = [
+      { clave: 'entregado', etiqueta: 'Entregado', valor: t.entregado, porcentaje: porcentaje(t.entregado, t.total), clase: CLASES_REPARTO.entregado },
+      { clave: 'porEntregar', etiqueta: 'Por entregar', valor: t.porEntregar, porcentaje: porcentaje(t.porEntregar, t.total), clase: CLASES_REPARTO.porEntregar },
+      { clave: 'detenido', etiqueta: 'Detenido', valor: t.detenido, porcentaje: porcentaje(t.detenido, t.total), clase: CLASES_REPARTO.detenido },
+      { clave: 'falta', etiqueta: 'Falta por generar', valor: t.faltaPorGenerar, porcentaje: porcentaje(t.faltaPorGenerar, t.total), clase: CLASES_REPARTO.falta },
+    ];
+    // Lo que ocupa lo ganado en la barra (sin restar lo entregado de más, que no es un tramo).
+    const anchoGanado = t.entregado + t.porEntregar + t.detenido;
+    return {
+      partes,
+      anchoGanado,
+      anchoFalta: t.faltaPorGenerar,
+      ganadoPorcentaje: porcentaje(t.ganado, t.total),
+      descripcion:
+        `Comisiones totales $${dinero(t.total)}: ` +
+        partes.map((p) => `${p.etiqueta.toLowerCase()} $${dinero(p.valor)} (${p.porcentaje})`).join(', '),
+    };
   });
 
   /** Lo que toca entregar el sábado, agrupado por asesor (por nombre), con el total a pagarle a cada uno. */
@@ -508,6 +551,13 @@ export class FinanzasComponent {
   money(valor: number): string {
     return dinero(valor);
   }
+}
+
+/** % de un total para mostrarse: entero, "<1%" si es poco pero no cero. */
+function porcentaje(valor: number, total: number): string {
+  if (total <= 0 || valor <= 0) return '0%';
+  const pct = (valor / total) * 100;
+  return pct < 1 ? '<1%' : `${Math.round(pct)}%`;
 }
 
 /** Con muchos abonos, los más viejos van en un solo renglón para que la lista no crezca de más. */

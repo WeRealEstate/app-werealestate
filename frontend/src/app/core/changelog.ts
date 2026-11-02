@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.7.1', fecha: '2026-11-02', cambios: [
+    "Finanzas → Comisiones → Desglose: 'Cómo se reparte' ahora es una barra de colores que muestra de un vistazo qué parte del total es lo entregado, lo por entregar, lo detenido por contrato sin firmar y lo que falta por generar, con lo ganado marcado debajo. Abajo, cada parte con su color, monto, % del total y una línea de explicación; en 'Por entregar' se ve cuánto está retrasado, cuánto toca el sábado y cuánto más adelante.",
+  ] },
   { version: '11.7.0', fecha: '2026-11-02', cambios: [
     "Finanzas → Comisiones: nueva sección 'Desglose' debajo de las tarjetas, para que las cifras cuadren. 'Cómo se reparte' muestra de dónde sale cada número: las comisiones totales son lo que falta por generar más lo ganado por abonos, y lo ganado es lo entregado, lo por entregar (retrasado, lo del próximo sábado y lo de más adelante) y lo detenido porque el contrato de la venta no está firmado, que antes no aparecía en ninguna tarjeta.",
     "'Por asesor' y 'Por desarrollo' muestran esas mismas cifras por cada asesor y por desarrollo; las ventas con lotes de SAMAI y de Nanuu van en 'Varios desarrollos' y las comisiones de ventas eliminadas en 'Venta eliminada'.",

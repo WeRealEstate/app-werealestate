@@ -119,62 +119,99 @@
         </div>
 
         @if (vistaDesglose() === 'reparto') {
-          <div class="mt-3 rounded-xl border border-border bg-surface p-4 sm:p-5 text-sm" data-testid="desglose-reparto">
-            <div class="flex items-baseline justify-between gap-4">
-              <p class="font-semibold text-ink">Comisiones totales <span class="font-normal text-ink-muted">· {{ d.total.comisiones }} {{ d.total.comisiones === 1 ? 'comisión' : 'comisiones' }}</span></p>
-              <p class="font-semibold tabular-nums text-ink">${{ money(d.total.total) }}</p>
-            </div>
-            <div class="ml-1.5 mt-2 space-y-2 border-l border-border pl-4">
-              <div class="flex items-baseline justify-between gap-4">
-                <p class="text-ink">Falta por generar <span class="block text-xs text-ink-muted">El cliente todavía no paga lo que la genera.</span></p>
-                <p class="tabular-nums text-ink">${{ money(d.total.faltaPorGenerar) }}</p>
+          @if (reparto(); as rp) {
+            <div class="mt-3 rounded-xl border border-border bg-surface p-4 sm:p-6" data-testid="desglose-reparto">
+              <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <p class="text-sm text-ink-muted">Comisiones totales · {{ d.total.comisiones }} {{ d.total.comisiones === 1 ? 'comisión' : 'comisiones' }}</p>
+                <p class="font-heading text-2xl font-semibold text-ink">${{ money(d.total.total) }}</p>
               </div>
-              <div class="flex items-baseline justify-between gap-4">
-                <p class="font-medium text-ink">Ganado por abonos <span class="block text-xs font-normal text-ink-muted">Lo que ya respaldan los abonos del cliente.</span></p>
-                <p class="font-medium tabular-nums text-ink">${{ money(d.total.ganado) }}</p>
-              </div>
-              <div class="ml-1.5 space-y-2 border-l border-border pl-4">
-                <div class="flex items-baseline justify-between gap-4">
-                  <p class="text-ink">Entregado <span class="block text-xs text-ink-muted">Ya pagado a los asesores (sin lo que devolvieron).</span></p>
-                  <p class="tabular-nums text-green-600 dark:text-green-400">${{ money(d.total.entregado) }}</p>
+
+              @if (d.total.total > 0) {
+                <!-- La barra: cada tramo del ancho de su parte; el gris del final es lo que falta por generar. -->
+                <div class="mt-4 flex h-3 gap-[2px] overflow-hidden rounded-full" role="img" [attr.aria-label]="rp.descripcion">
+                  @for (p of rp.partes; track p.clave) {
+                    @if (p.valor > 0) {
+                      <div
+                        class="h-full min-w-1 basis-0"
+                        [class]="p.clase"
+                        [style.flex-grow]="p.valor"
+                        [attr.title]="p.etiqueta + ': $' + money(p.valor) + ' (' + p.porcentaje + ')'"
+                      ></div>
+                    }
+                  }
                 </div>
-                <div class="flex items-baseline justify-between gap-4">
-                  <p class="text-ink">Por entregar <span class="block text-xs text-ink-muted">Ganado que ya se puede entregar.</span></p>
-                  <p class="tabular-nums text-amber-600 dark:text-amber-400">${{ money(d.total.porEntregar) }}</p>
-                </div>
-                <div class="ml-1.5 space-y-2 border-l border-border pl-4">
-                  <div class="flex items-baseline justify-between gap-4">
-                    <p class="text-ink">Retrasado <span class="block text-xs text-ink-muted">Su sábado de entrega ya pasó.</span></p>
-                    <p class="tabular-nums" [class.text-red-600]="d.total.retrasado > 0" [class.dark:text-red-400]="d.total.retrasado > 0" [class.text-ink]="d.total.retrasado === 0">${{ money(d.total.retrasado) }}</p>
+                <!-- Corchete bajo lo ganado (entregado + por entregar + detenido). -->
+                @if (rp.anchoGanado > 0) {
+                  <div class="mt-1.5 flex gap-[2px]" aria-hidden="true">
+                    <div class="h-1.5 min-w-0 basis-0 rounded-b border-x border-b border-ink-muted/50" [style.flex-grow]="rp.anchoGanado"></div>
+                    @if (rp.anchoFalta > 0) {
+                      <div class="basis-0" [style.flex-grow]="rp.anchoFalta"></div>
+                    }
                   </div>
-                  <div class="flex items-baseline justify-between gap-4">
-                    <p class="text-ink">Toca el sábado {{ fecha(d.sabado) }}</p>
-                    <p class="tabular-nums text-ink">${{ money(d.total.tocaSabado) }}</p>
-                  </div>
-                  <div class="flex items-baseline justify-between gap-4">
-                    <p class="text-ink">Más adelante <span class="block text-xs text-ink-muted">Se entrega en los sábados siguientes.</span></p>
-                    <p class="tabular-nums text-ink">${{ money(d.total.masAdelante) }}</p>
-                  </div>
-                </div>
-                <div class="flex items-baseline justify-between gap-4">
-                  <p class="text-ink">
-                    Detenido: contrato sin firmar
-                    <span class="block text-xs text-ink-muted">
-                      {{ d.comisionesDetenidas }} {{ d.comisionesDetenidas === 1 ? 'comisión' : 'comisiones' }}. Se puede entregar cuando se registre la firma del contrato en la venta.
-                    </span>
+                  <!-- Fuera del corchete para que no se corte cuando lo ganado es poco. -->
+                  <p class="mt-1 text-xs text-ink-muted">
+                    Ganado por abonos <span class="font-semibold text-ink">${{ money(d.total.ganado) }}</span> · {{ rp.ganadoPorcentaje }}
                   </p>
-                  <p class="tabular-nums text-ink">${{ money(d.total.detenido) }}</p>
-                </div>
-                @if (d.total.entregadoDeMas > 0) {
-                  <div class="flex items-baseline justify-between gap-4">
-                    <p class="text-ink">Entregado de más <span class="block text-xs text-ink-muted">Ya no lo respaldan abonos vigentes (p. ej. se anuló un recibo): el asesor lo debe devolver. Se resta del ganado.</span></p>
-                    <p class="tabular-nums text-amber-700 dark:text-amber-300">−${{ money(d.total.entregadoDeMas) }}</p>
-                  </div>
                 }
-              </div>
+              }
+
+              <!-- Leyenda: cada parte con su color, monto y % del total, en el mismo orden que la barra. -->
+              <ul class="mt-5 grid gap-x-6 gap-y-5 sm:grid-cols-2 xl:grid-cols-4">
+                @for (p of rp.partes; track p.clave) {
+                  <li class="min-w-0">
+                    <p class="flex items-center gap-2 text-sm text-ink-muted">
+                      <span class="h-2.5 w-2.5 shrink-0 rounded-full" [class]="p.clase" aria-hidden="true"></span>
+                      {{ p.etiqueta }}
+                    </p>
+                    <p class="mt-1 flex items-baseline gap-2">
+                      <span class="text-lg font-semibold text-ink">${{ money(p.valor) }}</span>
+                      <span class="text-xs text-ink-muted">{{ p.porcentaje }}</span>
+                    </p>
+                    @switch (p.clave) {
+                      @case ('entregado') {
+                        <p class="mt-1 text-xs text-ink-muted">Ya pagado a los asesores (sin lo que devolvieron).</p>
+                      }
+                      @case ('porEntregar') {
+                        <ul class="mt-1.5 space-y-1 text-xs">
+                          <li class="flex items-center justify-between gap-3">
+                            <span class="inline-flex items-center gap-1.5" [class.text-red-600]="d.total.retrasado > 0" [class.dark:text-red-400]="d.total.retrasado > 0" [class.text-ink-muted]="d.total.retrasado === 0">
+                              @if (d.total.retrasado > 0) {
+                                <svg lucideCircleAlert [size]="13" aria-hidden="true"></svg>
+                              }
+                              Retrasado
+                            </span>
+                            <span class="tabular-nums text-ink">${{ money(d.total.retrasado) }}</span>
+                          </li>
+                          <li class="flex items-center justify-between gap-3">
+                            <span class="text-ink-muted">Toca el sáb {{ fecha(d.sabado).slice(0, 5) }}</span>
+                            <span class="tabular-nums text-ink">${{ money(d.total.tocaSabado) }}</span>
+                          </li>
+                          <li class="flex items-center justify-between gap-3">
+                            <span class="text-ink-muted">Más adelante</span>
+                            <span class="tabular-nums text-ink">${{ money(d.total.masAdelante) }}</span>
+                          </li>
+                        </ul>
+                      }
+                      @case ('detenido') {
+                        <p class="mt-1 text-xs text-ink-muted">
+                          Contrato sin firmar · {{ d.comisionesDetenidas }} {{ d.comisionesDetenidas === 1 ? 'comisión' : 'comisiones' }}. Se entrega cuando se registre la firma en la venta.
+                        </p>
+                      }
+                      @case ('falta') {
+                        <p class="mt-1 text-xs text-ink-muted">El cliente todavía no paga lo que la genera.</p>
+                      }
+                    }
+                  </li>
+                }
+              </ul>
+
+              @if (d.total.entregadoDeMas > 0) {
+                <p class="mt-5 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+                  Lo entregado incluye ${{ money(d.total.entregadoDeMas) }} de más: ya no lo respaldan abonos vigentes (por ejemplo, se anuló un recibo) y el asesor lo debe devolver.
+                </p>
+              }
             </div>
-            <p class="mt-4 text-xs text-ink-muted">Cada nivel suma la cifra de arriba.</p>
-          </div>
+          }
         } @else {
           <div class="mt-3 overflow-x-auto rounded-xl border border-border">
             <table class="mobile-records min-w-full divide-y divide-border text-sm" [attr.data-testid]="'desglose-' + vistaDesglose()">
