@@ -23,9 +23,10 @@ public record ComisionDto(
         // cliente lleva abonado en total.
         BigDecimal mensualidad,
         BigDecimal abonado,
-        // Atraso del cliente: cuántas mensualidades lleva sin pagar de las ya vencidas (0 si va al
-        // corriente) y a cuánto dinero equivale.
+        // Atraso del cliente (ver CalendarioPagos): cuántos pagos vencidos lleva sin cubrir (0 si va al corriente),
+        // cuántos de ellos son mensualidades (el resto: enganche, aportación o pago de contado) y a cuánto equivalen.
         int mensualidadesAtrasadas,
+        int pagosAtrasados,
         BigDecimal montoAtrasadoCliente,
         // Cómo va el cliente este mes (null si este mes no le toca pagar), con lo esperado, lo que ya
         // abonó y la fecha en que le toca.

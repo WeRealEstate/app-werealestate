@@ -1,5 +1,6 @@
 package com.werealestate.backend.controller;
 
+import com.werealestate.backend.dto.AmortizacionDto;
 import com.werealestate.backend.dto.AplicarDepositoRequest;
 import com.werealestate.backend.dto.ContadoresVentasDto;
 import com.werealestate.backend.dto.NumeracionVentaDto;
@@ -14,6 +15,7 @@ import com.werealestate.backend.dto.VentaCreateRequest;
 import com.werealestate.backend.dto.VentaEliminarRequest;
 import com.werealestate.backend.dto.VentaDto;
 import com.werealestate.backend.dto.VentaUpdateRequest;
+import com.werealestate.backend.service.EstadoCuentaService;
 import com.werealestate.backend.service.VentaService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -32,9 +34,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class VentaController {
 
     private final VentaService ventaService;
+    private final EstadoCuentaService estadoCuentaService;
 
-    public VentaController(VentaService ventaService) {
+    public VentaController(VentaService ventaService, EstadoCuentaService estadoCuentaService) {
         this.ventaService = ventaService;
+        this.estadoCuentaService = estadoCuentaService;
     }
 
     @PostMapping
@@ -86,6 +90,12 @@ public class VentaController {
     @GetMapping("/{id}")
     public VentaDto obtener(@PathVariable Long id) {
         return ventaService.obtener(id);
+    }
+
+    /** Tabla de amortización de la venta con su estado de cuenta a hoy (pagado, atrasado, lo que le toca). */
+    @GetMapping("/{id}/amortizacion")
+    public AmortizacionDto amortizacion(@PathVariable Long id) {
+        return estadoCuentaService.deVenta(id);
     }
 
     /** Registra o corrige si el contrato está firmado y desde cuándo. */

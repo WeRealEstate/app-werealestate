@@ -1,0 +1,136 @@
+@let a = amortizacion();
+<section class="rounded-2xl border border-border bg-surface" [attr.data-testid]="'amortizacion-' + a.ventaNumero">
+  <div class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
+    <button
+      type="button"
+      (click)="alternar()"
+      [attr.aria-expanded]="abierta()"
+      [attr.aria-controls]="idTabla()"
+      class="flex min-w-0 flex-1 items-start gap-2 rounded-lg text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50"
+      data-testid="alternar-amortizacion"
+    >
+      <span class="mt-0.5 shrink-0 text-ink-muted">
+        @if (abierta()) {
+          <svg lucideChevronDown [size]="18" aria-hidden="true"></svg>
+        } @else {
+          <svg lucideChevronRight [size]="18" aria-hidden="true"></svg>
+        }
+      </span>
+      <span class="min-w-0">
+        <span class="block break-words font-heading text-sm font-semibold text-ink">{{ encabezado() }}</span>
+        <span class="mt-1 flex flex-wrap items-center gap-1.5">
+          @if (a.pagosAtrasados > 0) {
+            <span class="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700 dark:bg-red-500/15 dark:text-red-300" data-testid="estado-amortizacion">
+              Atrasado · {{ cuentaAtrasados() }} (${{ money(a.atrasoMonto) }})
+            </span>
+          } @else if (liquidada()) {
+            <span class="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700 dark:bg-green-500/15 dark:text-green-300" data-testid="estado-amortizacion">Liquidada</span>
+          } @else {
+            <span class="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700 dark:bg-green-500/15 dark:text-green-300" data-testid="estado-amortizacion">Al corriente</span>
+          }
+          @if (a.copropietario) {
+            <span class="inline-flex rounded-full bg-we-primary/10 px-2 py-0.5 text-xs font-medium text-we-primary dark:text-we-blue-light">Copropietario</span>
+          }
+          @if (a.proximaFecha && a.proximoMonto) {
+            <span class="text-xs text-ink-muted">Le toca el {{ fecha(a.proximaFecha) }}: ${{ money(a.proximoMonto) }}</span>
+          }
+        </span>
+      </span>
+    </button>
+    <button
+      type="button"
+      (click)="descargarPdf()"
+      [disabled]="generando()"
+      class="boton-secundario inline-flex min-h-[44px] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-semibold text-ink
+             active:scale-[0.97] transition duration-150 disabled:opacity-60"
+      data-testid="descargar-amortizacion"
+    >
+      <svg lucideDownload [size]="15" aria-hidden="true"></svg>
+      {{ generando() ? 'Generando…' : 'Descargar PDF' }}
+    </button>
+  </div>
+
+  @if (abierta()) {
+    <div class="border-t border-border px-4 pb-4 pt-3" [id]="idTabla()">
+      <dl class="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+        <div>
+          <dt class="text-xs text-ink-muted">Precio</dt>
+          <dd class="font-semibold text-ink">${{ money(a.precio) }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs text-ink-muted">Pagado</dt>
+          <dd class="font-semibold text-green-700 dark:text-green-400">${{ money(a.pagado) }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs text-ink-muted">Saldo</dt>
+          <dd class="font-semibold text-ink">${{ money(a.saldo) }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs text-ink-muted">Atrasado</dt>
+          @if (a.pagosAtrasados > 0) {
+            <dd class="font-semibold text-red-600 dark:text-red-400">${{ money(a.atrasoMonto) }}</dd>
+            <dd class="text-xs text-ink-muted">desde el {{ fecha(a.atrasadoDesde) }}</dd>
+          } @else {
+            <dd class="font-semibold text-ink">$0.00</dd>
+          }
+        </div>
+      </dl>
+
+      <div
+        #caja
+        class="mt-3 max-h-[30rem] overflow-auto rounded-xl border border-border focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50"
+        tabindex="0"
+        role="region"
+        [attr.aria-label]="'Tabla de amortización de la venta #' + a.ventaNumero"
+        data-testid="tabla-amortizacion"
+      >
+        <table class="w-full min-w-[42rem] text-left text-sm">
+          <thead class="text-xs uppercase tracking-wide text-ink-muted">
+            <tr>
+              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-3 py-2.5 text-center font-semibold">N.º</th>
+              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-3 py-2.5 font-semibold">Fecha</th>
+              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-3 py-2.5 font-semibold">Concepto</th>
+              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-3 py-2.5 text-right font-semibold">Monto</th>
+              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-3 py-2.5 text-right font-semibold">Pagado</th>
+              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-3 py-2.5 text-right font-semibold">Saldo</th>
+              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-3 py-2.5 font-semibold">Estado</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border">
+            @for (f of a.filas; track $index; let i = $index) {
+              <tr
+                [class]="claseFila(f.estado)"
+                [attr.data-actual]="i === indiceActual() ? '' : null"
+                [attr.data-estado]="f.estado"
+              >
+                <td class="whitespace-nowrap px-3 py-2 text-center tabular-nums text-ink-muted">{{ f.numero ?? '—' }}</td>
+                <td class="whitespace-nowrap px-3 py-2 tabular-nums text-ink">{{ fecha(f.fecha) }}</td>
+                <td class="px-3 py-2 text-ink">{{ f.concepto }}</td>
+                <td class="whitespace-nowrap px-3 py-2 text-right tabular-nums text-ink">${{ money(f.monto) }}</td>
+                <td class="whitespace-nowrap px-3 py-2 text-right tabular-nums" [class.text-ink-muted]="f.pagado === 0" [class.text-ink]="f.pagado > 0">${{ money(f.pagado) }}</td>
+                <td class="whitespace-nowrap px-3 py-2 text-right tabular-nums text-ink-muted">{{ f.fecha ? '$' + money(f.saldo) : '—' }}</td>
+                <td class="whitespace-nowrap px-3 py-2">
+                  <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold" [class]="estadoClases[f.estado]">{{ estadoLabels[f.estado] }}</span>
+                </td>
+              </tr>
+            }
+          </tbody>
+          <tfoot class="border-t border-border bg-surface-2 text-sm font-semibold text-ink">
+            <tr>
+              <td class="px-3 py-2.5" colspan="3">Total</td>
+              <td class="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">${{ money(totalMonto()) }}</td>
+              <td class="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">${{ money(totalPagado()) }}</td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <p class="mt-2 text-xs text-ink-muted">
+        Lo abonado cubre los pagos del más antiguo al más nuevo; un pago cuenta como atrasado desde el día siguiente a su fecha. Saldo: lo que falta del precio después de cada pago, según el plan.
+        @if (conSinFecha()) {
+          «{{ sinFecha }}» es la parte del precio a la que la venta no le asigna fecha (por ejemplo, anualidades de ventas anteriores): no cuenta como atraso.
+        }
+      </p>
+    </div>
+  }
+</section>

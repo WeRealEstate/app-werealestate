@@ -101,6 +101,9 @@ export class ClienteSelectorComponent implements OnDestroy {
       compras: c.compras,
       desarrollos: [...new Set(c.ventas.flatMap((v) => v.desarrollos))],
       saldoPendiente: c.saldoPendiente,
+      atrasoMonto: c.atrasoMonto,
+      pagosAtrasados: c.pagosAtrasados,
+      mensualidadesAtrasadas: c.mensualidadesAtrasadas,
     };
   }
 }

@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { Amortizacion } from '../models/amortizacion.model';
 import { Pagina } from '../models/pagina.model';
 import {
   PagoVenta,
@@ -74,6 +75,11 @@ export class VentasService {
 
   obtener(id: number): Promise<Venta> {
     return firstValueFrom(this.http.get<Venta>(`${this.baseUrl}/${id}`));
+  }
+
+  /** Tabla de amortización de la venta con su estado de cuenta a hoy. */
+  amortizacion(id: number): Promise<Amortizacion> {
+    return firstValueFrom(this.http.get<Amortizacion>(`${this.baseUrl}/${id}/amortizacion`));
   }
 
   /** Para el ícono de "ver información de venta" en /panel/lotes. Rechaza (404) si el lote no

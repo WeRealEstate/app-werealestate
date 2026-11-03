@@ -7,4 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface VentaCopropietarioRepository extends JpaRepository<VentaCopropietario, Long> {
 
     List<VentaCopropietario> findByVentaIdOrderByOrdenAsc(Long ventaId);
+
+    /** Las ventas en las que el cliente es copropietario (no el titular). */
+    List<VentaCopropietario> findByClienteId(Long clienteId);
 }

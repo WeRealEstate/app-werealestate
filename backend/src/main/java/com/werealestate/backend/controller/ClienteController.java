@@ -1,5 +1,6 @@
 package com.werealestate.backend.controller;
 
+import com.werealestate.backend.dto.AmortizacionDto;
 import com.werealestate.backend.dto.ClienteDto;
 import com.werealestate.backend.dto.ClienteListaDto;
 import com.werealestate.backend.dto.ClienteNumeroRequest;
@@ -8,6 +9,7 @@ import com.werealestate.backend.dto.NumeracionClienteDto;
 import com.werealestate.backend.dto.NumeroContratoRequest;
 import com.werealestate.backend.dto.VentaDto;
 import com.werealestate.backend.service.ClienteService;
+import com.werealestate.backend.service.EstadoCuentaService;
 import com.werealestate.backend.service.VentaService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -26,10 +28,12 @@ public class ClienteController {
 
     private final ClienteService clienteService;
     private final VentaService ventaService;
+    private final EstadoCuentaService estadoCuentaService;
 
-    public ClienteController(ClienteService clienteService, VentaService ventaService) {
+    public ClienteController(ClienteService clienteService, VentaService ventaService, EstadoCuentaService estadoCuentaService) {
         this.clienteService = clienteService;
         this.ventaService = ventaService;
+        this.estadoCuentaService = estadoCuentaService;
     }
 
     @GetMapping
@@ -56,6 +60,13 @@ public class ClienteController {
     @GetMapping("/{id}")
     public ClienteDto obtener(@PathVariable Long id) {
         return clienteService.obtener(id);
+    }
+
+    /** La tabla de amortización de cada compra del cliente (como titular o copropietario), con su estado de cuenta
+     * a hoy. Va bajo /api/clientes para quien tenga el módulo Clientes aunque no tenga el de Ventas. */
+    @GetMapping("/{id}/amortizaciones")
+    public List<AmortizacionDto> amortizaciones(@PathVariable Long id) {
+        return estadoCuentaService.deCliente(id);
     }
 
     @PostMapping

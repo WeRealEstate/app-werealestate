@@ -1,8 +1,9 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LucideExternalLink, LucidePencil } from '@lucide/angular';
+import { Amortizacion, cuentaAtraso, frasePagosAtrasados } from '../../../../core/models/amortizacion.model';
 import { UBICACION_DOCUMENTO_LABELS } from '../../../../core/models/asesor-externo.model';
 import {
   Cliente,
@@ -15,11 +16,12 @@ import {
 import { ClientesService } from '../../../../core/services/clientes.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { ClienteFormModalComponent } from '../../../../shared/cliente-form-modal/cliente-form-modal.component';
+import { TablaAmortizacionComponent } from '../../../../shared/tabla-amortizacion/tabla-amortizacion.component';
 import { WeLoaderComponent } from '../../../../shared/we-loader/we-loader.component';
 
 @Component({
   selector: 'app-cliente-detalle',
-  imports: [WeLoaderComponent, FormsModule, RouterLink, ClienteFormModalComponent, LucideExternalLink, LucidePencil],
+  imports: [WeLoaderComponent, FormsModule, RouterLink, ClienteFormModalComponent, TablaAmortizacionComponent, LucideExternalLink, LucidePencil],
   templateUrl: './cliente-detalle.component.html',
 })
 export class ClienteDetalleComponent {
@@ -30,6 +32,43 @@ export class ClienteDetalleComponent {
   readonly cargando = signal(true);
   readonly error = signal<string | null>(null);
   readonly editando = signal(false);
+
+  // --- Tabla de amortización de cada compra (con su estado de cuenta a hoy): se piden aparte para no frenar la
+  // ficha. Arranca abierta la primera compra atrasada o, si ninguna lo está, la más reciente.
+  readonly amortizaciones = signal<Amortizacion[] | null>(null);
+  readonly errorAmortizaciones = signal<string | null>(null);
+  readonly abiertas = signal<ReadonlySet<number>>(new Set());
+  readonly cuentaAtraso = cuentaAtraso;
+  readonly frasePagosAtrasados = frasePagosAtrasados;
+  readonly hayAtraso = computed(() => (this.cliente()?.pagosAtrasados ?? 0) > 0);
+
+  estaAbierta(ventaId: number): boolean {
+    return this.abiertas().has(ventaId);
+  }
+
+  alCambiarAbierta(ventaId: number, abierta: boolean): void {
+    this.abiertas.update((actual) => {
+      const nuevo = new Set(actual);
+      if (abierta) nuevo.add(ventaId);
+      else nuevo.delete(ventaId);
+      return nuevo;
+    });
+  }
+
+  private async cargarAmortizaciones(): Promise<void> {
+    this.errorAmortizaciones.set(null);
+    try {
+      const lista = await this.clientesService.amortizaciones(this.id);
+      // La primera vez se abre una; al recargar se respeta lo que la persona dejó abierto.
+      if (this.amortizaciones() === null && lista.length > 0) {
+        const inicial = lista.find((a) => a.pagosAtrasados > 0) ?? lista[0];
+        this.abiertas.set(new Set([inicial.ventaId]));
+      }
+      this.amortizaciones.set(lista);
+    } catch {
+      this.errorAmortizaciones.set('No se pudieron cargar las tablas de amortización.');
+    }
+  }
 
   // --- Cambiar su número en un desarrollo (S-… o N-…; misma lógica que el número de venta: si otro ya lo tiene, se
   // recorre +1). Se mueve junto con quienes lo comparten (el titular y los copropietarios de esa compra).
@@ -83,6 +122,7 @@ export class ClienteDetalleComponent {
     try {
       this.cliente.set(await this.clientesService.cambiarNumero(this.id, editando.desarrolloId, numero));
       this.cambiandoNumero.set(false);
+      void this.cargarAmortizaciones();
       this.toast.success(`Ahora es el cliente ${editando.prefijo}-${numero} en ${editando.desarrollo}.`);
     } catch (e) {
       this.errorNumero.set(
@@ -124,6 +164,10 @@ export class ClienteDetalleComponent {
       this.cliente.update((c) =>
         c ? { ...c, ventas: c.ventas.map((x) => (x.ventaId === v.ventaId ? { ...x, numeroContrato: venta.numeroContrato } : x)) } : c,
       );
+      // El PDF de la tabla de amortización lleva el número de contrato.
+      this.amortizaciones.update((lista) =>
+        lista ? lista.map((a) => (a.ventaId === v.ventaId ? { ...a, numeroContrato: venta.numeroContrato } : a)) : lista,
+      );
       this.editandoContratoDe.set(null);
       this.toast.success(nuevo ? `Contrato ${nuevo} guardado en la venta #${v.numero}.` : `Se quitó el número de contrato de la venta #${v.numero}.`);
     } catch (e) {
@@ -141,6 +185,7 @@ export class ClienteDetalleComponent {
 
   constructor() {
     void this.cargar();
+    void this.cargarAmortizaciones();
   }
 
   private async cargar(): Promise<void> {
@@ -155,7 +200,8 @@ export class ClienteDetalleComponent {
 
   async alGuardar(): Promise<void> {
     this.editando.set(false);
-    await this.cargar();
+    // Nombre y teléfono también van en el PDF de la tabla de amortización.
+    await Promise.all([this.cargar(), this.cargarAmortizaciones()]);
   }
 
   esUrl(url: string | null): boolean {

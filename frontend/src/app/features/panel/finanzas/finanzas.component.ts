@@ -21,6 +21,7 @@ import {
   FormaPagoComision,
   MODALIDAD_COMISION_LABELS,
 } from '../../../core/models/finanzas.model';
+import { frasePagosAtrasados } from '../../../core/models/amortizacion.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { FinanzasService } from '../../../core/services/finanzas.service';
@@ -116,6 +117,8 @@ export class FinanzasComponent {
   readonly estadoClases = ESTADO_COMISION_CLASES;
   readonly modalidadLabels = MODALIDAD_COMISION_LABELS;
   readonly pagoClienteLabels = ESTADO_PAGO_CLIENTE_LABELS;
+  /** "2 mensualidades atrasadas" / "1 pago atrasado" (enganche, aportación o contado): mismo texto que Clientes. */
+  readonly frasePagosAtrasados = frasePagosAtrasados;
   readonly pagoClienteClases = ESTADO_PAGO_CLIENTE_CLASES;
   readonly formaPagoLabels = FORMA_PAGO_COMISION_LABELS;
 

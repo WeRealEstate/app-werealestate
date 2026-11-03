@@ -2,13 +2,14 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { LucideArrowDown, LucideArrowUp } from '@lucide/angular';
+import { cuentaAtraso } from '../../../../core/models/amortizacion.model';
 import { ClienteLista, etiquetaNumeros } from '../../../../core/models/cliente.model';
 import { Cliente } from '../../../../core/models/cliente.model';
 import { ClientesService } from '../../../../core/services/clientes.service';
 import { ClienteFormModalComponent } from '../../../../shared/cliente-form-modal/cliente-form-modal.component';
 import { WeLoaderComponent } from '../../../../shared/we-loader/we-loader.component';
 
-type FiltroEstado = 'TODOS' | 'ACTIVOS' | 'INACTIVOS' | 'INCOMPLETOS' | 'CON_SALDO';
+type FiltroEstado = 'TODOS' | 'ACTIVOS' | 'INACTIVOS' | 'INCOMPLETOS' | 'CON_SALDO' | 'ATRASADOS';
 
 @Component({
   selector: 'app-clientes-list',
@@ -29,6 +30,8 @@ export class ClientesListComponent {
   /** Orden por número de cliente (SAMAI primero, luego Nanuu): desc = el número mayor arriba dentro de cada uno. */
   readonly orden = signal<'asc' | 'desc'>('desc');
   readonly etiquetaNumeros = etiquetaNumeros;
+  /** "2 mensualidades" / "3 pagos": para la etiqueta roja de atraso. */
+  readonly cuentaAtraso = cuentaAtraso;
 
   readonly desarrollos = computed(() => [...new Set(this.clientes().flatMap((c) => c.desarrollos))].sort());
 
@@ -45,6 +48,7 @@ export class ClientesListComponent {
       if (estado === 'INACTIVOS' && c.activo) return false;
       if (estado === 'INCOMPLETOS' && !c.datosIncompletos) return false;
       if (estado === 'CON_SALDO' && c.saldoPendiente <= 0) return false;
+      if (estado === 'ATRASADOS' && c.pagosAtrasados <= 0) return false;
       if (desarrollo && !c.desarrollos.includes(desarrollo)) return false;
       return true;
     }).sort((a, b) => {

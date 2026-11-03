@@ -15,6 +15,13 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.8.0', fecha: '2026-11-03', cambios: [
+    "Clientes: ahora se ve si un cliente tiene pagos atrasados. En la lista aparece una etiqueta roja 'Atrasado · 2 mensualidades ($X)' debajo del saldo, y el filtro nuevo 'Con pagos atrasados' muestra solo a esos clientes. Un pago cuenta como atrasado desde el día siguiente a su fecha; las ventas de contado con saldo también cuentan desde el día siguiente a la venta. Cuando lo atrasado no son solo mensualidades (enganche, aportación o contado) dice 'pagos'.",
+    "Ficha del cliente: nueva tarjeta 'Pagos atrasados' (monto, cuántos y desde cuándo) y una columna 'Estado' en Compras (Atrasado, Al corriente o Liquidada, y cuándo le toca su siguiente pago). Si es copropietario de una venta atrasada, también le aparece.",
+    "Tabla de amortización de cada compra, en la ficha del cliente (debajo de Compras, una por compra) y en el detalle de la venta (junto a la cobranza, con el aviso de atraso): número de pago, fecha, concepto, monto, cuánto lleva pagado, saldo y estado (Pagado, Atrasado, Le toca o Pendiente). Lo abonado cubre los pagos del más antiguo al más nuevo. El botón 'Descargar PDF' la genera con el diseño de la cotización para dársela al cliente, con sus datos, los de la venta y el resumen a la fecha.",
+    "Si la mensualidad redondeada deja unos centavos sin cubrir el precio, la última mensualidad los absorbe. En ventas anteriores con anualidades sin mes, esa parte queda en un renglón 'Sin fecha en el plan', que no cuenta como atraso.",
+    "Finanzas → Comisiones: el atraso del cliente usa el mismo cálculo: ahora también marca las ventas de contado con saldo y cuenta los pagos atrasados de la tabla. Por ejemplo, una aportación atrasada más una mensualidad dice '2 pagos atrasados'; antes podía decir '3 mensualidades atrasadas'.",
+  ] },
   { version: '11.7.2', fecha: '2026-11-03', cambios: [
     "Cotizador (panel y público): se quitó la flecha doble del menú 'Precio por m²'. El campo 'Superficie personalizada' sigue a la vista, pero se ve desactivado y no se puede editar hasta que eliges 'Personalizada' (o la tarifa por hectárea).",
     "Cotizador: el resumen ya no dice 'Mensualidad estimada $0.00 por 0 meses'. Sin forma de pago elegida muestra 'Elige una forma de pago para ver la mensualidad', y con Contado muestra 'Pago de contado' con el total en un solo pago.",

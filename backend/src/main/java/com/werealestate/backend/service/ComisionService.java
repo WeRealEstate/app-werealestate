@@ -985,6 +985,7 @@ public class ComisionService {
                 venta != null ? venta.getMensualidad() : null,
                 totales.abonadoDeVenta(venta != null ? venta.getId() : null),
                 cobro.mensualidadesAtrasadas(),
+                cobro.pagosAtrasados(),
                 cobro.atrasoMonto(),
                 estadoPagoMes(cobro),
                 cobro.esperadoMes(),

@@ -410,6 +410,24 @@
       </div>
     </div>
 
+    <!-- ATRASO Y TABLA DE AMORTIZACIÓN -->
+    @if (amortizacion(); as a) {
+      @if (a.pagosAtrasados > 0) {
+        <div class="mt-4 flex items-start gap-3 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200" role="status" data-testid="aviso-atraso-venta">
+          <svg lucideCircleAlert [size]="18" class="mt-0.5 shrink-0" aria-hidden="true"></svg>
+          <div>
+            <p class="font-semibold">Atrasado · {{ cuentaAtraso(a.pagosAtrasados, a.mensualidadesAtrasadas) }} (${{ money(a.atrasoMonto) }}) desde el {{ fechaCorta(a.atrasadoDesde) }}</p>
+            @if (a.proximaFecha && a.proximoMonto) {
+              <p class="mt-0.5">Le toca el {{ fechaCorta(a.proximaFecha) }}: ${{ money(a.proximoMonto) }}</p>
+            }
+          </div>
+        </div>
+      }
+      <div class="mt-4">
+        <app-tabla-amortizacion [amortizacion]="a" titulo="Tabla de amortización" [(abierta)]="amortizacionAbierta" />
+      </div>
+    }
+
     <!-- CONTRATO -->
     <app-contrato-venta [venta]="v" (guardado)="cargar()" />
 

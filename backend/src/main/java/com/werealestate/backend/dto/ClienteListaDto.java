@@ -17,5 +17,10 @@ public record ClienteListaDto(
         boolean datosIncompletos,
         int compras,
         List<String> desarrollos,
-        BigDecimal saldoPendiente) {
+        BigDecimal saldoPendiente,
+        // Pagos atrasados de todas sus compras (también donde es copropietario): monto, cuántos pagos y cuántos de
+        // ellos mensualidades (ver service/CalendarioPagos); 0 si va al corriente.
+        BigDecimal atrasoMonto,
+        int pagosAtrasados,
+        int mensualidadesAtrasadas) {
 }

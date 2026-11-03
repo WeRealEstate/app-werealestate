@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { Amortizacion } from '../models/amortizacion.model';
 import { Cliente, ClienteLista, ClienteRequest, NumeracionCliente } from '../models/cliente.model';
 import { Venta } from '../models/venta.model';
 
@@ -21,6 +22,12 @@ export class ClientesService {
 
   obtener(id: number): Promise<Cliente> {
     return firstValueFrom(this.http.get<Cliente>(`${this.baseUrl}/${id}`));
+  }
+
+  /** La tabla de amortización de cada compra del cliente (titular o copropietario), de la más reciente a la más
+   * antigua. */
+  amortizaciones(id: number): Promise<Amortizacion[]> {
+    return firstValueFrom(this.http.get<Amortizacion[]>(`${this.baseUrl}/${id}/amortizaciones`));
   }
 
   /** Siguiente número de cliente de ese desarrollo y, si "numero" ya lo tiene otro cliente, quién y cuántos se

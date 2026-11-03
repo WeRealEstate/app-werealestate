@@ -51,6 +51,11 @@ export interface ClienteLista {
   compras: number;
   desarrollos: string[];
   saldoPendiente: number;
+  /** Pagos atrasados de todas sus compras (también donde es copropietario); 0 si va al corriente. */
+  atrasoMonto: number;
+  pagosAtrasados: number;
+  /** Cuántos de los pagos atrasados son mensualidades (el resto: enganche, aportación o contado). */
+  mensualidadesAtrasadas: number;
 }
 
 /** Respuesta de /api/clientes/numeracion. */
@@ -75,6 +80,13 @@ export interface ClienteVenta {
   copropietario: boolean;
   /** Número de contrato de esa venta (null = sin número). */
   numeroContrato: string | null;
+  /** Cómo va con sus pagos: lo atrasado y el siguiente pago que aún no vence (null si ya no hay). */
+  atrasoMonto: number;
+  pagosAtrasados: number;
+  mensualidadesAtrasadas: number;
+  atrasadoDesde: string | null;
+  proximaFecha: string | null;
+  proximoMonto: number | null;
 }
 
 export interface Cliente {
@@ -121,6 +133,11 @@ export interface Cliente {
   totalComprado: number;
   totalAbonado: number;
   saldoPendiente: number;
+  /** Pagos atrasados de todas sus compras: monto, cuántos pagos, cuántos son mensualidades y desde cuándo. */
+  atrasoMonto: number;
+  pagosAtrasados: number;
+  mensualidadesAtrasadas: number;
+  atrasadoDesde: string | null;
   ventas: ClienteVenta[];
 }
 

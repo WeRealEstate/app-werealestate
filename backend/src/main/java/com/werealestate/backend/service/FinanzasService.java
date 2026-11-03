@@ -34,18 +34,13 @@ import org.springframework.transaction.annotation.Transactional;
  * Números de Finanzas que salen de las ventas: cuánto hay vendido (por desarrollo y por lote) y el
  * calendario de ingresos esperados contra recibidos.
  *
- * <p>Calendario esperado de una venta: el enganche/pago inicial el día de la venta; una
- * mensualidad por cada mes del plazo, en su día de pago (el último día del mes si el mes es más
- * corto), empezando el mes de la venta o el siguiente según la venta; y las aportaciones en su mes
- * (ese mes se paga la aportación en lugar de la mensualidad). Una venta de contado espera todo el
- * precio el día de la venta. Lo esperado de una venta nunca suma más que su precio. Las anualidades
- * ("Aportación anual") no se proyectan: la venta no guarda en qué mes caen ni cuántas son.
+ * <p>Lo esperado de cada venta sale de {@link CalendarioPagos} (la misma regla que usan el atraso del cliente y la
+ * tabla de amortización): el enganche/pago inicial el día de la venta, una mensualidad por mes del plazo en su día de
+ * pago, las aportaciones en su mes y, de contado, todo el precio el día de la venta.
  */
 @Service
 @Transactional(readOnly = true)
 public class FinanzasService {
-
-    private static final Set<String> ETIQUETAS_PAGO_INICIAL = Set.of("Enganche", "Pago inicial");
 
     private final VentaRepository ventaRepository;
     private final VentaLoteRepository ventaLoteRepository;
@@ -128,9 +123,9 @@ public class FinanzasService {
 
         for (Venta venta : datos.ventas) {
             if (!perteneceADesarrollo(datos, venta, desarrolloId)) continue;
-            for (Concepto c : calendario(datos, venta)) {
-                YearMonth ym = YearMonth.from(c.fecha);
-                esperado.merge(ym, c.monto, BigDecimal::add);
+            for (CalendarioPagos.Concepto c : calendario(datos, venta)) {
+                YearMonth ym = YearMonth.from(c.fecha());
+                esperado.merge(ym, c.monto(), BigDecimal::add);
                 ventasPorMes.computeIfAbsent(ym, k -> new java.util.HashSet<>()).add(venta.getId());
             }
             // Libro: cada abono en su fecha y, si su recibo se anuló, un contra-asiento negativo en la
@@ -199,10 +194,11 @@ public class FinanzasService {
         for (Venta venta : datos.ventas) {
             if (!perteneceADesarrollo(datos, venta, desarrolloId)) continue;
             String desarrollo = datos.desarrolloDe(venta.getId());
-            for (Concepto c : calendario(datos, venta)) {
-                if (YearMonth.from(c.fecha).equals(ym)) {
+            for (CalendarioPagos.Concepto c : calendario(datos, venta)) {
+                if (YearMonth.from(c.fecha()).equals(ym)) {
                     esperados.add(new FinanzasIngresosDto.Concepto(
-                            venta.getId(), venta.getNumero(), venta.getCliente(), desarrollo, c.concepto, c.fecha, c.monto));
+                            venta.getId(), venta.getNumero(), venta.getCliente(), desarrollo, descripcion(c, venta),
+                            c.fecha(), c.monto()));
                 }
             }
             for (Movimiento m : datos.movimientosDe(venta.getId())) {
@@ -229,24 +225,25 @@ public class FinanzasService {
 
     // ---------------------------------------------------------------- cobro del cliente
 
-    /** Cómo va el cliente: lo que debe por pagos ya vencidos (monto y a cuántas mensualidades
-     * equivale) y lo de este mes (esperado, recibido y fecha en que le toca pagar; esperadoMes es
-     * cero si este mes no le toca nada). */
+    /** Cómo va el cliente: lo que debe por pagos ya vencidos (monto, cuántos pagos son y cuántos de ellos
+     * mensualidades) y lo de este mes (esperado, recibido y fecha en que le toca pagar; esperadoMes es cero si este
+     * mes no le toca nada). */
     public record CobroVenta(
             BigDecimal atrasoMonto,
             int mensualidadesAtrasadas,
+            int pagosAtrasados,
             BigDecimal esperadoMes,
             BigDecimal recibidoMes,
             LocalDate fechaMes) {
         public static final CobroVenta NINGUNO =
-                new CobroVenta(BigDecimal.ZERO, 0, BigDecimal.ZERO, BigDecimal.ZERO, null);
+                new CobroVenta(BigDecimal.ZERO, 0, 0, BigDecimal.ZERO, BigDecimal.ZERO, null);
     }
 
     /**
-     * Cobro de cada venta con mensualidad. Atraso: lo esperado con fecha anterior a hoy menos lo que
-     * el cliente lleva abonado (mismo criterio que el atraso acumulado de Ingresos), y a cuántas
-     * mensualidades equivale (redondeado hacia arriba, sin pasar de las ya vencidas). Uso interno
-     * (no revisa rol): lo llaman servicios que ya lo hicieron.
+     * Cobro de cada venta (también las de contado). Atraso: lo que falta de los pagos con fecha anterior a hoy una vez
+     * que lo abonado cubre los pagos del más antiguo al más nuevo (ver CalendarioPagos; mismo criterio que el atraso
+     * acumulado de Ingresos y que la tabla de amortización del cliente). Uso interno (no revisa rol): lo llaman
+     * servicios que ya lo hicieron.
      */
     public Map<Long, CobroVenta> cobroPorVenta() {
         Datos datos = cargar();
@@ -254,19 +251,13 @@ public class FinanzasService {
         YearMonth mesActual = YearMonth.from(hoy);
         Map<Long, CobroVenta> resultado = new HashMap<>();
         for (Venta venta : datos.ventas) {
-            if (venta.getMensualidad() == null || venta.getMensualidad().signum() <= 0) continue;
-            BigDecimal vencido = BigDecimal.ZERO;
-            int mensualidadesVencidas = 0;
+            List<CalendarioPagos.Concepto> conceptos = calendario(datos, venta);
             BigDecimal esperadoMes = BigDecimal.ZERO;
             LocalDate fechaMes = null;
-            for (Concepto c : calendario(datos, venta)) {
-                if (c.fecha.isBefore(hoy)) {
-                    vencido = vencido.add(c.monto);
-                    if (c.concepto.startsWith("Mensualidad")) mensualidadesVencidas++;
-                }
-                if (YearMonth.from(c.fecha).equals(mesActual)) {
-                    esperadoMes = esperadoMes.add(c.monto);
-                    if (fechaMes == null || c.fecha.isBefore(fechaMes)) fechaMes = c.fecha;
+            for (CalendarioPagos.Concepto c : conceptos) {
+                if (YearMonth.from(c.fecha()).equals(mesActual)) {
+                    esperadoMes = esperadoMes.add(c.monto());
+                    if (fechaMes == null || c.fecha().isBefore(fechaMes)) fechaMes = c.fecha();
                 }
             }
             BigDecimal abonado = BigDecimal.ZERO;
@@ -275,23 +266,16 @@ public class FinanzasService {
                 abonado = abonado.add(p.getMonto());
                 if (YearMonth.from(p.getFecha()).equals(mesActual)) recibidoMes = recibidoMes.add(p.getMonto());
             }
-            BigDecimal atraso = vencido.subtract(abonado);
-            int mensualidades = 0;
-            if (atraso.compareTo(new BigDecimal("0.01")) > 0) {
-                int necesarias = atraso.divide(venta.getMensualidad(), 0, java.math.RoundingMode.CEILING).intValue();
-                mensualidades = Math.min(necesarias, Math.max(mensualidadesVencidas, 1));
-            } else {
-                atraso = BigDecimal.ZERO;
-            }
-            resultado.put(venta.getId(), new CobroVenta(atraso, mensualidades, esperadoMes, recibidoMes, fechaMes));
+            CalendarioPagos.EstadoDeCuenta cuenta =
+                    CalendarioPagos.estadoDeCuenta(conceptos, datos.precioDe(venta.getId()), abonado, hoy);
+            resultado.put(venta.getId(), new CobroVenta(
+                    cuenta.atrasoMonto(), cuenta.mensualidadesAtrasadas(), cuenta.pagosAtrasados(),
+                    esperadoMes, recibidoMes, fechaMes));
         }
         return resultado;
     }
 
     // ---------------------------------------------------------------- calendario de una venta
-
-    private record Concepto(LocalDate fecha, String concepto, BigDecimal monto) {
-    }
 
     /** Un movimiento del libro de ingresos: monto negativo = contra-asiento de un recibo anulado. */
     private record Movimiento(LocalDate fecha, BigDecimal monto, boolean anulacion) {
@@ -311,63 +295,13 @@ public class FinanzasService {
     }
 
     /** Lo que se espera cobrar de la venta, en orden de fecha, sin pasar nunca de su precio. */
-    private List<Concepto> calendario(Datos datos, Venta venta) {
-        BigDecimal precio = datos.precioDe(venta.getId());
-        List<Concepto> brutos = new ArrayList<>();
-
-        boolean pagoInicial = venta.getEnganche() != null
-                && venta.getEngancheLabel() != null
-                && ETIQUETAS_PAGO_INICIAL.contains(venta.getEngancheLabel());
-        if (pagoInicial) {
-            brutos.add(new Concepto(venta.getFechaVenta(), venta.getEngancheLabel(), venta.getEnganche()));
-        }
-
-        if (venta.getMensualidad() == null || venta.getPlazoMeses() == null) {
-            // Contado: todo el precio (menos el pago inicial, si lo hubo) el día de la venta.
-            BigDecimal resto = precio.subtract(pagoInicial ? venta.getEnganche() : BigDecimal.ZERO);
-            if (resto.signum() > 0) brutos.add(new Concepto(venta.getFechaVenta(), "Pago de contado", resto));
-        } else {
-            Map<YearMonth, BigDecimal> aportaciones = new TreeMap<>();
-            for (VentaAportacion a : datos.aportacionesDe(venta.getId())) {
-                aportaciones.put(YearMonth.of(a.getAnio(), a.getMes()), a.getMonto());
-            }
-            YearMonth primero = YearMonth.from(venta.getFechaVenta());
-            if (!venta.isPrimeraMensualidadMesVenta()) primero = primero.plusMonths(1);
-
-            Set<YearMonth> cubiertos = new java.util.HashSet<>();
-            for (int k = 0; k < venta.getPlazoMeses(); k++) {
-                YearMonth ym = primero.plusMonths(k);
-                cubiertos.add(ym);
-                BigDecimal aportacion = aportaciones.get(ym);
-                brutos.add(aportacion != null
-                        ? new Concepto(diaDePago(ym, venta.getDiaPago()), "Aportación", aportacion)
-                        : new Concepto(
-                                diaDePago(ym, venta.getDiaPago()),
-                                "Mensualidad " + (k + 1) + "/" + venta.getPlazoMeses(),
-                                venta.getMensualidad()));
-            }
-            aportaciones.forEach((ym, monto) -> {
-                if (!cubiertos.contains(ym)) {
-                    brutos.add(new Concepto(diaDePago(ym, venta.getDiaPago()), "Aportación", monto));
-                }
-            });
-        }
-
-        brutos.sort(Comparator.comparing(Concepto::fecha));
-        List<Concepto> resultado = new ArrayList<>();
-        BigDecimal restante = precio;
-        for (Concepto c : brutos) {
-            if (restante.signum() <= 0) break;
-            BigDecimal monto = c.monto.min(restante);
-            resultado.add(new Concepto(c.fecha, c.concepto, monto));
-            restante = restante.subtract(monto);
-        }
-        return resultado;
+    private static List<CalendarioPagos.Concepto> calendario(Datos datos, Venta venta) {
+        return CalendarioPagos.conceptos(venta, datos.precioDe(venta.getId()), datos.aportacionesDe(venta.getId()));
     }
 
-    /** El día de pago de la venta en ese mes; en un mes más corto, el último día. */
-    private static LocalDate diaDePago(YearMonth ym, int diaPago) {
-        return ym.atDay(Math.min(diaPago, ym.lengthOfMonth()));
+    /** Cómo se lee el pago en el detalle de Ingresos: "Mensualidad 3/24", "Aportación", "Enganche"… */
+    private static String descripcion(CalendarioPagos.Concepto c, Venta venta) {
+        return c.mensualidad() ? "Mensualidad " + c.numero() + "/" + venta.getPlazoMeses() : c.concepto();
     }
 
     private static YearMonth parsear(String mes) {

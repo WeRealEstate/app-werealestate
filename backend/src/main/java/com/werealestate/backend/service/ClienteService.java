@@ -19,11 +19,13 @@ import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.UbicacionDocumento;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.model.Venta;
+import com.werealestate.backend.model.VentaAportacion;
 import com.werealestate.backend.model.VentaLote;
 import com.werealestate.backend.repository.AsesorExternoRepository;
 import com.werealestate.backend.repository.ClienteRepository;
 import com.werealestate.backend.repository.PagoVentaRepository;
 import com.werealestate.backend.repository.UsuarioRepository;
+import com.werealestate.backend.repository.VentaAportacionRepository;
 import com.werealestate.backend.repository.VentaComisionRepository;
 import com.werealestate.backend.repository.VentaLoteRepository;
 import com.werealestate.backend.repository.VentaRepository;
@@ -65,6 +67,7 @@ public class ClienteService {
     private final VentaLoteRepository ventaLoteRepository;
     private final com.werealestate.backend.repository.VentaCopropietarioRepository copropietarioRepository;
     private final PagoVentaRepository pagoVentaRepository;
+    private final VentaAportacionRepository ventaAportacionRepository;
     private final VentaComisionRepository comisionRepository;
     private final UsuarioRepository usuarioRepository;
     private final AsesorExternoRepository asesorExternoRepository;
@@ -77,6 +80,7 @@ public class ClienteService {
             VentaLoteRepository ventaLoteRepository,
             com.werealestate.backend.repository.VentaCopropietarioRepository copropietarioRepository,
             PagoVentaRepository pagoVentaRepository,
+            VentaAportacionRepository ventaAportacionRepository,
             VentaComisionRepository comisionRepository,
             UsuarioRepository usuarioRepository,
             AsesorExternoRepository asesorExternoRepository,
@@ -87,6 +91,7 @@ public class ClienteService {
         this.ventaLoteRepository = ventaLoteRepository;
         this.copropietarioRepository = copropietarioRepository;
         this.pagoVentaRepository = pagoVentaRepository;
+        this.ventaAportacionRepository = ventaAportacionRepository;
         this.comisionRepository = comisionRepository;
         this.usuarioRepository = usuarioRepository;
         this.asesorExternoRepository = asesorExternoRepository;
@@ -397,6 +402,10 @@ public class ClienteService {
         private final Map<Long, List<Venta>> ventasPorCliente = new HashMap<>();
         private final Map<Long, List<VentaLote>> lotesPorVenta = new HashMap<>();
         private final Map<Long, BigDecimal> abonadoPorVenta = new HashMap<>();
+        private final Map<Long, List<VentaAportacion>> aportacionesPorVenta = new HashMap<>();
+        /** Estado de cuenta de cada venta a hoy (se calcula la primera vez que se pide). */
+        private final Map<Long, CalendarioPagos.EstadoDeCuenta> cuentas = new HashMap<>();
+        private final LocalDate hoy = LocalDate.now();
         /** "clienteId:ventaId" de las ventas en las que el cliente es copropietario (no el principal). */
         private final java.util.Set<String> copropiedades = new java.util.HashSet<>();
         /** Número de cada cliente en cada desarrollo (S-40, N-12). */
@@ -422,6 +431,18 @@ public class ClienteService {
             for (PagoVenta p : pagoVentaRepository.findAllVigentes()) {
                 abonadoPorVenta.merge(p.getVenta().getId(), p.getMonto(), BigDecimal::add);
             }
+            for (VentaAportacion a : ventaAportacionRepository.findAll()) {
+                aportacionesPorVenta.computeIfAbsent(a.getVenta().getId(), k -> new ArrayList<>()).add(a);
+            }
+        }
+
+        /** Cómo va la venta con sus pagos a hoy: el mismo cálculo que Finanzas y la tabla de amortización. */
+        CalendarioPagos.EstadoDeCuenta cuentaDe(Venta v, BigDecimal precio, BigDecimal abonado) {
+            return cuentas.computeIfAbsent(v.getId(), id -> CalendarioPagos.estadoDeCuenta(
+                    CalendarioPagos.conceptos(v, precio, aportacionesPorVenta.getOrDefault(id, List.of())),
+                    precio,
+                    abonado,
+                    hoy));
         }
 
         List<ClienteDto.ClienteVentaDto> ventasDe(Long clienteId) {
@@ -431,6 +452,7 @@ public class ClienteService {
                         List<VentaLote> lotes = lotesPorVenta.getOrDefault(v.getId(), List.of());
                         BigDecimal precio = lotes.stream().map(VentaLote::getPrecio).reduce(BigDecimal.ZERO, BigDecimal::add);
                         BigDecimal abonado = abonadoPorVenta.getOrDefault(v.getId(), BigDecimal.ZERO);
+                        CalendarioPagos.EstadoDeCuenta cuenta = cuentaDe(v, precio, abonado);
                         return new ClienteDto.ClienteVentaDto(
                                 v.getId(),
                                 v.getNumero(),
@@ -444,7 +466,13 @@ public class ClienteService {
                                 abonado,
                                 precio.subtract(abonado).max(BigDecimal.ZERO),
                                 copropiedades.contains(clienteId + ":" + v.getId()),
-                                v.getNumeroContrato());
+                                v.getNumeroContrato(),
+                                cuenta.atrasoMonto(),
+                                cuenta.pagosAtrasados(),
+                                cuenta.mensualidadesAtrasadas(),
+                                cuenta.atrasadoDesde(),
+                                cuenta.proximaFecha(),
+                                cuenta.proximoMonto());
                     })
                     .toList();
         }
@@ -462,7 +490,10 @@ public class ClienteService {
                     c.datosIncompletos(),
                     ventas.size(),
                     new ArrayList<>(new LinkedHashSet<>(ventas.stream().flatMap(v -> v.desarrollos().stream()).toList())),
-                    ventas.stream().map(ClienteDto.ClienteVentaDto::saldo).reduce(BigDecimal.ZERO, BigDecimal::add));
+                    ventas.stream().map(ClienteDto.ClienteVentaDto::saldo).reduce(BigDecimal.ZERO, BigDecimal::add),
+                    ventas.stream().map(ClienteDto.ClienteVentaDto::atrasoMonto).reduce(BigDecimal.ZERO, BigDecimal::add),
+                    ventas.stream().mapToInt(ClienteDto.ClienteVentaDto::pagosAtrasados).sum(),
+                    ventas.stream().mapToInt(ClienteDto.ClienteVentaDto::mensualidadesAtrasadas).sum());
         }
     }
 

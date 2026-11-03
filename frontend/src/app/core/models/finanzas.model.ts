@@ -56,8 +56,10 @@ export interface Comision {
   mensualidad: number | null;
   /** Lo que el cliente lleva abonado en total. */
   abonado: number;
-  /** Mensualidades vencidas que el cliente aún no cubre (0 si va al corriente) y a cuánto equivalen. */
+  /** Pagos vencidos que el cliente aún no cubre (0 si va al corriente), cuántos de ellos son mensualidades y a
+   * cuánto equivalen (ver backend service/CalendarioPagos). */
   mensualidadesAtrasadas: number;
+  pagosAtrasados: number;
   montoAtrasadoCliente: number;
   /** Cómo va el cliente este mes; null si este mes no le toca pagar nada. */
   estadoPagoMes: EstadoPagoCliente | null;

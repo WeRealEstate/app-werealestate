@@ -301,6 +301,7 @@ export class VentaFormComponent {
           id: c.id, numeros: c.numeros ?? [], nombreCompleto: c.nombreCompleto, telefono: c.telefono, correo: c.correo, activo: c.activo,
           datosIncompletos: c.datosIncompletos, compras: c.compras,
           desarrollos: [...new Set(c.ventas.flatMap((v) => v.desarrollos))], saldoPendiente: c.saldoPendiente,
+          atrasoMonto: c.atrasoMonto, pagosAtrasados: c.pagosAtrasados, mensualidadesAtrasadas: c.mensualidadesAtrasadas,
         }),
       ).catch(() => undefined);
     }

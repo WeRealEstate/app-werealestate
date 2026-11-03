@@ -3,7 +3,9 @@ import { CopropietariosEditorComponent, hayCopropietariosRepetidos, idsCopropiet
 import { ClienteSelectorComponent } from '../../../../shared/cliente-selector/cliente-selector.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
-import { LucidePencil, LucideTrash2 } from '@lucide/angular';
+import { LucideCircleAlert, LucidePencil, LucideTrash2 } from '@lucide/angular';
+import { Amortizacion, cuentaAtraso, fechaCorta } from '../../../../core/models/amortizacion.model';
+import { TablaAmortizacionComponent } from '../../../../shared/tabla-amortizacion/tabla-amortizacion.component';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Location } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -30,7 +32,7 @@ const SEGUNDOS_ESPERA_ELIMINAR = 10;
 @Component({
   selector: 'app-venta-detalle',
   standalone: true,
-  imports: [MonedaInputDirective, WeLoaderComponent, ReciboFormComponent, RecibosVentaComponent, ContratoVentaComponent, ReactiveFormsModule, RouterLink, ClienteSelectorComponent, CopropietariosEditorComponent, NumeroVentaComponent, LucidePencil, LucideTrash2],
+  imports: [MonedaInputDirective, WeLoaderComponent, ReciboFormComponent, RecibosVentaComponent, ContratoVentaComponent, TablaAmortizacionComponent, ReactiveFormsModule, RouterLink, ClienteSelectorComponent, CopropietariosEditorComponent, NumeroVentaComponent, LucideCircleAlert, LucidePencil, LucideTrash2],
   templateUrl: './venta-detalle.component.html',
 })
 export class VentaDetalleComponent implements OnInit, OnDestroy {
@@ -49,6 +51,12 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
   readonly asesoresExternos = signal<AsesorExterno[]>([]);
   readonly pagos = signal<PagoVenta[]>([]);
   readonly historialRecibos = signal<ReciboHistorial[]>([]);
+  /** Tabla de amortización con el estado de cuenta a hoy (null si no se pudo calcular: la venta se ve igual). */
+  readonly amortizacion = signal<Amortizacion | null>(null);
+  /** Se queda como la dejó la persona aunque la venta se recargue (p. ej. al registrar un abono). */
+  readonly amortizacionAbierta = signal(true);
+  readonly cuentaAtraso = cuentaAtraso;
+  readonly fechaCorta = fechaCorta;
   readonly isLoading = signal(true);
   readonly errorMessage = signal<string | null>(null);
 
@@ -175,13 +183,15 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
           ? await this.ventasService.obtenerPorNumero(this.numeroEnUrl)
           : await this.ventasService.obtener(this.ventaId);
       this.ventaId = venta.id;
-      const [pagos, historial] = await Promise.all([
+      const [pagos, historial, amortizacion] = await Promise.all([
         this.ventasService.listarPagos(venta.id),
         this.ventasService.historialRecibos(venta.id),
+        this.ventasService.amortizacion(venta.id).catch(() => null),
       ]);
       this.venta.set(venta);
       this.pagos.set(pagos);
       this.historialRecibos.set(historial);
+      this.amortizacion.set(amortizacion);
       this.sincronizarDireccion(venta.numero);
     } catch {
       this.errorMessage.set('No se pudo cargar la venta.');
@@ -227,7 +237,7 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
     const v = this.venta();
     if (!v) return;
     this.clienteEdicion.set(
-      v.clienteId === null ? null : { id: v.clienteId, numeros: [], nombreCompleto: v.cliente, telefono: null, correo: null, activo: true, datosIncompletos: false, compras: 0, desarrollos: [], saldoPendiente: 0 },
+      v.clienteId === null ? null : { id: v.clienteId, numeros: [], nombreCompleto: v.cliente, telefono: null, correo: null, activo: true, datosIncompletos: false, compras: 0, desarrollos: [], saldoPendiente: 0, atrasoMonto: 0, pagosAtrasados: 0, mensualidadesAtrasadas: 0 },
     );
     this.edicionForm.reset({
       asesor: asesorSeleccionDe(v.asesor),
@@ -242,7 +252,7 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
       notas: v.notas ?? '',
     });
     this.copropietariosEdicion.set(
-      v.copropietarios.map((c) => ({ id: c.id, numeros: [], nombreCompleto: c.nombreCompleto, telefono: null, correo: null, activo: true, datosIncompletos: false, compras: 0, desarrollos: [], saldoPendiente: 0 })),
+      v.copropietarios.map((c) => ({ id: c.id, numeros: [], nombreCompleto: c.nombreCompleto, telefono: null, correo: null, activo: true, datosIncompletos: false, compras: 0, desarrollos: [], saldoPendiente: 0, atrasoMonto: 0, pagosAtrasados: 0, mensualidadesAtrasadas: 0 })),
     );
     this.edicionPrimeraMensualidadMesVenta.set(v.primeraMensualidadMesVenta);
     this.errorEdicion.set(null);

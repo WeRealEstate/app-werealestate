@@ -55,6 +55,12 @@ public record ClienteDto(
         BigDecimal totalComprado,
         BigDecimal totalAbonado,
         BigDecimal saldoPendiente,
+        // Pagos atrasados de todas sus compras (también donde es copropietario): monto, cuántos pagos, cuántos de
+        // ellos mensualidades y la fecha del más antiguo (ver service/CalendarioPagos).
+        BigDecimal atrasoMonto,
+        int pagosAtrasados,
+        int mensualidadesAtrasadas,
+        LocalDate atrasadoDesde,
         List<ClienteVentaDto> ventas) {
 
     public record ClienteVentaDto(
@@ -69,7 +75,15 @@ public record ClienteDto(
             // true si es copropietario de esa venta (no el cliente principal).
             boolean copropietario,
             // Número de contrato de esa venta (null = sin número).
-            String numeroContrato) {
+            String numeroContrato,
+            // Cómo va con sus pagos (ver service/CalendarioPagos): lo atrasado (monto, pagos, mensualidades y desde
+            // cuándo) y el siguiente pago que aún no vence (null si ya no hay).
+            BigDecimal atrasoMonto,
+            int pagosAtrasados,
+            int mensualidadesAtrasadas,
+            LocalDate atrasadoDesde,
+            LocalDate proximaFecha,
+            BigDecimal proximoMonto) {
     }
 
     public static ClienteDto from(Cliente c, List<ClienteVentaDto> ventas, List<NumeroClienteDto> numeros) {
@@ -87,6 +101,12 @@ public record ClienteDto(
         }
         BigDecimal total = ventas.stream().map(ClienteVentaDto::precio).reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal abonado = ventas.stream().map(ClienteVentaDto::abonado).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal atraso = ventas.stream().map(ClienteVentaDto::atrasoMonto).reduce(BigDecimal.ZERO, BigDecimal::add);
+        LocalDate atrasadoDesde = ventas.stream()
+                .map(ClienteVentaDto::atrasadoDesde)
+                .filter(java.util.Objects::nonNull)
+                .min(LocalDate::compareTo)
+                .orElse(null);
         return new ClienteDto(
                 c.getId(),
                 c.getNumero(),
@@ -129,6 +149,10 @@ public record ClienteDto(
                 total,
                 abonado,
                 total.subtract(abonado).max(BigDecimal.ZERO),
+                atraso,
+                ventas.stream().mapToInt(ClienteVentaDto::pagosAtrasados).sum(),
+                ventas.stream().mapToInt(ClienteVentaDto::mensualidadesAtrasadas).sum(),
+                atrasadoDesde,
                 ventas);
     }
 }
