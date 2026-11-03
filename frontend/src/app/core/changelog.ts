@@ -15,6 +15,17 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.7.2', fecha: '2026-11-03', cambios: [
+    "Cotizador (panel y público): se quitó la flecha doble del menú 'Precio por m²'. El campo 'Superficie personalizada' sigue a la vista, pero se ve desactivado y no se puede editar hasta que eliges 'Personalizada' (o la tarifa por hectárea).",
+    "Cotizador: el resumen ya no dice 'Mensualidad estimada $0.00 por 0 meses'. Sin forma de pago elegida muestra 'Elige una forma de pago para ver la mensualidad', y con Contado muestra 'Pago de contado' con el total en un solo pago.",
+    "Cotizador: los avisos como 'Este dispositivo no permite compartir el PDF…' salen con el aviso amarillo de la app en lugar de la ventana del navegador.",
+    "Cotizador público: la barra de arriba, el resumen del Score y el pie quedan alineados con el formulario.",
+    "Fechas en español en toda la app: los meses ya no salen en inglés ('28 oct 2026' en lugar de '28 Oct 2026'). El detalle de la venta y la ficha del lote muestran la fecha como 12/09/2026 en lugar de 2026-09-12.",
+    "Montos: en Finanzas → Ingresos las diferencias negativas salen '-$27,750.00' (antes '$-27,750.00'). El precio de los lotes (Lotes, ficha del lote en el Plano y en el plano público) y el presupuesto del lead llevan signo de pesos: '$160,000' en lugar de '160,000 MXN'.",
+    "Leads (admin): el título dice de quién son los leads que estás viendo ('Mis leads', 'Leads de Mariana López' o 'Leads de todos los asesores'). Si la lista sale vacía por el filtro de asesor, aparece el botón 'Ver los de todos los asesores'.",
+    "Historial de movimientos de lotes: un apartado hecho en el panel muestra quién lo hizo y, abajo, para qué asesor (por ejemplo 'Administrador We' y 'para Sofía Ramírez'). Antes aparecía como si el asesor lo hubiera hecho desde la página pública. Lo hecho desde las páginas públicas sigue diciendo '(vía disponibilidad pública)'.",
+    "Registrar abono: '+ Agregar otro concepto al mismo folio' ya no queda pegado al botón 'Registrar abono'.",
+  ] },
   { version: '11.7.1', fecha: '2026-11-02', cambios: [
     "Finanzas → Comisiones → Desglose: 'Cómo se reparte' ahora es una barra de colores que muestra de un vistazo qué parte del total es lo entregado, lo por entregar, lo detenido por contrato sin firmar y lo que falta por generar, con lo ganado marcado debajo. Abajo, cada parte con su color, monto, % del total y una línea de explicación; en 'Por entregar' se ve cuánto está retrasado, cuánto toca el sábado y cuánto más adelante.",
   ] },

@@ -90,6 +90,17 @@ export class LeadsListComponent {
   readonly asesoresDisponibles = signal<UsuarioResumen[]>([]);
   readonly totalFrios = signal(0);
 
+  /** El admin arranca viendo solo los suyos (ver el constructor): el título sigue al filtro de asesor para
+   * no decir "de todos los asesores" mientras la lista muestra solo una bolsa. */
+  readonly titulo = computed(() => {
+    if (this.verArchivados()) return 'Leads archivados';
+    const asesorId = this.asesorId();
+    if (!this.esAdmin() || asesorId === this.auth.currentUser()?.id) return 'Mis leads';
+    if (asesorId === null) return 'Leads de todos los asesores';
+    const asesor = this.asesoresDisponibles().find((a) => a.id === asesorId);
+    return asesor ? `Leads de ${asesor.nombre}` : 'Leads';
+  });
+
   private pagina = 0;
   private debounceHandle: ReturnType<typeof setTimeout> | undefined;
 
@@ -165,6 +176,11 @@ export class LeadsListComponent {
   onAsesorChange(valor: string): void {
     this.asesorId.set(valor === '' ? null : +valor);
     this.recargarDesdeInicio();
+  }
+
+  /** Desde la lista vacía de un solo asesor: quita ese filtro y deja los demás como están. */
+  verTodosLosAsesores(): void {
+    this.onAsesorChange('');
   }
 
   onEtiquetaChange(valor: string): void {

@@ -115,15 +115,21 @@ export class LotesHistorialComponent {
     });
   }
 
-  /** Quién hizo el movimiento: el usuario autenticado, el nombre de asesor capturado desde
-   * /cotizador-publico/lotes, o nadie (reversión automática por vencimiento). */
+  /** Quién hizo el movimiento: el usuario autenticado, el nombre de asesor capturado en una página
+   * pública (viaPublico: ahí el usuario es el de sistema), o nadie (reversión automática por vencimiento). */
   autorMovimiento(movimiento: MovimientoLote): string {
     if (movimiento.usuario) {
-      return movimiento.nombreAsesor
+      return movimiento.viaPublico && movimiento.nombreAsesor
         ? `${movimiento.nombreAsesor} (vía disponibilidad pública)`
         : movimiento.usuario.nombre;
     }
     return 'Sistema (reversión automática)';
+  }
+
+  /** En un cambio hecho en el panel, nombreAsesor es el asesor al que se le apartó el lote (no quien lo
+   * hizo): se muestra aparte, debajo del autor. En uno público ya va dentro de autorMovimiento. */
+  asesorDelMovimiento(movimiento: MovimientoLote): string | null {
+    return movimiento.usuario && !movimiento.viaPublico ? movimiento.nombreAsesor : null;
   }
 
   verDetalle(movimiento: MovimientoLote): void {

@@ -196,7 +196,11 @@ export interface MovimientoLote {
   estadoAnterior: EstadoLote;
   estadoNuevo: EstadoLote;
   usuario: UsuarioResumen | null;
+  /** Con viaPublico, el nombre que escribió el asesor en la página pública; si no, el asesor al que se
+   * le apartó el lote desde el panel. */
   nombreAsesor: string | null;
+  /** true si el cambio se hizo sin sesión, desde el plano público o la disponibilidad pública. */
+  viaPublico: boolean;
   nombreCliente: string | null;
   /** Solo viene con valor en el movimiento que apartó el lote con dinero. */
   monto: number | null;

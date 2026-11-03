@@ -25,7 +25,7 @@
           </div>
           <div>
             <p class="text-xs text-ink-muted">Fecha de venta</p>
-            <p class="mt-0.5 text-sm font-medium text-ink">{{ v.fechaVenta }}</p>
+            <p class="mt-0.5 text-sm font-medium text-ink">{{ v.fechaVenta | date: 'dd/MM/yyyy' }}</p>
           </div>
           <div>
             <p class="text-xs text-ink-muted">Forma de pago</p>
@@ -91,7 +91,7 @@
             <div class="space-y-2 max-h-40 overflow-y-auto pr-1">
               @for (p of pagosInfoLote(); track p.id) {
                 <div class="flex items-center justify-between gap-2 rounded-lg bg-surface-2 px-3.5 py-2 text-sm" [class.opacity-60]="p.anulado" [class.line-through]="p.anulado">
-                  <span class="text-ink-muted">{{ p.fecha }}</span>
+                  <span class="text-ink-muted">{{ p.fecha | date: 'dd/MM/yyyy' }}</span>
                   <span class="text-ink-muted truncate">{{ p.folio ? p.folio + ' · ' : '' }}{{ p.tipo ? tipoLabels[p.tipo] : 'Por completar' }}{{ p.anulado ? ' · anulado' : '' }}</span>
                   <span class="font-medium text-ink">${{ money(p.monto) }}</span>
                 </div>

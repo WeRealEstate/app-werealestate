@@ -2,7 +2,7 @@
   <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
     <div>
       <h1 class="font-heading text-2xl font-semibold text-ink">
-        {{ verArchivados() ? 'Leads archivados' : (esAdmin() ? 'Leads de todos los asesores' : 'Mis leads') }}
+        {{ titulo() }}
       </h1>
       <p class="mt-1 text-sm text-ink-muted">
         {{ verArchivados() ? 'Se conservan como métrica; no aparecen en la lista activa.' : 'Seguimiento de leads de Samai y Nanuu.' }}
@@ -161,6 +161,17 @@
           Todavía no hay leads registrados.
         }
       </p>
+      @if (esAdmin() && asesorId() !== null) {
+        <button
+          type="button"
+          (click)="verTodosLosAsesores()"
+          class="mt-4 inline-flex min-h-[44px] items-center justify-center rounded-lg px-4 text-sm font-semibold text-we-primary
+                 hover:bg-we-primary/10 transition-colors duration-150
+                 focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50"
+        >
+          Ver los de todos los asesores
+        </button>
+      }
     </div>
   } @else {
     <div class="mt-6 overflow-x-auto rounded-xl border border-border">

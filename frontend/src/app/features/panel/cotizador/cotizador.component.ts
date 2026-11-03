@@ -1,5 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { LucideCalendar, LucideCheck, LucideChevronDown, LucideDollarSign, LucideHistory } from '@lucide/angular';
+import { LucideCalendar, LucideCheck, LucideDollarSign, LucideHistory } from '@lucide/angular';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -9,6 +9,7 @@ import { CotizacionesService } from '../../../core/services/cotizaciones.service
 import { LeadsService } from '../../../core/services/leads.service';
 import { LotesService } from '../../../core/services/lotes.service';
 import { PromocionesService } from '../../../core/services/promociones.service';
+import { ToastService } from '../../../core/services/toast.service';
 import { Desarrollo } from '../../../core/models/lead.model';
 import { Lote } from '../../../core/models/lote.model';
 import { Promocion, TipoPrecioPromocion } from '../../../core/models/promocion.model';
@@ -81,7 +82,6 @@ function compararNatural(a: string, b: string): number {
     LucideHistory,
     LucideDollarSign,
     LucideCalendar,
-    LucideChevronDown,
     LucideCheck,
     AportacionesSelectorComponent,
   ],
@@ -94,6 +94,7 @@ export class CotizadorComponent implements OnInit {
   private readonly leadsService = inject(LeadsService);
   private readonly lotesService = inject(LotesService);
   private readonly promocionesService = inject(PromocionesService);
+  private readonly toast = inject(ToastService);
   private readonly route = inject(ActivatedRoute);
 
   readonly desarrollos = signal<Desarrollo[]>([]);
@@ -920,7 +921,7 @@ export class CotizadorComponent implements OnInit {
     this.showQuoteErrors = true;
 
     if (!this.isQuoteValid) {
-      alert('Completa los datos de la cotización antes de generar el PDF.');
+      this.toast.aviso('Completa los datos de la cotización antes de generar el PDF.');
       return;
     }
 
@@ -1276,7 +1277,7 @@ export class CotizadorComponent implements OnInit {
     this.showQuoteErrors = true;
 
     if (!this.isQuoteValid) {
-      alert('Completa los datos de la cotización antes de generar el PDF.');
+      this.toast.aviso('Completa los datos de la cotización antes de generar el PDF.');
       return;
     }
 
@@ -1287,7 +1288,7 @@ export class CotizadorComponent implements OnInit {
 
       // Verificamos si el navegador permite compartir archivos
       if (!navigator.share || !navigator.canShare || !navigator.canShare({ files: [pdfFile] })) {
-        alert('Este dispositivo no permite compartir el PDF directamente. Puedes descargarlo y enviarlo manualmente por WhatsApp.');
+        this.toast.aviso('Este dispositivo no permite compartir el PDF directamente. Puedes descargarlo y enviarlo manualmente por WhatsApp.');
         return;
       }
 

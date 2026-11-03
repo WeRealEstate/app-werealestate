@@ -1,6 +1,8 @@
 @if (top().length > 0) {
-  <section class="mx-auto max-w-6xl px-4 pt-6 sm:px-6 lg:px-10" aria-labelledby="score-resumen-titulo" data-testid="score-resumen">
-    <div class="rounded-xl border border-border bg-surface p-4 shadow-sm sm:p-5">
+  <!-- El margen va en la sección y el ancho máximo en la tarjeta, igual que <main> del layout: así la tarjeta
+       queda alineada con el formulario de abajo. -->
+  <section class="px-4 pt-6 sm:px-6 lg:px-10" aria-labelledby="score-resumen-titulo" data-testid="score-resumen">
+    <div class="mx-auto max-w-6xl rounded-xl border border-border bg-surface p-4 shadow-sm sm:p-5">
       <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
         <h2 id="score-resumen-titulo" class="flex items-center gap-2 font-heading text-base font-semibold text-ink">
           <svg lucideTrophy [size]="18" class="text-amber-500" aria-hidden="true"></svg>

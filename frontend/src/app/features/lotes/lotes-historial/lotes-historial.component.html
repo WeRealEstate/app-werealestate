@@ -86,7 +86,12 @@
                   </span>
                 </div>
               </td>
-              <td class="px-4 py-3 text-ink-muted">{{ autorMovimiento(m) }}</td>
+              <td class="px-4 py-3 text-ink-muted">
+                {{ autorMovimiento(m) }}
+                @if (asesorDelMovimiento(m); as asesor) {
+                  <span class="block text-xs">para {{ asesor }}</span>
+                }
+              </td>
               <td class="px-4 py-3 text-ink-muted">{{ m.nombreCliente || '—' }}</td>
               <td class="px-4 py-3 text-ink-muted max-w-[220px] truncate" [title]="m.nota ?? ''">{{ m.nota || '—' }}</td>
               <td class="px-4 py-3 text-ink-muted whitespace-nowrap">{{ m.fecha | date: 'd MMM y, HH:mm' }}</td>
@@ -166,7 +171,12 @@
           </div>
           <div>
             <dt class="text-xs font-medium uppercase tracking-wide text-ink-muted">Quién</dt>
-            <dd class="mt-1 text-ink">{{ autorMovimiento(d) }}</dd>
+            <dd class="mt-1 text-ink">
+              {{ autorMovimiento(d) }}
+              @if (asesorDelMovimiento(d); as asesor) {
+                <span class="block text-sm text-ink-muted">para {{ asesor }}</span>
+              }
+            </dd>
           </div>
           @if (d.nombreCliente) {
             <div>

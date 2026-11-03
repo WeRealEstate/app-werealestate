@@ -78,7 +78,7 @@
           <div class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200" data-testid="aviso-fecha-provisional">
             <p class="font-semibold">Fecha de venta provisional</p>
             <p class="mt-0.5">
-              Esta venta se registró desde We Forms: su fecha ({{ v.fechaVenta }}) es la del día en que se envió. Corrígela en «Modificar venta» cuando se firme, o márcala como definitiva ahí mismo.
+              Esta venta se registró desde We Forms: su fecha ({{ fecha(v.fechaVenta) }}) es la del día en que se envió. Corrígela en «Modificar venta» cuando se firme, o márcala como definitiva ahí mismo.
             </p>
           </div>
         }
@@ -150,7 +150,7 @@
         </div>
         <div>
           <p class="text-xs text-ink-muted">Fecha de venta</p>
-          <p class="mt-1 text-sm font-medium text-ink">{{ v.fechaVenta }}</p>
+          <p class="mt-1 text-sm font-medium text-ink">{{ fecha(v.fechaVenta) }}</p>
         </div>
         <div>
           <p class="text-xs text-ink-muted">Forma de pago</p>

@@ -1,13 +1,14 @@
 <div class="flex min-h-dvh flex-col bg-canvas pb-[env(safe-area-inset-bottom)]">
   <!-- Barra fija estilo Apple: transparente sobre la foto de la portada y translúcida (vidrio esmerilado)
-       en cuanto el contenido pasa por debajo, para que se lea sobre cualquier fondo. -->
+       en cuanto el contenido pasa por debajo, para que se lea sobre cualquier fondo. El margen va en la barra y
+       el ancho máximo adentro, igual que en <main>: así el logo y los enlaces quedan alineados con el formulario. -->
   <header
     id="barra-publica"
-    class="fixed inset-x-0 top-0 z-40 border-b pt-[env(safe-area-inset-top)] transition-[background-color,border-color] duration-300"
+    class="fixed inset-x-0 top-0 z-40 border-b px-4 pt-[env(safe-area-inset-top)] transition-[background-color,border-color] duration-300 sm:px-6 lg:px-10"
     [class.border-transparent]="sobreHero()"
     [class.barra-vidrio]="!sobreHero()"
   >
-    <div class="mx-auto flex h-13 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-10">
+    <div class="mx-auto flex h-13 max-w-6xl items-center justify-between gap-4">
       <a
         routerLink="/cotizador-publico"
         class="flex items-center gap-3 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50"
@@ -96,9 +97,9 @@
     </div>
   </main>
 
-  <footer class="border-t border-border bg-surface-2">
+  <footer class="border-t border-border bg-surface-2 px-4 py-6 sm:px-6 lg:px-10">
     <div
-      class="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-6 text-center text-xs text-ink-muted sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-10"
+      class="mx-auto flex max-w-6xl flex-col gap-1 text-center text-xs text-ink-muted sm:flex-row sm:items-center sm:justify-between"
     >
       <p>© {{ currentYear }} We Real Estate. Todos los derechos reservados.</p>
       <p>Cotizaciones sujetas a disponibilidad y condiciones vigentes.</p>

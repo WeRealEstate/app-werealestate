@@ -149,7 +149,7 @@
               <td data-label="Lote" class="px-4 py-3 font-medium text-ink">{{ lote.numeroLote }}</td>
               <td data-label="Desarrollo" class="px-4 py-3 text-ink-muted">{{ lote.desarrollo.nombre }}</td>
               <td data-label="Superficie" class="px-4 py-3 text-ink-muted">{{ lote.superficie }} m²</td>
-              <td data-label="Precio estimado" class="px-4 py-3 text-ink-muted">{{ precioEstimado(lote) | number:'1.0-0' }} MXN</td>
+              <td data-label="Precio estimado" class="px-4 py-3 text-ink-muted">${{ precioEstimado(lote) | number:'1.0-0' }}</td>
               <td data-label="Estado" class="px-4 py-3">
                 <div class="flex items-center gap-1.5">
                   @if (estadosDisponiblesPara(lote).length > 1) {

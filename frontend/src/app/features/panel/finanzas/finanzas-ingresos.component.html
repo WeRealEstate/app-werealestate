@@ -109,7 +109,7 @@
               <td class="px-3 py-3 text-right text-ink-muted">{{ m.futuro ? '—' : (m.recibido < 0 ? '-' : '') + '$' + money(m.recibido < 0 ? -m.recibido : m.recibido) }}</td>
               <td class="px-3 py-3 text-right text-ink-muted">{{ m.devolucionesComision > 0 ? '$' + money(m.devolucionesComision) : '—' }}</td>
               <td class="px-3 py-3 text-right" [class.text-red-600]="!m.futuro && m.diferencia < 0" [class.dark:text-red-400]="!m.futuro && m.diferencia < 0" [class.text-green-600]="!m.futuro && m.diferencia > 0" [class.dark:text-green-400]="!m.futuro && m.diferencia > 0">
-                {{ m.futuro ? '—' : (m.diferencia > 0 ? '+' : '') + '$' + money(m.diferencia) }}
+                {{ m.futuro ? '—' : diferencia(m.diferencia) }}
               </td>
               <td class="px-3 py-3 text-right text-ink-muted">{{ m.futuro ? '—' : '$' + money(m.atrasoAcumulado) }}</td>
               <td class="px-3 py-3 text-right text-ink-muted">{{ m.ventas }}</td>

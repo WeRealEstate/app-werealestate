@@ -106,6 +106,14 @@ export class FinanzasIngresosComponent {
   money(valor: number): string {
     return valor.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
+
+  /** Diferencia con el signo antes del $ ("-$27,750.00", "+$1,000.00"), no "$-27,750.00". Se compara en
+   * centavos para que una diferencia que redondea a cero no salga como "-$0.00". */
+  diferencia(valor: number): string {
+    const centavos = Math.round(valor * 100);
+    const signo = centavos > 0 ? '+' : centavos < 0 ? '-' : '';
+    return `${signo}$${this.money(Math.abs(centavos) / 100)}`;
+  }
 }
 
 function mesActual(): string {

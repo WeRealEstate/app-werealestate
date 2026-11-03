@@ -213,6 +213,12 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
     return valor.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
+  /** "2026-09-12" → "12/09/2026", sin pasar por Date (que la desfasa un día por la zona horaria). */
+  fecha(iso: string): string {
+    const [anio, mes, dia] = iso.slice(0, 10).split('-');
+    return `${dia}/${mes}/${anio}`;
+  }
+
   // --- Modificar venta (temporal) ---
   readonly clienteEdicion = signal<ClienteLista | null>(null);
   readonly copropietariosEdicion = signal<(ClienteLista | null)[]>([]);
