@@ -122,7 +122,6 @@ export interface VentaCreateRequest {
   diaPago: number;
   primeraMensualidadMesVenta: boolean;
   notas: string | null;
-  marcarLoteVendido: boolean;
   /** Solo con el tipo de pago "Con aportaciones"; el backend las valida (ver VentaService). */
   aportaciones?: VentaAportacion[];
   /** Contrato firmado (opcional); con true, la fecha de firma es obligatoria. */
@@ -141,7 +140,7 @@ export interface VentaCreateRequest {
   coasesorComisionPorcentaje?: number | null;
 }
 
-/** Igual que VentaCreateRequest pero sin lotes ni marcarLoteVendido: no toca qué lotes incluye la
+/** Igual que VentaCreateRequest pero sin lotes: no toca qué lotes incluye la
  * venta, solo sus datos capturados. Temporal: el botón "Modificar venta" que usa esto se va a
  * quitar más adelante. */
 export interface VentaUpdateRequest {

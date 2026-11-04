@@ -1,6 +1,6 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, ElementRef, HostListener, OnDestroy, ViewChild, computed, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, NgModel } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Desarrollo } from '../../../core/models/lead.model';
@@ -9,6 +9,7 @@ import {
   ESTADO_LOTE_COLOR_RGB,
   ESTADO_LOTE_LABELS,
   ESTADO_LOTE_POLIGONO_CLASSES,
+  ESTADOS_DE_VENTA,
   ESTADOS_LOTE_ADMIN_O_LIDER,
   ESTADOS_LOTE_ORDEN,
   ESTADOS_LOTE_ORDEN_ADMIN,
@@ -18,8 +19,10 @@ import {
   PlanoDesarrollo,
   PuntoMapa,
   MAX_LOTES_APARTADO_MULTIPLE,
+  estadosParaAdmin,
 } from '../../../core/models/lote.model';
 import { AuthService } from '../../../core/services/auth.service';
+import { ConfirmService } from '../../../core/services/confirm.service';
 import { LeadsService } from '../../../core/services/leads.service';
 import { LotesService } from '../../../core/services/lotes.service';
 import { PdfService } from '../../../core/services/pdf-cotizacion.service';
@@ -51,17 +54,8 @@ const ZOOM_PASO_RUEDA = 1.15;
 const UMBRAL_ARRASTRE_VISTA_PX = 6;
 
 /** Igual que en Lotes: un asesor solo puede moverse entre Disponible/Apartado, y solo si el lote
- * no está ya en un estado exclusivo de admin o de admin/líder. */
+ * no está ya en un estado exclusivo de admin o de admin/líder. Admin y administración: ver estadosParaAdmin. */
 const ESTADOS_ASESOR: EstadoLote[] = ['DISPONIBLE', 'APARTADO'];
-const ESTADOS_TODOS: EstadoLote[] = [
-  'DISPONIBLE',
-  'APARTADO',
-  'APARTADO_A_PLAZO',
-  'APARTADO_CON_DINERO',
-  'EN_PROCESO_DE_FIRMA',
-  'RESERVADO_WE',
-  'VENDIDO',
-];
 
 /** Cuánto se espera a que el navegador conceda la pantalla completa real antes de usar el respaldo. */
 const PLAZO_PANTALLA_COMPLETA_MS = 800;
@@ -89,6 +83,7 @@ export class PlanoComponent implements OnDestroy {
   private readonly leadsService = inject(LeadsService);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
+  private readonly confirmService = inject(ConfirmService);
   private readonly router = inject(Router);
   private readonly pdfService = inject(PdfService);
 
@@ -249,6 +244,7 @@ export class PlanoComponent implements OnDestroy {
   }
 
   readonly estadoLabels = ESTADO_LOTE_LABELS;
+  readonly estadosDeVenta = ESTADOS_DE_VENTA;
   readonly badgeClases = ESTADO_LOTE_BADGE_CLASSES;
   readonly poligonoClases = ESTADO_LOTE_POLIGONO_CLASSES;
   /** Leyenda y PDF: los 6 estados de siempre; admin y administración ven además "Reservado por We". */
@@ -268,7 +264,7 @@ export class PlanoComponent implements OnDestroy {
   /** Cambio de estado que un admin o líder de área está por confirmar (ver
    * LoteCambioEstadoModalComponent); null cuando el modal está cerrado. Un asesor nunca pasa por
    * aquí. */
-  readonly cambioEstadoPendiente = signal<{ lote: Lote; nuevoEstado: EstadoLote } | null>(null);
+  readonly cambioEstadoPendiente = signal<{ lote: Lote; nuevoEstado: EstadoLote; selector?: NgModel } | null>(null);
 
   readonly generandoPdf = signal(false);
 
@@ -653,7 +649,7 @@ export class PlanoComponent implements OnDestroy {
    * asesor solo se mueve entre Disponible/Apartado, y ni siquiera puede sacar un lote ya
    * comprometido (apartado a plazo, con dinero, en firma o vendido) de ese estado. */
   estadosDisponiblesPara(lote: Lote): EstadoLote[] {
-    if (this.esAdmin() || this.esLider()) return ESTADOS_TODOS;
+    if (this.esAdmin() || this.esLider()) return estadosParaAdmin(lote);
     const bloqueado = ESTADOS_LOTE_SOLO_ADMIN.has(lote.estado) || ESTADOS_LOTE_ADMIN_O_LIDER.has(lote.estado);
     return bloqueado ? [lote.estado] : ESTADOS_ASESOR;
   }
@@ -661,12 +657,17 @@ export class PlanoComponent implements OnDestroy {
   /** Un asesor solo se mueve entre Disponible/Apartado y el cambio se aplica directo; un admin o
    * líder de área puede mover un lote a cualquier estado, así que se le pide justificar el cambio
    * con una nota (y, solo para "Apartado a plazo", también la fecha de vencimiento) en un modal
-   * antes de llamar a la API. */
-  async cambiarEstado(lote: Lote, nuevoEstado: string): Promise<void> {
+   * antes de llamar a la API; al cancelar, el selector regresa al estado real. Vendido y En proceso de
+   * firma los pone la venta: para un lote sin venta, elegirlos lleva a registrarla. */
+  async cambiarEstado(lote: Lote, nuevoEstado: string, selector?: NgModel): Promise<void> {
     if (nuevoEstado === lote.estado) return;
 
     if (this.esAdmin() || this.esLider()) {
-      this.abrirModalCambioEstado(lote, nuevoEstado as EstadoLote);
+      if (lote.ventaNumero == null && ESTADOS_DE_VENTA.has(nuevoEstado as EstadoLote)) {
+        await this.irARegistrarVenta(lote, selector);
+        return;
+      }
+      this.cambioEstadoPendiente.set({ lote, nuevoEstado: nuevoEstado as EstadoLote, selector });
       return;
     }
 
@@ -678,11 +679,40 @@ export class PlanoComponent implements OnDestroy {
     }
   }
 
-  abrirModalCambioEstado(lote: Lote, nuevoEstado: EstadoLote): void {
-    this.cambioEstadoPendiente.set({ lote, nuevoEstado });
+  /** Vendido y En proceso de firma solo los pone una venta: se confirma y se abre Nueva venta con el desarrollo y el
+   * lote ya elegidos; el lote cambia al guardarla (según el contrato). El aviso vive fuera de esta página, así que
+   * antes se sale de la pantalla completa. */
+  private async irARegistrarVenta(lote: Lote, selector?: NgModel): Promise<void> {
+    if (this.pantallaCompleta()) await this.salirPantallaCompleta();
+    const ir = await this.confirmService.confirm({
+      titulo: 'Registrar la venta',
+      mensaje:
+        'Vendido y En proceso de firma los pone la venta: al registrarla, el lote queda En proceso de firma y, con el ' +
+        `contrato firmado, Vendido. ¿Abrir Nueva venta con el Lote ${lote.numeroLote} de la Manzana ${lote.manzana}?`,
+      textoConfirmar: 'Registrar venta',
+    });
+    if (!ir) {
+      this.regresarSelector(lote, selector);
+      return;
+    }
+    void this.router.navigate(['/panel/ventas/nueva'], {
+      queryParams: { desarrolloId: lote.desarrollo.id, loteId: lote.id },
+    });
+  }
+
+  /** El selector ya muestra la opción elegida; si el cambio no sigue, vuelve al estado real del lote. */
+  private regresarSelector(lote: Lote, selector?: NgModel): void {
+    selector?.control.setValue(lote.estado, { emitViewToModelChange: false });
+  }
+
+  /** La venta del lote (solo admin y administración reciben su número). */
+  verVenta(lote: Lote): void {
+    if (lote.ventaNumero) void this.router.navigate(['/panel/ventas', lote.ventaNumero]);
   }
 
   cancelarCambioEstado(): void {
+    const pendiente = this.cambioEstadoPendiente();
+    if (pendiente) this.regresarSelector(pendiente.lote, pendiente.selector);
     this.cambioEstadoPendiente.set(null);
   }
 

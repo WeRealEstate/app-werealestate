@@ -92,6 +92,20 @@ export const ESTADOS_LOTE_ORDEN_ADMIN: EstadoLote[] = [
   'VENDIDO',
 ];
 
+/** Los estados que pone la venta del lote: En proceso de firma mientras el contrato no esté firmado y Vendido ya
+ * firmado. A mano no se llega a ellos (se registra la venta) ni se sale de ellos (se elimina la venta). */
+export const ESTADOS_DE_VENTA: ReadonlySet<EstadoLote> = new Set(['EN_PROCESO_DE_FIRMA', 'VENDIDO']);
+
+/** A qué estados puede mover un lote admin o administración en Lotes y Plano (backend: LoteService.cambiarEstado).
+ * Sin venta, a cualquiera (elegir Vendido o En proceso de firma lleva a registrar la venta). Con venta, a ninguno si
+ * ya está Vendido o En proceso de firma; si quedó en otro estado (datos de antes de esta regla), solo de vuelta a uno
+ * de esos dos. */
+export function estadosParaAdmin(lote: Lote): EstadoLote[] {
+  if (lote.ventaNumero == null) return ESTADOS_LOTE_ORDEN_ADMIN;
+  if (ESTADOS_DE_VENTA.has(lote.estado)) return [lote.estado];
+  return [lote.estado, 'EN_PROCESO_DE_FIRMA', 'VENDIDO'];
+}
+
 /** Inventario de un desarrollo contado por estado (GET /api/lotes/resumen). porEstado trae los 6 estados. */
 export interface ResumenLotes {
   desarrolloId: number;
@@ -133,6 +147,9 @@ export interface Lote {
    * módulo de Ventas (ver LoteService.buscarPaginado) — para el punto rojo en /panel/lotes que
    * señala cuáles ventas todavía faltan por registrar. Siempre false en cualquier otro listado. */
   sinVentaRegistrada: boolean;
+  /** Número de la venta en la que está el lote (null = en ninguna). Solo llega para admin y administración: con
+   * venta, su estado lo manda la venta (ver {@link estadosParaAdmin}). */
+  ventaNumero: number | null;
 }
 
 /** El plano interactivo de un desarrollo: la imagen subida por un admin y el polígono de cada lote

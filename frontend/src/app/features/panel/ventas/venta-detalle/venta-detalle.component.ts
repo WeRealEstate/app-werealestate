@@ -107,7 +107,6 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
   readonly mostrarEliminar = signal(false);
   readonly segundosEliminar = signal(0);
   readonly passwordEliminar = signal('');
-  readonly liberarLotes = signal(true);
   readonly eliminando = signal(false);
   readonly errorEliminar = signal<string | null>(null);
   readonly cuentaTerminada = computed(() => this.segundosEliminar() <= 0);
@@ -115,7 +114,6 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
 
   abrirEliminar(): void {
     this.passwordEliminar.set('');
-    this.liberarLotes.set(true);
     this.errorEliminar.set(null);
     this.segundosEliminar.set(SEGUNDOS_ESPERA_ELIMINAR);
     this.mostrarEliminar.set(true);
@@ -137,7 +135,7 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
     this.eliminando.set(true);
     this.errorEliminar.set(null);
     try {
-      await this.ventasService.eliminar(this.ventaId, this.passwordEliminar(), this.liberarLotes());
+      await this.ventasService.eliminar(this.ventaId, this.passwordEliminar());
       clearInterval(this.temporizadorEliminar);
       this.mostrarEliminar.set(false);
       this.toast.success('Venta eliminada.');

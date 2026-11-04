@@ -42,13 +42,11 @@ public record VentaCreateRequest(
         @Min(1) @Max(31) Integer diaPago,
         Boolean primeraMensualidadMesVenta,
         @Size(max = 1000) String notas,
-        // Si es true, además de registrar la venta se marca cada lote como VENDIDO (con su
-        // historial normal, ver LoteService.marcarVendido). Ver VentaService.
-        boolean marcarLoteVendido,
         // Esquema "Con aportaciones": varias por año, cada una con su mes y monto. Opcional (null o
         // vacío = sin aportaciones); ver VentaService.validarAportaciones.
         @Valid List<VentaAportacionItemRequest> aportaciones,
-        // Contrato firmado (opcional; null = sin firmar). Con firmado = true, la fecha es obligatoria.
+        // Contrato firmado (opcional; null = sin firmar). Con firmado = true, la fecha es obligatoria. También manda el
+        // estado de los lotes: firmado, Vendido; sin firmar, En proceso de firma (ver LoteService.marcarPorVenta).
         Boolean contratoFirmado,
         LocalDate contratoFechaFirma,
         // Cómo se firmó (obligatorio con firmado = true) y enlace opcional a la carpeta de Drive.
