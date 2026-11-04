@@ -18,9 +18,16 @@ public record ComisionesPorEntregarDto(LocalDate sabado, BigDecimal total, List<
     }
 
     /** Lo que aporta a la comisión un abono del cliente: su fecha, tipo (Enganche, Mensualidad…; "Venta" en una
-     * comisión de una exhibición de la regla anterior), monto (null en esa), la regla con la que cuenta ("Cuenta la
-     * mitad"…), cuánto aporta y el sábado en que se entrega. */
+     * comisión de una exhibición de la regla anterior), monto (null en esa), el porcentaje del abono que se aplica
+     * (100 o 50; null en "Venta"), si solo se aplicó una parte porque con él se completa la comisión (parcial), cuánto
+     * aporta y el sábado en que se paga. */
     public record Abono(
-            LocalDate fecha, String concepto, BigDecimal montoAbono, String regla, BigDecimal aporte, LocalDate entrega) {
+            LocalDate fecha,
+            String concepto,
+            BigDecimal montoAbono,
+            Integer porcentaje,
+            boolean parcial,
+            BigDecimal aporte,
+            LocalDate entrega) {
     }
 }

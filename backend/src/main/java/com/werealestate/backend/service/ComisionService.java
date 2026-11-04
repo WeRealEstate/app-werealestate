@@ -312,25 +312,23 @@ public class ComisionService {
         return new ComisionesPorEntregarDto(sabado, total, items);
     }
 
-    /** De dónde sale una porción de lo ganado: el abono del cliente y la regla con la que cuenta. */
+    /** De dónde sale una porción de la comisión generada: el abono del cliente y el porcentaje que se le aplica. */
     private static ComisionesPorEntregarDto.Abono abonoDe(VentaComision comision, VentaComisionDevengo devengo) {
         PagoVenta pago = devengo.getPagoVenta();
         if (pago == null) {
-            // Regla anterior, una exhibición: la comisión completa se ganó al vender.
+            // Regla anterior, una exhibición: la comisión completa se generó en la fecha de la venta.
             return new ComisionesPorEntregarDto.Abono(
-                    devengo.getFechaOrigen(), "Venta", null, "Comisión completa al vender", devengo.getMonto(),
-                    devengo.getFechaEntrega());
+                    devengo.getFechaOrigen(), "Venta", null, null, false, devengo.getMonto(), devengo.getFechaEntrega());
         }
         boolean completo = comision.isReglaNueva() && pago.getTipo() == TipoAbono.ENGANCHE;
         BigDecimal segunRegla = completo
                 ? pago.getMonto()
                 : pago.getMonto().divide(new BigDecimal("2"), 2, RoundingMode.HALF_UP);
-        String regla = completo ? "Cuenta completo" : "Cuenta la mitad";
         // El último abono puede aportar menos: solo lo que faltaba para completar la comisión.
-        if (devengo.getMonto().compareTo(segunRegla) < 0) regla += " · hasta completar la comisión";
+        boolean parcial = devengo.getMonto().compareTo(segunRegla) < 0;
         return new ComisionesPorEntregarDto.Abono(
-                devengo.getFechaOrigen(), conceptoDe(devengo), pago.getMonto(), regla, devengo.getMonto(),
-                devengo.getFechaEntrega());
+                devengo.getFechaOrigen(), conceptoDe(devengo), pago.getMonto(), completo ? 100 : 50, parcial,
+                devengo.getMonto(), devengo.getFechaEntrega());
     }
 
     private static final String VARIOS_DESARROLLOS = "Varios desarrollos";
@@ -484,7 +482,7 @@ public class ComisionService {
 
         BigDecimal entregado = totales().entregado(comision.getId());
         if (monto.compareTo(entregado) < 0) {
-            throw new ConflictException("La comisión no puede ser menor a lo ya entregado ($" + entregado + ")");
+            throw new ConflictException("La comisión no puede ser menor que lo ya pagado ($" + entregado + ")");
         }
 
         comision.setMontoYPorcentaje(monto, porcentaje, true);
@@ -521,18 +519,18 @@ public class ComisionService {
         VentaComision comision = obtenerEntidad(id);
 
         if (comision.isCancelada()) {
-            throw new ConflictException("Esta comisión está cancelada: reactívala para poder entregarla");
+            throw new ConflictException("Esta comisión está cancelada: reactívala para registrar su pago");
         }
         Totales totales = totales();
         if (totales.bloqueada(id)) {
-            throw new ConflictException("El contrato de esta venta no está firmado: la comisión se acumula, "
-                    + "pero no se puede entregar hasta registrar la firma en la venta");
+            throw new ConflictException("El contrato de esta venta no está firmado: la comisión queda retenida "
+                    + "hasta registrar la firma en la venta");
         }
         BigDecimal yaEntregado = totales.entregado(id);
         BigDecimal porEntregar = totales.devengado(id).subtract(yaEntregado);
         if (request.monto().compareTo(porEntregar) > 0) {
-            throw new ConflictException("Solo hay $" + porEntregar.max(BigDecimal.ZERO)
-                    + " ganados por entregar en esta comisión; el cliente no ha pagado más");
+            throw new ConflictException("El monto máximo a pagar es $" + porEntregar.max(BigDecimal.ZERO)
+                    + ": es la comisión generada pendiente de pago");
         }
 
         LocalDate fecha = request.fecha() != null ? request.fecha() : LocalDate.now();
@@ -670,8 +668,8 @@ public class ComisionService {
 
         BigDecimal entregado = totales().entregado(id);
         if (request.monto().compareTo(entregado) > 0) {
-            throw new ConflictException("Solo hay $" + entregado.max(BigDecimal.ZERO)
-                    + " entregados que se puedan devolver en esta comisión");
+            throw new ConflictException("El monto máximo a devolver es $" + entregado.max(BigDecimal.ZERO)
+                    + " (lo pagado al asesor en esta comisión)");
         }
         LocalDate fecha = request.fecha() != null ? request.fecha() : LocalDate.now();
         String notas = request.notas() == null || request.notas().isBlank() ? null : request.notas().trim();

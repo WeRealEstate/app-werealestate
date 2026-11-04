@@ -1,4 +1,4 @@
-import { LucideCircleAlert, LucideHandCoins, LucideLandmark, LucideTrendingUp, LucideWallet } from '@lucide/angular';
+import { LucideChevronDown, LucideCircleAlert, LucideHandCoins, LucideLandmark, LucideTrendingUp, LucideWallet } from '@lucide/angular';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -40,20 +40,20 @@ const ESTADOS: EstadoComision[] = ['PENDIENTE', 'ACUMULANDO', 'PARCIAL', 'PAGADA
 
 type VistaDesglose = 'reparto' | 'asesor' | 'desarrollo';
 
-/** Con más abonos que estos, los más viejos se juntan en un solo renglón ("N abonos anteriores"). */
+/** Con más abonos que estos, los más viejos se juntan en un solo renglón ("Cobros anteriores (N)"). */
 const MAX_ABONOS_VISIBLES = 8;
 const ABONOS_RECIENTES = 6;
 
 const ORDEN_NOMBRES = new Intl.Collator('es-MX', { sensitivity: 'base' });
 
-/** Una parte de la barra de "Cómo se reparte". Colores validados con la skill de dataviz (verde, ámbar y violeta como
+/** Una parte de la barra de "Composición". Colores validados con la skill de dataviz (verde, ámbar y violeta como
  * categorías vecinas en claro sobre #ffffff y en oscuro sobre la tarjeta #131d3b; en claro el ámbar queda bajo 3:1 y
- * lo compensan los nombres y montos visibles debajo). "Falta por generar" es el fondo de la barra, en gris. */
+ * lo compensan los nombres y montos visibles debajo). "Por generar" es el fondo de la barra, en gris. */
 interface ParteReparto {
   clave: string;
   etiqueta: string;
   valor: number;
-  /** % del total de comisiones, ya redondeado para mostrarse ("8%", "<1%"). */
+  /** % del total de comisiones, ya redondeado para mostrarse ("8 %", "<1 %"). */
   porcentaje: string;
   clase: string;
 }
@@ -71,7 +71,7 @@ interface ItemSabado extends ComisionPorEntregar {
   abonosVisibles: AbonoDeComision[];
 }
 
-/** Lo que toca entregarle a un asesor el sábado: sus ventas y el total. */
+/** Lo que se le paga a un asesor el sábado: sus ventas y el total. */
 interface GrupoSabado {
   clave: string;
   nombre: string;
@@ -85,7 +85,7 @@ interface GrupoSabado {
 @Component({
   selector: 'app-finanzas',
   standalone: true,
-  imports: [LucideCircleAlert, LucideHandCoins, LucideTrendingUp, LucideLandmark, LucideWallet, MonedaInputDirective, WeLoaderComponent, SkeletonKpisComponent, FormsModule, RouterLink, FinanzasIngresosComponent, FinanzasValorComponent, GastosListComponent],
+  imports: [LucideChevronDown, LucideCircleAlert, LucideHandCoins, LucideTrendingUp, LucideLandmark, LucideWallet, MonedaInputDirective, WeLoaderComponent, SkeletonKpisComponent, FormsModule, RouterLink, FinanzasIngresosComponent, FinanzasValorComponent, GastosListComponent],
   templateUrl: './finanzas.component.html',
 })
 export class FinanzasComponent {
@@ -129,9 +129,9 @@ export class FinanzasComponent {
   readonly porEntregar = signal<ComisionesPorEntregar | null>(null);
   readonly desglose = signal<ComisionDesglose | null>(null);
 
-  // Desglose bajo las tarjetas: cómo se reparte el total, por asesor y por desarrollo.
+  // Desglose bajo las tarjetas: composición del total, por asesor y por desarrollo.
   readonly vistasDesglose: { id: VistaDesglose; label: string }[] = [
-    { id: 'reparto', label: 'Cómo se reparte' },
+    { id: 'reparto', label: 'Composición' },
     { id: 'asesor', label: 'Por asesor' },
     { id: 'desarrollo', label: 'Por desarrollo' },
   ];
@@ -142,18 +142,18 @@ export class FinanzasComponent {
     return this.vistaDesglose() === 'asesor' ? d.porAsesor : d.porDesarrollo;
   });
 
-  /** "Cómo se reparte": las partes de la barra en orden (las tres de lo ganado y lo que falta por generar). */
+  /** "Composición": las partes de la barra en orden (las tres de la comisión generada y lo que está por generar). */
   readonly reparto = computed(() => {
     const d = this.desglose();
     if (!d) return null;
     const t = d.total;
     const partes: ParteReparto[] = [
-      { clave: 'entregado', etiqueta: 'Entregado', valor: t.entregado, porcentaje: porcentaje(t.entregado, t.total), clase: CLASES_REPARTO.entregado },
-      { clave: 'porEntregar', etiqueta: 'Por entregar', valor: t.porEntregar, porcentaje: porcentaje(t.porEntregar, t.total), clase: CLASES_REPARTO.porEntregar },
-      { clave: 'detenido', etiqueta: 'Detenido', valor: t.detenido, porcentaje: porcentaje(t.detenido, t.total), clase: CLASES_REPARTO.detenido },
-      { clave: 'falta', etiqueta: 'Falta por generar', valor: t.faltaPorGenerar, porcentaje: porcentaje(t.faltaPorGenerar, t.total), clase: CLASES_REPARTO.falta },
+      { clave: 'entregado', etiqueta: 'Pagada', valor: t.entregado, porcentaje: porcentaje(t.entregado, t.total), clase: CLASES_REPARTO.entregado },
+      { clave: 'porEntregar', etiqueta: 'Por pagar', valor: t.porEntregar, porcentaje: porcentaje(t.porEntregar, t.total), clase: CLASES_REPARTO.porEntregar },
+      { clave: 'detenido', etiqueta: 'Retenida', valor: t.detenido, porcentaje: porcentaje(t.detenido, t.total), clase: CLASES_REPARTO.detenido },
+      { clave: 'falta', etiqueta: 'Por generar', valor: t.faltaPorGenerar, porcentaje: porcentaje(t.faltaPorGenerar, t.total), clase: CLASES_REPARTO.falta },
     ];
-    // Lo que ocupa lo ganado en la barra (sin restar lo entregado de más, que no es un tramo).
+    // Lo que ocupa la comisión generada en la barra (sin restar lo pagado de más, que no es un tramo).
     const anchoGanado = t.entregado + t.porEntregar + t.detenido;
     return {
       partes,
@@ -166,7 +166,7 @@ export class FinanzasComponent {
     };
   });
 
-  /** Lo que toca entregar el sábado, agrupado por asesor (por nombre), con el total a pagarle a cada uno. */
+  /** Pagos del sábado agrupados por asesor (por nombre), con el total a pagarle a cada uno. */
   readonly gruposSabado = computed<GrupoSabado[]>(() => {
     const grupos = new Map<string, GrupoSabado>();
     for (const item of this.porEntregar()?.items ?? []) {
@@ -182,10 +182,10 @@ export class FinanzasComponent {
     return [...grupos.values()].sort((a, b) => ORDEN_NOMBRES.compare(a.nombre, b.nombre));
   });
 
-  /** Ventas de la lista del sábado con sus abonos abiertos. */
+  /** Ventas de los pagos del sábado con su cálculo abierto. */
   readonly abonosAbiertos = signal<ReadonlySet<number>>(new Set());
 
-  /** 'RETRASADA' no es un estado: filtra las que tienen entregas vencidas por pagar. */
+  /** 'RETRASADA' no es un estado: filtra las que tienen pagos vencidos. */
   readonly filtroEstado = signal<'' | EstadoComision | 'RETRASADA'>('');
   readonly busqueda = signal('');
   readonly comisionesFiltradas = computed(() => {
@@ -405,11 +405,11 @@ export class FinanzasComponent {
     const monto = this.entregaMonto();
     if (!c || this.guardando()) return;
     if (monto === null || monto <= 0) {
-      this.errorModal.set('Escribe el monto a entregar.');
+      this.errorModal.set('Indica el monto a pagar.');
       return;
     }
     if (monto > this.entregaMax()) {
-      this.errorModal.set(`Solo hay $${dinero(this.entregaMax())} ganados por entregar: el cliente no ha pagado más.`);
+      this.errorModal.set(`El monto máximo a pagar es $${dinero(this.entregaMax())}: es la comisión generada pendiente de pago.`);
       return;
     }
     const conIva = this.entregaConIva();
@@ -431,14 +431,14 @@ export class FinanzasComponent {
         formaPago,
       });
       this.entregando.set(null);
-      this.toast.success('Entrega registrada y agregada a Gastos. Se descarga su ticket de pago.');
+      this.toast.success('Pago registrado y agregado a Gastos. Se descarga su comprobante.');
       if (this.expandidaId() === c.id) this.detalle.set(actualizado);
       // La entrega recién hecha es la de id más alto (la lista viene por fecha, que puede ser anterior).
       const nueva = actualizado.entregas.reduce((mayor, e) => (e.id > mayor ? e.id : mayor), 0);
       if (nueva) void this.descargarTicket(c.id, nueva);
       await this.refrescar();
     } catch (error) {
-      this.errorModal.set(mensajeDe(error, 'No se pudo registrar la entrega.'));
+      this.errorModal.set(mensajeDe(error, 'No se pudo registrar el pago.'));
     } finally {
       this.guardando.set(false);
     }
@@ -452,7 +452,7 @@ export class FinanzasComponent {
       const ticket = await this.finanzasService.ticketEntrega(comisionId, entregaId);
       await this.pdfComision.descargarTicket(ticket);
     } catch (error) {
-      this.toast.error(mensajeDe(error, 'No se pudo generar el ticket de pago.'));
+      this.toast.error(mensajeDe(error, 'No se pudo generar el comprobante de pago.'));
     } finally {
       this.generandoTicket.set(null);
     }
@@ -482,7 +482,7 @@ export class FinanzasComponent {
       return;
     }
     if (monto > c.entregado) {
-      this.errorModal.set(`Solo hay $${dinero(c.entregado)} entregados que se puedan devolver.`);
+      this.errorModal.set(`El monto máximo a devolver es $${dinero(c.entregado)} (lo pagado al asesor).`);
       return;
     }
     this.guardando.set(true);
@@ -495,7 +495,7 @@ export class FinanzasComponent {
         this.devolucionNotas().trim() || null,
       );
       this.devolviendo.set(null);
-      this.toast.success('Devolución registrada: aparece como ingreso en Finanzas.');
+      this.toast.success('Devolución registrada como ingreso en Finanzas.');
       if (this.expandidaId() === c.id) this.detalle.set(actualizado);
       await this.refrescar();
     } catch (error) {
@@ -507,19 +507,19 @@ export class FinanzasComponent {
 
   async anularEntrega(c: Comision, entregaId: number): Promise<void> {
     const confirmado = await this.confirmService.confirm({
-      titulo: 'Anular entrega',
-      mensaje: 'Se anula la entrega y también se elimina el gasto que generó. ¿Continuar?',
-      textoConfirmar: 'Anular',
+      titulo: 'Anular pago',
+      mensaje: 'Se anulará el pago y se eliminará el gasto que generó. ¿Deseas continuar?',
+      textoConfirmar: 'Anular pago',
       peligroso: true,
     });
     if (!confirmado) return;
     try {
       const actualizado = await this.finanzasService.anularEntrega(c.id, entregaId);
       if (this.expandidaId() === c.id) this.detalle.set(actualizado);
-      this.toast.success('Entrega anulada.');
+      this.toast.success('Pago anulado.');
       await this.refrescar();
     } catch (error) {
-      this.toast.error(mensajeDe(error, 'No se pudo anular la entrega.'));
+      this.toast.error(mensajeDe(error, 'No se pudo anular el pago.'));
     }
   }
 
@@ -528,8 +528,8 @@ export class FinanzasComponent {
     const confirmado = await this.confirmService.confirm({
       titulo: cancelar ? 'Cancelar comisión' : 'Reactivar comisión',
       mensaje: cancelar
-        ? `Se deja de acumular la comisión de ${c.cliente} y ya no se puede entregar lo que tenía ganado: deja de contar en Retrasadas y en la lista del sábado. Si la reactivas, vuelve a contar.`
-        : `La comisión de ${c.cliente} vuelve a acumular con los abonos del cliente y lo ganado se puede entregar.`,
+        ? `La comisión de ${c.cliente} dejará de generarse y su saldo pendiente no podrá pagarse; tampoco contará en Vencidas ni en los pagos del sábado. Puede reactivarse en cualquier momento.`
+        : `La comisión de ${c.cliente} volverá a generarse con los pagos del cliente y su saldo podrá pagarse.`,
       textoConfirmar: cancelar ? 'Cancelar comisión' : 'Reactivar',
       peligroso: cancelar,
     });
@@ -545,6 +545,23 @@ export class FinanzasComponent {
     }
   }
 
+  /** "50 %": el porcentaje con el espacio que pide el español, sin que se separe del número. */
+  porcentajeTexto(valor: number): string {
+    return `${valor}\u00a0%`;
+  }
+
+  /** La regla con la que la comisión se genera, para la nota bajo su cálculo en los pagos del sábado. */
+  reglaDe(c: Comision): string {
+    if (c.reglaNueva) {
+      return 'Regla: enganche 100\u00a0%, mensualidad y aportación 50\u00a0%, apartado 0\u00a0%, hasta completar la comisión. '
+        + 'Cada parte se programa para el sábado siguiente al cobro (o a la firma del contrato, si fue posterior).';
+    }
+    if (c.modalidad === 'UNA_EXHIBICION') {
+      return 'Regla anterior: la comisión completa se genera en la fecha de la venta y se programa para el sábado siguiente.';
+    }
+    return 'Regla anterior: 50\u00a0% de cada abono, hasta completar la comisión. Cada parte se programa para el sábado siguiente al cobro.';
+  }
+
   fecha(iso: string | null): string {
     if (!iso) return '—';
     const [anio, mes, dia] = iso.slice(0, 10).split('-');
@@ -557,10 +574,11 @@ export class FinanzasComponent {
 }
 
 /** % de un total para mostrarse: entero, "<1%" si es poco pero no cero. */
+/** "8 %": con el espacio que pide el español, sin que se separe del número al cortar la línea. */
 function porcentaje(valor: number, total: number): string {
-  if (total <= 0 || valor <= 0) return '0%';
+  if (total <= 0 || valor <= 0) return '0\u00a0%';
   const pct = (valor / total) * 100;
-  return pct < 1 ? '<1%' : `${Math.round(pct)}%`;
+  return pct < 1 ? '<1\u00a0%' : `${Math.round(pct)}\u00a0%`;
 }
 
 /** Con muchos abonos, los más viejos van en un solo renglón para que la lista no crezca de más. */

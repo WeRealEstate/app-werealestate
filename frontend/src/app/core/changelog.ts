@@ -15,6 +15,12 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.9.1', fecha: '2026-11-04', cambios: [
+    "Finanzas → Comisiones: textos más claros y formales en toda la pestaña. Los conceptos ahora se llaman Comisión generada, Pagada, Por pagar (Vencida, Programada para el sábado y Fechas posteriores), Retenida (ventas sin contrato firmado) y Por generar. El botón 'Entregar' ahora dice 'Registrar pago', las comisiones retrasadas se llaman Vencidas y el ticket se llama comprobante.",
+    "Desglose de comisiones: la vista 'Cómo se reparte' ahora se llama 'Composición' y cada parte trae una explicación breve.",
+    "Pagos del sábado: '¿De qué abonos sale?' ahora es 'Ver cálculo', una tabla con la fecha, el concepto, el abono del cliente, el porcentaje que se aplica y la comisión que genera. Abajo vienen la comisión generada al corte, lo pagado anteriormente, el total a pagar y la regla con la que se calcula. En celular se muestra un renglón por abono.",
+    "Lista de comisiones: los estados ahora son Por generar, En generación, Pago parcial, Pagada y Cancelada; el detalle muestra 'Comisión generada' y 'Pagos realizados'. Los avisos y ventanas usan los mismos términos.",
+  ] },
   { version: '11.9.0', fecha: '2026-11-04', cambios: [
     "Lotes, Plano y Ventas alineados: el estado de un lote que está en una venta lo manda la venta. Sin el contrato firmado queda En proceso de firma y, firmado, Vendido. En Lotes y en el Plano ese lote ya no tiene selector de estado: aparece 'Venta #N' para abrir su venta. Para liberarlo hay que eliminar la venta.",
     "Un lote sin venta ya no se marca a mano como Vendido ni En proceso de firma: al elegir uno de esos estados en Lotes o en el Plano, la app ofrece abrir 'Nueva venta' con el desarrollo y el lote ya elegidos, y el lote cambia al guardar la venta.",

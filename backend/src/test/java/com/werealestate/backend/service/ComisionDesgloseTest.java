@@ -240,9 +240,10 @@ class ComisionDesgloseTest {
         igual("500", deAna.yaEntregado());
         assertEquals(2, deAna.abonos().size());
         assertEquals("Mensualidad", deAna.abonos().get(0).concepto());
-        assertEquals("Cuenta la mitad", deAna.abonos().get(0).regla());
+        assertEquals(50, deAna.abonos().get(0).porcentaje());
+        assertEquals(false, deAna.abonos().get(0).parcial());
         igual("2000", deAna.abonos().get(0).montoAbono());
-        assertEquals("Cuenta completo", pe.items().get(1).abonos().get(0).regla());
+        assertEquals(100, pe.items().get(1).abonos().get(0).porcentaje());
         igual("1800", pe.total());
     }
 
@@ -255,7 +256,9 @@ class ComisionDesgloseTest {
 
         ComisionesPorEntregarDto.Item item = service.porEntregar(null).items().get(0);
 
-        assertEquals("Cuenta la mitad · hasta completar la comisión", item.abonos().get(1).regla());
+        assertEquals(50, item.abonos().get(1).porcentaje());
+        assertEquals(true, item.abonos().get(1).parcial());
+        assertEquals(false, item.abonos().get(0).parcial());
     }
 
     @Test

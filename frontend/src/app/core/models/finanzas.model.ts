@@ -2,10 +2,10 @@
 export type EstadoPagoCliente = 'YA_ABONO' | 'ABONO_PARCIAL' | 'POR_VENCER' | 'SIN_ABONAR';
 
 export const ESTADO_PAGO_CLIENTE_LABELS: Record<EstadoPagoCliente, string> = {
-  YA_ABONO: 'Ya abonó este mes',
-  ABONO_PARCIAL: 'Abono parcial',
-  POR_VENCER: 'Aún no abona',
-  SIN_ABONAR: 'Sin abonar',
+  YA_ABONO: 'Pago del mes cubierto',
+  ABONO_PARCIAL: 'Pago parcial del mes',
+  POR_VENCER: 'Pago del mes por vencer',
+  SIN_ABONAR: 'Pago del mes vencido',
 };
 
 export const ESTADO_PAGO_CLIENTE_CLASES: Record<EstadoPagoCliente, string> = {
@@ -19,9 +19,9 @@ export type ModalidadComision = 'UNA_EXHIBICION' | 'PARCIALIDADES';
 export type EstadoComision = 'PENDIENTE' | 'ACUMULANDO' | 'PARCIAL' | 'PAGADA' | 'CANCELADA';
 
 export const ESTADO_COMISION_LABELS: Record<EstadoComision, string> = {
-  PENDIENTE: 'Pendiente',
-  ACUMULANDO: 'Acumulando',
-  PARCIAL: 'Parcial',
+  PENDIENTE: 'Por generar',
+  ACUMULANDO: 'En generación',
+  PARCIAL: 'Pago parcial',
   PAGADA: 'Pagada',
   CANCELADA: 'Cancelada',
 };
@@ -213,10 +213,17 @@ export interface ComisionPorEntregar {
  * exhibición de la regla anterior, sin montoAbono); regla: "Cuenta la mitad", "Cuenta completo"… */
 export interface AbonoDeComision {
   fecha: string;
+  /** Enganche, Mensualidad, Aportación…; "Venta" en una comisión de una exhibición (regla anterior). */
   concepto: string;
+  /** Monto del abono del cliente (null en "Venta"). */
   montoAbono: number | null;
-  regla: string;
+  /** % del abono que se aplica a la comisión (100 o 50; null en "Venta"). */
+  porcentaje: number | null;
+  /** true si solo se aplicó una parte del abono: con él se completó la comisión. */
+  parcial: boolean;
+  /** Comisión que genera este abono. */
   aporte: number;
+  /** Sábado en que se programa su pago. */
   entrega: string;
 }
 
