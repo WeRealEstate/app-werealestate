@@ -29,6 +29,7 @@ import com.werealestate.backend.model.Lote;
 import com.werealestate.backend.model.MovimientoLote;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Usuario;
+import com.werealestate.backend.model.Venta;
 import com.werealestate.backend.model.VentaLote;
 import jakarta.persistence.criteria.Subquery;
 import com.werealestate.backend.repository.AsesorExternoRepository;
@@ -818,6 +819,42 @@ public class LoteService {
         if (lote.getEstado() == estado) return;
         cambiarEstadoConHistorial(lote, estado, currentUserProvider.getUsuarioActual(), null, cliente, null, nota);
         lote.setFechaExpiraApartado(null);
+    }
+
+    /**
+     * Atajo para un lote que está en una venta pero quedó en otro estado (datos de antes de que la venta mandara el
+     * estado del lote; ver el aviso LOTE_VENTA_DESALINEADA de NotificacionService): lo pone en el estado que le toca
+     * por su venta —Vendido si alguna de sus ventas tiene el contrato firmado, En proceso de firma si no— con el
+     * cliente y el asesor de esa venta y la nota "Alineado con la venta #N", sin pedir más datos. Solo admin y
+     * Administración. Igual que un cambio a mano a esos estados, deja de contar el dinero apartado del lote.
+     */
+    public LoteDto alinearConVenta(Long id) {
+        Usuario actual = currentUserProvider.getUsuarioActual();
+        if (actual.getRol() != Role.ADMIN && actual.getRol() != Role.LIDER_AREA) {
+            throw new ForbiddenOperationException(
+                    "Solo un administrador o personal de administración puede alinear un lote con su venta");
+        }
+        Lote lote = obtenerEntidad(id);
+        List<VentaLote> ventasDelLote = ventaLoteRepository.findByLoteId(id);
+        if (ventasDelLote.isEmpty()) throw new ConflictException("Este lote no está en ninguna venta");
+        if (ESTADOS_DE_VENTA.contains(lote.getEstado())) {
+            throw new ConflictException("Este lote ya está como su venta lo indica");
+        }
+        // Manda una venta con el contrato firmado, si la hay; si no, la más reciente.
+        Venta venta = ventasDelLote.stream()
+                .map(VentaLote::getVenta)
+                .filter(Venta::isContratoFirmado)
+                .findFirst()
+                .orElseGet(() -> ventasDelLote.stream()
+                        .map(VentaLote::getVenta)
+                        .max(Comparator.comparing(Venta::getId, Comparator.nullsFirst(Comparator.naturalOrder())))
+                        .orElseThrow());
+        EstadoLote estado = venta.isContratoFirmado() ? EstadoLote.VENDIDO : EstadoLote.EN_PROCESO_DE_FIRMA;
+        cambiarEstadoConHistorial(lote, estado, actual, venta.getAsesorNombre(), venta.getCliente(), null,
+                "Alineado con la venta #" + venta.getNumero());
+        lote.setFechaExpiraApartado(null);
+        lote.setMontoApartado(null);
+        return conVentas(lote);
     }
 
     private Usuario exigirAdmin(String accion) {

@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -226,5 +227,64 @@ class LoteVentaReglasTest {
         assertNull(plano.get(1).ventaNumero());
         assertTrue(plano.get(1).sinVentaRegistrada());
         assertNull(plano.get(2).ventaNumero());
+    }
+
+    // ---------------------------------------------------------------- "Alinear con la venta"
+
+    /** El lote queda en una venta con ese número, cliente, asesor y firma. */
+    private Venta ventaDe(Lote lote, long id, long numero, boolean firmada) {
+        Venta venta = mock(Venta.class);
+        when(venta.getId()).thenReturn(id);
+        when(venta.getNumero()).thenReturn(numero);
+        when(venta.getCliente()).thenReturn("Mary Carmen González Sánchez");
+        when(venta.getAsesorNombre()).thenReturn("Yeshu Hernández");
+        when(venta.isContratoFirmado()).thenReturn(firmada);
+        VentaLote vl = new VentaLote(venta, lote, new BigDecimal("1000"));
+        when(ventaLotes.findByLoteId(lote.getId())).thenReturn(List.of(vl));
+        numeros.add(new Object[] {lote.getId(), numero});
+        return venta;
+    }
+
+    @Test
+    void alinearPoneElEstadoDeLaVentaSinPedirDatos() {
+        Lote sinFirma = lote(1, EstadoLote.APARTADO_CON_DINERO);
+        ReflectionTestUtils.setField(sinFirma, "montoApartado", new BigDecimal("5000"));
+        ventaDe(sinFirma, 10, 18, false);
+
+        LoteDto dto = service.alinearConVenta(1L);
+
+        assertEquals(EstadoLote.EN_PROCESO_DE_FIRMA, sinFirma.getEstado());
+        assertEquals(null, sinFirma.getMontoApartado());
+        assertEquals(18L, dto.ventaNumero());
+        verify(movimientos).save(argThat(m -> m.getEstadoNuevo() == EstadoLote.EN_PROCESO_DE_FIRMA
+                && "Alineado con la venta #18".equals(m.getNota())
+                && "Mary Carmen González Sánchez".equals(m.getNombreCliente())));
+
+        Lote firmado = lote(2, EstadoLote.DISPONIBLE);
+        ventaDe(firmado, 11, 19, true);
+        service.alinearConVenta(2L);
+        assertEquals(EstadoLote.VENDIDO, firmado.getEstado());
+    }
+
+    @Test
+    void alinearNoAplicaSinVentaNiSiYaCoincide() {
+        lote(1, EstadoLote.VENDIDO);
+        when(ventaLotes.findByLoteId(1L)).thenReturn(List.of());
+        assertThrows(ConflictException.class, () -> service.alinearConVenta(1L));
+
+        Lote yaAlineado = lote(2, EstadoLote.VENDIDO);
+        ventaDe(yaAlineado, 12, 20, true);
+        assertThrows(ConflictException.class, () -> service.alinearConVenta(2L));
+        verify(movimientos, never()).save(any());
+    }
+
+    @Test
+    void soloAdministracionPuedeAlinear() {
+        Lote lote = lote(1, EstadoLote.APARTADO);
+        ventaDe(lote, 13, 21, false);
+        when(actual.getRol()).thenReturn(Role.ASESOR);
+
+        assertThrows(ForbiddenOperationException.class, () -> service.alinearConVenta(1L));
+        assertEquals(EstadoLote.APARTADO, lote.getEstado());
     }
 }

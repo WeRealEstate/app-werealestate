@@ -195,6 +195,24 @@
                     </span>
                   }
                 </div>
+                @if (noCoincideConSuVenta(lote)) {
+                  <!-- Lote con venta que quedó en otro estado: un clic lo pone como manda su venta (aviso de la campana). -->
+                  <div class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs" data-testid="lote-desalineado">
+                    <span class="inline-flex items-center gap-1 font-medium text-amber-700 dark:text-amber-300">
+                      <svg lucideTriangleAlert [size]="13" aria-hidden="true"></svg>
+                      No coincide con su venta
+                    </span>
+                    <button
+                      type="button"
+                      (click)="alinearConVenta(lote)"
+                      [disabled]="alineando() !== null"
+                      class="rounded-full bg-we-primary px-2.5 py-1 font-semibold text-white hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150 disabled:opacity-60"
+                      data-testid="alinear-con-venta"
+                    >
+                      {{ alineando() === lote.id ? 'Alineando…' : 'Alinear con la venta #' + lote.ventaNumero }}
+                    </button>
+                  </div>
+                }
                 @if (lote.estado === 'APARTADO_A_PLAZO' && lote.fechaExpiraApartado) {
                   <p class="mt-1 text-xs text-ink-muted">Vence: {{ lote.fechaExpiraApartado | date: 'dd/MM/yy HH:mm' }}</p>
                 }

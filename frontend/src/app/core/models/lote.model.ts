@@ -106,6 +106,13 @@ export function estadosParaAdmin(lote: Lote): EstadoLote[] {
   return [lote.estado, 'EN_PROCESO_DE_FIRMA', 'VENDIDO'];
 }
 
+/** Lote que está en una venta pero quedó en otro estado (datos de antes de que la venta mandara el estado del
+ * lote): se corrige con "Alinear con la venta" (backend LoteService.alinearConVenta). ventaNumero solo llega a admin
+ * y administración. */
+export function noCoincideConSuVenta(lote: Lote): boolean {
+  return lote.ventaNumero != null && !ESTADOS_DE_VENTA.has(lote.estado);
+}
+
 /** Inventario de un desarrollo contado por estado (GET /api/lotes/resumen). porEstado trae los 6 estados. */
 export interface ResumenLotes {
   desarrolloId: number;

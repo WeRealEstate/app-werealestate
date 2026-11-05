@@ -154,6 +154,13 @@ public class LoteController {
         return loteService.cambiarEstado(id, request);
     }
 
+    /** Pone un lote con venta que quedó en otro estado en el que le toca por su venta, sin pedir datos (ver
+     * LoteService.alinearConVenta). */
+    @PutMapping("/{id}/alinear-con-venta")
+    public LoteDto alinearConVenta(@PathVariable Long id) {
+        return loteService.alinearConVenta(id);
+    }
+
     @PutMapping("/{id}/mapa")
     public LoteDto actualizarPoligonoMapa(
             @PathVariable Long id, @Valid @RequestBody ActualizarPoligonoMapaRequest request) {

@@ -10,6 +10,7 @@ import {
   LucideHistory,
   LucidePencil,
   LucideTrash2,
+  LucideTriangleAlert,
   LucideUpload,
 } from '@lucide/angular';
 import { FormsModule, NgModel } from '@angular/forms';
@@ -34,6 +35,7 @@ import {
   EstadoLote,
   Lote,
   estadosParaAdmin,
+  noCoincideConSuVenta,
 } from '../../../core/models/lote.model';
 import { MonedaInputDirective } from '../../../shared/moneda-input/moneda-input.directive';
 
@@ -47,7 +49,7 @@ const ESTADOS_ASESOR: EstadoLote[] = ['DISPONIBLE', 'APARTADO'];
 @Component({
   selector: 'app-lotes-list',
   standalone: true,
-  imports: [MonedaInputDirective, WeLoaderComponent, 
+  imports: [LucideTriangleAlert, MonedaInputDirective, WeLoaderComponent, 
     FormsModule,
     RouterLink,
     DecimalPipe,
@@ -352,6 +354,29 @@ export class LotesListComponent {
   onCambioEstadoConfirmado(actualizado: Lote): void {
     this.lotes.update((lista) => lista.map((l) => (l.id === actualizado.id ? actualizado : l)));
     this.cambioEstadoPendiente.set(null);
+  }
+
+  // ---- "Alinear con la venta": lote con venta que quedó en otro estado (aviso de la campana) ----
+  readonly noCoincideConSuVenta = noCoincideConSuVenta;
+  /** Lote que se está alineando (para deshabilitar el botón mientras responde el servidor). */
+  readonly alineando = signal<number | null>(null);
+
+  /** Un clic y sin ventana: el estado lo decide la venta (Vendido con contrato firmado, En proceso de firma sin
+   * firmar) y el cliente y la nota salen de ella (ver LoteService.alinearConVenta). */
+  async alinearConVenta(lote: Lote): Promise<void> {
+    if (this.alineando() !== null) return;
+    this.alineando.set(lote.id);
+    try {
+      const actualizado = await this.lotesService.alinearConVenta(lote.id);
+      this.lotes.update((lista) => lista.map((l) => (l.id === actualizado.id ? actualizado : l)));
+      this.toast.success(
+        `Mz ${lote.manzana} / Lote ${lote.numeroLote} quedó ${this.estadoLabels[actualizado.estado]}, igual que su venta #${lote.ventaNumero}.`,
+      );
+    } catch (error) {
+      this.toast.error(this.mensajeError(error, 'No se pudo alinear el lote con su venta.'));
+    } finally {
+      this.alineando.set(null);
+    }
   }
 
   private mensajeError(error: unknown, porDefecto: string): string {

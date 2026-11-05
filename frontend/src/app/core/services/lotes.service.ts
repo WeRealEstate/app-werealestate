@@ -174,6 +174,12 @@ export class LotesService {
     return firstValueFrom(this.http.put<Lote>(`${this.baseUrl}/${id}`, request));
   }
 
+  /** Pone un lote con venta que quedó en otro estado en el que le toca por su venta (Vendido con el contrato firmado,
+   * En proceso de firma sin firmar), sin pedir datos: el cliente y la nota salen de la venta. */
+  alinearConVenta(id: number): Promise<Lote> {
+    return firstValueFrom(this.http.put<Lote>(`${this.baseUrl}/${id}/alinear-con-venta`, {}));
+  }
+
   /** fechaExpiraApartado solo aplica (y es obligatoria) para estado === 'APARTADO_A_PLAZO'. nota es
    * obligatoria del lado del backend cuando quien cambia el estado es admin o líder de área.
    * nombreCliente y montoApartado los exige la UI (no el backend) al mover un lote a un estado

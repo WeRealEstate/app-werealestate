@@ -705,6 +705,27 @@ export class PlanoComponent implements OnDestroy {
     selector?.control.setValue(lote.estado, { emitViewToModelChange: false });
   }
 
+  /** Lote que se está alineando con su venta (para deshabilitar el botón mientras responde el servidor). */
+  readonly alineando = signal<number | null>(null);
+
+  /** "Alinear con la venta": un lote con venta que quedó en otro estado pasa al que le manda su venta (Vendido con
+   * el contrato firmado, En proceso de firma sin firmar), sin ventana; ver LoteService.alinearConVenta. */
+  async alinearConVenta(lote: Lote): Promise<void> {
+    if (this.alineando() !== null) return;
+    this.alineando.set(lote.id);
+    try {
+      const actualizado = await this.lotesService.alinearConVenta(lote.id);
+      this.aplicarLoteActualizado(actualizado);
+      this.toast.success(
+        `Mz ${lote.manzana} / Lote ${lote.numeroLote} quedó ${this.estadoLabels[actualizado.estado]}, igual que su venta #${lote.ventaNumero}.`,
+      );
+    } catch (error) {
+      this.toast.error(this.mensajeError(error, 'No se pudo alinear el lote con su venta.'));
+    } finally {
+      this.alineando.set(null);
+    }
+  }
+
   /** La venta del lote (solo admin y administración reciben su número). */
   verVenta(lote: Lote): void {
     if (lote.ventaNumero) void this.router.navigate(['/panel/ventas', lote.ventaNumero]);

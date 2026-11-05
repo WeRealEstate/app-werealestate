@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.10.1', fecha: '2026-11-05', cambios: [
+    "Lotes y Plano: un lote que está en una venta pero aparece en otro estado (por ejemplo, Apartado con dinero) ahora dice 'No coincide con su venta' y trae el botón 'Alinear con la venta #N'. Con un clic, sin llenar ninguna ventana, el lote queda como lo indica su venta: Vendido si el contrato ya está firmado, o En proceso de firma si todavía no. El cliente se toma de la venta y en el historial queda la nota 'Alineado con la venta #N'. Igual que al cambiarlo a mano, el lote deja de mostrar el dinero con el que estaba apartado. El aviso de la campana de ese lote desaparece solo. Solo Admin y Administración.",
+  ] },
   { version: '11.10.0', fecha: '2026-11-05', cambios: [
     "Se quitó la página pública de lotes (/cotizador-publico/lotes); quien entre a esa dirección llega al cotizador. Los planos públicos de SAMAI y Aldea Nanuu siguen igual, incluido apartar con el PIN del asesor, y en el panel no cambia nada.",
     "Avisos de lotes que no cuadran con Ventas, en la campana (y como notificación push) para Admin y Administración, uno por lote: un lote marcado como Vendido sin una venta registrada, y un lote que está en una venta pero no aparece como Vendido ni En proceso de firma. Al tocarlo se abre Lotes con ese lote ya filtrado para corregirlo. No se pueden descartar: desaparecen solos cuando el lote se corrige (registrando su venta, cambiándolo a Reservado por We o poniéndolo como Vendido o En proceso de firma, según el caso).",

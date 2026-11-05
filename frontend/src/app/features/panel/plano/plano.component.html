@@ -470,12 +470,24 @@
               @if (estadosDeVenta.has(lote.estado)) {
                 Lo manda su venta: Vendido con el contrato firmado, En proceso de firma sin firmar. Para liberarlo, elimina la venta.
               } @else {
-                Está en una venta: solo puede pasar a Vendido o En proceso de firma.
+                <span class="font-medium text-amber-700 dark:text-amber-300">No coincide con su venta:</span>
+                está en una venta pero aparece como {{ estadoLabels[lote.estado] }}.
               }
               <button type="button" (click)="verVenta(lote)" class="font-semibold text-we-primary hover:underline dark:text-we-blue-light">
                 Ver venta #{{ lote.ventaNumero }}
               </button>
             </p>
+            @if (!estadosDeVenta.has(lote.estado)) {
+              <button
+                type="button"
+                (click)="alinearConVenta(lote)"
+                [disabled]="alineando() !== null"
+                class="mt-2 w-full rounded-lg bg-we-primary px-3 py-2 text-sm font-semibold text-white hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150 disabled:opacity-60"
+                data-testid="alinear-con-venta"
+              >
+                {{ alineando() === lote.id ? 'Alineando…' : 'Alinear con la venta #' + lote.ventaNumero }}
+              </button>
+            }
           }
           @if (lote.sinVentaRegistrada) {
             <!-- Solo lo reciben admin y administración (ver LoteService.puedeVerReservadosWe). -->
