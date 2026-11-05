@@ -6,7 +6,9 @@ export type TipoNotificacion =
   | 'LOTE_DESAPARTADO'
   | 'LOTE_ESTADO'
   | 'VENTA_NUEVA'
-  | 'REGISTRO_VENTA_NUEVO';
+  | 'REGISTRO_VENTA_NUEVO'
+  | 'LOTE_SIN_VENTA'
+  | 'LOTE_VENTA_DESALINEADA';
 
 export interface Notificacion {
   tipo: TipoNotificacion;
@@ -19,4 +21,8 @@ export interface Notificacion {
   /** Solo en VENTA_NUEVA (admin y Administración): id de la venta registrada. */
   ventaId: number | null;
   firma: string;
+  /** Avisos de lotes desincronizados con Ventas (LOTE_SIN_VENTA, LOTE_VENTA_DESALINEADA): el lote a corregir. */
+  loteId: number | null;
+  /** true = no se puede descartar: desaparece sola cuando se corrige lo que la provoca. */
+  fija: boolean;
 }

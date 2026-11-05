@@ -83,7 +83,7 @@ public class SecurityConfig {
                         // (listar, buscar, registrar con sesión), sigue exigiendo autenticación.
                         .requestMatchers(HttpMethod.GET, "/api/promociones/activas").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/cotizaciones/publica").permitAll()
-                        // /cotizador-publico/lotes y /samai, /aldea-nanuu: ver disponibilidad y
+                        // /samai, /aldea-nanuu y el cotizador público: ver disponibilidad y
                         // apartar un lote sin sesión, con las mismas restricciones que un asesor
                         // (ver LoteService). /uploads/** tiene su propia cadena arriba.
                         .requestMatchers(HttpMethod.GET, "/api/lotes/publico").permitAll()

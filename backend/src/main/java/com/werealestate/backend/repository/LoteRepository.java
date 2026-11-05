@@ -34,6 +34,14 @@ public interface LoteRepository extends JpaRepository<Lote, Long>, JpaSpecificat
             + "and not exists (select vl.id from VentaLote vl where vl.lote = l) group by l.desarrollo.id")
     List<ConteoPorDesarrollo> contarReservadosWePorDesarrollo();
 
+    /** Lotes Vendidos que no están en ninguna venta, con su desarrollo: el aviso a Administración de que falta registrar
+     * su venta (ver NotificacionService). Se siguen mostrando como "Reservado por We" a admin y Administración. */
+    @Query("select l from Lote l join fetch l.desarrollo d "
+            + "where l.estado = com.werealestate.backend.model.EstadoLote.VENDIDO "
+            + "and not exists (select vl.id from VentaLote vl where vl.lote = l) "
+            + "order by d.nombre, l.manzana, l.numeroLote")
+    List<Lote> findVendidosSinVenta();
+
     interface ConteoPorDesarrollo {
         Long getDesarrolloId();
 

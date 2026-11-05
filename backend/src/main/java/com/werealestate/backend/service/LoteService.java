@@ -106,11 +106,11 @@ public class LoteService {
 
     /** Mismo usuario "de sistema" (ver migración V17) que atribuye las cotizaciones generadas desde
      * /cotizador-publico: aquí se reutiliza para atribuir los cambios de estado que haga un
-     * visitante público en /cotizador-publico/lotes, donde tampoco hay una sesión real detrás. */
+     * visitante en un plano público (/samai, /aldea-nanuu), donde tampoco hay una sesión real detrás. */
     private static final String EMAIL_USUARIO_PUBLICO = "cotizador-publico@weinversiones.com";
 
     /** Nombre exacto de Desarrollo (ver catálogo sembrado) para cada valor de "proyecto" que usa
-     * el público en /cotizador-publico/lotes — el mismo mapeo que ya usa CotizadorComponent. */
+     * el público (planos públicos y cotizador) — el mismo mapeo que ya usa CotizadorComponent. */
     private static final Map<String, String> DESARROLLO_POR_PROYECTO =
             Map.of("samai", "SAMAI Campestre", "nanuu", "Aldea Nanuu");
 
@@ -336,7 +336,7 @@ public class LoteService {
                 .toList();
     }
 
-    /** Todos los lotes de un desarrollo (cualquier estado) para /cotizador-publico/lotes: a
+    /** Todos los lotes de un desarrollo (cualquier estado) para los planos públicos y el cotizador: a
      * diferencia de {@link #listarDisponibles}, aquí también se muestran los apartados para que el
      * visitante vea la disponibilidad real, aunque solo pueda actuar sobre los disponibles. */
     public List<LoteDto> listarPublicoPorProyecto(String proyecto) {
@@ -354,7 +354,7 @@ public class LoteService {
                 .toList();
     }
 
-    /** Igual que {@link #cambiarEstado}, pero para /cotizador-publico/lotes: sin sesión iniciada,
+    /** Igual que {@link #cambiarEstado}, pero para los planos públicos: sin sesión iniciada,
      * así que un visitante nunca puede tocar un lote exclusivo de admin (ni para entrar ni para
      * salir de esos estados), el cambio se atribuye al usuario de sistema, apartar exige el
      * nombre del asesor que atendió al visitante y el del cliente que apartó, y liberar un lote ya

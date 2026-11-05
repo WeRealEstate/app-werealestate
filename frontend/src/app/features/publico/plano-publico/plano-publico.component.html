@@ -448,7 +448,7 @@
   }
 
   <!-- Modal "Apartar lote": pide el nombre del asesor, el del cliente y una nota opcional antes de
-       confirmar — igual que /cotizador-publico/lotes. -->
+       confirmar. -->
   @if (mostrarApartar()) {
     @if (loteActivo(); as lote) {
       <button type="button" (click)="cancelarApartar()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>

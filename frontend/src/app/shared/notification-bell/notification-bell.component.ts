@@ -8,6 +8,7 @@ import {
   LucideListTodo,
   LucidePhoneCall,
   LucideRefreshCw,
+  LucideTriangleAlert,
   LucideUnlock,
   LucideX,
 } from '@lucide/angular';
@@ -35,6 +36,7 @@ const CLAVE_AVISO_PENDIENTES = 'we_aviso_pendientes';
   imports: [
     RouterLink,
     LucideBell,
+    LucideTriangleAlert,
     LucideX,
     LucidePhoneCall,
     LucideListTodo,
@@ -121,6 +123,8 @@ export class NotificationBellComponent {
   }
 
   rutaDeNotificacion(n: Notificacion): string[] {
+    // Lote desincronizado con Ventas: Lotes, filtrado a ese lote (ver parametrosDeNotificacion).
+    if (n.loteId !== null) return ['/panel/lotes'];
     if (n.leadId !== null) return ['/panel/leads', String(n.leadId)];
     if (n.eventoId !== null) return ['/panel/calendario'];
     if (n.tipo === 'REGISTRO_VENTA_NUEVO') return ['/panel/we-forms'];
@@ -129,11 +133,17 @@ export class NotificationBellComponent {
     return ['/panel/equipo'];
   }
 
+  parametrosDeNotificacion(n: Notificacion): Record<string, number> | null {
+    return n.loteId !== null ? { loteId: n.loteId } : null;
+  }
+
   /** Al navegar desde una notificación, o al descartarla con la "X", se marca como leída de
    * verdad (queda registrada en el backend): no vuelve a aparecer, ni al recargar ni en otra
-   * sesión, a menos que la condición que la generó cambie de verdad (ver NotificacionService). */
+   * sesión, a menos que la condición que la generó cambie de verdad (ver NotificacionService).
+   * Las fijas (lotes desincronizados) no se marcan: siguen en la lista hasta que se corrija el lote. */
   alNavegar(index: number): void {
     this.close();
+    if (this.notificaciones()[index]?.fija) return;
     this.marcarLeidaYQuitar(index);
   }
 

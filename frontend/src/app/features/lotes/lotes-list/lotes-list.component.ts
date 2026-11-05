@@ -1,6 +1,7 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
 import {
   LucideChevronDown,
@@ -122,7 +123,8 @@ export class LotesListComponent {
 
   constructor() {
     // Filtros que llegan por enlace (p. ej. desde las cifras del inicio: ?desarrolloId=1&estado=VENDIDO).
-    const params = inject(ActivatedRoute).snapshot.queryParamMap;
+    const ruta = inject(ActivatedRoute);
+    const params = ruta.snapshot.queryParamMap;
     const desarrolloId = Number(params.get('desarrolloId'));
     if (Number.isInteger(desarrolloId) && desarrolloId > 0) this.filtroDesarrolloId.set(desarrolloId);
     const estado = params.get('estado');
@@ -131,6 +133,26 @@ export class LotesListComponent {
     }
 
     this.leadsService.listarDesarrollosGestionables().then((d) => this.desarrollos.set(d));
+    // ?loteId= (aviso de lote desincronizado en la campana): la lista se filtra a ese lote. Se escucha también estando
+    // ya en Lotes, porque al tocar otro aviso Angular reutiliza esta pantalla.
+    ruta.queryParamMap.pipe(takeUntilDestroyed(inject(DestroyRef))).subscribe((p) => {
+      const loteId = Number(p.get('loteId'));
+      if (Number.isInteger(loteId) && loteId > 0) void this.filtrarALote(loteId);
+    });
+    if (!params.get('loteId')) this.cargar();
+  }
+
+  /** Deja la lista con solo ese lote (desarrollo, manzana y número) para corregirlo desde aquí. */
+  private async filtrarALote(loteId: number): Promise<void> {
+    try {
+      const lote = await this.lotesService.obtener(loteId);
+      this.filtroDesarrolloId.set(lote.desarrollo.id);
+      this.filtroManzana.set(lote.manzana);
+      this.filtroNumeroLote.set(lote.numeroLote);
+      this.filtroEstado.set(null);
+    } catch {
+      // Si el lote ya no existe, se muestra la lista sin filtrar.
+    }
     this.cargar();
   }
 

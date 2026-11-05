@@ -15,7 +15,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /** Bitácora de cada cambio de estado de un lote: quién lo hizo (usuario autenticado, o nadie si
- * fue la reversión automática por vencimiento) y, si vino de /cotizador-publico/lotes, el nombre
+ * fue la reversión automática por vencimiento) y, si vino de un plano público (/samai, /aldea-nanuu), el nombre
  * del asesor que capturó el visitante y el del cliente que apartó — ahí no hay una sesión real
  * detrás. */
 @Entity

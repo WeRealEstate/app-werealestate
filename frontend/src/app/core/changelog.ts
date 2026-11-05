@@ -15,6 +15,11 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.10.0', fecha: '2026-11-05', cambios: [
+    "Se quitó la página pública de lotes (/cotizador-publico/lotes); quien entre a esa dirección llega al cotizador. Los planos públicos de SAMAI y Aldea Nanuu siguen igual, incluido apartar con el PIN del asesor, y en el panel no cambia nada.",
+    "Avisos de lotes que no cuadran con Ventas, en la campana (y como notificación push) para Admin y Administración, uno por lote: un lote marcado como Vendido sin una venta registrada, y un lote que está en una venta pero no aparece como Vendido ni En proceso de firma. Al tocarlo se abre Lotes con ese lote ya filtrado para corregirlo. No se pueden descartar: desaparecen solos cuando el lote se corrige (registrando su venta, cambiándolo a Reservado por We o poniéndolo como Vendido o En proceso de firma, según el caso).",
+    "Los lotes Vendidos sin venta registrada se siguen viendo como 'Reservado por We' para Admin y Administración, y como Vendidos en los planos públicos y el cotizador.",
+  ] },
   { version: '11.9.1', fecha: '2026-11-04', cambios: [
     "Finanzas → Comisiones: textos más claros y formales en toda la pestaña. Los conceptos ahora se llaman Comisión generada, Pagada, Por pagar (Vencida, Programada para el sábado y Fechas posteriores), Retenida (ventas sin contrato firmado) y Por generar. El botón 'Entregar' ahora dice 'Registrar pago', las comisiones retrasadas se llaman Vencidas y el ticket se llama comprobante.",
     "Desglose de comisiones: la vista 'Cómo se reparte' ahora se llama 'Composición' y cada parte trae una explicación breve.",

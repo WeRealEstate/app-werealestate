@@ -1,12 +1,12 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, inject } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { LucideChevronDown, LucideChevronRight } from '@lucide/angular';
 import { animate, scroll, stagger } from 'motion';
 
 /** Curva de llegada de toda la portada: frena suave al final, sin rebote. */
 const LLEGADA: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
-/** Portada de /cotizador-publico (y /cotizador-publico/lotes, que comparte el layout): la foto de la costa
+/** Portada de /cotizador-publico: la foto de la costa
  * de Oaxaca a pantalla completa con el título centrado. Dos momentos de movimiento, nada más:
  *  - al entrar, la foto se asienta (se aleja un poco) y el texto aparece de abajo, de borroso a nítido;
  *  - al bajar, la foto se acerca y se oscurece mientras el texto sube y se desvanece, dejando paso al
@@ -20,7 +20,6 @@ const LLEGADA: [number, number, number, number] = [0.16, 1, 0.3, 1];
   templateUrl: './hero-publico.component.html',
 })
 export class HeroPublicoComponent implements AfterViewInit, OnDestroy {
-  private readonly router = inject(Router);
 
   @ViewChild('hero', { static: true }) private readonly hero!: ElementRef<HTMLElement>;
   @ViewChild('fotoMarco', { static: true }) private readonly fotoMarco!: ElementRef<HTMLElement>;
@@ -65,13 +64,8 @@ export class HeroPublicoComponent implements AfterViewInit, OnDestroy {
     this.limpiezas.forEach((limpiar) => limpiar());
   }
 
-  /** La portada es compartida por /cotizador-publico y /cotizador-publico/lotes (mismo layout, ver
-   * CotizadorPublicoLayoutComponent): si "Comenzar cotización" se toca estando en /lotes, primero hay que
-   * volver a la ruta del cotizador — si no, bajar a "#cotizador" solo revelaría la pantalla de lotes. */
+  /** "Comenzar cotización": baja al formulario del cotizador, debajo de la portada. */
   irAlCotizador(): void {
-    if (this.router.url.startsWith('/cotizador-publico/lotes')) {
-      void this.router.navigateByUrl('/cotizador-publico');
-    }
     const destino = document.getElementById('cotizador');
     if (!destino) return;
     const reducido = matchMedia('(prefers-reduced-motion: reduce)').matches;

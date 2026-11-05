@@ -120,9 +120,8 @@ function olvidarSinAcceso(proyecto?: string): void {
 }
 
 /** Plano interactivo público, en pantalla completa y sin sesión — para compartir el link de un
- * desarrollo directamente (/samai, /aldea-nanuu, ver app.routes.ts). Mismas restricciones que
- * /cotizador-publico/lotes: cualquiera puede ver el estado de cada lote y apartar uno disponible
- * (pidiendo nombre de asesor y de cliente, ver LoteService.cambiarEstadoPublico), pero no editar el
+ * desarrollo directamente (/samai, /aldea-nanuu, ver app.routes.ts). Cualquiera puede ver el estado de cada
+ * lote y apartar uno disponible (pidiendo nombre de asesor y de cliente, ver LoteService.cambiarEstadoPublico), pero no editar el
  * plano, delimitar lotes ni liberar uno ya apartado — eso sigue siendo exclusivo de /panel/plano. */
 @Component({
   selector: 'app-plano-publico',
@@ -302,8 +301,8 @@ export class PlanoPublicoComponent implements OnDestroy {
     if (!CONGELAR_TRAZO_EN_GESTO || !this.enGesto()) this.zoomTrazo.set(zoom);
   });
 
-  // Modal "Apartar lote": mismos campos y restricciones que /cotizador-publico/lotes — pide nombre
-  // de asesor y de cliente (nota opcional) porque no hay una sesión real detrás de este apartado.
+  // Modal "Apartar lote": pide nombre de asesor y de cliente (nota opcional) porque no hay una sesión
+  // real detrás de este apartado (ver LoteService.cambiarEstadoPublico).
   readonly mostrarApartar = signal(false);
 
   // Candado: sin un asesor verificado no se muestran los botones de cotizar ni apartar. El nombre se recuerda en la
@@ -478,8 +477,7 @@ export class PlanoPublicoComponent implements OnDestroy {
     return lote.precio;
   }
 
-  /** Igual que LotesPublicoComponent.puedeCambiarEstado combinado con el filtro de la fila
-   * "Apartar": un lote exclusivo de admin no se toca desde aquí, y solo tiene sentido ofrecer
+  /** Un lote exclusivo de admin no se toca desde aquí, y solo tiene sentido ofrecer
    * apartar uno que esté disponible (liberar uno ya apartado no está permitido públicamente). */
   puedeApartar(lote: Lote): boolean {
     return !ESTADOS_LOTE_SOLO_ADMIN.has(lote.estado) && lote.estado === 'DISPONIBLE';

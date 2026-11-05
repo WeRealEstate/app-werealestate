@@ -11,8 +11,7 @@ import { ToastContainerComponent } from '../../../shared/toast-container/toast-c
 /** Chrome de página para /cotizador-publico: sin sesión ni sidebar, así que le da al Cotizador
  * el fondo, el ancho centrado, la portada con la foto de Oaxaca, una barra fija estilo Apple (logo y
  * accesos a los planos públicos) y el footer que normalmente pone PanelLayoutComponent. También monta
- * el toast/confirm globales — aquí fuera de PanelLayoutComponent, /cotizador-publico/lotes (apartar/
- * liberar un lote sin sesión) los necesita igual que cualquier pantalla del panel interno. */
+ * el toast/confirm globales, que aquí fuera de PanelLayoutComponent el cotizador necesita igual que en el panel. */
 @Component({
   selector: 'app-cotizador-publico-layout',
   standalone: true,
@@ -23,10 +22,10 @@ export class CotizadorPublicoLayoutComponent {
   private readonly router = inject(Router);
   readonly currentYear = new Date().getFullYear();
 
-  /** La portada (foto a pantalla completa) va en el cotizador y en Lotes; el Score de ventas entra directo, sin ella,
+  /** La portada (foto a pantalla completa) va en el cotizador; el Score de ventas entra directo, sin ella,
    * para que su link compartido muestre el podio de inmediato. */
   readonly conPortada = signal(!esScore(window.location.pathname));
-  /** El resumen del score (top 5) va debajo de la portada solo en el cotizador, no en Lotes. */
+  /** El resumen del score (top 5) va debajo de la portada solo en el cotizador. */
   readonly enCotizador = signal(esCotizador(window.location.pathname));
 
   /** true mientras la barra está encima de la foto de la portada: ahí va transparente con texto blanco;

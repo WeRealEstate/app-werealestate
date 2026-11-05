@@ -47,4 +47,12 @@ public interface VentaLoteRepository extends JpaRepository<VentaLote, Long> {
      * más de una (datos de antes de que se impidiera), trae la de número mayor. Ver LoteService.marcarVentas. */
     @Query("select vl.lote.id, max(vl.venta.numero) from VentaLote vl where vl.lote.id in :loteIds group by vl.lote.id")
     List<Object[]> numeroDeVentaPorLote(@Param("loteIds") java.util.Collection<Long> loteIds);
+
+    /** Lotes que están en una venta pero no están Vendidos ni En proceso de firma (datos de antes de que la venta
+     * mandara el estado del lote): el aviso a Administración (ver NotificacionService). */
+    @Query("select vl from VentaLote vl join fetch vl.lote l join fetch l.desarrollo d join fetch vl.venta "
+            + "where l.estado not in (com.werealestate.backend.model.EstadoLote.VENDIDO, "
+            + "com.werealestate.backend.model.EstadoLote.EN_PROCESO_DE_FIRMA) "
+            + "order by d.nombre, l.manzana, l.numeroLote")
+    List<VentaLote> findConLoteFueraDeEstadoDeVenta();
 }

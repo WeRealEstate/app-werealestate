@@ -202,8 +202,8 @@ export interface LoteImportResultado {
 
 /** Un renglón del historial de movimientos de lotes: de qué lote, qué cambió, quién y cuándo.
  * `usuario` es null en la reversión automática por vencimiento; `nombreAsesor`/`nombreCliente`/
- * `nota` solo vienen de un apartado hecho desde /cotizador-publico/lotes, donde no hay una sesión
- * real detrás. */
+ * `nota` solo vienen de un apartado hecho desde un plano público (/samai, /aldea-nanuu), donde no hay
+ * una sesión real detrás. */
 export interface MovimientoLote {
   id: number;
   loteId: number;

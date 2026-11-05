@@ -13,9 +13,8 @@ export const routes: Routes = [
   },
   {
     // Plano público en pantalla completa, sin sesión ni layout — pensado para compartir el link
-    // directo de un desarrollo. Mismas restricciones que /cotizador-publico/lotes: se puede ver el
-    // estado de cada lote y apartar uno disponible, pero no editar el plano ni liberar un lote ya
-    // apartado. Ver PlanoPublicoComponent.
+    // directo de un desarrollo. Se puede ver el estado de cada lote y apartar uno disponible (con el
+    // PIN del asesor), pero no editar el plano ni liberar un lote ya apartado. Ver PlanoPublicoComponent.
     path: 'samai',
     title: 'We Real Estate | Plano Samai',
     data: { proyecto: 'samai' },
@@ -48,11 +47,11 @@ export const routes: Routes = [
           import('./features/panel/cotizador/cotizador.component').then((m) => m.CotizadorComponent),
       },
       {
-        // Ver disponibilidad de lotes de SAMAI/Nanuu y apartar/liberar uno, sin sesión — mismas
-        // restricciones que un asesor, ver LoteService.cambiarEstadoPublico.
+        // La página pública de lotes se quitó (los planos /samai y /aldea-nanuu siguen): sus enlaces viejos
+        // llevan al cotizador.
         path: 'lotes',
-        loadComponent: () =>
-          import('./features/publico/lotes-publico/lotes-publico.component').then((m) => m.LotesPublicoComponent),
+        redirectTo: '',
+        pathMatch: 'full',
       },
       {
         // Score de ventas para la competencia entre asesores: el mismo del panel, sin sesión ni PIN (ver ScoreComponent).

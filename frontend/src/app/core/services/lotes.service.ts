@@ -81,7 +81,7 @@ export class LotesService {
     );
   }
 
-  /** Para /cotizador-publico/lotes: sin sesión, ver LoteController/SecurityConfig. */
+  /** Para los planos públicos y el cotizador público: sin sesión, ver LoteController/SecurityConfig. */
   async listarPublicoPorProyecto(proyecto: 'samai' | 'nanuu'): Promise<Lote[]> {
     // index.html ya pidió estos lotes en cuanto abrió /samai o /aldea-nanuu (ver window.__lotesPrecargados): se usa esa
     // respuesta una sola vez, y solo si es del mismo plano y reciente. Si falló o no aplica, va la petición de siempre.
@@ -106,7 +106,7 @@ export class LotesService {
     return r.nombre;
   }
 
-  /** Apartar un lote desde /cotizador-publico/lotes: nombreAsesor y nombreCliente son
+  /** Apartar un lote desde un plano público: nombreAsesor y nombreCliente son
    * obligatorios, nota es opcional — ver LoteService.cambiarEstadoPublico. Liberar un lote ya
    * apartado no está permitido desde aquí. */
   apartarLotePublico(id: number, nombreAsesor: string, nombreCliente: string, nota?: string): Promise<Lote> {

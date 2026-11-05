@@ -178,8 +178,8 @@ export class CotizadorComponent implements OnInit {
   }
 
   /** Lotes disponibles del desarrollo actual: alimentan las sugerencias de manzana/lote de abajo.
-   * En /cotizador-publico no hay sesión, así que usa el mismo endpoint público que alimenta
-   * /cotizador-publico/lotes (que trae cualquier estado) y aquí se filtra a solo disponibles. */
+   * En /cotizador-publico no hay sesión, así que usa el mismo endpoint público que alimenta los
+   * planos públicos (que trae cualquier estado) y aquí se filtra a solo disponibles. */
   private async cargarLotesDisponibles(): Promise<void> {
     this.isCargandoLotes.set(true);
     try {

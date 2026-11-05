@@ -180,7 +180,8 @@ public class PushService {
     }
 
     private static String claveDe(NotificacionDto n) {
-        Long id = n.leadId() != null ? n.leadId() : n.tareaId() != null ? n.tareaId() : n.eventoId() != null ? n.eventoId() : n.movimientoId() != null ? n.movimientoId() : n.ventaId();
+        // El lote va primero: en un aviso de lote desincronizado, varios lotes pueden ser de la misma venta.
+        Long id = n.loteId() != null ? n.loteId() : n.leadId() != null ? n.leadId() : n.tareaId() != null ? n.tareaId() : n.eventoId() != null ? n.eventoId() : n.movimientoId() != null ? n.movimientoId() : n.ventaId();
         return NotificacionService.clave(n.tipo(), id, n.firma());
     }
 
@@ -200,11 +201,15 @@ public class PushService {
             case "LOTE_DESAPARTADO" -> "Lote liberado";
             case "LOTE_ESTADO" -> "Cambio de estado de un lote";
             case "VENTA_NUEVA" -> "Nueva venta";
+            case "LOTE_SIN_VENTA" -> "Lote vendido sin venta registrada";
+            case "LOTE_VENTA_DESALINEADA" -> "Lote que no coincide con su venta";
             default -> "We Real Estate";
         };
     }
 
     private static String rutaDe(NotificacionDto n) {
+        // Avisos de lotes desincronizados: Lotes filtrado a ese lote.
+        if (n.loteId() != null) return "/panel/lotes?loteId=" + n.loteId();
         return switch (n.tipo()) {
             case "SEGUIMIENTO_PENDIENTE" -> "/panel/leads";
             case "EVENTO_PENDIENTE" -> "/panel/calendario";

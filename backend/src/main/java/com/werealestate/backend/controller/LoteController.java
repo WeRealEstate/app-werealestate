@@ -68,7 +68,7 @@ public class LoteController {
     }
 
     /** Únicos dos endpoints públicos de este controlador, sin sesión (ver SecurityConfig): la
-     * disponibilidad de lotes en /cotizador-publico/lotes. */
+     * disponibilidad de lotes en los planos públicos y el cotizador público. */
     @GetMapping("/publico")
     public List<LoteDto> listarPublico(@RequestParam String proyecto) {
         return loteService.listarPublicoPorProyecto(proyecto);

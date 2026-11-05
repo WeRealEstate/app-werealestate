@@ -3,7 +3,7 @@ import { inject } from '@angular/core';
 import { catchError, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 
-/** Endpoints de los planos públicos y el cotizador público (/samai, /aldea-nanuu, /cotizador-publico/lotes): se piden SIN
+/** Endpoints de los planos públicos y el cotizador público (/samai, /aldea-nanuu, /cotizador-publico): se piden SIN
  * la sesión aunque el navegador tenga una, para que el link público se vea igual para todos (un admin que lo abre en el
  * mismo navegador donde usa el panel vería "Reservado por We" en vez de "Vendido"). */
 const ENDPOINT_PUBLICO_DE_LOTES = '/lotes/publico';

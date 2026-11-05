@@ -36,6 +36,7 @@
           @for (n of notificaciones(); track $index) {
             <a
               [routerLink]="rutaDeNotificacion(n)"
+              [queryParams]="parametrosDeNotificacion(n)"
               (click)="alNavegar($index)"
               class="group flex items-start gap-2.5 border-b border-border px-4 py-3 text-sm last:border-b-0 hover:bg-surface-2 transition-colors duration-150"
             >
@@ -47,6 +48,7 @@
                 [class.text-purple-500]="n.tipo === 'EVENTO_PENDIENTE'"
                 [class.text-green-500]="n.tipo === 'LOTE_DESAPARTADO' || n.tipo === 'VENTA_NUEVA' || n.tipo === 'REGISTRO_VENTA_NUEVO'"
                 [class.text-sky-500]="n.tipo === 'LOTE_ESTADO'"
+                [class.text-red-500]="n.tipo === 'LOTE_SIN_VENTA' || n.tipo === 'LOTE_VENTA_DESALINEADA'"
                 aria-hidden="true"
               >
                 @switch (n.tipo) {
@@ -58,18 +60,22 @@
                   @case ('LOTE_ESTADO') { <svg lucideRefreshCw [size]="16"></svg> }
                   @case ('VENTA_NUEVA') { <svg lucideBadgeDollarSign [size]="16"></svg> }
                   @case ('REGISTRO_VENTA_NUEVO') { <svg lucideClipboardCheck [size]="16"></svg> }
+                  @case ('LOTE_SIN_VENTA') { <svg lucideTriangleAlert [size]="16"></svg> }
+                  @case ('LOTE_VENTA_DESALINEADA') { <svg lucideTriangleAlert [size]="16"></svg> }
                   @default { <svg lucideBell [size]="16"></svg> }
                 }
               </span>
               <span class="flex-1 text-ink">{{ n.mensaje }}</span>
-              <button
-                type="button"
-                (click)="eliminar($index, $event)"
-                aria-label="Eliminar notificación"
-                class="shrink-0 rounded p-0.5 text-ink-muted opacity-0 hover:text-red-600 group-hover:opacity-100 focus:opacity-100 transition-opacity duration-150"
-              >
-                <svg lucideX [size]="14"></svg>
-              </button>
+              @if (!n.fija) {
+                <button
+                  type="button"
+                  (click)="eliminar($index, $event)"
+                  aria-label="Eliminar notificación"
+                  class="shrink-0 rounded p-0.5 text-ink-muted opacity-0 hover:text-red-600 group-hover:opacity-100 focus:opacity-100 transition-opacity duration-150"
+                >
+                  <svg lucideX [size]="14"></svg>
+                </button>
+              }
             </a>
           }
         }

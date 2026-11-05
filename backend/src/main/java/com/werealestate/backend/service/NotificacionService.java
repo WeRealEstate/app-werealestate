@@ -6,6 +6,7 @@ import com.werealestate.backend.model.EstadoLead;
 import com.werealestate.backend.model.EventoCalendario;
 import com.werealestate.backend.model.EstadoLote;
 import com.werealestate.backend.model.Lead;
+import com.werealestate.backend.model.Lote;
 import com.werealestate.backend.model.MovimientoLote;
 import com.werealestate.backend.model.Modulo;
 import com.werealestate.backend.model.ModulosAcceso;
@@ -25,6 +26,7 @@ import com.werealestate.backend.repository.MovimientoLoteRepository;
 import com.werealestate.backend.repository.NotificacionLeidaRepository;
 import com.werealestate.backend.repository.SeguimientoRepository;
 import com.werealestate.backend.repository.TareaRepository;
+import com.werealestate.backend.repository.LoteRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -65,6 +67,7 @@ public class NotificacionService {
     private final VentaRepository ventaRepository;
     private final VentaLoteRepository ventaLoteRepository;
     private final com.werealestate.backend.repository.WeFormRespuestaRepository respuestaRepository;
+    private final LoteRepository loteRepository;
 
     public NotificacionService(
             LeadRepository leadRepository,
@@ -76,7 +79,8 @@ public class NotificacionService {
             MovimientoLoteRepository movimientoLoteRepository,
             VentaRepository ventaRepository,
             VentaLoteRepository ventaLoteRepository,
-            com.werealestate.backend.repository.WeFormRespuestaRepository respuestaRepository) {
+            com.werealestate.backend.repository.WeFormRespuestaRepository respuestaRepository,
+            LoteRepository loteRepository) {
         this.leadRepository = leadRepository;
         this.seguimientoRepository = seguimientoRepository;
         this.tareaRepository = tareaRepository;
@@ -87,6 +91,7 @@ public class NotificacionService {
         this.ventaRepository = ventaRepository;
         this.ventaLoteRepository = ventaLoteRepository;
         this.respuestaRepository = respuestaRepository;
+        this.loteRepository = loteRepository;
     }
 
     public List<NotificacionDto> listar() {
@@ -179,8 +184,42 @@ public class NotificacionService {
             agregarAvisosDeVentas(actual, leidas, notificaciones);
         }
         agregarAvisosDeRegistrosDeVenta(actual, leidas, notificaciones);
+        if (actual.getRol() == Role.ADMIN || actual.getRol() == Role.LIDER_AREA) {
+            agregarAvisosDeLotesDesincronizados(notificaciones);
+        }
 
         return notificaciones;
+    }
+
+    /**
+     * Lotes que no cuadran con Ventas, uno por aviso, para admin y Administración: un lote Vendido sin ninguna venta
+     * registrada y un lote que está en una venta pero no está Vendido ni En proceso de firma (datos de antes de que la
+     * venta mandara el estado del lote; hoy ninguna pantalla deja crear ninguno de los dos). Son avisos fijos: no se
+     * descartan ni cuentan como leídos; desaparecen solos al corregir el lote. La firma es la fecha del último cambio de
+     * estado del lote, para que el push se mande una sola vez por ocurrencia.
+     */
+    private void agregarAvisosDeLotesDesincronizados(List<NotificacionDto> notificaciones) {
+        for (Lote lote : loteRepository.findVendidosSinVenta()) {
+            notificaciones.add(NotificacionDto.loteSinVenta(
+                    nombreLote(lote) + " está marcado como Vendido sin una venta registrada. Registra su venta o, si la "
+                            + "empresa se lo guarda, cámbialo a Reservado por We.",
+                    lote.getId(),
+                    String.valueOf(lote.getFechaCambioEstado())));
+        }
+        for (VentaLote vl : ventaLoteRepository.findConLoteFueraDeEstadoDeVenta()) {
+            Lote lote = vl.getLote();
+            notificaciones.add(NotificacionDto.loteVentaDesalineada(
+                    nombreLote(lote) + " está en la venta #" + vl.getVenta().getNumero() + " pero aparece como "
+                            + etiqueta(lote.getEstado()) + ". Debe estar Vendido (contrato firmado) o En proceso de firma.",
+                    lote.getId(),
+                    vl.getVenta().getId(),
+                    lote.getFechaCambioEstado() + ":" + vl.getVenta().getId()));
+        }
+    }
+
+    /** "Mz 1 / Lote 2 de SAMAI Campestre". */
+    private static String nombreLote(Lote lote) {
+        return "Mz " + lote.getManzana() + " / Lote " + lote.getNumeroLote() + " de " + lote.getDesarrollo().getNombre();
     }
 
     /** Avisos de que un lote se apartó o se liberó (también por vencimiento automático), solo para
