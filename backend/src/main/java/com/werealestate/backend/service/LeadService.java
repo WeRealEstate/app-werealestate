@@ -3,6 +3,7 @@ package com.werealestate.backend.service;
 import com.werealestate.backend.dto.AsignarEtiquetasRequest;
 import com.werealestate.backend.dto.LeadCreateRequest;
 import com.werealestate.backend.dto.LeadDto;
+import com.werealestate.backend.dto.LeadResumenDto;
 import com.werealestate.backend.dto.LeadImportBatchRequest;
 import com.werealestate.backend.dto.LeadImportError;
 import com.werealestate.backend.dto.LeadImportRequest;
@@ -35,8 +36,10 @@ import com.werealestate.backend.security.CurrentUserProvider;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
@@ -440,8 +443,30 @@ public class LeadService {
 
     private LeadDto toDto(Lead lead) {
         long dias = ChronoUnit.DAYS.between(lead.getFechaUltimoContacto(), LocalDateTime.now());
+        return LeadDto.from(lead, dias, esFrio(lead, dias));
+    }
+
+    /** Frío: abierto (ni ganado ni perdido) y sin contacto en diasFrio días o más. */
+    private boolean esFrio(Lead lead, long diasSinContacto) {
         boolean cerrado = lead.getEstado() == EstadoLead.CERRADO_GANADO || lead.getEstado() == EstadoLead.CERRADO_PERDIDO;
-        boolean frio = !cerrado && dias >= diasFrio;
-        return LeadDto.from(lead, dias, frio);
+        return !cerrado && diasSinContacto >= diasFrio;
+    }
+
+    /** Los mismos leads que {@link #listar()}, solo contados (total, fríos y por estado), para el inicio del asesor:
+     * así no descarga la lista completa para mostrar tres números. */
+    @Transactional(readOnly = true)
+    public LeadResumenDto resumen() {
+        Usuario actual = currentUserProvider.getUsuarioActual();
+        List<Lead> leads = actual.getRol() == Role.ADMIN
+                ? leadRepository.findByArchivadoFalseOrderByFechaUltimoContactoDesc()
+                : leadRepository.findByAsesorIdAndArchivadoFalseOrderByFechaUltimoContactoDesc(actual.getId());
+        LocalDateTime ahora = LocalDateTime.now();
+        Map<EstadoLead, Long> porEstado = new EnumMap<>(EstadoLead.class);
+        long frios = 0;
+        for (Lead lead : leads) {
+            porEstado.merge(lead.getEstado(), 1L, Long::sum);
+            if (esFrio(lead, ChronoUnit.DAYS.between(lead.getFechaUltimoContacto(), ahora))) frios++;
+        }
+        return new LeadResumenDto(leads.size(), frios, porEstado);
     }
 }

@@ -1,6 +1,21 @@
 import { Injectable } from '@angular/core';
-import { GState, jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import type { jsPDF } from 'jspdf';
+import type autoTableTipo from 'jspdf-autotable';
+
+/** jspdf y jspdf-autotable pesan ~400 KB: se descargan la primera vez que se genera un PDF (cotización o plano), no
+ * al abrir el Cotizador o el Plano. Aquí solo se importan sus tipos, que no llegan al navegador; las funciones de
+ * tabla de abajo usan `autoTable` cuando cargarJsPdf ya lo dejó listo (siempre se llama antes de armar el PDF). */
+let jspdf: typeof import('jspdf') | null = null;
+let autoTable: typeof autoTableTipo;
+
+async function cargarJsPdf(): Promise<typeof import('jspdf')> {
+  if (!jspdf) {
+    const [libreria, tablas] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
+    autoTable = tablas.default;
+    jspdf = libreria;
+  }
+  return jspdf;
+}
 
 export interface QuotePdfData {
   project: string;
@@ -107,6 +122,7 @@ export class PdfService {
   // ==============================
 
   private async buildQuotePdf(data: QuotePdfData): Promise<jsPDF> {
+    const { jsPDF } = await cargarJsPdf();
 
     const doc = new jsPDF({
       orientation: 'portrait',
@@ -1738,6 +1754,7 @@ private addNanuuFinancingTable(
    * marca con el título arriba y otra con la leyenda debajo.
    * Los tamaños de texto y márgenes se escalan (`k`) respecto de la hoja carta con la que se diseñó. */
   private async buildPlanoPdf(data: PlanoPdfData): Promise<jsPDF> {
+    const { jsPDF, GState } = await cargarJsPdf();
     const pageWidth = 420; // ancho de una A3 horizontal
     const k = pageWidth / 279.4; // 279.4 mm = ancho de la hoja carta horizontal
     const margen = 4 * k; // solo separa los textos de las franjas del borde de la hoja

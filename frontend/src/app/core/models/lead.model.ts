@@ -25,6 +25,14 @@ export interface UsuarioResumen {
   nombre: string;
 }
 
+/** Conteos de los leads activos de quien pregunta (GET /api/leads/resumen), para el inicio del asesor. Los estados
+ * sin leads no vienen. */
+export interface ResumenLeads {
+  total: number;
+  frios: number;
+  porEstado: Partial<Record<EstadoLead, number>>;
+}
+
 export interface Lead {
   id: number;
   nombreCliente: string;

@@ -21,10 +21,17 @@ import { PushService } from '../../core/services/push.service';
 import { ToastService } from '../../core/services/toast.service';
 import { Notificacion } from '../../core/models/notificacion.model';
 
-/** Cada cuánto se refresca en segundo plano mientras el usuario sigue en el panel, además de al
- * navegar (ver constructor): sin esto, la campana se queda con el conteo de la primera carga
- * hasta que se refresca la página a mano, aunque el usuario resuelva pendientes mientras tanto. */
+/** Cada cuánto se refresca en segundo plano mientras el usuario sigue en el panel: sin esto, la campana se
+ * queda con el conteo de la primera carga hasta que se refresca la página a mano, aunque el usuario
+ * resuelva pendientes mientras tanto. */
 const INTERVALO_REFRESCO_MS = 60_000;
+
+/** Al cambiar de pantalla solo se vuelven a pedir si la última carga tiene más de esto. Antes se pedían en
+ * cada navegación, y calcularlas es de lo más pesado del servidor. */
+const RECARGA_AL_NAVEGAR_MS = 30_000;
+
+/** Al abrir la campana se piden de nuevo, salvo que se acaben de pedir (abrir y cerrar seguido). */
+const RECARGA_AL_ABRIR_MS = 5_000;
 
 /** Guarda la firma del token con el que ya se mostró el aviso de pendientes: así sale una sola vez por
  * inicio de sesión (el token cambia en cada login) y no en cada recarga de la página. */
@@ -57,7 +64,8 @@ export class NotificationBellComponent {
   private readonly destroyRef = inject(DestroyRef);
   readonly push = inject(PushService);
 
-  readonly notificaciones = signal<Notificacion[]>([]);
+  /** Compartidas con el inicio del asesor (ver NotificacionesService). */
+  readonly notificaciones = this.notificacionesService.lista;
   readonly isOpen = signal(false);
   readonly total = computed(() => this.notificaciones().length);
 
@@ -73,7 +81,7 @@ export class NotificationBellComponent {
         filter((evento) => evento instanceof NavigationEnd),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe(() => this.cargar(false));
+      .subscribe(() => this.cargar(false, RECARGA_AL_NAVEGAR_MS));
 
     const intervalo = setInterval(() => this.cargar(false), INTERVALO_REFRESCO_MS);
     this.destroyRef.onDestroy(() => clearInterval(intervalo));
@@ -81,10 +89,9 @@ export class NotificationBellComponent {
 
   /** mostrarAviso solo va en true en la primera carga: en los refrescos silenciosos (al navegar o
    * por el intervalo) mostrar el mismo toast una y otra vez sería más molesto que útil. */
-  private async cargar(mostrarAviso: boolean): Promise<void> {
+  private async cargar(mostrarAviso: boolean, siPasaronMs = 0): Promise<void> {
     try {
-      const lista = await this.notificacionesService.listar();
-      this.notificaciones.set(lista);
+      const lista = await this.notificacionesService.refrescar(siPasaronMs);
       if (mostrarAviso && lista.length > 0 && this.avisoPendiente()) {
         this.toast.aviso(
           `Tienes ${lista.length} pendiente${lista.length === 1 ? '' : 's'}: revisa la campana de notificaciones.`,
@@ -111,6 +118,7 @@ export class NotificationBellComponent {
 
   toggle(): void {
     this.isOpen.update((v) => !v);
+    if (this.isOpen()) void this.cargar(false, RECARGA_AL_ABRIR_MS);
   }
 
   close(): void {
@@ -155,8 +163,8 @@ export class NotificationBellComponent {
 
   private marcarLeidaYQuitar(index: number): void {
     const n = this.notificaciones()[index];
-    this.notificaciones.update((lista) => lista.filter((_, i) => i !== index));
     if (!n) return;
+    this.notificacionesService.quitar(n);
 
     const entidadId = n.leadId ?? n.tareaId ?? n.eventoId ?? n.movimientoId ?? n.ventaId;
     if (entidadId === null) return;

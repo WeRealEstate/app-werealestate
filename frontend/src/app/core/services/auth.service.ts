@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { LoginRequest, LoginResponse, Modulo, Role, User } from '../models/user.model';
+import { limpiarCachesDeSesion } from '../utils/cache-memoria';
 
 const TOKEN_KEY = 'we_auth_token';
 const USER_KEY = 'we_auth_user';
@@ -30,6 +31,8 @@ export class AuthService {
       this.http.post<LoginResponse>(`${environment.apiUrl}/auth/login`, credentials),
     );
 
+    // Catálogos y notificaciones guardados en memoria son de quien tenía la sesión antes (ver cache-memoria).
+    limpiarCachesDeSesion();
     this.tokenSignal.set(response.token);
     this.currentUserSignal.set(response.user);
     localStorage.setItem(TOKEN_KEY, response.token);
@@ -66,6 +69,7 @@ export class AuthService {
   }
 
   logout(): void {
+    limpiarCachesDeSesion();
     this.tokenSignal.set(null);
     this.currentUserSignal.set(null);
     localStorage.removeItem(TOKEN_KEY);

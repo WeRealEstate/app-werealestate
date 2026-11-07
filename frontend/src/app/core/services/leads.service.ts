@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Pagina } from '../models/pagina.model';
+import { CacheLista } from '../utils/cache-memoria';
 import {
   Desarrollo,
   Lead,
@@ -11,6 +12,7 @@ import {
   LeadImportResultado,
   LeadUpdateRequest,
   MoverColumnaRequest,
+  ResumenLeads,
   Seguimiento,
   SeguimientoCreateRequest,
   SeguimientoProximo,
@@ -40,6 +42,11 @@ export class LeadsService {
 
   listar(): Promise<Lead[]> {
     return firstValueFrom(this.http.get<Lead[]>(this.baseUrl).pipe(map((leads) => leads.map((l) => this.normalizar(l)))));
+  }
+
+  /** Total, fríos y cuántos hay por estado, sin descargar la lista (inicio del asesor). */
+  resumen(): Promise<ResumenLeads> {
+    return firstValueFrom(this.http.get<ResumenLeads>(`${this.baseUrl}/resumen`));
   }
 
   /** Lista principal, paginada: la búsqueda y los filtros corren en el servidor sobre el total,
@@ -123,8 +130,14 @@ export class LeadsService {
     return firstValueFrom(this.http.post<Seguimiento>(`${this.baseUrl}/${leadId}/seguimientos`, request));
   }
 
+  /** El catálogo de desarrollos casi no cambia y lo piden casi todas las pantallas: 5 minutos en memoria (ver
+   * CacheLista); se vacía al subir un plano. */
+  private readonly cacheDesarrollos = new CacheLista<Desarrollo>();
+
   listarDesarrollos(): Promise<Desarrollo[]> {
-    return firstValueFrom(this.http.get<Desarrollo[]>(`${environment.apiUrl}/desarrollos`));
+    return this.cacheDesarrollos.obtener(() =>
+      firstValueFrom(this.http.get<Desarrollo[]>(`${environment.apiUrl}/desarrollos`)),
+    );
   }
 
   /** Igual que {@link listarDesarrollos}, pero sin el catálogo genérico "Otro": para Plano y Lotes,
@@ -142,7 +155,7 @@ export class LeadsService {
     formData.append('archivo', archivo);
     return firstValueFrom(
       this.http.post<Desarrollo>(`${environment.apiUrl}/desarrollos/${desarrolloId}/plano`, formData),
-    );
+    ).finally(() => this.cacheDesarrollos.invalidar());
   }
 
   proximosSeguimientos(): Promise<SeguimientoProximo[]> {

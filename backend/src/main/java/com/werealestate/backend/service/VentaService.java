@@ -55,8 +55,10 @@ import jakarta.persistence.criteria.JoinType;
 import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -593,7 +595,7 @@ public class VentaService {
 
         Pageable pageable = PageRequest.of(Math.max(pagina, 0), Math.max(tamano, 1));
         Page<Venta> resultado = ventaRepository.findAll(spec, pageable);
-        return new PaginaDto<>(resultado.getContent().stream().map(this::toDto).toList(), resultado.hasNext());
+        return new PaginaDto<>(toDtos(resultado.getContent()), resultado.hasNext());
     }
 
     /** Para los contadores de /panel/ventas: lotes vendidos (cada lote cuenta una vez) y ventas
@@ -866,6 +868,44 @@ public class VentaService {
                 .map(cp -> ClienteResumenDto.from(cp.getCliente()))
                 .toList();
         return VentaDto.from(venta, venta.getNumero(), lotes, aportaciones, copropietarios, totalAbonado(venta.getId()));
+    }
+
+    /**
+     * Lo mismo que {@link #toDto} para una página de ventas, pero leyendo lotes, aportaciones, copropietarios y lo
+     * abonado de todas con una consulta por tipo: toDto hace cuatro por venta y la lista de Ventas llegaba a ~60
+     * consultas por página. Mismo resultado y mismo orden que llamar a toDto con cada una.
+     */
+    private List<VentaDto> toDtos(List<Venta> ventas) {
+        if (ventas.isEmpty()) return List.of();
+        List<Long> ids = ventas.stream().map(Venta::getId).toList();
+
+        Map<Long, List<VentaLoteDto>> lotes = new HashMap<>();
+        for (VentaLote vl : ventaLoteRepository.findByVentaIdInOrderByIdAsc(ids)) {
+            lotes.computeIfAbsent(vl.getVenta().getId(), id -> new ArrayList<>()).add(VentaLoteDto.from(vl));
+        }
+        Map<Long, List<VentaAportacionDto>> aportaciones = new HashMap<>();
+        for (VentaAportacion a : ventaAportacionRepository.findByVentaIdInOrderByAnioAscMesAsc(ids)) {
+            aportaciones.computeIfAbsent(a.getVenta().getId(), id -> new ArrayList<>()).add(VentaAportacionDto.from(a));
+        }
+        Map<Long, List<ClienteResumenDto>> copropietarios = new HashMap<>();
+        for (VentaCopropietario cp : copropietarioRepository.findByVentaIdInOrderByOrdenAsc(ids)) {
+            copropietarios.computeIfAbsent(cp.getVenta().getId(), id -> new ArrayList<>())
+                    .add(ClienteResumenDto.from(cp.getCliente()));
+        }
+        Map<Long, BigDecimal> abonado = new HashMap<>();
+        for (Object[] fila : pagoVentaRepository.totalVigentePorVenta(ids)) {
+            abonado.put((Long) fila[0], (BigDecimal) fila[1]);
+        }
+
+        return ventas.stream()
+                .map(v -> VentaDto.from(
+                        v,
+                        v.getNumero(),
+                        lotes.getOrDefault(v.getId(), List.of()),
+                        aportaciones.getOrDefault(v.getId(), List.of()),
+                        copropietarios.getOrDefault(v.getId(), List.of()),
+                        abonado.getOrDefault(v.getId(), BigDecimal.ZERO)))
+                .toList();
     }
 
     /** Reemplaza los copropietarios de la venta: hasta 4 clientes distintos, activos y distintos del principal. */

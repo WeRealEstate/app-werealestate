@@ -4,14 +4,21 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ModuloCatalogo, Usuario, UsuarioCreateRequest, UsuarioNominaRequest, UsuarioUpdateRequest } from '../models/user.model';
 import { UsuarioResumen } from '../models/lead.model';
+import { CacheLista } from '../utils/cache-memoria';
 
 @Injectable({ providedIn: 'root' })
 export class UsuariosService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiUrl}/usuarios`;
 
+  /** Listas que casi no cambian y que varias pantallas piden (Leads, Pipeline, tareas, ventas): se guardan 5 minutos
+   * en memoria (ver CacheLista) y se vacían en cuanto se crea, edita o borra un usuario desde aquí. */
+  private readonly cacheTodos = new CacheLista<Usuario>();
+  private readonly cacheAsignables = new CacheLista<UsuarioResumen>();
+  private readonly cacheParaVenta = new CacheLista<UsuarioResumen>();
+
   listar(): Promise<Usuario[]> {
-    return firstValueFrom(this.http.get<Usuario[]>(this.baseUrl));
+    return this.cacheTodos.obtener(() => firstValueFrom(this.http.get<Usuario[]>(this.baseUrl)));
   }
 
   /** Qué módulos existen, para qué roles aplican y con cuáles arranca cada rol. */
@@ -26,26 +33,30 @@ export class UsuariosService {
 
   /** Lista ligera (id/nombre) de usuarios activos no-admin, para pickers de "asignar a". Accesible también para líderes de área. */
   asignables(): Promise<UsuarioResumen[]> {
-    return firstValueFrom(this.http.get<UsuarioResumen[]>(`${this.baseUrl}/asignables`));
+    return this.cacheAsignables.obtener(() =>
+      firstValueFrom(this.http.get<UsuarioResumen[]>(`${this.baseUrl}/asignables`)),
+    );
   }
 
   /** Lista ligera (id/nombre) de usuarios activos que pueden ser el asesor interno de una venta:
    * a diferencia de asignables(), no excluye a quien la pide ni filtra por jerarquía. */
   paraVenta(): Promise<UsuarioResumen[]> {
-    return firstValueFrom(this.http.get<UsuarioResumen[]>(`${this.baseUrl}/para-venta`));
+    return this.cacheParaVenta.obtener(() =>
+      firstValueFrom(this.http.get<UsuarioResumen[]>(`${this.baseUrl}/para-venta`)),
+    );
   }
 
   crear(request: UsuarioCreateRequest): Promise<Usuario> {
-    return firstValueFrom(this.http.post<Usuario>(this.baseUrl, request));
+    return this.yRefrescarListas(firstValueFrom(this.http.post<Usuario>(this.baseUrl, request)));
   }
 
   actualizar(id: number, request: UsuarioUpdateRequest): Promise<Usuario> {
-    return firstValueFrom(this.http.put<Usuario>(`${this.baseUrl}/${id}`, request));
+    return this.yRefrescarListas(firstValueFrom(this.http.put<Usuario>(`${this.baseUrl}/${id}`, request)));
   }
 
   /** Nómina semanal del usuario (solo admin): cada sábado genera un pago pendiente en Gastos. */
   actualizarNomina(id: number, request: UsuarioNominaRequest): Promise<Usuario> {
-    return firstValueFrom(this.http.put<Usuario>(`${this.baseUrl}/${id}/nomina`, request));
+    return this.yRefrescarListas(firstValueFrom(this.http.put<Usuario>(`${this.baseUrl}/${id}/nomina`, request)));
   }
 
   restablecerPassword(id: number, password: string): Promise<void> {
@@ -53,6 +64,15 @@ export class UsuariosService {
   }
 
   eliminar(id: number): Promise<void> {
-    return firstValueFrom(this.http.delete<void>(`${this.baseUrl}/${id}`));
+    return this.yRefrescarListas(firstValueFrom(this.http.delete<void>(`${this.baseUrl}/${id}`)));
+  }
+
+  /** Tras un cambio (salga bien o no) las listas guardadas ya no sirven: la siguiente pantalla las pide de nuevo. */
+  private yRefrescarListas<R>(peticion: Promise<R>): Promise<R> {
+    return peticion.finally(() => {
+      this.cacheTodos.invalidar();
+      this.cacheAsignables.invalidar();
+      this.cacheParaVenta.invalidar();
+    });
   }
 }

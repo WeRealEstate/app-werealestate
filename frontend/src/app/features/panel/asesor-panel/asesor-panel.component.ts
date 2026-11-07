@@ -5,8 +5,7 @@ import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
 import { NotificacionesService } from '../../../core/services/notificaciones.service';
-import { ESTADO_LEAD_LABELS, EstadoLead, Lead } from '../../../core/models/lead.model';
-import { Notificacion } from '../../../core/models/notificacion.model';
+import { ESTADO_LEAD_LABELS, EstadoLead, ResumenLeads } from '../../../core/models/lead.model';
 import { AsignarTareasComponent } from '../../../shared/asignar-tareas/asignar-tareas.component';
 
 @Component({
@@ -23,20 +22,17 @@ export class AsesorPanelComponent {
   readonly user = this.auth.currentUser;
   readonly estadoLabels = ESTADO_LEAD_LABELS;
 
-  readonly leads = signal<Lead[]>([]);
-  readonly pendientes = signal<Notificacion[]>([]);
+  /** Solo los conteos (GET /api/leads/resumen): antes se descargaban todos sus leads para mostrar tres números. */
+  readonly resumen = signal<ResumenLeads | null>(null);
+  /** Las mismas notificaciones que la campana (una sola petición para las dos), solo las de leads. */
+  readonly pendientes = computed(() => this.notificacionesService.lista().filter((n) => n.leadId !== null));
   readonly isLoading = signal(true);
 
-  readonly totalLeads = computed(() => this.leads().length);
-  readonly totalFrios = computed(() => this.leads().filter((l) => l.frio).length);
-  readonly porEstado = computed(() => {
-    const conteo = {} as Record<EstadoLead, number>;
-    for (const l of this.leads()) conteo[l.estado] = (conteo[l.estado] ?? 0) + 1;
-    return conteo;
-  });
+  readonly totalLeads = computed(() => this.resumen()?.total ?? 0);
+  readonly totalFrios = computed(() => this.resumen()?.frios ?? 0);
 
   contarEstado(estado: string): number {
-    return this.porEstado()[estado as EstadoLead] ?? 0;
+    return this.resumen()?.porEstado[estado as EstadoLead] ?? 0;
   }
 
   constructor() {
@@ -48,12 +44,12 @@ export class AsesorPanelComponent {
     try {
       // Sin Leads ni Pipeline (el admin se los quitó) la API de leads respondería 403: no se pide.
       const verLeads = this.auth.tieneAlgunModulo(['LEADS', 'PIPELINE']);
-      const [leads, notificaciones] = await Promise.all([
-        verLeads ? this.leadsService.listar() : Promise.resolve([] as Lead[]),
-        this.notificacionesService.listar(),
+      // La campana pide las notificaciones al mismo tiempo: refrescar() comparte esa petición en vez de repetirla.
+      const [resumen] = await Promise.all([
+        verLeads ? this.leadsService.resumen() : Promise.resolve(null),
+        this.notificacionesService.refrescar(30_000),
       ]);
-      this.leads.set(leads);
-      this.pendientes.set(notificaciones.filter((n) => n.leadId !== null));
+      this.resumen.set(resumen);
     } catch {
       // El resumen es informativo: si falla, la página sigue siendo usable.
     } finally {

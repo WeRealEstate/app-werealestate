@@ -11,6 +11,9 @@ public interface VentaLoteRepository extends JpaRepository<VentaLote, Long> {
 
     List<VentaLote> findByVentaId(Long ventaId);
 
+    /** Los lotes de varias ventas de una sola vez (lista de Ventas, ver VentaService.toDtos). */
+    List<VentaLote> findByVentaIdInOrderByIdAsc(java.util.Collection<Long> ventaIds);
+
     /** Cuántos lotes tiene cada venta del conjunto: filas [ventaId, lotes] (para el Score de ventas). */
     @Query("select vl.venta.id, count(vl) from VentaLote vl where vl.venta.id in :ventaIds group by vl.venta.id")
     List<Object[]> contarLotesPorVenta(@Param("ventaIds") java.util.Collection<Long> ventaIds);

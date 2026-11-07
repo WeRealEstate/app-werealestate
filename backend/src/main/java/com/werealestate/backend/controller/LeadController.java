@@ -3,6 +3,7 @@ package com.werealestate.backend.controller;
 import com.werealestate.backend.dto.AsignarEtiquetasRequest;
 import com.werealestate.backend.dto.LeadCreateRequest;
 import com.werealestate.backend.dto.LeadDto;
+import com.werealestate.backend.dto.LeadResumenDto;
 import com.werealestate.backend.dto.LeadImportBatchRequest;
 import com.werealestate.backend.dto.LeadImportResultado;
 import com.werealestate.backend.dto.LeadUpdateRequest;
@@ -36,6 +37,12 @@ public class LeadController {
     @GetMapping
     public List<LeadDto> listar() {
         return leadService.listar();
+    }
+
+    /** Conteos de los leads de quien pregunta (inicio del asesor), sin descargar la lista. */
+    @GetMapping("/resumen")
+    public LeadResumenDto resumen() {
+        return leadService.resumen();
     }
 
     /** Lista principal, paginada y con filtros que corren en el servidor sobre el total. */

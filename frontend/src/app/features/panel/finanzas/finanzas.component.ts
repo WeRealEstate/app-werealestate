@@ -247,12 +247,22 @@ export class FinanzasComponent {
   constructor() {
     const pedida = this.route.snapshot.queryParamMap.get('pestana');
     const inicial = this.pestanas.find((t) => t.id === pedida) ?? this.pestanas[0];
-    if (inicial) this.pestana.set(inicial.id);
-    if (this.puedeFinanzas) void this.cargar();
-    else this.isLoading.set(false);
+    if (inicial) this.abrirPestana(inicial.id);
+    if (!this.puedeFinanzas) this.isLoading.set(false);
+  }
+
+  /** true desde que se pidieron los datos de Comisiones (vuelve a false si fallan, para reintentar al volver). */
+  private comisionesPedidas = false;
+
+  /** Las cuatro consultas de Comisiones son de las más pesadas del servidor: se hacen la primera vez que se abre esa
+   * pestaña, no al entrar a Finanzas por Ingresos, Valor vendido o Gastos (que cargan lo suyo). */
+  abrirPestana(id: Pestana): void {
+    this.pestana.set(id);
+    if (id === 'comisiones' && this.puedeFinanzas && !this.comisionesPedidas) void this.cargar();
   }
 
   async cargar(): Promise<void> {
+    this.comisionesPedidas = true;
     this.isLoading.set(true);
     this.errorMessage.set(null);
     try {
@@ -267,6 +277,7 @@ export class FinanzasComponent {
       this.porEntregar.set(porEntregar);
       this.desglose.set(desglose);
     } catch {
+      this.comisionesPedidas = false;
       this.errorMessage.set('No se pudieron cargar las comisiones. Intenta de nuevo.');
     } finally {
       this.isLoading.set(false);

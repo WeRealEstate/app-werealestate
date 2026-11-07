@@ -1,5 +1,5 @@
-import ExcelJS from 'exceljs';
-import { descargarBlob, estilizarEncabezado } from './excel';
+import type * as ExcelJS from 'exceljs';
+import { cargarExcelJS, descargarBlob, estilizarEncabezado } from './excel';
 
 const COLOR_EJEMPLO = 'FFFFF3CD';
 const COLOR_TEXTO_EJEMPLO = 'FF7A5C00';
@@ -49,7 +49,8 @@ const FILA_EJEMPLO = [
 
 /** Genera y descarga la plantilla .xlsx para importar leads, con la lista de desarrollos disponibles como validación. */
 export async function generarPlantillaLeads(desarrollos: string[]): Promise<void> {
-  const workbook = new ExcelJS.Workbook();
+  const { Workbook } = await cargarExcelJS();
+  const workbook = new Workbook();
   const hoja = workbook.addWorksheet('Leads');
 
   hoja.columns = COLUMNAS.map((c) => ({ header: c.header, key: c.key, width: c.width }));

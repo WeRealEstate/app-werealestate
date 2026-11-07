@@ -1,5 +1,5 @@
-import ExcelJS from 'exceljs';
-import { descargarBlob, estilizarEncabezado } from './excel';
+import type * as ExcelJS from 'exceljs';
+import { cargarExcelJS, descargarBlob, estilizarEncabezado } from './excel';
 
 const COLOR_EJEMPLO = 'FFFFF3CD';
 const COLOR_TEXTO_EJEMPLO = 'FF7A5C00';
@@ -15,7 +15,8 @@ const FILA_EJEMPLO = ['SAMAI Campestre', '5', '11', '2500'];
 
 /** Genera y descarga la plantilla .xlsx para importar lotes, con la lista de desarrollos disponibles como validación. */
 export async function generarPlantillaLotes(desarrollos: string[]): Promise<void> {
-  const workbook = new ExcelJS.Workbook();
+  const { Workbook } = await cargarExcelJS();
+  const workbook = new Workbook();
   const hoja = workbook.addWorksheet('Lotes');
 
   hoja.columns = COLUMNAS.map((c) => ({ header: c.header, key: c.key, width: c.width }));

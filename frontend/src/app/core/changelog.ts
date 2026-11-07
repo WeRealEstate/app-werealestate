@@ -15,6 +15,13 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.11.0', fecha: '2026-11-07', cambios: [
+    "La app hace menos llamadas al servidor. La campana ya no recalcula las notificaciones en cada cambio de pantalla: se actualiza cada minuto, al abrirla y al navegar si pasaron más de 30 segundos. El inicio del asesor ya no las pide dos veces y muestra sus conteos de leads sin descargarlos todos. Finanzas carga Comisiones solo al abrir esa pestaña. Los desarrollos, usuarios y asesores se reutilizan durante 5 minutos y se vuelven a pedir al editarlos o al cambiar de sesión.",
+    "Pantallas más ligeras: las herramientas de Excel y PDF se descargan solo al exportar, importar o generar un PDF. Leads baja de ~1 MB a ~110 KB, el Cotizador de ~650 KB a ~220 KB y el Plano de ~600 KB a ~170 KB. El primer Excel o PDF de cada sesión tarda un momento más.",
+    "Cambiar de pantalla es más rápido: después de abrir la app se descargan en segundo plano las pantallas que ese usuario puede usar, y no las de otros roles. No se hace si el celular tiene ahorro de datos o una conexión 2G/3G.",
+    "El servidor responde más rápido en listas grandes. Ventas, Clientes, Valor vendido y el historial de lotes ya no hacen una consulta por cada registro; por ejemplo, la lista de Ventas pasa de 60 a 12 consultas por página. La campana calcula los seguimientos pendientes con una sola consulta en vez de leer todos los leads y todos sus seguimientos.",
+    "Los planos públicos y el cotizador público ya no reciben quién hizo el último cambio de cada lote ni con cuánto dinero se apartó: eran datos internos que no se mostraban. El Calendario ya no pide seguimientos de leads a quien no tiene ese módulo; esa petición fallaba siempre.",
+  ] },
   { version: '11.10.1', fecha: '2026-11-05', cambios: [
     "Lotes y Plano: un lote que está en una venta pero aparece en otro estado (por ejemplo, Apartado con dinero) ahora dice 'No coincide con su venta' y trae el botón 'Alinear con la venta #N'. Con un clic, sin llenar ninguna ventana, el lote queda como lo indica su venta: Vendido si el contrato ya está firmado, o En proceso de firma si todavía no. El cliente se toma de la venta y en el historial queda la nota 'Alineado con la venta #N'. Igual que al cambiarlo a mano, el lote deja de mostrar el dinero con el que estaba apartado. El aviso de la campana de ese lote desaparece solo. Solo Admin y Administración.",
   ] },

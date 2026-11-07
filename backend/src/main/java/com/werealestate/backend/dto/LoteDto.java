@@ -29,16 +29,19 @@ public record LoteDto(
         BigDecimal precio) {
 
     public static LoteDto from(Lote lote) {
-        return de(lote, VisibilidadLote.visible(lote.getEstado()));
+        return de(lote, VisibilidadLote.visible(lote.getEstado()), true);
     }
 
     /** Para los endpoints públicos (/api/lotes/publico/**): el estado siempre como lo ve el público, aunque la petición
      * traiga la sesión de un admin (ver {@link VisibilidadLote#comoPublico}). */
     public static LoteDto paraPublico(Lote lote) {
-        return de(lote, VisibilidadLote.comoPublico(lote.getEstado()));
+        return de(lote, VisibilidadLote.comoPublico(lote.getEstado()), false);
     }
 
-    private static LoteDto de(Lote lote, EstadoLote estadoVisible) {
+    /** interno: quién hizo el último cambio y con cuánto dinero se apartó el lote son datos internos; los planos
+     * públicos y el cotizador no los usan, así que no salen en los endpoints públicos (el nombre además pesaba en la
+     * lista de cada desarrollo). */
+    private static LoteDto de(Lote lote, EstadoLote estadoVisible, boolean interno) {
         return new LoteDto(
                 lote.getId(),
                 DesarrolloDto.from(lote.getDesarrollo()),
@@ -47,10 +50,10 @@ public record LoteDto(
                 lote.getSuperficie(),
                 estadoVisible,
                 lote.getFechaCambioEstado(),
-                lote.getCambiadoPor() != null ? UsuarioResumenDto.from(lote.getCambiadoPor()) : null,
+                interno && lote.getCambiadoPor() != null ? UsuarioResumenDto.from(lote.getCambiadoPor()) : null,
                 PoligonoMapaJson.deserializar(lote.getMapaPoligonoJson()),
                 lote.getFechaExpiraApartado(),
-                lote.getMontoApartado(),
+                interno ? lote.getMontoApartado() : null,
                 false,
                 null,
                 lote.getPrecioM2Efectivo(),

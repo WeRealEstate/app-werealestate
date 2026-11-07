@@ -1,7 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import * as XLSX from 'xlsx';
 import { Desarrollo } from '../../../core/models/lead.model';
 import { LoteImportResultado } from '../../../core/models/lote.model';
 import { LeadsService } from '../../../core/services/leads.service';
@@ -85,7 +84,8 @@ export class LoteImportComponent {
     this.isProcesando.set(true);
 
     try {
-      const buffer = await archivo.arrayBuffer();
+      // xlsx (~330 KB) se descarga hasta que se elige un archivo, no al abrir la pantalla.
+      const [buffer, XLSX] = await Promise.all([archivo.arrayBuffer(), import('xlsx')]);
       const libro = XLSX.read(buffer, { type: 'array' });
       const hoja = libro.Sheets[libro.SheetNames[0]];
       const filasCrudas: string[][] = XLSX.utils.sheet_to_json(hoja, { header: 1, defval: '' });

@@ -20,6 +20,12 @@ public interface PagoVentaRepository extends JpaRepository<PagoVenta, Long> {
     @Query("select p from PagoVenta p join fetch p.recibo r where p.venta.id = :ventaId and r.anulado = false order by p.fecha asc, p.id asc")
     List<PagoVenta> findVigentesByVentaIdOrderByFechaAscIdAsc(@Param("ventaId") Long ventaId);
 
+    /** Lo abonado de cada venta (solo recibos vigentes), sumado en la base para varias ventas a la vez: filas
+     * [ventaId, total]. Una venta sin abonos no aparece. Lista de Ventas, ver VentaService.toDtos. */
+    @Query("select p.venta.id, sum(p.monto) from PagoVenta p join p.recibo r "
+            + "where p.venta.id in :ventaIds and r.anulado = false group by p.venta.id")
+    List<Object[]> totalVigentePorVenta(@Param("ventaIds") java.util.Collection<Long> ventaIds);
+
     List<PagoVenta> findByReciboId(Long reciboId);
 
     List<PagoVenta> findByVentaIdOrderByFechaDesc(Long ventaId);

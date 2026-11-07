@@ -1,4 +1,13 @@
-import ExcelJS from 'exceljs';
+import type * as ExcelJS from 'exceljs';
+
+/** exceljs pesa ~920 KB: se descarga la primera vez que se genera un Excel, no al abrir la pantalla que tiene el
+ * botón (antes Leads, Historial de cotizaciones y We Forms la bajaban completa aunque nadie exportara). Aquí solo se
+ * importan sus tipos, que no llegan al navegador. */
+export async function cargarExcelJS(): Promise<typeof ExcelJS> {
+  const modulo = await import('exceljs');
+  // Es un paquete CommonJS: según cómo lo envuelva el empaquetador, sus clases vienen en `default` o arriba.
+  return ((modulo as unknown as { default?: typeof ExcelJS }).default ?? modulo) as typeof ExcelJS;
+}
 
 const COLOR_ENCABEZADO = 'FF243FB8';
 const COLOR_BORDE = 'FFD9D9D9';
@@ -51,7 +60,8 @@ export async function descargarExcel<T extends Record<string, unknown>>(
   nombreHoja = 'Datos',
 ): Promise<void> {
   const claves = Object.keys(encabezados) as (keyof T)[];
-  const workbook = new ExcelJS.Workbook();
+  const { Workbook } = await cargarExcelJS();
+  const workbook = new Workbook();
   const hoja = workbook.addWorksheet(nombreHoja);
 
   hoja.columns = claves.map((clave) => ({ header: encabezados[clave], key: String(clave), width: 20 }));

@@ -21,7 +21,6 @@ import com.werealestate.backend.model.VentaLote;
 import com.werealestate.backend.repository.VentaLoteRepository;
 import com.werealestate.backend.repository.VentaRepository;
 import com.werealestate.backend.repository.EventoCalendarioRepository;
-import com.werealestate.backend.repository.LeadRepository;
 import com.werealestate.backend.repository.MovimientoLoteRepository;
 import com.werealestate.backend.repository.NotificacionLeidaRepository;
 import com.werealestate.backend.repository.SeguimientoRepository;
@@ -31,10 +30,8 @@ import com.werealestate.backend.security.CurrentUserProvider;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,7 +54,6 @@ public class NotificacionService {
             Set.of(EstadoLote.APARTADO, EstadoLote.APARTADO_A_PLAZO, EstadoLote.APARTADO_CON_DINERO);
     private static final List<EstadoLead> CERRADOS = List.of(EstadoLead.CERRADO_GANADO, EstadoLead.CERRADO_PERDIDO);
 
-    private final LeadRepository leadRepository;
     private final SeguimientoRepository seguimientoRepository;
     private final TareaRepository tareaRepository;
     private final EventoCalendarioRepository eventoCalendarioRepository;
@@ -70,7 +66,6 @@ public class NotificacionService {
     private final LoteRepository loteRepository;
 
     public NotificacionService(
-            LeadRepository leadRepository,
             SeguimientoRepository seguimientoRepository,
             TareaRepository tareaRepository,
             EventoCalendarioRepository eventoCalendarioRepository,
@@ -81,7 +76,6 @@ public class NotificacionService {
             VentaLoteRepository ventaLoteRepository,
             com.werealestate.backend.repository.WeFormRespuestaRepository respuestaRepository,
             LoteRepository loteRepository) {
-        this.leadRepository = leadRepository;
         this.seguimientoRepository = seguimientoRepository;
         this.tareaRepository = tareaRepository;
         this.eventoCalendarioRepository = eventoCalendarioRepository;
@@ -106,39 +100,24 @@ public class NotificacionService {
             leidas.add(clave(l.getTipo(), l.getEntidadId(), l.getFirma()));
         }
 
-        List<Lead> leadsVisibles = actual.getRol() == Role.ADMIN
-                ? leadRepository.findByArchivadoFalseOrderByFechaUltimoContactoAsc()
-                : leadRepository.findByAsesorIdAndArchivadoFalseOrderByFechaUltimoContactoAsc(actual.getId());
-
-        // Último seguimiento de cada lead, resuelto en una sola consulta (antes era una por lead
-        // dentro del for de abajo). Ordenado por lead y luego por fecha desc: la primera fila de
-        // cada lead que encontramos es su seguimiento más reciente, así que putIfAbsent basta.
-        List<Long> leadIds = leadsVisibles.stream().map(Lead::getId).toList();
-        Map<Long, Seguimiento> ultimoSeguimientoPorLead = new HashMap<>();
-        if (!leadIds.isEmpty()) {
-            for (Seguimiento s : seguimientoRepository.findByLeadIdInOrderByLeadIdAscFechaDesc(leadIds)) {
-                ultimoSeguimientoPorLead.putIfAbsent(s.getLead().getId(), s);
-            }
-        }
-
         LocalDateTime ahora = LocalDateTime.now();
         List<NotificacionDto> notificaciones = new ArrayList<>();
 
-        for (Lead lead : leadsVisibles) {
-            boolean cerrado = CERRADOS.contains(lead.getEstado());
-            if (cerrado) continue;
-
-            Seguimiento ultimo = ultimoSeguimientoPorLead.get(lead.getId());
-
-            if (ultimo != null) {
-                LocalDateTime proximo = ultimo.getProximoSeguimiento();
-                if (proximo != null && !proximo.isAfter(ahora)) {
-                    String firma = proximo.toString();
-                    if (!leidas.contains(clave("SEGUIMIENTO_PENDIENTE", lead.getId(), firma))) {
-                        notificaciones.add(NotificacionDto.seguimientoPendiente(
-                                "Seguimiento pendiente con " + lead.getNombreCliente() + ".", lead.getId(), firma));
-                    }
-                }
+        // Leads abiertos (todos para el admin, los suyos para los demás) cuyo último seguimiento ya pide el siguiente:
+        // la consulta trae solo esos, con su lead, ya en el orden de antes. Antes se cargaban todos los leads y todos
+        // sus seguimientos en cada consulta de la campana, y eso crecía con cada seguimiento registrado.
+        List<Seguimiento> vencidos = actual.getRol() == Role.ADMIN
+                ? seguimientoRepository.ultimosVencidos(CERRADOS, ahora)
+                : seguimientoRepository.ultimosVencidosDeAsesor(actual.getId(), CERRADOS, ahora);
+        Set<Long> leadsAvisados = new HashSet<>();
+        for (Seguimiento ultimo : vencidos) {
+            Lead lead = ultimo.getLead();
+            // Dos seguimientos con la misma fecha exacta: basta un aviso por lead.
+            if (!leadsAvisados.add(lead.getId())) continue;
+            String firma = ultimo.getProximoSeguimiento().toString();
+            if (!leidas.contains(clave("SEGUIMIENTO_PENDIENTE", lead.getId(), firma))) {
+                notificaciones.add(NotificacionDto.seguimientoPendiente(
+                        "Seguimiento pendiente con " + lead.getNombreCliente() + ".", lead.getId(), firma));
             }
         }
 

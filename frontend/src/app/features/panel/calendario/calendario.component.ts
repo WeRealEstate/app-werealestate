@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { EventosCalendarioService } from '../../../core/services/eventos-calendario.service';
 import { TareasService } from '../../../core/services/tareas.service';
 import { LeadsService } from '../../../core/services/leads.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { EventoCalendario } from '../../../core/models/evento-calendario.model';
@@ -70,6 +71,7 @@ export class CalendarioComponent {
   private readonly eventosService = inject(EventosCalendarioService);
   private readonly tareasService = inject(TareasService);
   private readonly leadsService = inject(LeadsService);
+  private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly confirmService = inject(ConfirmService);
   private readonly fb = inject(FormBuilder);
@@ -193,7 +195,8 @@ export class CalendarioComponent {
         this.eventosService.listar(),
         this.tareasService.misTareas(),
         this.tareasService.tareasCreadas(),
-        this.leadsService.proximosSeguimientos(),
+        // Sin Leads ni Pipeline (Administración y Equipo interno, por lo general) el servidor responde 403: no se pide.
+        this.auth.tieneAlgunModulo(['LEADS', 'PIPELINE']) ? this.leadsService.proximosSeguimientos() : Promise.resolve([]),
       ]);
 
       this.eventos.set(eventos);

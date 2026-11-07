@@ -15,7 +15,6 @@ import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.model.Venta;
 import com.werealestate.backend.model.VentaLote;
 import com.werealestate.backend.repository.EventoCalendarioRepository;
-import com.werealestate.backend.repository.LeadRepository;
 import com.werealestate.backend.repository.LoteRepository;
 import com.werealestate.backend.repository.MovimientoLoteRepository;
 import com.werealestate.backend.repository.NotificacionLeidaRepository;
@@ -43,7 +42,6 @@ class NotificacionLotesDesincronizadosTest {
     @BeforeEach
     void preparar() {
         service = new NotificacionService(
-                mock(LeadRepository.class),
                 mock(SeguimientoRepository.class),
                 mock(TareaRepository.class),
                 mock(EventoCalendarioRepository.class),
