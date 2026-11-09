@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.12.0', fecha: '2026-11-09', cambios: [
+    "Registrar venta (We Forms): cada registro que llega manda un correo a finanzas.weinmobiliaria@gmail.com con el asunto '¡Es hora de realizar un contrato!' y los datos del cliente, el asesor, el desarrollo, los lotes, el número de venta y el formulario. Sale de la cuenta de Gmail configurada en el servidor y solo cuando el registro ya quedó guardado; el asesor no espera al correo para terminar. Mientras no se configure esa cuenta, no se manda nada.",
+  ] },
   { version: '11.11.0', fecha: '2026-11-07', cambios: [
     "La app hace menos llamadas al servidor. La campana ya no recalcula las notificaciones en cada cambio de pantalla: se actualiza cada minuto, al abrirla y al navegar si pasaron más de 30 segundos. El inicio del asesor ya no las pide dos veces y muestra sus conteos de leads sin descargarlos todos. Finanzas carga Comisiones solo al abrir esa pestaña. Los desarrollos, usuarios y asesores se reutilizan durante 5 minutos y se vuelven a pedir al editarlos o al cambiar de sesión.",
     "Pantallas más ligeras: las herramientas de Excel y PDF se descargan solo al exportar, importar o generar un PDF. Leads baja de ~1 MB a ~110 KB, el Cotizador de ~650 KB a ~220 KB y el Plano de ~600 KB a ~170 KB. El primer Excel o PDF de cada sesión tarda un momento más.",

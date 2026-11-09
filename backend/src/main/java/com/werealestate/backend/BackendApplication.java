@@ -3,10 +3,14 @@ package com.werealestate.backend;
 import java.util.TimeZone;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @EnableScheduling
+// Para lo que no debe hacer esperar a quien lo dispara, como el aviso por correo de un registro de venta
+// (ver AvisoRegistroVentaCorreo).
+@EnableAsync
 public class BackendApplication {
 
 	public static void main(String[] args) {

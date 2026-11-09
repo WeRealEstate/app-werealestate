@@ -1,2 +1,2 @@
 // Generado por scripts/build-info.mjs (npm run build). La versión vive en core/changelog.ts.
-export const FECHA_COMPILACION = '2026-11-06';
+export const FECHA_COMPILACION = '2026-11-09';

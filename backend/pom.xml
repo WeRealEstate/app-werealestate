@@ -55,6 +55,12 @@
 			<artifactId>flyway-database-postgresql</artifactId>
 		</dependency>
 
+		<!-- Avisos por correo (SMTP): "¡Es hora de realizar un contrato!" al llegar un registro de venta -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
+
 		<!-- Notificaciones push del teléfono (Web Push + VAPID) -->
 		<dependency>
 			<groupId>nl.martijndwars</groupId>
