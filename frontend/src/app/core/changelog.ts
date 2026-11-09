@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.13.5', fecha: '2026-11-09', cambios: [
+    "Cotizador público: se agregó nuevamente el acceso directo 'Score de ventas' en la portada principal junto a los enlaces de los planos de Samai y Aldea Nanuu.",
+  ] },
   { version: '11.13.4', fecha: '2026-11-09', cambios: [
     "Score de ventas: se simplificaron los periodos a 'Este mes', 'Este año' y 'Todo', eliminando las opciones 'Esta semana' y 'Rango de fechas' tanto en el panel como en la vista pública.",
   ] },
