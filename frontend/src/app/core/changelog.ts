@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.12.2', fecha: '2026-11-09', cambios: [
+    "Planos públicos: el zoom y el arrastre se sienten más fluidos (menos trabajo del navegador en cada paso). El comportamiento del zoom es el mismo.",
+  ] },
   { version: '11.12.1', fecha: '2026-11-09', cambios: [
     "Seguridad: si se desactiva a un usuario, pierde el acceso en su siguiente petición (antes su sesión seguía viva hasta 8 horas) y los cambios de rol se aplican de inmediato. Las respuestas JSON del servidor viajan comprimidas.",
   ] },

@@ -1,5 +1,5 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, DestroyRef, effect, ElementRef, HostListener, Injector, OnDestroy, ViewChild, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, effect, ElementRef, HostListener, Injector, OnDestroy, ViewChild, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -128,6 +128,9 @@ function olvidarSinAcceso(proyecto?: string): void {
   standalone: true,
   imports: [FormsModule, DecimalPipe, RouterLink, ToastContainerComponent],
   templateUrl: './plano-publico.component.html',
+  // Con cientos de polígonos, revisar toda la plantilla en cada paso de zoom era lo más caro: todo el estado que
+  // lee la plantilla son signals, así que solo se repinta lo que cambia.
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PlanoPublicoComponent implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
@@ -657,6 +660,16 @@ export class PlanoPublicoComponent implements OnDestroy {
 
   // ---- Zoom y desplazamiento (ver PlanoComponent; el piso es zoomAjuste(), la vista completa) ----
 
+  /** Medida del visor guardada: leerla con getBoundingClientRect en cada paso de zoom/arrastre (y desde el template en
+   * cada detección de cambios) obligaba al navegador a recalcular el layout justo después de mover el plano, que es
+   * lo que más trababa. El visor solo cambia de tamaño con resize, pantalla completa o barra de URL, y todos pasan por
+   * ajustarZoomParaVerCompleto, que la vuelve a medir. */
+  private rectVista: DOMRect | null = null;
+  private medirVista(): DOMRect | null {
+    if (!this.rectVista) this.rectVista = this.contenedorPlano?.nativeElement.getBoundingClientRect() ?? null;
+    return this.rectVista;
+  }
+
   /** Alto que tendría la imagen en pantalla a zoom 1: como el ancho siempre es el del contenedor
    * (class="w-full" en el <img>), el alto natural es ese ancho × la proporción real de la imagen. */
   private altoNaturalEnPantalla(anchoContenedor: number): number {
@@ -670,9 +683,10 @@ export class PlanoPublicoComponent implements OnDestroy {
    * (que vive dentro del mismo div escalado) se mantenga perfectamente alineado con la imagen.
    * Deja la imagen centrada; el espacio sobrante se ve negro (ver el fondo del contenedor). */
   private ajustarZoomParaVerCompleto(): void {
+    this.rectVista = null;
     const contenedor = this.contenedorPlano?.nativeElement;
     if (!contenedor || this.naturalWidth === 0) return;
-    const rect = contenedor.getBoundingClientRect();
+    const rect = this.medirVista() ?? contenedor.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return;
 
     const altoAZoom1 = this.altoNaturalEnPantalla(rect.width);
@@ -715,7 +729,7 @@ export class PlanoPublicoComponent implements OnDestroy {
   private zoomEn(clientX: number, clientY: number, nuevoZoom: number): void {
     const contenedor = this.contenedorPlano?.nativeElement;
     if (!contenedor) return;
-    const rect = contenedor.getBoundingClientRect();
+    const rect = this.medirVista() ?? contenedor.getBoundingClientRect();
     const zoomActual = this.zoom();
     const zoomFinal = Math.min(ZOOM_MAX, Math.max(this.zoomAjuste(), nuevoZoom));
     if (zoomFinal === zoomActual) return;
@@ -732,7 +746,7 @@ export class PlanoPublicoComponent implements OnDestroy {
   }
 
   private zoomEnCentro(nuevoZoom: number): void {
-    const rect = this.contenedorPlano?.nativeElement.getBoundingClientRect();
+    const rect = this.medirVista();
     if (!rect) return;
     this.zoomEn(rect.left + rect.width / 2, rect.top + rect.height / 2, nuevoZoom);
   }
@@ -807,7 +821,7 @@ export class PlanoPublicoComponent implements OnDestroy {
   }
 
   private desplazarConTrackpad(event: WheelEvent): void {
-    const rect = this.contenedorPlano?.nativeElement.getBoundingClientRect();
+    const rect = this.medirVista();
     if (!rect) return;
     this.panX.update((x) => x - event.deltaX);
     this.panY.update((y) => y - event.deltaY);
@@ -877,7 +891,7 @@ export class PlanoPublicoComponent implements OnDestroy {
   }
 
   private moverVista(dx: number, dy: number): void {
-    const rect = this.contenedorPlano?.nativeElement.getBoundingClientRect();
+    const rect = this.medirVista();
     if (!rect) return;
     this.animar(() => {
       this.panX.update((x) => x + dx);
@@ -892,7 +906,7 @@ export class PlanoPublicoComponent implements OnDestroy {
   hayAlgoFueraDeVista(): boolean {
     const contenedor = this.contenedorPlano?.nativeElement;
     if (!contenedor) return false;
-    const rect = contenedor.getBoundingClientRect();
+    const rect = this.medirVista() ?? contenedor.getBoundingClientRect();
     const zoom = this.zoom();
     const anchoContenido = rect.width * zoom;
     const altoContenido = this.altoNaturalEnPantalla(rect.width) * zoom;
@@ -966,7 +980,7 @@ export class PlanoPublicoComponent implements OnDestroy {
 
     if (this.punteros.size >= 2 && this.ultimoPellizco) {
       const actual = this.medirPellizco();
-      const rect = this.contenedorPlano?.nativeElement.getBoundingClientRect();
+      const rect = this.medirVista();
       if (!actual || !rect || actual.distancia === 0 || this.ultimoPellizco.distancia === 0) return;
       // Primero se desplaza lo que se movió el punto medio, y luego se hace zoom alrededor del
       // nuevo punto medio: así el punto del plano bajo los dedos se queda bajo los dedos.
@@ -987,7 +1001,7 @@ export class PlanoPublicoComponent implements OnDestroy {
     if (this.arrastreVista.movioSuficiente) {
       this.panX.set(this.arrastreVista.panXInicial + dx);
       this.panY.set(this.arrastreVista.panYInicial + dy);
-      const rect = this.contenedorPlano?.nativeElement.getBoundingClientRect();
+      const rect = this.medirVista();
       if (rect) this.limitarPan(rect);
     }
   }
