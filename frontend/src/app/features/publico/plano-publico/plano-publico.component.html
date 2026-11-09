@@ -2,12 +2,19 @@
   @if (isLoading()) {
     <div class="h-full bg-black"></div>
   } @else if (errorMessage()) {
-    <div class="flex h-full items-center justify-center p-6 text-center">
-      <p class="text-sm text-red-600 dark:text-red-400">{{ errorMessage() }}</p>
+    <div class="flex h-full flex-col items-center justify-center gap-4 bg-black p-6 text-center">
+      <p class="text-sm text-white/85">{{ errorMessage() }}</p>
+      <button
+        type="button"
+        (click)="reintentar()"
+        class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white shadow transition-colors hover:bg-[#2f50d9] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+      >
+        Reintentar
+      </button>
     </div>
   } @else if (!planoUrl()) {
-    <div class="flex h-full items-center justify-center p-6 text-center">
-      <p class="text-sm text-ink-muted">Este plano todavía no está disponible.</p>
+    <div class="flex h-full items-center justify-center bg-black p-6 text-center">
+      <p class="text-sm text-white/75">Este plano todavía no está disponible.</p>
     </div>
   } @else {
     <div
@@ -27,11 +34,11 @@
         [style.transform]="'translate(' + panX() + 'px, ' + panY() + 'px) scale(' + zoom() + ')'"
       >
         <img
-          [src]="planoUrl()"
+          #imagenPlano
+          [src]="planoImagenUrl()"
           alt="Plano de {{ desarrolloNombre() }}"
           class="block w-full select-none"
           draggable="false"
-          decoding="async"
           fetchpriority="high"
           [class.opacity-0]="!imagenLista()"
           [class.plano-fundido]="imagenLista()"

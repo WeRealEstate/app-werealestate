@@ -140,7 +140,27 @@ export class PlanoPublicoComponent implements OnDestroy {
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
 
-  @ViewChild('contenedorPlano') private readonly contenedorPlano?: ElementRef<HTMLElement>;
+  private contenedorPlano?: ElementRef<HTMLElement>;
+  @ViewChild('contenedorPlano')
+  private set contenedorPlanoRef(ref: ElementRef<HTMLElement> | undefined) {
+    this.contenedorPlano = ref;
+    // Si la imagen ya había terminado de cargar (precargada por index.html o en caché) antes de que Angular
+    // enlazara el ViewChild del contenedor, aquí se calcula el zoom y el centrado de inmediato.
+    if (ref?.nativeElement && this.naturalWidth > 0) {
+      this.ajustarZoomParaVerCompleto();
+    }
+  }
+
+  @ViewChild('imagenPlano')
+  private set imagenPlanoRef(ref: ElementRef<HTMLImageElement> | undefined) {
+    const img = ref?.nativeElement;
+    // Cuando index.html precarga el plano con <link rel="preload" as="image">, al montar el <img> puede estar ya
+    // completo en memoria (img.complete) antes de que el listener (load) alcance a dispararse.
+    if (img && img.complete && img.naturalWidth > 0) {
+      this.procesarImagenCargada(img);
+    }
+  }
+
   @ViewChild('raizPlano') private readonly raizPlano?: ElementRef<HTMLElement>;
 
   // --- Pantalla completa del navegador (oculta la barra de direcciones y las pestañas). Se pide para toda la
@@ -189,10 +209,18 @@ export class PlanoPublicoComponent implements OnDestroy {
   readonly imagenLista = signal(false);
   private cargaProgramada = false;
   readonly errorMessage = signal<string | null>(null);
+  private readonly reintentoImagen = signal(0);
 
   /** El plano/nombre del desarrollo vienen anidados en cualquiera de sus lotes (todos comparten el
    * mismo desarrollo) — no hace falta un endpoint aparte. */
   readonly planoUrl = computed(() => this.lotes()[0]?.desarrollo.planoUrl ?? null);
+  /** URL efectiva del <img>: si la descarga inicial del archivo de imagen falla una vez, agrega un parámetro para reintentar. */
+  readonly planoImagenUrl = computed(() => {
+    const url = this.planoUrl();
+    const intento = this.reintentoImagen();
+    if (!url || intento === 0) return url;
+    return `${url}${url.includes('?') ? '&' : '?'}r=${intento}`;
+  });
   readonly desarrolloNombre = computed(() => this.lotes()[0]?.desarrollo.nombre ?? '');
 
   readonly loteActivo = signal<Lote | null>(null);
@@ -460,10 +488,25 @@ export class PlanoPublicoComponent implements OnDestroy {
     try {
       this.lotes.set(await this.lotesService.listarPublicoPorProyecto(this.proyecto));
     } catch {
-      this.errorMessage.set('No se pudo cargar el plano. Intenta de nuevo.');
+      // Un primer intento al abrir el link desde WhatsApp o con señal inestable puede fallar en frío: se reintenta una vez sola.
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        this.lotes.set(await this.lotesService.listarPublicoPorProyecto(this.proyecto));
+      } catch {
+        this.errorMessage.set('No se pudo cargar el plano. Intenta de nuevo.');
+      }
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  reintentar(): void {
+    this.cargaProgramada = false;
+    this.imagenLista.set(false);
+    this.naturalWidth = 0;
+    this.naturalHeight = 0;
+    this.reintentoImagen.set(0);
+    void this.cargar();
   }
 
   tienePoligono(lote: Lote): boolean {
@@ -677,6 +720,8 @@ export class PlanoPublicoComponent implements OnDestroy {
     return anchoContenedor * (this.naturalHeight / this.naturalWidth);
   }
 
+  private reintentoAjustePendiente = false;
+
   /** Al cargar la imagen (y si la ventana cambia de tamaño): calcula el zoom que hace caber la
    * imagen COMPLETA en la pantalla, sin recortar — el equivalente de "object-fit: contain", pero
    * aplicado al mismo zoom/pan del visor en vez de a CSS puro, para que el overlay de polígonos
@@ -687,7 +732,16 @@ export class PlanoPublicoComponent implements OnDestroy {
     const contenedor = this.contenedorPlano?.nativeElement;
     if (!contenedor || this.naturalWidth === 0) return;
     const rect = this.medirVista() ?? contenedor.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) return;
+    if (rect.width === 0 || rect.height === 0) {
+      if (!this.reintentoAjustePendiente) {
+        this.reintentoAjustePendiente = true;
+        requestAnimationFrame(() => {
+          this.reintentoAjustePendiente = false;
+          this.ajustarZoomParaVerCompleto();
+        });
+      }
+      return;
+    }
 
     const altoAZoom1 = this.altoNaturalEnPantalla(rect.width);
     const zoomAjuste = Math.min(1, Math.max(ZOOM_MIN, rect.height / altoAZoom1));
@@ -701,16 +755,24 @@ export class PlanoPublicoComponent implements OnDestroy {
 
   /** Se dispara cuando el <img> termina de cargar — recién ahí se conoce su tamaño real. */
   onImagenCargada(event: Event): void {
-    const img = event.target as HTMLImageElement;
+    this.procesarImagenCargada(event.target as HTMLImageElement);
+  }
+
+  private procesarImagenCargada(img: HTMLImageElement): void {
+    if (!img || img.naturalWidth === 0) return;
     this.naturalWidth = img.naturalWidth;
     this.naturalHeight = img.naturalHeight;
     this.ajustarZoomParaVerCompleto();
     this.terminarCarga();
   }
 
-  /** Si la imagen no carga, igual se quita la pantalla de carga (el visor queda vacío y negro). */
+  /** Si la imagen falla en el primer intento, se vuelve a pedir una vez; si vuelve a fallar, se muestra el botón Reintentar. */
   onImagenError(): void {
-    this.terminarCarga();
+    if (this.reintentoImagen() < 1) {
+      this.reintentoImagen.update((n) => n + 1);
+      return;
+    }
+    this.errorMessage.set('No se pudo cargar la imagen del plano. Intenta de nuevo.');
   }
 
   /** En cuanto llega el plano (o falla) se muestra: sin pantalla de carga ni espera mínima. Con el plano entra

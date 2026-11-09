@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.13.2', fecha: '2026-11-09', cambios: [
+    "Planos públicos (/samai y /aldea-nanuu): se corrigió un fallo por el que al abrir el enlace directo la pantalla podía quedarse en negro hasta recargar la página (cuando la imagen precargada terminaba antes de montarse el visor o tras actualizar la app). Además, si la red falla al pedir los lotes o la imagen, se reintenta automáticamente y se muestra un botón 'Reintentar'.",
+  ] },
   { version: '11.13.1', fecha: '2026-11-09', cambios: [
     "Cotizador público: el resumen del Score de ventas ya no aparece arriba del formulario ni como enlace en el centro de la portada; ahora va al final de la página como una cinta discreta de una línea con el podio (1.º a 3.º, solo posición y nombre) que al tocarla lleva al score completo. El acceso en la barra superior sigue igual.",
   ] },
