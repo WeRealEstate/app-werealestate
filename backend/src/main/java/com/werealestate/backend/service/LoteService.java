@@ -349,7 +349,7 @@ public class LoteService {
                 .findByNombre(nombreDesarrollo)
                 .orElseThrow(() -> new ResourceNotFoundException("Desarrollo no encontrado"));
 
-        return loteRepository.findByDesarrolloId(desarrollo.getId()).stream()
+        return loteRepository.findConDesarrolloByDesarrolloId(desarrollo.getId()).stream()
                 .sorted(ORDEN_NATURAL_LOTES)
                 .map(LoteDto::paraPublico)
                 .toList();

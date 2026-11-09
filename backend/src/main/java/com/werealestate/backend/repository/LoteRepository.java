@@ -4,6 +4,7 @@ import com.werealestate.backend.model.EstadoLote;
 import com.werealestate.backend.model.Lote;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -20,6 +21,10 @@ public interface LoteRepository extends JpaRepository<Lote, Long>, JpaSpecificat
     List<Lote> findByDesarrolloIdAndEstadoOrderByManzanaAscNumeroLoteAsc(Long desarrolloId, EstadoLote estado);
 
     List<Lote> findByDesarrolloId(Long desarrolloId);
+
+    /** Igual que {@link #findByDesarrolloId}, pero trae el desarrollo en la misma consulta (el DTO lo lee en cada lote). */
+    @EntityGraph(attributePaths = "desarrollo")
+    List<Lote> findConDesarrolloByDesarrolloId(Long desarrolloId);
 
     /** Conteo de lotes por desarrollo y estado, resuelto en SQL (no carga los lotes), para el resumen del
      * inicio del admin. */

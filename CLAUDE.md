@@ -27,7 +27,7 @@ Migraciones: `src/main/resources/db/migration/V1…V73` (la siguiente es **V74**
 ### Seguridad y permisos
 - `SecurityConfig`: stateless, JWT. Públicos: `/api/auth/**`, `GET /api/promociones/activas`, `POST /api/cotizaciones/publica`, `GET /api/lotes/publico`, `PUT /api/lotes/publico/*/estado`, `POST /api/lotes/publico/verificar-asesor`, `GET|POST /api/forms-publico/**`, `GET /api/score-publico`. Cadena aparte para `/uploads/**` (cacheable, público).
 - `SecurityConfig` deja pasar el despacho de errores (`DispatcherType.ERROR`): sin eso un 500 o un 400 salía como 401 "No autenticado" y el frontend cerraba sesión (así falló el login cuando un `Set.of(...).contains(null)` rompió las notificaciones). Un 401 ahora es siempre falta de autenticación real.
-- `JwtAuthFilter` confía en el rol del token (no consulta BD). `CurrentUserProvider.getUsuarioActual()` sí consulta por email.
+- `JwtAuthFilter` valida la firma y además consulta al usuario por email en cada petición: si no existe o está inactivo la petición queda anónima (401) y el rol que vale es el de la BD, no el del token. `CurrentUserProvider.getUsuarioActual()` también consulta por email.
 - Roles (`Role`): `ASESOR, LIDER_AREA` (en UI = "Administración"), `EQUIPO_INTERNO, ADMIN`.
 - 15 módulos (`Modulo`): LEADS, PIPELINE, COTIZADOR, LOTES, PLANO, VENTAS, SCORE, CLIENTES, FINANZAS, GASTOS, CALENDARIO, ASESORES_EXTERNOS, COMUNIDADES, WE_FORMS, MATERIAL. `ModulosAcceso` define máximo y default por rol; `Usuario.modulos` (CSV, null = default del rol).
 - `ModuloAccesoInterceptor`: mapa prefijo de API → módulos que lo habilitan (más específico primero). **Un endpoint nuevo de un módulo debe agregarse ahí.** APIs compartidas (desarrollos, usuarios, notificaciones, tareas, reportes) solo por rol.
@@ -78,7 +78,7 @@ Migraciones: `src/main/resources/db/migration/V1…V73` (la siguiente es **V74**
 ## Pendientes / riesgos conocidos
 1. `JWT_SECRET` nunca seteado en el VPS (usa el default de `application.properties`) — crítico. Rotar la password de DB que se pegó en un chat.
 2. `PUT /api/lotes/publico/*/estado` no exige PIN en servidor (el PIN solo gatea la UI).
-3. Token válido tras desactivar un usuario (480 min por defecto).
+3. ~~Token válido tras desactivar un usuario~~ — resuelto (ver `SEGURIDAD.md` #5). Pendientes de la auditoría en `SEGURIDAD.md` (gitignored): #1–#4 y #6–#9.
 4. Varios servicios cargan tablas completas en memoria (`FinanzasService.Datos`, `ComisionService.Totales`, `ClienteService.verificarDuplicado`, `LoteService.actualizarPrecioManzana`).
 5. Código marcado "temporal": `Venta.actualizar` y su botón; conviven dos reglas de comisión (`reglaNueva`).
 6. `API_CONTRACT.md` solo cubre el login y no menciona `captchaToken`; `README.md` vacío.

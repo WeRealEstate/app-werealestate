@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.12.1', fecha: '2026-11-09', cambios: [
+    "Seguridad: si se desactiva a un usuario, pierde el acceso en su siguiente petición (antes su sesión seguía viva hasta 8 horas) y los cambios de rol se aplican de inmediato. Las respuestas JSON del servidor viajan comprimidas.",
+  ] },
   { version: '11.12.0', fecha: '2026-11-09', cambios: [
     "Registrar venta (We Forms): cada registro que llega manda un correo a finanzas.weinmobiliaria@gmail.com con el asunto '¡Es hora de realizar un contrato!' y los datos del cliente, el asesor, el desarrollo, los lotes, el número de venta y el formulario. Sale de la cuenta de Gmail configurada en el servidor y solo cuando el registro ya quedó guardado; el asesor no espera al correo para terminar. Mientras no se configure esa cuenta, no se manda nada.",
   ] },
