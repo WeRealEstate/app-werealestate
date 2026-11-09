@@ -83,9 +83,6 @@
 
   @if (conPortada()) {
     <app-hero-publico />
-    @if (enCotizador()) {
-      <app-score-resumen />
-    }
   } @else {
     <!-- Sin portada, el contenido arranca debajo de la barra fija. -->
     <div class="h-[calc(3.25rem+env(safe-area-inset-top))]" aria-hidden="true"></div>
@@ -96,6 +93,10 @@
       <router-outlet />
     </div>
   </main>
+
+  @if (enCotizador()) {
+    <app-score-resumen />
+  }
 
   <footer class="border-t border-border bg-surface-2 px-4 py-6 sm:px-6 lg:px-10">
     <div

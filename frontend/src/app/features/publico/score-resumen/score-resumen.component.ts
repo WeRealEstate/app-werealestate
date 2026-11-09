@@ -5,12 +5,12 @@ import { PosicionScore, conPosiciones } from '../../../core/models/score.model';
 import { ScoreService } from '../../../core/services/score.service';
 import { WeFormsPublicoService } from '../../../core/services/we-forms-publico.service';
 
-const LUGARES_EN_RESUMEN = 5;
+const LUGARES_EN_RESUMEN = 3;
 
-/** Resumen del Score de ventas debajo de la portada del cotizador público: los cinco primeros lugares de todo el
- * historial y el enlace al score completo (/cotizador-publico/score). Si el dispositivo tiene guardado el PIN de un
- * asesor, marca "Tú" o, si no está entre los cinco, dice en qué lugar va. Sin ninguna venta todavía (o si no carga),
- * no se muestra: el cotizador sigue igual. */
+/** Cinta compacta del Score de ventas al final del cotizador público (antes del pie de página): muestra el podio
+ * (los tres primeros lugares de todo el historial, solo posición y nombre) y al tocarla lleva al score completo
+ * (/cotizador-publico/score). Si el dispositivo tiene guardado el PIN de un asesor, marca "Tú" o, si no está entre los
+ * tres primeros, indica en qué lugar va. Sin ninguna venta todavía (o si no carga), no se muestra. */
 @Component({
   selector: 'app-score-resumen',
   standalone: true,
@@ -30,7 +30,7 @@ export class ScoreResumenComponent {
     return clave ? (this.filas().find((f) => f.clave === clave) ?? null) : null;
   });
   readonly estoyEnElTop = computed(() => this.top().some((f) => f.clave === this.miClave()));
-  /** Con un empate en el último lugar del resumen, alguien puede ir en ese mismo lugar sin caber en las cinco filas. */
+  /** Con un empate en el último lugar del podio, alguien puede ir en ese mismo lugar sin caber en los tres mostrados. */
   readonly empatoConElTop = computed(() => {
     const yo = this.miFila();
     const ultimo = this.top().at(-1);

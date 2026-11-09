@@ -25,7 +25,7 @@ export class CotizadorPublicoLayoutComponent {
   /** La portada (foto a pantalla completa) va en el cotizador; el Score de ventas entra directo, sin ella,
    * para que su link compartido muestre el podio de inmediato. */
   readonly conPortada = signal(!esScore(window.location.pathname));
-  /** El resumen del score (top 5) va debajo de la portada solo en el cotizador. */
+  /** La cinta compacta del score (podio 1.º–3.º) va al final de la página solo en el cotizador. */
   readonly enCotizador = signal(esCotizador(window.location.pathname));
 
   /** true mientras la barra está encima de la foto de la portada: ahí va transparente con texto blanco;

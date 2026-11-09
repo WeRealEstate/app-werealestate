@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.13.1', fecha: '2026-11-09', cambios: [
+    "Cotizador público: el resumen del Score de ventas ya no aparece arriba del formulario ni como enlace en el centro de la portada; ahora va al final de la página como una cinta discreta de una línea con el podio (1.º a 3.º, solo posición y nombre) que al tocarla lleva al score completo. El acceso en la barra superior sigue igual.",
+  ] },
   { version: '11.13.0', fecha: '2026-11-09', cambios: [
     "Respuestas más rápidas en todo el panel: el servidor ya no busca al usuario tres veces por petición (lo hace una sola vez al validar su sesión) y se agregaron índices en la base de datos para acelerar búsquedas por desarrollo, cliente, asesor, venta y fechas.",
     "Clientes, Comisiones, Finanzas y Gastos recurrentes: abrir la ficha de un cliente, buscar en el selector de clientes o registrar, editar y devolver pagos de comisiones ahora consulta solo los registros implicados en vez de leer todas las ventas, pagos y comisiones.",
