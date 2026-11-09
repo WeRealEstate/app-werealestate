@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.13.4', fecha: '2026-11-09', cambios: [
+    "Score de ventas: se simplificaron los periodos a 'Este mes', 'Este año' y 'Todo', eliminando las opciones 'Esta semana' y 'Rango de fechas' tanto en el panel como en la vista pública.",
+  ] },
   { version: '11.13.3', fecha: '2026-11-09', cambios: [
     "Planos públicos y del panel: carga progresiva en dos pasos. Al abrir el plano se muestra primero una vista rápida (~450 KB en vez de ~26.5 MB) para que el mapa y los lotes estén listos al instante, mientras en segundo plano se descarga y decodifica la imagen en alta definición completa (15,000 × 10,000 px) y se reemplaza sola sin mover el zoom ni la posición. El servidor genera esta vista rápida y optimiza la compresión de los planos ya subidos de forma automática al iniciar.",
   ] },

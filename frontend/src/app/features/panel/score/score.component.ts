@@ -7,7 +7,7 @@ import { ScoreService } from '../../../core/services/score.service';
 import { WeFormsPublicoService } from '../../../core/services/we-forms-publico.service';
 import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 
-type Periodo = 'semana' | 'mes' | 'anio' | 'todo' | 'rango';
+type Periodo = 'mes' | 'anio' | 'todo';
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
@@ -18,7 +18,7 @@ const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', '
 @Component({
   selector: 'app-score',
   standalone: true,
-  imports: [FormsModule, LucideTrophy, WeLoaderComponent],
+  imports: [LucideTrophy, WeLoaderComponent],
   templateUrl: './score.component.html',
 })
 export class ScoreComponent {
@@ -28,16 +28,12 @@ export class ScoreComponent {
   readonly esPublico = inject(ActivatedRoute).snapshot.data['publico'] === true;
 
   readonly periodos: { valor: Periodo; etiqueta: string }[] = [
-    { valor: 'semana', etiqueta: 'Esta semana' },
     { valor: 'mes', etiqueta: 'Este mes' },
     { valor: 'anio', etiqueta: 'Este año' },
     { valor: 'todo', etiqueta: 'Todo' },
-    { valor: 'rango', etiqueta: 'Rango de fechas' },
   ];
 
   readonly periodo = signal<Periodo>('mes');
-  readonly rangoDesde = signal('');
-  readonly rangoHasta = signal('');
 
   readonly ranking = signal<RankingScore | null>(null);
   readonly isLoading = signal(true);
@@ -58,18 +54,12 @@ export class ScoreComponent {
   readonly periodoLabel = computed(() => {
     const hoy = new Date();
     switch (this.periodo()) {
-      case 'semana':
-        return 'esta semana';
       case 'mes':
         return `${MESES[hoy.getMonth()]} ${hoy.getFullYear()}`;
       case 'anio':
         return `${hoy.getFullYear()}`;
       case 'todo':
         return 'todo el historial';
-      case 'rango':
-        return this.rangoDesde() && this.rangoHasta()
-          ? `el periodo del ${fechaCorta(this.rangoDesde())} al ${fechaCorta(this.rangoHasta())}`
-          : 'el rango elegido';
     }
   });
 
@@ -80,19 +70,6 @@ export class ScoreComponent {
   cambiarPeriodo(periodo: Periodo): void {
     if (periodo === this.periodo()) return;
     this.periodo.set(periodo);
-    if (periodo === 'rango') {
-      // Arranca con el mes en curso para que el rango ya muestre algo y solo haya que ajustarlo.
-      if (!this.rangoDesde() || !this.rangoHasta()) {
-        const { desde, hasta } = rangoDe('mes');
-        this.rangoDesde.set(desde!);
-        this.rangoHasta.set(hasta!);
-      }
-    }
-    void this.cargar();
-  }
-
-  cambiarRango(campo: 'desde' | 'hasta', valor: string): void {
-    (campo === 'desde' ? this.rangoDesde : this.rangoHasta).set(valor);
     void this.cargar();
   }
 
@@ -123,20 +100,7 @@ export class ScoreComponent {
 
   private async cargar(): Promise<void> {
     const consulta = ++this.consulta;
-    let desde: string | undefined;
-    let hasta: string | undefined;
-    if (this.periodo() === 'rango') {
-      desde = this.rangoDesde() || undefined;
-      hasta = this.rangoHasta() || undefined;
-      if (desde && hasta && desde > hasta) {
-        this.errorMessage.set('La fecha inicial no puede ser posterior a la final.');
-        this.ranking.set(null);
-        this.isLoading.set(false);
-        return;
-      }
-    } else {
-      ({ desde, hasta } = rangoDe(this.periodo()));
-    }
+    const { desde, hasta } = rangoDe(this.periodo());
     this.isLoading.set(true);
     this.errorMessage.set(null);
     try {
@@ -163,15 +127,10 @@ export class ScoreComponent {
   }
 }
 
-/** Fechas yyyy-MM-dd del periodo según la fecha del dispositivo: la semana va de lunes a domingo. */
+/** Fechas yyyy-MM-dd del periodo según la fecha del dispositivo. */
 function rangoDe(periodo: Periodo): { desde?: string; hasta?: string } {
   const hoy = new Date();
   switch (periodo) {
-    case 'semana': {
-      const lunes = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - ((hoy.getDay() + 6) % 7));
-      const domingo = new Date(lunes.getFullYear(), lunes.getMonth(), lunes.getDate() + 6);
-      return { desde: isoDate(lunes), hasta: isoDate(domingo) };
-    }
     case 'mes':
       return {
         desde: isoDate(new Date(hoy.getFullYear(), hoy.getMonth(), 1)),
@@ -186,10 +145,4 @@ function rangoDe(periodo: Periodo): { desde?: string; hasta?: string } {
 
 function isoDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-/** "2026-10-05" → "05/10/2026". */
-function fechaCorta(iso: string): string {
-  const [anio, mes, dia] = iso.split('-');
-  return `${dia}/${mes}/${anio}`;
 }
