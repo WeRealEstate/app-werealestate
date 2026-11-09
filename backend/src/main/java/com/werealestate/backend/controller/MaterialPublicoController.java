@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
+import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,45 +39,45 @@ public class MaterialPublicoController {
     }
 
     @GetMapping("/{id}/archivo")
-    public ResponseEntity<byte[]> archivo(
+    public ResponseEntity<Resource> archivo(
             @PathVariable Long id,
             @RequestParam String proyecto,
             @RequestHeader("X-Asesor-Pin") String pin,
             HttpServletRequest http) {
         limitador.exigir(http, pin, proyecto);
-        return MaterialController.responder(service.descargarPublico(id, proyecto));
+        return MaterialController.responder(service.descargarPublico(id, proyecto), http);
     }
 
     @GetMapping("/{id}/miniatura")
-    public ResponseEntity<byte[]> miniatura(
+    public ResponseEntity<Resource> miniatura(
             @PathVariable Long id,
             @RequestParam String proyecto,
             @RequestHeader("X-Asesor-Pin") String pin,
             HttpServletRequest http) {
         limitador.exigir(http, pin, proyecto);
-        return MaterialController.responder(service.miniaturaPublico(id, proyecto));
+        return MaterialController.responder(service.miniaturaPublico(id, proyecto), http);
     }
 
     @GetMapping("/{id}/imagenes/{imagenId}")
-    public ResponseEntity<byte[]> imagen(
+    public ResponseEntity<Resource> imagen(
             @PathVariable Long id,
             @PathVariable Long imagenId,
             @RequestParam String proyecto,
             @RequestHeader("X-Asesor-Pin") String pin,
             HttpServletRequest http) {
         limitador.exigir(http, pin, proyecto);
-        return MaterialController.responder(service.imagenPublico(id, imagenId, proyecto));
+        return MaterialController.responder(service.imagenPublico(id, imagenId, proyecto), http);
     }
 
     @GetMapping("/{id}/imagenes/{imagenId}/miniatura")
-    public ResponseEntity<byte[]> miniaturaImagen(
+    public ResponseEntity<Resource> miniaturaImagen(
             @PathVariable Long id,
             @PathVariable Long imagenId,
             @RequestParam String proyecto,
             @RequestHeader("X-Asesor-Pin") String pin,
             HttpServletRequest http) {
         limitador.exigir(http, pin, proyecto);
-        return MaterialController.responder(service.miniaturaImagenPublico(id, imagenId, proyecto));
+        return MaterialController.responder(service.miniaturaImagenPublico(id, imagenId, proyecto), http);
     }
 
     /** Toda la galería en un ZIP (ver MaterialController.enviarZip). */

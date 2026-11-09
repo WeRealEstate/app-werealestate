@@ -301,25 +301,22 @@ public class GastoRecurrenteService {
         } catch (RuntimeException e) {
             throw new ValidationException("Mes inválido: usa el formato yyyy-MM");
         }
+        LocalDate desde = ym.atDay(1);
+        LocalDate hasta = ym.atEndOfMonth();
         // Libro: cada abono en su mes y, si su recibo se anuló, un contra-asiento negativo en el mes de
-        // la anulación (el mes original no cambia).
+        // la anulación (el mes original no cambia). Solo se leen los movimientos que tocan ese mes.
         BigDecimal ingresos = BigDecimal.ZERO;
-        for (PagoVenta p : pagoVentaRepository.findAllConRecibo()) {
-            if (YearMonth.from(p.getFecha()).equals(ym)) ingresos = ingresos.add(p.getMonto());
+        for (PagoVenta p : pagoVentaRepository.findEnRangoConRecibo(desde, hasta)) {
+            if (!p.getFecha().isBefore(desde) && !p.getFecha().isAfter(hasta)) ingresos = ingresos.add(p.getMonto());
             if (p.getRecibo().isAnulado() && p.getRecibo().getAnuladoFecha() != null
-                    && YearMonth.from(p.getRecibo().getAnuladoFecha()).equals(ym)) {
+                    && !p.getRecibo().getAnuladoFecha().isBefore(desde)
+                    && !p.getRecibo().getAnuladoFecha().isAfter(hasta)) {
                 ingresos = ingresos.subtract(p.getMonto());
             }
         }
         // Lo que los asesores devolvieron de comisiones ya entregadas: ingreso aparte.
-        BigDecimal devoluciones = devolucionRepository.findAll().stream()
-                .filter(d -> YearMonth.from(d.getFecha()).equals(ym))
-                .map(com.werealestate.backend.model.VentaComisionDevolucion::getMonto)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal gastado = gastoRepository.findAll().stream()
-                .filter(g -> YearMonth.from(g.getFecha()).equals(ym))
-                .map(Gasto::getMonto)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal devoluciones = devolucionRepository.sumarEntre(desde, hasta);
+        BigDecimal gastado = gastoRepository.sumarEntre(desde, hasta);
 
         LocalDate hoy = LocalDate.now();
         BigDecimal pendiente = BigDecimal.ZERO;
@@ -338,12 +335,18 @@ public class GastoRecurrenteService {
 
     // ---------------------------------------------------------------- vencimientos
 
-    /** Crea los vencimientos que falten, hasta 30 días adelante, de los recurrentes activos. */
+    /** Crea los vencimientos que falten, hasta 30 días adelante, de los recurrentes activos.
+     * Precarga en una sola consulta los pares (recurrenteId, fechaVencimiento) ya existentes para no ejecutar
+     * un SELECT por cada semana/mes histórico en cada llamada. */
     void generarPendientes() {
         LocalDate hasta = LocalDate.now().plusDays(DIAS_DE_ANTICIPACION);
+        java.util.Set<String> existentes = new java.util.HashSet<>();
+        for (Object[] fila : pagoRepository.fechasExistentesDeActivos()) {
+            existentes.add(fila[0] + ":" + fila[1]);
+        }
         for (GastoRecurrente g : recurrenteRepository.findByActivoTrue()) {
             for (LocalDate fecha : vencimientos(g, hasta)) {
-                if (!pagoRepository.existsByRecurrenteIdAndFechaVencimiento(g.getId(), fecha)) {
+                if (existentes.add(g.getId() + ":" + fecha)) {
                     pagoRepository.save(new GastoRecurrentePago(g, fecha, g.getMontoEstimado()));
                 }
             }
@@ -400,8 +403,7 @@ public class GastoRecurrenteService {
     }
 
     private GastoRecurrenteDto dto(GastoRecurrente g) {
-        List<GastoRecurrentePago> sinPagar =
-                pagoRepository.findSinPagar().stream().filter(p -> p.getRecurrente().getId().equals(g.getId())).toList();
+        List<GastoRecurrentePago> sinPagar = pagoRepository.findSinPagarDe(g.getId());
         return GastoRecurrenteDto.from(g, sinPagar.isEmpty() ? null : sinPagar.get(0).getFechaVencimiento(), sinPagar.size());
     }
 

@@ -123,12 +123,11 @@ public class NotificacionService {
 
         LocalDate hoy = LocalDate.now();
 
-        for (Tarea tarea : tareaRepository.findByAsignadoAIdOrderByCompletadaAscFechaLimiteAscFechaCreacionDesc(actual.getId())) {
-            if (tarea.isCompletada()) continue;
-            // Solo notifica tareas con fecha límite vencida o para hoy; sin fecha, se ve en "Mis tareas" pero no interrumpe.
+        for (Tarea tarea : tareaRepository
+                .findByAsignadoAIdAndCompletadaFalseAndFechaLimiteLessThanEqualOrderByFechaLimiteAscFechaCreacionDesc(
+                        actual.getId(), hoy)) {
             LocalDate fechaLimite = tarea.getFechaLimite();
-            boolean vencidaOParaHoy = fechaLimite != null && !fechaLimite.isAfter(hoy);
-            if (vencidaOParaHoy) {
+            if (fechaLimite != null) {
                 String firma = fechaLimite.toString();
                 if (!leidas.contains(clave("TAREA_PENDIENTE", tarea.getId(), firma))) {
                     notificaciones.add(NotificacionDto.tareaPendiente(
@@ -137,9 +136,8 @@ public class NotificacionService {
             }
         }
 
-        for (EventoCalendario evento : eventoCalendarioRepository.findByUsuarioIdOrderByFechaAsc(actual.getId())) {
-            if (!evento.isRecordatorio()) continue;
-
+        for (EventoCalendario evento : eventoCalendarioRepository
+                .findByUsuarioIdAndRecordatorioTrueAndFechaLessThanEqualOrderByFechaAsc(actual.getId(), hoy.plusDays(1))) {
             LocalDate fecha = evento.getFecha();
             String firma;
             String mensaje;
@@ -262,20 +260,31 @@ public class NotificacionService {
     }
 
     /** Aviso de cada venta registrada en los últimos días por alguien más (solo admin y líder de
-     * área con el módulo Ventas). La firma es el momento en que se registró. */
+     * área con el módulo Ventas). La firma es el momento en que se registró. Precarga en bloque las ventas que
+     * vinieron de We Forms y los lotes de cada venta para evitar consultas N+1. */
     private void agregarAvisosDeVentas(Usuario actual, Set<String> leidas, List<NotificacionDto> notificaciones) {
         if (actual.getRol() != Role.ADMIN
                 && !ModulosAcceso.efectivos(actual).contains(Modulo.VENTAS)) {
             return;
         }
         LocalDateTime desde = LocalDateTime.now().minusDays(DIAS_AVISOS_LOTES);
-        for (Venta v : ventaRepository.recientesDeOtros(desde, actual.getId())) {
+        List<Venta> recientes = ventaRepository.recientesDeOtros(desde, actual.getId());
+        if (recientes.isEmpty()) return;
+
+        List<Long> ventaIds = recientes.stream().map(Venta::getId).toList();
+        Set<Long> conRespuesta = new HashSet<>(respuestaRepository.ventaIdsConRespuesta(ventaIds));
+        java.util.Map<Long, List<VentaLote>> lotesPorVenta = new java.util.HashMap<>();
+        for (VentaLote vl : ventaLoteRepository.findByVentaIdInOrderByIdAsc(ventaIds)) {
+            lotesPorVenta.computeIfAbsent(vl.getVenta().getId(), k -> new ArrayList<>()).add(vl);
+        }
+
+        for (Venta v : recientes) {
             // Una venta que nació de un registro de venta se avisa como tal (ver agregarAvisosDeRegistrosDeVenta).
-            if (respuestaRepository.existsByVentaId(v.getId())) continue;
+            if (conRespuesta.contains(v.getId())) continue;
             String firma = v.getFechaCreacion().toString();
             if (leidas.contains(clave("VENTA_NUEVA", v.getId(), firma))) continue;
 
-            List<VentaLote> lotes = ventaLoteRepository.findByVentaId(v.getId());
+            List<VentaLote> lotes = lotesPorVenta.getOrDefault(v.getId(), List.of());
             String detalle = lotes.stream()
                     .map(vl -> "Mz " + vl.getLote().getManzana() + " Lote " + vl.getLote().getNumeroLote() + " ("
                             + vl.getLote().getDesarrollo().getNombre() + ")")
@@ -297,12 +306,27 @@ public class NotificacionService {
             return;
         }
         LocalDateTime desde = LocalDateTime.now().minusDays(DIAS_AVISOS_LOTES);
-        for (WeFormRespuesta r : respuestaRepository.recientes(desde)) {
+        List<WeFormRespuesta> recientes = respuestaRepository.recientes(desde);
+        if (recientes.isEmpty()) return;
+
+        List<Long> ventaIds = recientes.stream()
+                .map(WeFormRespuesta::getVenta)
+                .filter(java.util.Objects::nonNull)
+                .map(Venta::getId)
+                .toList();
+        java.util.Map<Long, List<VentaLote>> lotesPorVenta = new java.util.HashMap<>();
+        if (!ventaIds.isEmpty()) {
+            for (VentaLote vl : ventaLoteRepository.findByVentaIdInOrderByIdAsc(ventaIds)) {
+                lotesPorVenta.computeIfAbsent(vl.getVenta().getId(), k -> new ArrayList<>()).add(vl);
+            }
+        }
+
+        for (WeFormRespuesta r : recientes) {
             String firma = r.getFechaEnvio().toString();
             if (leidas.contains(clave(TIPO_REGISTRO_VENTA, r.getId(), firma))
                     || leidas.contains(clave(TIPO_REGISTRO_VENTA_ANTERIOR, r.getId(), firma))) continue;
             Venta v = r.getVenta();
-            String lotes = v == null ? "" : ventaLoteRepository.findByVentaId(v.getId()).stream()
+            String lotes = v == null ? "" : lotesPorVenta.getOrDefault(v.getId(), List.of()).stream()
                     .map(vl -> "Mz " + vl.getLote().getManzana() + " Lote " + vl.getLote().getNumeroLote())
                     .collect(java.util.stream.Collectors.joining(", "));
             String cliente = r.getCliente() != null ? r.getCliente().nombreCompleto() : "un cliente";

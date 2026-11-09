@@ -11,14 +11,24 @@ public interface VentaLoteRepository extends JpaRepository<VentaLote, Long> {
 
     List<VentaLote> findByVentaId(Long ventaId);
 
-    /** Los lotes de varias ventas de una sola vez (lista de Ventas, ver VentaService.toDtos). */
-    List<VentaLote> findByVentaIdInOrderByIdAsc(java.util.Collection<Long> ventaIds);
+    /** Los lotes de varias ventas de una sola vez con lote y desarrollo precargados (evita N+1 al armar DTOs). */
+    @Query("select vl from VentaLote vl join fetch vl.lote l join fetch l.desarrollo join fetch vl.venta "
+            + "where vl.venta.id in :ventaIds order by vl.id asc")
+    List<VentaLote> findByVentaIdInOrderByIdAsc(@Param("ventaIds") java.util.Collection<Long> ventaIds);
+
+    /** Todos los lotes vendidos con su venta, lote y desarrollo en una sola consulta (para listados globales y finanzas). */
+    @Query("select vl from VentaLote vl join fetch vl.lote l join fetch l.desarrollo join fetch vl.venta")
+    List<VentaLote> findAllConLoteYDesarrollo();
 
     /** Cuántos lotes tiene cada venta del conjunto: filas [ventaId, lotes] (para el Score de ventas). */
     @Query("select vl.venta.id, count(vl) from VentaLote vl where vl.venta.id in :ventaIds group by vl.venta.id")
     List<Object[]> contarLotesPorVenta(@Param("ventaIds") java.util.Collection<Long> ventaIds);
 
     boolean existsByLoteId(Long loteId);
+
+    /** IDs de los lotes de un desarrollo que ya están incluidos en alguna venta (una sola consulta para We Forms). */
+    @Query("select distinct vl.lote.id from VentaLote vl where vl.lote.desarrollo.id = :desarrolloId")
+    List<Long> lotesConVentaEnDesarrollo(@Param("desarrolloId") Long desarrolloId);
 
     /** El desarrollo de cada lote de cada venta: filas [ventaId, nombre del desarrollo], sin repetir (desglose de
      * comisiones por desarrollo). */

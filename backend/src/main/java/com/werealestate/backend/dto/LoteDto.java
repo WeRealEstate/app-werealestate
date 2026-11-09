@@ -29,19 +29,25 @@ public record LoteDto(
         BigDecimal precio) {
 
     public static LoteDto from(Lote lote) {
-        return de(lote, VisibilidadLote.visible(lote.getEstado()), true);
+        return de(lote, VisibilidadLote.visible(lote.getEstado()), true, true);
+    }
+
+    /** Para tablas paginadas (/api/lotes/buscar) y selectores de lotes (/api/lotes/disponibles y We Forms) donde no se
+     * dibuja el plano interactivo: omite deserializar y enviar las coordenadas del polígono (mapaPoligono = null). */
+    public static LoteDto sinMapa(Lote lote) {
+        return de(lote, VisibilidadLote.visible(lote.getEstado()), true, false);
     }
 
     /** Para los endpoints públicos (/api/lotes/publico/**): el estado siempre como lo ve el público, aunque la petición
      * traiga la sesión de un admin (ver {@link VisibilidadLote#comoPublico}). */
     public static LoteDto paraPublico(Lote lote) {
-        return de(lote, VisibilidadLote.comoPublico(lote.getEstado()), false);
+        return de(lote, VisibilidadLote.comoPublico(lote.getEstado()), false, true);
     }
 
     /** interno: quién hizo el último cambio y con cuánto dinero se apartó el lote son datos internos; los planos
      * públicos y el cotizador no los usan, así que no salen en los endpoints públicos (el nombre además pesaba en la
-     * lista de cada desarrollo). */
-    private static LoteDto de(Lote lote, EstadoLote estadoVisible, boolean interno) {
+     * lista de cada desarrollo). incluirPoligono: solo en vistas de mapa se deserializa mapaPoligonoJson. */
+    private static LoteDto de(Lote lote, EstadoLote estadoVisible, boolean interno, boolean incluirPoligono) {
         return new LoteDto(
                 lote.getId(),
                 DesarrolloDto.from(lote.getDesarrollo()),
@@ -51,7 +57,7 @@ public record LoteDto(
                 estadoVisible,
                 lote.getFechaCambioEstado(),
                 interno && lote.getCambiadoPor() != null ? UsuarioResumenDto.from(lote.getCambiadoPor()) : null,
-                PoligonoMapaJson.deserializar(lote.getMapaPoligonoJson()),
+                incluirPoligono ? PoligonoMapaJson.deserializar(lote.getMapaPoligonoJson()) : null,
                 lote.getFechaExpiraApartado(),
                 interno ? lote.getMontoApartado() : null,
                 false,

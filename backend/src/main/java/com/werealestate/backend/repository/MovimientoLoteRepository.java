@@ -15,6 +15,10 @@ public interface MovimientoLoteRepository
      * información" en /panel/lotes. */
     List<MovimientoLote> findByLoteIdOrderByFechaDesc(Long loteId);
 
+    /** Historial de varios lotes a la vez, más reciente primero, con usuario precargado (evita N+1 al filtrar lotes apartados en We Forms). */
+    @Query("select m from MovimientoLote m left join fetch m.usuario where m.lote.id in :loteIds order by m.fecha desc, m.id desc")
+    List<MovimientoLote> findByLoteIdInOrderByFechaDesc(@Param("loteIds") java.util.Collection<Long> loteIds);
+
     /** Cambios de estado desde `desde` hechos por alguien distinto de `usuarioId` (o por nadie: la
      * reversión automática por vencimiento) — la base de los avisos de apartado/desapartado de
      * NotificacionService, que no le avisan a quien hizo el cambio. */

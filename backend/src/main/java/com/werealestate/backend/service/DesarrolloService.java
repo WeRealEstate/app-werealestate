@@ -25,6 +25,7 @@ import javax.imageio.stream.ImageOutputStream;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.rendering.ImageType;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -124,31 +125,21 @@ public class DesarrolloService {
         return DesarrolloDto.from(desarrollo);
     }
 
+    /** Rasteriza directamente en RGB opaco (ImageType.RGB pinta sobre blanco dentro de PDFBox) para no duplicar un
+     * segundo BufferedImage de ~600 MB en memoria al quitar el canal alfa antes de comprimir a JPEG. */
     private static byte[] rasterizarPrimeraPaginaPdf(byte[] pdfBytes) {
         try (PDDocument documento = Loader.loadPDF(pdfBytes)) {
             if (documento.getNumberOfPages() == 0) {
                 throw new ValidationException("El PDF del plano no tiene páginas");
             }
             PDFRenderer renderer = new PDFRenderer(documento);
-            BufferedImage imagen = renderer.renderImageWithDPI(0, dpiSeguroPara(documento.getPage(0).getMediaBox()));
+            BufferedImage imagen = renderer.renderImageWithDPI(
+                    0, dpiSeguroPara(documento.getPage(0).getMediaBox()), ImageType.RGB);
 
-            return codificarJpeg(sinCanalAlfa(imagen), CALIDAD_JPEG_RASTERIZADO);
+            return codificarJpeg(imagen, CALIDAD_JPEG_RASTERIZADO);
         } catch (IOException e) {
             throw new ValidationException("No se pudo leer el PDF del plano");
         }
-    }
-
-    /** JPEG no soporta transparencia; PDFRenderer entrega la página ya rasterizada con canal alfa
-     * (siempre opaco en la práctica, una página de PDF no tiene fondo transparente), así que se
-     * aplana sobre blanco para evitar que el escritor de JPEG falle o distorsione los colores. */
-    private static BufferedImage sinCanalAlfa(BufferedImage imagen) {
-        BufferedImage opaca = new BufferedImage(imagen.getWidth(), imagen.getHeight(), BufferedImage.TYPE_INT_RGB);
-        var g = opaca.createGraphics();
-        g.setColor(Color.WHITE);
-        g.fillRect(0, 0, imagen.getWidth(), imagen.getHeight());
-        g.drawImage(imagen, 0, 0, null);
-        g.dispose();
-        return opaca;
     }
 
     private static byte[] codificarJpeg(BufferedImage imagen, float calidad) throws IOException {

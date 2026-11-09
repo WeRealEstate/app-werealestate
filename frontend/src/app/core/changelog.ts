@@ -15,6 +15,12 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.13.0', fecha: '2026-11-09', cambios: [
+    "Respuestas más rápidas en todo el panel: el servidor ya no busca al usuario tres veces por petición (lo hace una sola vez al validar su sesión) y se agregaron índices en la base de datos para acelerar búsquedas por desarrollo, cliente, asesor, venta y fechas.",
+    "Clientes, Comisiones, Finanzas y Gastos recurrentes: abrir la ficha de un cliente, buscar en el selector de clientes o registrar, editar y devolver pagos de comisiones ahora consulta solo los registros implicados en vez de leer todas las ventas, pagos y comisiones.",
+    "Lotes, Leads, Campana, We Forms y Comercializadoras: las listas y selectores de lotes ya no descargan los trazos del plano cuando no se dibuja el mapa, el resumen de leads se calcula directo en la base de datos y la campana, los conteos de formularios y de asesores externos ya no hacen una consulta por fila.",
+    "Material y Planos: los archivos y miniaturas de Material se transmiten directo desde el disco sin cargarlos completos en la memoria del servidor y el navegador los reutiliza si no han cambiado (sigue validando la sesión o el PIN en cada acceso). Subir un plano en PDF ocupa la mitad de memoria al convertirlo a imagen.",
+  ] },
   { version: '11.12.2', fecha: '2026-11-09', cambios: [
     "Planos públicos: el zoom y el arrastre se sienten más fluidos (menos trabajo del navegador en cada paso). El comportamiento del zoom es el mismo.",
   ] },

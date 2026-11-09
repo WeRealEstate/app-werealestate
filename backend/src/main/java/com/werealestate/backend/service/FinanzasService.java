@@ -68,7 +68,8 @@ public class FinanzasService {
 
     public FinanzasValorDto valorVendido() {
         exigirAdminOLider();
-        Datos datos = cargar();
+        List<VentaLote> lotes = ventaLoteRepository.findAllConLoteYDesarrollo();
+        List<PagoVenta> pagos = pagoVentaRepository.findAllVigentes();
 
         BigDecimal total = BigDecimal.ZERO;
         Map<Long, long[]> conteo = new LinkedHashMap<>();
@@ -76,7 +77,7 @@ public class FinanzasService {
         Map<Long, String> nombres = new HashMap<>();
         List<FinanzasValorDto.Lote> detalle = new ArrayList<>();
 
-        for (VentaLote vl : datos.lotes) {
+        for (VentaLote vl : lotes) {
             Venta venta = vl.getVenta();
             Long desId = vl.getLote().getDesarrollo().getId();
             total = total.add(vl.getPrecio());
@@ -101,9 +102,9 @@ public class FinanzasService {
                 .thenComparing(FinanzasValorDto.Lote::manzana)
                 .thenComparing(FinanzasValorDto.Lote::numeroLote));
 
-        BigDecimal cobrado = datos.pagos.stream().map(PagoVenta::getMonto).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal cobrado = pagos.stream().map(PagoVenta::getMonto).reduce(BigDecimal.ZERO, BigDecimal::add);
         return new FinanzasValorDto(
-                total, datos.lotes.size(), cobrado, total.subtract(cobrado).max(BigDecimal.ZERO), porDesarrollo, detalle);
+                total, lotes.size(), cobrado, total.subtract(cobrado).max(BigDecimal.ZERO), porDesarrollo, detalle);
     }
 
     // ---------------------------------------------------------------- ingresos esperados
@@ -226,17 +227,28 @@ public class FinanzasService {
     // ---------------------------------------------------------------- cobro del cliente
 
     /** Cómo va el cliente: lo que debe por pagos ya vencidos (monto, cuántos pagos son y cuántos de ellos
-     * mensualidades) y lo de este mes (esperado, recibido y fecha en que le toca pagar; esperadoMes es cero si este
-     * mes no le toca nada). */
+     * mensualidades), lo de este mes (esperado, recibido y fecha en que le toca pagar; esperadoMes es cero si este
+     * mes no le toca nada) y el total abonado vigente de la venta. */
     public record CobroVenta(
             BigDecimal atrasoMonto,
             int mensualidadesAtrasadas,
             int pagosAtrasados,
             BigDecimal esperadoMes,
             BigDecimal recibidoMes,
-            LocalDate fechaMes) {
+            LocalDate fechaMes,
+            BigDecimal abonado) {
         public static final CobroVenta NINGUNO =
-                new CobroVenta(BigDecimal.ZERO, 0, 0, BigDecimal.ZERO, BigDecimal.ZERO, null);
+                new CobroVenta(BigDecimal.ZERO, 0, 0, BigDecimal.ZERO, BigDecimal.ZERO, null, BigDecimal.ZERO);
+
+        public CobroVenta(
+                BigDecimal atrasoMonto,
+                int mensualidadesAtrasadas,
+                int pagosAtrasados,
+                BigDecimal esperadoMes,
+                BigDecimal recibidoMes,
+                LocalDate fechaMes) {
+            this(atrasoMonto, mensualidadesAtrasadas, pagosAtrasados, esperadoMes, recibidoMes, fechaMes, BigDecimal.ZERO);
+        }
     }
 
     /**
@@ -246,33 +258,56 @@ public class FinanzasService {
      * servicios que ya lo hicieron.
      */
     public Map<Long, CobroVenta> cobroPorVenta() {
-        Datos datos = cargar();
+        Datos datos = new Datos(false);
         LocalDate hoy = LocalDate.now();
         YearMonth mesActual = YearMonth.from(hoy);
         Map<Long, CobroVenta> resultado = new HashMap<>();
         for (Venta venta : datos.ventas) {
-            List<CalendarioPagos.Concepto> conceptos = calendario(datos, venta);
-            BigDecimal esperadoMes = BigDecimal.ZERO;
-            LocalDate fechaMes = null;
-            for (CalendarioPagos.Concepto c : conceptos) {
-                if (YearMonth.from(c.fecha()).equals(mesActual)) {
-                    esperadoMes = esperadoMes.add(c.monto());
-                    if (fechaMes == null || c.fecha().isBefore(fechaMes)) fechaMes = c.fecha();
-                }
-            }
-            BigDecimal abonado = BigDecimal.ZERO;
-            BigDecimal recibidoMes = BigDecimal.ZERO;
-            for (PagoVenta p : datos.pagosDe(venta.getId())) {
-                abonado = abonado.add(p.getMonto());
-                if (YearMonth.from(p.getFecha()).equals(mesActual)) recibidoMes = recibidoMes.add(p.getMonto());
-            }
-            CalendarioPagos.EstadoDeCuenta cuenta =
-                    CalendarioPagos.estadoDeCuenta(conceptos, datos.precioDe(venta.getId()), abonado, hoy);
-            resultado.put(venta.getId(), new CobroVenta(
-                    cuenta.atrasoMonto(), cuenta.mensualidadesAtrasadas(), cuenta.pagosAtrasados(),
-                    esperadoMes, recibidoMes, fechaMes));
+            resultado.put(venta.getId(), calcularCobro(
+                    venta, datos.precioDe(venta.getId()), datos.aportacionesDe(venta.getId()),
+                    datos.pagosDe(venta.getId()), hoy, mesActual));
         }
         return resultado;
+    }
+
+    /** Cobro de una sola venta (para detalle o acciones puntuales sobre una comisión sin cargar toda la cartera). */
+    public CobroVenta cobroDeVenta(Venta venta) {
+        if (venta == null) return CobroVenta.NINGUNO;
+        BigDecimal precio = ventaLoteRepository.findByVentaId(venta.getId()).stream()
+                .map(VentaLote::getPrecio)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        List<VentaAportacion> aportaciones = ventaAportacionRepository.findByVentaIdOrderByAnioAscMesAsc(venta.getId());
+        List<PagoVenta> pagos = pagoVentaRepository.findVigentesByVentaIdOrderByFechaAscIdAsc(venta.getId());
+        LocalDate hoy = LocalDate.now();
+        return calcularCobro(venta, precio, aportaciones, pagos, hoy, YearMonth.from(hoy));
+    }
+
+    private static CobroVenta calcularCobro(
+            Venta venta,
+            BigDecimal precio,
+            List<VentaAportacion> aportaciones,
+            List<PagoVenta> pagosVigentes,
+            LocalDate hoy,
+            YearMonth mesActual) {
+        List<CalendarioPagos.Concepto> conceptos = CalendarioPagos.conceptos(venta, precio, aportaciones);
+        BigDecimal esperadoMes = BigDecimal.ZERO;
+        LocalDate fechaMes = null;
+        for (CalendarioPagos.Concepto c : conceptos) {
+            if (YearMonth.from(c.fecha()).equals(mesActual)) {
+                esperadoMes = esperadoMes.add(c.monto());
+                if (fechaMes == null || c.fecha().isBefore(fechaMes)) fechaMes = c.fecha();
+            }
+        }
+        BigDecimal abonado = BigDecimal.ZERO;
+        BigDecimal recibidoMes = BigDecimal.ZERO;
+        for (PagoVenta p : pagosVigentes) {
+            abonado = abonado.add(p.getMonto());
+            if (YearMonth.from(p.getFecha()).equals(mesActual)) recibidoMes = recibidoMes.add(p.getMonto());
+        }
+        CalendarioPagos.EstadoDeCuenta cuenta = CalendarioPagos.estadoDeCuenta(conceptos, precio, abonado, hoy);
+        return new CobroVenta(
+                cuenta.atrasoMonto(), cuenta.mensualidadesAtrasadas(), cuenta.pagosAtrasados(),
+                esperadoMes, recibidoMes, fechaMes, abonado);
     }
 
     // ---------------------------------------------------------------- calendario de una venta
@@ -324,22 +359,33 @@ public class FinanzasService {
     // ---------------------------------------------------------------- datos
 
     /** Todo lo necesario en memoria y agrupado por venta (el volumen es chico, y así no hay una
-     * consulta por venta). */
+     * consulta por venta). Cuando incluirLibroIngresos es true se leen los recibos con anulados y se derivan
+     * de ahí los vigentes (una sola consulta a pago_venta en vez de dos); cuando es false (cobroPorVenta)
+     * se omiten anulados y devoluciones de comisión. */
     private final class Datos {
         final List<Venta> ventas = ventaRepository.findAll();
-        final List<VentaLote> lotes = ventaLoteRepository.findAll();
+        final List<VentaLote> lotes = ventaLoteRepository.findAllConLoteYDesarrollo();
         /** Solo los abonos vigentes (recibo no anulado): lo que cuenta para saldos y atrasos. */
-        final List<PagoVenta> pagos = pagoVentaRepository.findAllVigentes();
+        final List<PagoVenta> pagos;
         /** Libro de ingresos: abonos con su contra-asiento si el recibo se anuló. */
-        final List<PagoVenta> pagosConAnulados = pagoVentaRepository.findAllConRecibo();
-        final List<Devolucion> devoluciones = devolucionRepository.findAll().stream().map(Devolucion::de).toList();
+        final List<PagoVenta> pagosConAnulados;
+        final List<Devolucion> devoluciones;
         final List<VentaAportacion> aportaciones = ventaAportacionRepository.findAll();
         private final Map<Long, List<VentaLote>> lotesPorVenta = new HashMap<>();
         private final Map<Long, List<PagoVenta>> pagosPorVenta = new HashMap<>();
         private final Map<Long, List<VentaAportacion>> aportacionesPorVenta = new HashMap<>();
         private final Map<Long, List<Movimiento>> movimientosPorVenta = new HashMap<>();
 
-        Datos() {
+        Datos(boolean incluirLibroIngresos) {
+            if (incluirLibroIngresos) {
+                this.pagosConAnulados = pagoVentaRepository.findAllConRecibo();
+                this.pagos = pagosConAnulados.stream().filter(p -> !p.getRecibo().isAnulado()).toList();
+                this.devoluciones = devolucionRepository.findAll().stream().map(Devolucion::de).toList();
+            } else {
+                this.pagos = pagoVentaRepository.findAllVigentes();
+                this.pagosConAnulados = List.of();
+                this.devoluciones = List.of();
+            }
             lotes.forEach(l -> lotesPorVenta.computeIfAbsent(l.getVenta().getId(), k -> new ArrayList<>()).add(l));
             pagos.forEach(p -> pagosPorVenta.computeIfAbsent(p.getVenta().getId(), k -> new ArrayList<>()).add(p));
             for (PagoVenta p : pagosConAnulados) {
@@ -387,7 +433,7 @@ public class FinanzasService {
     }
 
     private Datos cargar() {
-        return new Datos();
+        return new Datos(true);
     }
 
     private Usuario exigirAdminOLider() {

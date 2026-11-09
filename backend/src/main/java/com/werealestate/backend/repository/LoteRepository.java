@@ -18,9 +18,13 @@ public interface LoteRepository extends JpaRepository<Lote, Long>, JpaSpecificat
 
     List<Lote> findByEstadoAndFechaExpiraApartadoBefore(EstadoLote estado, LocalDateTime limite);
 
+    @EntityGraph(attributePaths = {"desarrollo", "cambiadoPor"})
     List<Lote> findByDesarrolloIdAndEstadoOrderByManzanaAscNumeroLoteAsc(Long desarrolloId, EstadoLote estado);
 
+    @EntityGraph(attributePaths = {"desarrollo", "cambiadoPor"})
     List<Lote> findByDesarrolloId(Long desarrolloId);
+
+    List<Lote> findByDesarrolloIdAndManzanaIgnoreCase(Long desarrolloId, String manzana);
 
     /** Igual que {@link #findByDesarrolloId}, pero trae el desarrollo en la misma consulta (el DTO lo lee en cada lote). */
     @EntityGraph(attributePaths = "desarrollo")

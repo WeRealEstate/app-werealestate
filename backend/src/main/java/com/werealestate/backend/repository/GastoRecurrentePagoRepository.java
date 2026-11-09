@@ -19,9 +19,17 @@ public interface GastoRecurrentePagoRepository extends JpaRepository<GastoRecurr
 
     boolean existsByRecurrenteIdAndGastoIsNotNull(Long recurrenteId);
 
-    /** Los que siguen sin pagar ni omitir (pendientes o vencidos), del más próximo al más lejano. */
-    @Query("select p from GastoRecurrentePago p where p.gasto is null and p.omitido = false order by p.fechaVencimiento asc, p.id asc")
+    /** Los que siguen sin pagar ni omitir (pendientes o vencidos), del más próximo al más lejano, con su recurrente cargado. */
+    @Query("select p from GastoRecurrentePago p join fetch p.recurrente where p.gasto is null and p.omitido = false order by p.fechaVencimiento asc, p.id asc")
     List<GastoRecurrentePago> findSinPagar();
+
+    /** Los vencimientos sin pagar de un único gasto recurrente (para no filtrar toda la tabla al armar su DTO). */
+    @Query("select p from GastoRecurrentePago p where p.recurrente.id = :id and p.gasto is null and p.omitido = false order by p.fechaVencimiento asc, p.id asc")
+    List<GastoRecurrentePago> findSinPagarDe(@Param("id") Long recurrenteId);
+
+    /** Pares [recurrenteId, fechaVencimiento] ya generados de los recurrentes activos (evita N*M consultas en generarPendientes). */
+    @Query("select p.recurrente.id, p.fechaVencimiento from GastoRecurrentePago p where p.recurrente.activo = true")
+    List<Object[]> fechasExistentesDeActivos();
 
     @Query("select p from GastoRecurrentePago p where p.recurrente.id = :id and p.gasto is null")
     List<GastoRecurrentePago> findSinGastoDe(@Param("id") Long recurrenteId);

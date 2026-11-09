@@ -26,6 +26,11 @@ public interface PagoVentaRepository extends JpaRepository<PagoVenta, Long> {
             + "where p.venta.id in :ventaIds and r.anulado = false group by p.venta.id")
     List<Object[]> totalVigentePorVenta(@Param("ventaIds") java.util.Collection<Long> ventaIds);
 
+    /** Todos los pagos cuya fecha de abono o fecha de anulación del recibo cae en el rango [desde, hasta]. */
+    @Query("select p from PagoVenta p join fetch p.recibo r "
+            + "where (p.fecha between :desde and :hasta) or (r.anulado = true and r.anuladoFecha between :desde and :hasta)")
+    List<PagoVenta> findEnRangoConRecibo(@Param("desde") java.time.LocalDate desde, @Param("hasta") java.time.LocalDate hasta);
+
     List<PagoVenta> findByReciboId(Long reciboId);
 
     List<PagoVenta> findByVentaIdOrderByFechaDesc(Long ventaId);

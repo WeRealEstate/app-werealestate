@@ -76,8 +76,8 @@ public class MaterialService {
         this.uploadsPrivadosDir = uploadsPrivadosDir;
     }
 
-    /** Archivo listo para servir: bytes, tipo y el nombre con que se descarga. */
-    public record Descarga(byte[] bytes, MediaType tipo, String nombre) {}
+    /** Archivo listo para servir por streaming desde disco: ruta, tipo MIME, nombre de descarga, tamaño y ETag. */
+    public record Descarga(Path ruta, MediaType tipo, String nombre, long tamano, String etag) {}
 
     /** Una galería lista para empaquetar en ZIP: el controlador escribe los archivos uno por uno directo en la
      * respuesta (hasta 25 × 10 MB: no se arma en memoria). */
@@ -353,12 +353,11 @@ public class MaterialService {
 
     private Descarga leerArchivo(Material m) {
         if (!m.tieneArchivo()) throw new ResourceNotFoundException("Este material no tiene archivo");
-        try {
-            byte[] bytes = Files.readAllBytes(ruta(m.getId(), m.getArchivoExtension()));
-            return new Descarga(bytes, mediaTypeDe(m.getArchivoExtension()), m.getArchivoNombre());
-        } catch (IOException e) {
-            throw new ResourceNotFoundException("Archivo no encontrado");
-        }
+        return prepararDescarga(
+                ruta(m.getId(), m.getArchivoExtension()),
+                mediaTypeDe(m.getArchivoExtension()),
+                m.getArchivoNombre(),
+                "Archivo no encontrado");
     }
 
     /** Miniatura para las tarjetas: así no se baja la imagen completa (hasta 25 MB) solo para ver una vista previa.
@@ -372,11 +371,7 @@ public class MaterialService {
         }
         Path mini = rutaMiniatura(m.getId());
         if (!Files.exists(mini)) return leerArchivo(m);
-        try {
-            return new Descarga(Files.readAllBytes(mini), MediaType.IMAGE_JPEG, "miniatura.jpg");
-        } catch (IOException e) {
-            throw new ResourceNotFoundException("Archivo no encontrado");
-        }
+        return prepararDescarga(mini, MediaType.IMAGE_JPEG, "miniatura.jpg", "Archivo no encontrado");
     }
 
     private void generarMiniatura(Path destino, String extension, byte[] bytes) {
@@ -446,22 +441,28 @@ public class MaterialService {
 
     private Descarga leerImagen(MaterialImagen imagen) {
         Long materialId = imagen.getMaterial().getId();
-        try {
-            byte[] bytes = Files.readAllBytes(rutaImagen(materialId, imagen.getId(), imagen.getExtension()));
-            return new Descarga(bytes, mediaTypeDe(imagen.getExtension()), imagen.getNombre());
-        } catch (IOException e) {
-            throw new ResourceNotFoundException("Imagen no encontrada");
-        }
+        return prepararDescarga(
+                rutaImagen(materialId, imagen.getId(), imagen.getExtension()),
+                mediaTypeDe(imagen.getExtension()),
+                imagen.getNombre(),
+                "Imagen no encontrada");
     }
 
     /** Igual que la miniatura de un archivo suelto: la reducida si existe (JPG/PNG) y si no, la imagen completa. */
     private Descarga leerMiniaturaImagen(MaterialImagen imagen) {
         Path mini = rutaMiniaturaImagen(imagen.getMaterial().getId(), imagen.getId());
         if (!Files.exists(mini)) return leerImagen(imagen);
+        return prepararDescarga(mini, MediaType.IMAGE_JPEG, "miniatura.jpg", "Imagen no encontrada");
+    }
+
+    /** Obtiene metadatos del archivo en disco (tamaño y fecha de modificación para el ETag) sin cargar sus bytes en RAM. */
+    private static Descarga prepararDescarga(Path ruta, MediaType tipo, String nombre, String mensajeNoEncontrado) {
         try {
-            return new Descarga(Files.readAllBytes(mini), MediaType.IMAGE_JPEG, "miniatura.jpg");
+            var attrs = Files.readAttributes(ruta, java.nio.file.attribute.BasicFileAttributes.class);
+            String etag = "\"" + attrs.size() + "-" + attrs.lastModifiedTime().toMillis() + "\"";
+            return new Descarga(ruta, tipo, nombre, attrs.size(), etag);
         } catch (IOException e) {
-            throw new ResourceNotFoundException("Imagen no encontrada");
+            throw new ResourceNotFoundException(mensajeNoEncontrado);
         }
     }
 

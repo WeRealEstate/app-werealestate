@@ -109,22 +109,27 @@ public class ClienteService {
     }
 
     /** Hasta 20 clientes activos que coinciden con el texto (número "S-40"/"N-12"/"40", nombre, teléfono o CURP):
-     * para elegir el cliente de una venta. Sin texto devuelve los primeros por orden alfabético. */
+     * para elegir el cliente de una venta. Sin texto devuelve los primeros por orden alfabético.
+     * Filtra y limita a 20 primero y solo calcula los resúmenes de ventas de esos clientes, evitando escanear
+     * todas las ventas, pagos y aportaciones del sistema en cada pulsación del buscador. */
     @Transactional(readOnly = true)
     public List<ClienteListaDto> buscar(String q) {
         exigirAdminOLider();
         String buscado = normalizar(q);
-        Resumenes r = new Resumenes();
-        return clienteRepository.findAllByOrderByNombreAscApellidoPaternoAsc().stream()
+        String digitosBuscado = buscado.replaceAll("\\D", "");
+        Map<Long, List<NumeroClienteDto>> numeros = numeracion.todos();
+        List<Cliente> encontrados = clienteRepository.findAllByOrderByNombreAscApellidoPaternoAsc().stream()
                 .filter(Cliente::isActivo)
                 .filter(c -> buscado.isEmpty()
-                        || ClienteNumeracionService.coincide(r.numerosDe(c.getId()), q)
+                        || ClienteNumeracionService.coincide(numeros.getOrDefault(c.getId(), List.of()), q)
                         || normalizar(c.nombreCompleto()).contains(buscado)
-                        || (c.getTelefono() != null && c.getTelefono().replaceAll("\\D", "").contains(buscado.replaceAll("\\D", "")) && !buscado.replaceAll("\\D", "").isEmpty())
+                        || (c.getTelefono() != null && !digitosBuscado.isEmpty() && c.getTelefono().replaceAll("\\D", "").contains(digitosBuscado))
                         || (c.getCurp() != null && c.getCurp().toLowerCase(Locale.ROOT).contains(buscado)))
                 .limit(20)
-                .map(r::lista)
                 .toList();
+        if (encontrados.isEmpty()) return List.of();
+        Resumenes r = new Resumenes(encontrados.stream().map(Cliente::getId).toList(), numeros);
+        return encontrados.stream().map(r::lista).toList();
     }
 
     @Transactional(readOnly = true)
@@ -397,7 +402,8 @@ public class ClienteService {
 
     // ---------------------------------------------------------------- DTOs y utilidades
 
-    /** Sumas por cliente, calculadas de una vez para toda la lista. */
+    /** Sumas por cliente: puede cargarse para toda la cartera (listado general) o acotado a un subconjunto de
+     * clientes (detalle individual y buscador limitado a 20 resultados) para no recorrer todas las tablas. */
     private final class Resumenes {
         private final Map<Long, List<Venta>> ventasPorCliente = new HashMap<>();
         private final Map<Long, List<VentaLote>> lotesPorVenta = new HashMap<>();
@@ -409,13 +415,14 @@ public class ClienteService {
         /** "clienteId:ventaId" de las ventas en las que el cliente es copropietario (no el principal). */
         private final java.util.Set<String> copropiedades = new java.util.HashSet<>();
         /** Número de cada cliente en cada desarrollo (S-40, N-12). */
-        private final Map<Long, List<NumeroClienteDto>> numeros = numeracion.todos();
+        private final Map<Long, List<NumeroClienteDto>> numeros;
 
         List<NumeroClienteDto> numerosDe(Long clienteId) {
             return numeros.getOrDefault(clienteId, List.of());
         }
 
         Resumenes() {
+            this.numeros = numeracion.todos();
             for (Venta v : ventaRepository.findAll()) {
                 if (v.getClienteRef() != null) {
                     ventasPorCliente.computeIfAbsent(v.getClienteRef().getId(), k -> new ArrayList<>()).add(v);
@@ -425,13 +432,40 @@ public class ClienteService {
                 ventasPorCliente.computeIfAbsent(cp.getCliente().getId(), k -> new ArrayList<>()).add(cp.getVenta());
                 copropiedades.add(cp.getCliente().getId() + ":" + cp.getVenta().getId());
             }
-            for (VentaLote vl : ventaLoteRepository.findAll()) {
+            for (VentaLote vl : ventaLoteRepository.findAllConLoteYDesarrollo()) {
                 lotesPorVenta.computeIfAbsent(vl.getVenta().getId(), k -> new ArrayList<>()).add(vl);
             }
             for (PagoVenta p : pagoVentaRepository.findAllVigentes()) {
                 abonadoPorVenta.merge(p.getVenta().getId(), p.getMonto(), BigDecimal::add);
             }
             for (VentaAportacion a : ventaAportacionRepository.findAll()) {
+                aportacionesPorVenta.computeIfAbsent(a.getVenta().getId(), k -> new ArrayList<>()).add(a);
+            }
+        }
+
+        Resumenes(java.util.Collection<Long> clienteIds, Map<Long, List<NumeroClienteDto>> numeros) {
+            this.numeros = numeros;
+            if (clienteIds.isEmpty()) return;
+            java.util.Set<Long> ventaIds = new java.util.HashSet<>();
+            for (Venta v : ventaRepository.findByClienteRefIdIn(clienteIds)) {
+                if (v.getClienteRef() != null) {
+                    ventasPorCliente.computeIfAbsent(v.getClienteRef().getId(), k -> new ArrayList<>()).add(v);
+                    ventaIds.add(v.getId());
+                }
+            }
+            for (com.werealestate.backend.model.VentaCopropietario cp : copropietarioRepository.findByClienteIdIn(clienteIds)) {
+                ventasPorCliente.computeIfAbsent(cp.getCliente().getId(), k -> new ArrayList<>()).add(cp.getVenta());
+                copropiedades.add(cp.getCliente().getId() + ":" + cp.getVenta().getId());
+                ventaIds.add(cp.getVenta().getId());
+            }
+            if (ventaIds.isEmpty()) return;
+            for (VentaLote vl : ventaLoteRepository.findByVentaIdInOrderByIdAsc(ventaIds)) {
+                lotesPorVenta.computeIfAbsent(vl.getVenta().getId(), k -> new ArrayList<>()).add(vl);
+            }
+            for (Object[] fila : pagoVentaRepository.totalVigentePorVenta(ventaIds)) {
+                abonadoPorVenta.put((Long) fila[0], (BigDecimal) fila[1]);
+            }
+            for (VentaAportacion a : ventaAportacionRepository.findByVentaIdInOrderByAnioAscMesAsc(ventaIds)) {
                 aportacionesPorVenta.computeIfAbsent(a.getVenta().getId(), k -> new ArrayList<>()).add(a);
             }
         }
@@ -498,7 +532,9 @@ public class ClienteService {
     }
 
     private ClienteDto detalle(Cliente c) {
-        return ClienteDto.from(c, new Resumenes().ventasDe(c.getId()), numeracion.numerosDe(c.getId()));
+        List<NumeroClienteDto> nums = numeracion.numerosDe(c.getId());
+        Resumenes r = new Resumenes(List.of(c.getId()), Map.of(c.getId(), nums));
+        return ClienteDto.from(c, r.ventasDe(c.getId()), nums);
     }
 
     public Cliente obtenerEntidad(Long id) {

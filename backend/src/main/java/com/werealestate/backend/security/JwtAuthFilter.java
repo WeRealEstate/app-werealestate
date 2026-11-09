@@ -52,6 +52,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 if (usuario != null && usuario.isActivo()) {
                     var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + usuario.getRol().name()));
                     var authentication = new UsernamePasswordAuthenticationToken(usuario.getEmail(), null, authorities);
+                    // Guardamos la entidad cargada en details para que ModuloAccesoInterceptor y los servicios
+                    // que llaman a CurrentUserProvider no repitan SELECT * FROM usuario en la misma petición.
+                    authentication.setDetails(usuario);
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             } catch (JwtException | IllegalArgumentException ex) {

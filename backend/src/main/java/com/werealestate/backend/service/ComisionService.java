@@ -240,7 +240,7 @@ public class ComisionService {
     public List<ComisionDto> listar() {
         exigirAdminOLider();
         Totales totales = totales();
-        return comisionRepository.findAllByOrderByIdDesc().stream().map(c -> aDto(c, totales)).toList();
+        return totales.comisiones.stream().map(c -> aDto(c, totales)).toList();
     }
 
     @Transactional(readOnly = true)
@@ -263,7 +263,7 @@ public class ComisionService {
         long retrasadas = 0;
         BigDecimal montoRetrasado = BigDecimal.ZERO;
         LocalDate hoy = LocalDate.now();
-        for (VentaComision c : comisionRepository.findAll()) {
+        for (VentaComision c : totales.comisiones) {
             // Una comisión cancelada no cuenta en nada, tampoco en las retrasadas: ya no se entrega.
             if (c.isCancelada()) continue;
             BigDecimal vencido = totales.vencido(c.getId(), hoy);
@@ -295,7 +295,7 @@ public class ComisionService {
         Totales totales = totales();
         List<ComisionesPorEntregarDto.Item> items = new ArrayList<>();
         BigDecimal total = BigDecimal.ZERO;
-        for (VentaComision c : comisionRepository.findAllByOrderByIdDesc()) {
+        for (VentaComision c : totales.comisiones) {
             if (c.isCancelada()) continue;
             BigDecimal ganadoAlSabado = totales.devengadoHasta(c.getId(), sabado);
             BigDecimal yaEntregado = totales.entregado(c.getId());
@@ -354,7 +354,7 @@ public class ComisionService {
         Map<String, String> nombreAsesor = new HashMap<>();
         Map<String, Suma> porDesarrollo = new LinkedHashMap<>();
         long detenidas = 0;
-        for (VentaComision c : comisionRepository.findAll()) {
+        for (VentaComision c : totales.comisiones) {
             if (c.isCancelada()) continue;
             ComisionDesgloseDto.Cifras cifras = cifrasDe(c, totales, hoy, sabado);
             total.sumar(cifras);
@@ -480,7 +480,7 @@ public class ComisionService {
             monto = porcentajeDe(comision.getBase(), porcentaje);
         }
 
-        BigDecimal entregado = totales().entregado(comision.getId());
+        BigDecimal entregado = totalesDe(comision).entregado(comision.getId());
         if (monto.compareTo(entregado) < 0) {
             throw new ConflictException("La comisión no puede ser menor que lo ya pagado ($" + entregado + ")");
         }
@@ -521,7 +521,7 @@ public class ComisionService {
         if (comision.isCancelada()) {
             throw new ConflictException("Esta comisión está cancelada: reactívala para registrar su pago");
         }
-        Totales totales = totales();
+        Totales totales = totalesDe(comision);
         if (totales.bloqueada(id)) {
             throw new ConflictException("El contrato de esta venta no está firmado: la comisión queda retenida "
                     + "hasta registrar la firma en la venta");
@@ -574,7 +574,7 @@ public class ComisionService {
         BigDecimal anterior = entrega.getMonto();
         BigDecimal diferencia = monto.subtract(anterior);
         if (diferencia.signum() > 0) {
-            Totales totales = totales();
+            Totales totales = totalesDe(entrega.getComision());
             BigDecimal disponible = totales.devengado(comisionId).subtract(totales.entregado(comisionId));
             if (diferencia.compareTo(disponible) > 0) {
                 throw new ConflictException("Solo hay $" + anterior.add(disponible.max(BigDecimal.ZERO))
@@ -666,7 +666,7 @@ public class ComisionService {
         Usuario actual = exigirAdminOLider();
         VentaComision comision = obtenerEntidad(id);
 
-        BigDecimal entregado = totales().entregado(id);
+        BigDecimal entregado = totalesDe(comision).entregado(id);
         if (request.monto().compareTo(entregado) > 0) {
             throw new ConflictException("El monto máximo a devolver es $" + entregado.max(BigDecimal.ZERO)
                     + " (lo pagado al asesor en esta comisión)");
@@ -848,20 +848,20 @@ public class ComisionService {
 
     // ---------------------------------------------------------------- DTOs
 
-    /** Sumas por comisión, calculadas de una sola vez (evita una consulta por fila). */
+    /** Sumas por comisión: puede cargarse para todas las comisiones de una sola vez (listado, resumen, sábado y
+     * desglose) o acotado a una sola comisión (detalle, editar, entregar y devolver) para no consultar toda la base. */
     private final class Totales {
+        final List<VentaComision> comisiones;
         private final Map<Long, List<VentaComisionDevengo>> devengos = new HashMap<>();
         private final Map<Long, BigDecimal> entregado = new HashMap<>();
         private final Map<Long, BigDecimal> devuelto = new HashMap<>();
         /** Comisiones con la regla nueva cuyo contrato aún no está firmado: se acumulan pero no se entregan. */
         private final java.util.Set<Long> bloqueadas = new java.util.HashSet<>();
-        private final Map<Long, BigDecimal> abonadoPorVenta = new HashMap<>();
-        private final Map<Long, FinanzasService.CobroVenta> cobros = finanzasService.cobroPorVenta();
+        private final Map<Long, FinanzasService.CobroVenta> cobros;
 
         Totales() {
-            for (PagoVenta p : pagoVentaRepository.findAllVigentes()) {
-                abonadoPorVenta.merge(p.getVenta().getId(), p.getMonto(), BigDecimal::add);
-            }
+            this.comisiones = comisionRepository.findAllByOrderByIdDesc();
+            this.cobros = finanzasService.cobroPorVenta();
             for (VentaComisionDevengo d : devengoRepository.findAllConPagoOrdenados()) {
                 devengos.computeIfAbsent(d.getComision().getId(), k -> new ArrayList<>()).add(d);
             }
@@ -871,9 +871,30 @@ public class ComisionService {
             for (VentaComisionDevolucion d : devolucionRepository.findAll()) {
                 devuelto.merge(d.getComision().getId(), d.getMonto(), BigDecimal::add);
             }
-            for (VentaComision c : comisionRepository.findAll()) {
+            for (VentaComision c : comisiones) {
                 if (c.isReglaNueva() && c.getVenta() != null && !c.getVenta().isContratoFirmado()) bloqueadas.add(c.getId());
             }
+        }
+
+        Totales(
+                VentaComision c,
+                List<VentaComisionDevengo> devengosDeComision,
+                List<VentaComisionEntrega> entregasDeComision,
+                List<VentaComisionDevolucion> devolucionesDeComision) {
+            this.comisiones = List.of(c);
+            this.cobros = new HashMap<>();
+            if (c.getVenta() != null) {
+                FinanzasService.CobroVenta cv = finanzasService.cobroDeVenta(c.getVenta());
+                if (cv != null) this.cobros.put(c.getVenta().getId(), cv);
+            }
+            devengos.put(c.getId(), devengosDeComision);
+            for (VentaComisionEntrega e : entregasDeComision) {
+                entregado.merge(c.getId(), e.getMonto(), BigDecimal::add);
+            }
+            for (VentaComisionDevolucion d : devolucionesDeComision) {
+                devuelto.merge(c.getId(), d.getMonto(), BigDecimal::add);
+            }
+            if (c.isReglaNueva() && c.getVenta() != null && !c.getVenta().isContratoFirmado()) bloqueadas.add(c.getId());
         }
 
         /** Lo ganado por una comisión, por porción, en el orden en que se entrega. */
@@ -920,7 +941,7 @@ public class ComisionService {
         }
 
         BigDecimal abonadoDeVenta(Long ventaId) {
-            return ventaId == null ? BigDecimal.ZERO : abonadoPorVenta.getOrDefault(ventaId, BigDecimal.ZERO);
+            return cobroDeVenta(ventaId).abonado();
         }
 
         /** Lo ganado cuyo sábado de entrega ya pasó (anterior a hoy) y todavía no se entrega. */
@@ -948,6 +969,14 @@ public class ComisionService {
 
     private Totales totales() {
         return new Totales();
+    }
+
+    private Totales totalesDe(VentaComision c) {
+        return new Totales(
+                c,
+                devengoRepository.findByComisionIdOrderByFechaEntregaAscIdAsc(c.getId()),
+                entregaRepository.findByComisionIdOrderByFechaDescIdDesc(c.getId()),
+                devolucionRepository.findByComisionIdOrderByFechaAscIdAsc(c.getId()));
     }
 
     private ComisionDto aDto(VentaComision c, Totales totales) {
@@ -1024,15 +1053,17 @@ public class ComisionService {
     }
 
     private ComisionDetalleDto detalle(VentaComision comision) {
-        Totales totales = totales();
-        List<ComisionDetalleDto.Devengo> devengos = devengoRepository
-                .findByComisionIdOrderByFechaEntregaAscIdAsc(comision.getId())
-                .stream()
+        List<VentaComisionDevengo> listaDevengos =
+                devengoRepository.findByComisionIdOrderByFechaEntregaAscIdAsc(comision.getId());
+        List<VentaComisionEntrega> listaEntregas =
+                entregaRepository.findByComisionIdOrderByFechaDescIdDesc(comision.getId());
+        List<VentaComisionDevolucion> listaDevoluciones =
+                devolucionRepository.findByComisionIdOrderByFechaAscIdAsc(comision.getId());
+        Totales totales = new Totales(comision, listaDevengos, listaEntregas, listaDevoluciones);
+        List<ComisionDetalleDto.Devengo> devengos = listaDevengos.stream()
                 .map(d -> new ComisionDetalleDto.Devengo(d.getFechaOrigen(), d.getFechaEntrega(), d.getMonto()))
                 .toList();
-        List<ComisionDetalleDto.Entrega> entregas = entregaRepository
-                .findByComisionIdOrderByFechaDescIdDesc(comision.getId())
-                .stream()
+        List<ComisionDetalleDto.Entrega> entregas = listaEntregas.stream()
                 .map(e -> new ComisionDetalleDto.Entrega(
                         e.getId(),
                         e.getFecha(),
@@ -1046,9 +1077,7 @@ public class ComisionService {
                         e.getFormaPago(),
                         e.tieneTicket()))
                 .toList();
-        List<ComisionDetalleDto.Devolucion> devoluciones = devolucionRepository
-                .findByComisionIdOrderByFechaAscIdAsc(comision.getId())
-                .stream()
+        List<ComisionDetalleDto.Devolucion> devoluciones = listaDevoluciones.stream()
                 .map(d -> new ComisionDetalleDto.Devolucion(
                         d.getId(),
                         d.getFecha(),

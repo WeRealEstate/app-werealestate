@@ -118,13 +118,15 @@ public class PushService {
         return jdbc.queryForList("select distinct usuario_id from push_suscripcion", Long.class);
     }
 
-    /** Envía a los dispositivos del usuario lo que tiene pendiente y aún no se le había avisado. */
+    /** Envía a los dispositivos del usuario lo que tiene pendiente y aún no se le había avisado.
+     * Precarga en una sola consulta las claves ya enviadas al usuario para no ejecutar un SELECT COUNT(*) por aviso. */
     public void enviarPendientes(Usuario usuario) {
-        List<NotificacionDto> nuevas = notificacionService.listarPara(usuario).stream()
-                .filter(n -> jdbc.queryForObject(
-                                "select count(*) from push_enviada where usuario_id = ? and (clave = ? or clave = ?)",
-                                Integer.class, usuario.getId(), claveDe(n), claveAnteriorDe(n))
-                        == 0)
+        List<NotificacionDto> pendientes = notificacionService.listarPara(usuario);
+        if (pendientes.isEmpty()) return;
+        java.util.Set<String> enviadas = new java.util.HashSet<>(
+                jdbc.queryForList("select clave from push_enviada where usuario_id = ?", String.class, usuario.getId()));
+        List<NotificacionDto> nuevas = pendientes.stream()
+                .filter(n -> !enviadas.contains(claveDe(n)) && !enviadas.contains(claveAnteriorDe(n)))
                 .toList();
         if (nuevas.isEmpty()) return;
 

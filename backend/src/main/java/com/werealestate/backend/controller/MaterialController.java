@@ -2,6 +2,7 @@ package com.werealestate.backend.controller;
 
 import com.werealestate.backend.dto.MaterialDtos;
 import com.werealestate.backend.service.MaterialService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -10,9 +11,12 @@ import java.util.List;
 import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -73,14 +77,14 @@ public class MaterialController {
     }
 
     @GetMapping("/{id}/archivo")
-    public ResponseEntity<byte[]> archivo(@PathVariable Long id) {
-        return responder(service.descargarDelPanel(id));
+    public ResponseEntity<Resource> archivo(@PathVariable Long id, HttpServletRequest http) {
+        return responder(service.descargarDelPanel(id), http);
     }
 
     /** Imagen reducida para las tarjetas (solo imágenes). */
     @GetMapping("/{id}/miniatura")
-    public ResponseEntity<byte[]> miniatura(@PathVariable Long id) {
-        return responder(service.miniaturaDelPanel(id));
+    public ResponseEntity<Resource> miniatura(@PathVariable Long id, HttpServletRequest http) {
+        return responder(service.miniaturaDelPanel(id), http);
     }
 
     // ---------------------------------------------------------------- galería
@@ -102,13 +106,14 @@ public class MaterialController {
     }
 
     @GetMapping("/{id}/imagenes/{imagenId}")
-    public ResponseEntity<byte[]> imagen(@PathVariable Long id, @PathVariable Long imagenId) {
-        return responder(service.imagenDelPanel(id, imagenId));
+    public ResponseEntity<Resource> imagen(@PathVariable Long id, @PathVariable Long imagenId, HttpServletRequest http) {
+        return responder(service.imagenDelPanel(id, imagenId), http);
     }
 
     @GetMapping("/{id}/imagenes/{imagenId}/miniatura")
-    public ResponseEntity<byte[]> miniaturaImagen(@PathVariable Long id, @PathVariable Long imagenId) {
-        return responder(service.miniaturaImagenDelPanel(id, imagenId));
+    public ResponseEntity<Resource> miniaturaImagen(
+            @PathVariable Long id, @PathVariable Long imagenId, HttpServletRequest http) {
+        return responder(service.miniaturaImagenDelPanel(id, imagenId), http);
     }
 
     /** Toda la galería en un ZIP. */
@@ -136,12 +141,36 @@ public class MaterialController {
         }
     }
 
-    static ResponseEntity<byte[]> responder(MaterialService.Descarga d) {
+    /** Sirve el archivo por streaming desde disco (FileSystemResource, sin copiar hasta 25 MB en el heap de Java y con
+     * soporte de Range para videos MP4) usando Cache-Control: private, no-cache + ETag: el navegador siempre revalida
+     * la sesión o el PIN del asesor con el servidor antes de usar su copia, pero si el archivo no cambió recibe 304 Not
+     * Modified sin leer ni transferir bytes. */
+    static ResponseEntity<Resource> responder(MaterialService.Descarga d, HttpServletRequest http) {
+        CacheControl cache = CacheControl.noCache().cachePrivate();
+        String ifNoneMatch = http != null ? http.getHeader(HttpHeaders.IF_NONE_MATCH) : null;
+        if (coincideEtag(ifNoneMatch, d.etag())) {
+            return ResponseEntity.status(HttpStatus.NOT_MODIFIED)
+                    .cacheControl(cache)
+                    .eTag(d.etag())
+                    .build();
+        }
         return ResponseEntity.ok()
                 .contentType(d.tipo())
+                .contentLength(d.tamano())
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         ContentDisposition.inline().filename(d.nombre(), java.nio.charset.StandardCharsets.UTF_8).build().toString())
-                .cacheControl(CacheControl.noStore())
-                .body(d.bytes());
+                .cacheControl(cache)
+                .eTag(d.etag())
+                .body(new FileSystemResource(d.ruta()));
+    }
+
+    public static boolean coincideEtag(String ifNoneMatch, String etag) {
+        if (ifNoneMatch == null || ifNoneMatch.isBlank() || etag == null) return false;
+        String limpio = etag.replace("W/", "").trim();
+        for (String parte : ifNoneMatch.split(",")) {
+            String candidato = parte.trim().replace("W/", "").trim();
+            if ("*".equals(candidato) || candidato.equals(limpio)) return true;
+        }
+        return false;
     }
 }

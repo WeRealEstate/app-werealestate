@@ -32,4 +32,9 @@ public interface AsesorExternoRepository extends JpaRepository<AsesorExterno, Lo
 
     /** Solo los activos: lo que se muestra como "integrantes" (los desactivados siguen contando para no poder eliminar). */
     long countByComercializadoraIdAndActivoTrue(Long comercializadoraId);
+
+    /** Conteo de integrantes activos agrupado por comercializadora en una sola consulta: filas [comercializadoraId, total]. */
+    @org.springframework.data.jpa.repository.Query(
+            "select a.comercializadora.id, count(a) from AsesorExterno a where a.activo = true and a.comercializadora is not null group by a.comercializadora.id")
+    List<Object[]> contarActivosPorComercializadora();
 }

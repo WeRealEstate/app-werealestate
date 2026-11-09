@@ -64,4 +64,14 @@ class MaterialServiceTest {
         BufferedImage mini = MaterialService.reducir(png.toByteArray());
         assertEquals(200, mini.getWidth());
     }
+
+    @Test
+    void reconoceElEtagParaResponder304() {
+        String etag = "\"1024-1700000000\"";
+        assertTrue(com.werealestate.backend.controller.MaterialController.coincideEtag(etag, etag));
+        assertTrue(com.werealestate.backend.controller.MaterialController.coincideEtag("W/" + etag, etag));
+        assertTrue(com.werealestate.backend.controller.MaterialController.coincideEtag("\"otro\", " + etag, etag));
+        assertFalse(com.werealestate.backend.controller.MaterialController.coincideEtag("\"999-1700000000\"", etag));
+        assertFalse(com.werealestate.backend.controller.MaterialController.coincideEtag(null, etag));
+    }
 }

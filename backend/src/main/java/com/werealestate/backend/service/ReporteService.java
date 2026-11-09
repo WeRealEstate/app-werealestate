@@ -131,13 +131,14 @@ public class ReporteService {
         LocalDateTime ahora = LocalDateTime.now();
         long total = 0;
         Map<String, Long> porAsesor = new LinkedHashMap<>();
+        java.util.Set<Long> conSeguimiento = new java.util.HashSet<>(seguimientoRepository.leadIdsConSeguimiento());
 
         for (Lead lead : leadRepository.findByArchivadoFalseOrderByFechaUltimoContactoAsc()) {
             if (CERRADOS.contains(lead.getEstado())) continue;
 
             boolean frio = ChronoUnit.DAYS.between(lead.getFechaUltimoContacto(), ahora) >= diasFrio;
             boolean sinContactar = !frio
-                    && seguimientoRepository.findByLeadIdOrderByFechaDesc(lead.getId()).isEmpty()
+                    && !conSeguimiento.contains(lead.getId())
                     && ChronoUnit.DAYS.between(lead.getFechaCreacion(), ahora) >= diasSinContactarNuevo;
 
             if (frio || sinContactar) {

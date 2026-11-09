@@ -52,4 +52,8 @@ public interface SeguimientoRepository extends JpaRepository<Seguimiento, Long> 
     boolean existsByAsesorId(Long asesorId);
 
     void deleteByLeadId(Long leadId);
+
+    /** IDs de los leads activos que tienen al menos un seguimiento registrado (evita N+1 en ReporteService.calcularRiesgo). */
+    @Query("select distinct s.lead.id from Seguimiento s where s.lead.archivado = false")
+    List<Long> leadIdsConSeguimiento();
 }

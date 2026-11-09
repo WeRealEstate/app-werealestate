@@ -69,8 +69,12 @@ public class ComercializadoraService {
     @Transactional(readOnly = true)
     public List<ComercializadoraDtos.Item> listar() {
         exigirAdminOLider();
+        java.util.Map<Long, Long> activosPorCom = new java.util.HashMap<>();
+        for (Object[] fila : asesorRepository.contarActivosPorComercializadora()) {
+            activosPorCom.put((Long) fila[0], ((Number) fila[1]).longValue());
+        }
         return repository.findAllByOrderByNombreAsc().stream()
-                .map(c -> ComercializadoraDtos.Item.from(c, asesorRepository.countByComercializadoraIdAndActivoTrue(c.getId())))
+                .map(c -> ComercializadoraDtos.Item.from(c, activosPorCom.getOrDefault(c.getId(), 0L)))
                 .toList();
     }
 

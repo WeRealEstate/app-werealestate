@@ -91,10 +91,14 @@ public class WeFormService {
     @Transactional(readOnly = true)
     public List<WeFormDtos.Lista> listar() {
         exigirAcceso();
+        Map<Long, Long> conteos = new java.util.HashMap<>();
+        for (Object[] fila : respuestaRepository.contarPorForm()) {
+            conteos.put((Long) fila[0], ((Number) fila[1]).longValue());
+        }
         return formRepository.findAllByOrderByFechaCreacionDesc().stream()
                 .map(f -> new WeFormDtos.Lista(
                         f.getId(), f.getNombre(), f.getSlug(), f.getDesarrollo().getId(),
-                        f.getDesarrollo().getNombre(), f.getEstado(), respuestaRepository.countByFormId(f.getId()),
+                        f.getDesarrollo().getNombre(), f.getEstado(), conteos.getOrDefault(f.getId(), 0L),
                         f.getFechaCreacion()))
                 .toList();
     }
@@ -259,19 +263,20 @@ public class WeFormService {
                 promedio);
     }
 
-    /** Totales de todos los formularios por desarrollo y por asesor (la lista del módulo). */
+    /** Totales de todos los formularios por desarrollo y por asesor (la lista del módulo), resueltos con GROUP BY en SQL. */
     @Transactional(readOnly = true)
     public WeFormDtos.ResumenGeneral resumenGeneral() {
         exigirAcceso();
         Map<String, Long> desarrollos = new java.util.LinkedHashMap<>();
         Map<String, Long> asesores = new java.util.LinkedHashMap<>();
         long total = 0;
-        for (WeForm f : formRepository.findAll()) {
-            for (WeFormRespuesta r : respuestaRepository.findByFormIdOrderByFechaEnvioDesc(f.getId())) {
-                total++;
-                desarrollos.merge(f.getDesarrollo().getNombre(), 1L, Long::sum);
-                asesores.merge(r.getAsesorNombre(), 1L, Long::sum);
-            }
+        for (Object[] fila : respuestaRepository.contarPorDesarrolloYAsesor()) {
+            String desarrollo = (String) fila[0];
+            String asesor = (String) fila[1];
+            long cantidad = ((Number) fila[2]).longValue();
+            total += cantidad;
+            desarrollos.merge(desarrollo, cantidad, Long::sum);
+            asesores.merge(asesor, cantidad, Long::sum);
         }
         return new WeFormDtos.ResumenGeneral(total, ordenado(desarrollos), ordenado(asesores));
     }
@@ -355,8 +360,7 @@ public class WeFormService {
             throw new ValidationException("Elige un tipo de pregunta");
         }
         String opciones = opcionesTexto(tipo, request.opciones());
-        int orden = preguntaRepository.findByFormIdOrderByOrdenAsc(formId).stream()
-                .mapToInt(WeFormPregunta::getOrden).max().orElse(-1) + 1;
+        int orden = preguntaRepository.maxOrden(formId) + 1;
         boolean obligatoria = tipo != TipoPreguntaForm.TITULO && request.obligatoria();
         WeFormPregunta p = preguntaRepository.save(new WeFormPregunta(
                 form, orden, tipo, request.titulo().trim(), limpio(request.descripcion()), obligatoria, opciones, null,

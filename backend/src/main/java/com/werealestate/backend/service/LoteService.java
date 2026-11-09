@@ -242,7 +242,7 @@ public class LoteService {
 
         Pageable pageable = PageRequest.of(Math.max(pagina, 0), Math.max(tamano, 1));
         Page<Lote> resultado = loteRepository.findAll(spec, pageable);
-        List<LoteDto> lotes = resultado.getContent().stream().map(LoteDto::from).toList();
+        List<LoteDto> lotes = resultado.getContent().stream().map(LoteDto::sinMapa).toList();
         return new PaginaDto<>(marcarVentas(lotes), resultado.hasNext());
     }
 
@@ -333,7 +333,7 @@ public class LoteService {
                 .findByDesarrolloIdAndEstadoOrderByManzanaAscNumeroLoteAsc(desarrolloId, EstadoLote.DISPONIBLE)
                 .stream()
                 .sorted(ORDEN_NATURAL_LOTES)
-                .map(LoteDto::from)
+                .map(LoteDto::sinMapa)
                 .toList();
     }
 
@@ -540,10 +540,8 @@ public class LoteService {
      * hectáreas. Devuelve cuántos lotes se actualizaron. */
     public int actualizarPrecioManzana(Long desarrolloId, String manzana, java.math.BigDecimal precioM2) {
         exigirAdmin("cambiar precios");
-        java.util.List<Lote> lotes = loteRepository.findAll().stream()
-                .filter(l -> l.getDesarrollo().getId().equals(desarrolloId)
-                        && l.getManzana().trim().equalsIgnoreCase(manzana.trim()))
-                .toList();
+        java.util.List<Lote> lotes =
+                loteRepository.findByDesarrolloIdAndManzanaIgnoreCase(desarrolloId, manzana.trim());
         if (lotes.isEmpty()) throw new ResourceNotFoundException("No hay lotes en esa manzana");
         lotes.forEach(l -> l.setPrecioM2(precioM2));
         return lotes.size();
@@ -757,26 +755,48 @@ public class LoteService {
 
     /** Lotes que un asesor puede poner en un registro de venta: los disponibles del desarrollo y los que ÉL mismo
      * apartó (quien aparece en el último cambio a su estado actual). Un apartado que alguien más hizo, o
-     * uno sin asesor atribuido (por ejemplo, fijado por administración), no se ofrece. */
+     * uno sin asesor atribuido (por ejemplo, fijado por administración), no se ofrece.
+     * Resuelve las ventas del desarrollo y el historial de los lotes apartados en bloque (2 consultas en vez de N+1
+     * por lote) y devuelve LoteDto.sinMapa porque el selector de We Forms no dibuja el plano. */
     @Transactional(readOnly = true)
     public List<LoteDto> listarParaRegistroDeVenta(Long desarrolloId, Long asesorUsuarioId, String asesorNombre) {
-        return loteRepository.findByDesarrolloId(desarrolloId).stream()
-                .filter(l -> puedeTomarParaRegistroDeVenta(l, asesorUsuarioId, asesorNombre))
+        List<Lote> todos = loteRepository.findByDesarrolloId(desarrolloId);
+        if (todos.isEmpty()) return List.of();
+        Set<Long> conVenta = new HashSet<>(ventaLoteRepository.lotesConVentaEnDesarrollo(desarrolloId));
+        List<Long> apartadoIds = todos.stream()
+                .filter(l -> !conVenta.contains(l.getId()) && ESTADOS_APARTADO.contains(l.getEstado()))
+                .map(Lote::getId)
+                .toList();
+        Map<Long, List<MovimientoLote>> movimientosPorLote = new HashMap<>();
+        if (!apartadoIds.isEmpty()) {
+            for (MovimientoLote m : movimientoLoteRepository.findByLoteIdInOrderByFechaDesc(apartadoIds)) {
+                movimientosPorLote.computeIfAbsent(m.getLote().getId(), k -> new ArrayList<>()).add(m);
+            }
+        }
+        return todos.stream()
+                .filter(l -> !conVenta.contains(l.getId())
+                        && puedeTomarSegunEstado(
+                                l, asesorUsuarioId, asesorNombre, movimientosPorLote.getOrDefault(l.getId(), List.of())))
                 .sorted(ORDEN_NATURAL_LOTES)
-                .map(LoteDto::from)
+                .map(LoteDto::sinMapa)
                 .toList();
     }
 
     /** Regla de {@link #listarParaRegistroDeVenta}, y que no tenga ya una venta. */
     public boolean puedeTomarParaRegistroDeVenta(Lote lote, Long asesorUsuarioId, String asesorNombre) {
         if (ventaLoteRepository.existsByLoteId(lote.getId())) return false;
+        if (lote.getEstado() == EstadoLote.DISPONIBLE) return true;
+        if (!ESTADOS_APARTADO.contains(lote.getEstado())) return false;
+        return puedeTomarSegunEstado(
+                lote, asesorUsuarioId, asesorNombre, movimientoLoteRepository.findByLoteIdOrderByFechaDesc(lote.getId()));
+    }
+
+    private static boolean puedeTomarSegunEstado(
+            Lote lote, Long asesorUsuarioId, String asesorNombre, List<MovimientoLote> movimientos) {
         EstadoLote estado = lote.getEstado();
         if (estado == EstadoLote.DISPONIBLE) return true;
-        if (estado != EstadoLote.APARTADO && estado != EstadoLote.APARTADO_A_PLAZO
-                && estado != EstadoLote.APARTADO_CON_DINERO) {
-            return false;
-        }
-        return movimientoLoteRepository.findByLoteIdOrderByFechaDesc(lote.getId()).stream()
+        if (!ESTADOS_APARTADO.contains(estado)) return false;
+        return movimientos.stream()
                 .filter(m -> m.getEstadoNuevo() == estado)
                 .findFirst()
                 .map(m -> {

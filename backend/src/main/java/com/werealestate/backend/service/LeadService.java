@@ -453,20 +453,26 @@ public class LeadService {
     }
 
     /** Los mismos leads que {@link #listar()}, solo contados (total, fríos y por estado), para el inicio del asesor:
-     * así no descarga la lista completa para mostrar tres números. */
+     * resuelto en SQL con GROUP BY y COUNT para no instanciar todas las entidades Lead ni sus colecciones. */
     @Transactional(readOnly = true)
     public LeadResumenDto resumen() {
         Usuario actual = currentUserProvider.getUsuarioActual();
-        List<Lead> leads = actual.getRol() == Role.ADMIN
-                ? leadRepository.findByArchivadoFalseOrderByFechaUltimoContactoDesc()
-                : leadRepository.findByAsesorIdAndArchivadoFalseOrderByFechaUltimoContactoDesc(actual.getId());
-        LocalDateTime ahora = LocalDateTime.now();
+        boolean esAdmin = actual.getRol() == Role.ADMIN;
+        List<Object[]> conteos = esAdmin
+                ? leadRepository.contarPorEstadoActivos()
+                : leadRepository.contarPorEstadoActivosDeAsesor(actual.getId());
         Map<EstadoLead, Long> porEstado = new EnumMap<>(EstadoLead.class);
-        long frios = 0;
-        for (Lead lead : leads) {
-            porEstado.merge(lead.getEstado(), 1L, Long::sum);
-            if (esFrio(lead, ChronoUnit.DAYS.between(lead.getFechaUltimoContacto(), ahora))) frios++;
+        long total = 0;
+        for (Object[] fila : conteos) {
+            EstadoLead estado = (EstadoLead) fila[0];
+            long cantidad = ((Number) fila[1]).longValue();
+            porEstado.put(estado, cantidad);
+            total += cantidad;
         }
-        return new LeadResumenDto(leads.size(), frios, porEstado);
+        LocalDateTime limiteFrio = LocalDateTime.now().minusDays(diasFrio);
+        long frios = esAdmin
+                ? leadRepository.contarFriosActivos(limiteFrio)
+                : leadRepository.contarFriosActivosDeAsesor(actual.getId(), limiteFrio);
+        return new LeadResumenDto(total, frios, porEstado);
     }
 }
