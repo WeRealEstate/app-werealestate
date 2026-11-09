@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.13.3', fecha: '2026-11-09', cambios: [
+    "Planos públicos y del panel: carga progresiva en dos pasos. Al abrir el plano se muestra primero una vista rápida (~450 KB en vez de ~26.5 MB) para que el mapa y los lotes estén listos al instante, mientras en segundo plano se descarga y decodifica la imagen en alta definición completa (15,000 × 10,000 px) y se reemplaza sola sin mover el zoom ni la posición. El servidor genera esta vista rápida y optimiza la compresión de los planos ya subidos de forma automática al iniciar.",
+  ] },
   { version: '11.13.2', fecha: '2026-11-09', cambios: [
     "Planos públicos (/samai y /aldea-nanuu): se corrigió un fallo por el que al abrir el enlace directo la pantalla podía quedarse en negro hasta recargar la página (cuando la imagen precargada terminaba antes de montarse el visor o tras actualizar la app). Además, si la red falla al pedir los lotes o la imagen, se reintenta automáticamente y se muestra un botón 'Reintentar'.",
   ] },

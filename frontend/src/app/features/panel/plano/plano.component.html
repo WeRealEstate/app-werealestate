@@ -198,7 +198,7 @@
             (wheel)="onWheelImagen($event)"
           >
           <div class="relative origin-top-left" [style.transform]="'translate(' + panX() + 'px, ' + panY() + 'px) scale(' + zoom() + ')'">
-            <img [src]="plano()!.planoUrl" (load)="alCargarImagen($event)" alt="Plano de {{ plano()!.desarrolloNombre }}" class="block w-full select-none" draggable="false" />
+            <img [src]="planoImagenUrl()" (load)="alCargarImagen($event)" (error)="onErrorImagen()" alt="Plano de {{ plano()!.desarrolloNombre }}" class="block w-full select-none" draggable="false" />
 
             <!-- Polígonos guardados: relleno según estado, clic para seleccionar/editar -->
             <svg class="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">

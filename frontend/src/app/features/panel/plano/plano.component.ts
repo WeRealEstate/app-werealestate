@@ -146,9 +146,54 @@ export class PlanoComponent implements OnDestroy {
    * (navegadores que no la permiten, como Safari en iPhone). */
   private pantallaCompletaDelNavegador = false;
 
+  /** Carga progresiva en 2 pasos igual que el plano público: arranca con `-preview.jpg` (~450 KB) y pasa al HD cuando decodifica. */
+  private readonly usandoPreview = signal(true);
+  private readonly hdLista = signal(false);
+  private cargandoHd = false;
+
+  readonly planoImagenUrl = computed(() => {
+    const url = this.plano()?.planoUrl ?? null;
+    if (!url) return null;
+    if (this.usandoPreview() && !this.hdLista()) {
+      return url.replace(/\.(jpg|jpeg|png|webp)(?=\?|$)/i, '-preview.jpg');
+    }
+    return url;
+  });
+
   alCargarImagen(evento: Event): void {
     const img = evento.target as HTMLImageElement;
     if (img.naturalWidth > 0 && img.naturalHeight > 0) this.relacionAspecto.set(img.naturalWidth / img.naturalHeight);
+    if (this.usandoPreview() && !this.hdLista()) {
+      this.cargarHdEnSegundoPlano();
+    }
+  }
+
+  onErrorImagen(): void {
+    if (this.usandoPreview() && !this.hdLista()) {
+      this.usandoPreview.set(false);
+    }
+  }
+
+  private cargarHdEnSegundoPlano(): void {
+    const urlHd = this.plano()?.planoUrl;
+    if (!urlHd || this.cargandoHd || this.hdLista()) return;
+    this.cargandoHd = true;
+    const hd = new Image();
+    hd.decoding = 'async';
+    hd.src = urlHd;
+    hd.onload = () => {
+      const decodificar = typeof hd.decode === 'function' ? hd.decode() : Promise.resolve();
+      decodificar
+        .catch(() => undefined)
+        .then(() => {
+          if (this.plano()?.planoUrl === urlHd) {
+            this.hdLista.set(true);
+          }
+        });
+    };
+    hd.onerror = () => {
+      this.cargandoHd = false;
+    };
   }
 
   async alternarPantallaCompleta(): Promise<void> {
@@ -345,6 +390,9 @@ export class PlanoComponent implements OnDestroy {
     this.isLoading.set(true);
     try {
       const plano = await this.lotesService.obtenerMapa(id);
+      this.usandoPreview.set(true);
+      this.hdLista.set(false);
+      this.cargandoHd = false;
       this.plano.set(plano);
     } catch {
       this.toast.error('No se pudo cargar el plano de este desarrollo.');

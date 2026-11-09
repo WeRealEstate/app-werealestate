@@ -210,15 +210,24 @@ export class PlanoPublicoComponent implements OnDestroy {
   private cargaProgramada = false;
   readonly errorMessage = signal<string | null>(null);
   private readonly reintentoImagen = signal(0);
+  /** Carga progresiva en 2 pasos: primero se muestra la vista rápida (`-preview.jpg`, ~450 KB) en <0.5 s y, mientras el
+   * usuario ya explora el plano, se descarga y decodifica en segundo plano la imagen HD completa (150 MP). */
+  private readonly usandoPreview = signal(true);
+  private readonly hdLista = signal(false);
+  private cargandoHd = false;
 
   /** El plano/nombre del desarrollo vienen anidados en cualquiera de sus lotes (todos comparten el
    * mismo desarrollo) — no hace falta un endpoint aparte. */
   readonly planoUrl = computed(() => this.lotes()[0]?.desarrollo.planoUrl ?? null);
-  /** URL efectiva del <img>: si la descarga inicial del archivo de imagen falla una vez, agrega un parámetro para reintentar. */
+  /** URL efectiva del <img>: arranca con `-preview.jpg` y pasa al HD cuando ya se descargó y decodificó en segundo plano. */
   readonly planoImagenUrl = computed(() => {
     const url = this.planoUrl();
+    if (!url) return null;
+    if (this.usandoPreview() && !this.hdLista()) {
+      return url.replace(/\.(jpg|jpeg|png|webp)(?=\?|$)/i, '-preview.jpg');
+    }
     const intento = this.reintentoImagen();
-    if (!url || intento === 0) return url;
+    if (intento === 0) return url;
     return `${url}${url.includes('?') ? '&' : '?'}r=${intento}`;
   });
   readonly desarrolloNombre = computed(() => this.lotes()[0]?.desarrollo.nombre ?? '');
@@ -503,6 +512,9 @@ export class PlanoPublicoComponent implements OnDestroy {
   reintentar(): void {
     this.cargaProgramada = false;
     this.imagenLista.set(false);
+    this.usandoPreview.set(true);
+    this.hdLista.set(false);
+    this.cargandoHd = false;
     this.naturalWidth = 0;
     this.naturalHeight = 0;
     this.reintentoImagen.set(0);
@@ -760,14 +772,50 @@ export class PlanoPublicoComponent implements OnDestroy {
 
   private procesarImagenCargada(img: HTMLImageElement): void {
     if (!img || img.naturalWidth === 0) return;
+    const primeraVez = !this.imagenLista();
     this.naturalWidth = img.naturalWidth;
     this.naturalHeight = img.naturalHeight;
-    this.ajustarZoomParaVerCompleto();
-    this.terminarCarga();
+    if (primeraVez) {
+      this.ajustarZoomParaVerCompleto();
+      this.terminarCarga();
+    }
+    if (this.usandoPreview() && !this.hdLista()) {
+      this.cargarHdEnSegundoPlano();
+    }
   }
 
-  /** Si la imagen falla en el primer intento, se vuelve a pedir una vez; si vuelve a fallar, se muestra el botón Reintentar. */
+  /** Descarga y decodifica el plano HD (150 MP) fuera del hilo principal mientras el usuario ya ve la vista rápida;
+   * al terminar, reemplaza el src del <img> sin tocar el zoom ni la posición actual. */
+  private cargarHdEnSegundoPlano(): void {
+    const urlHd = this.planoUrl();
+    if (!urlHd || this.cargandoHd || this.hdLista()) return;
+    this.cargandoHd = true;
+    const hd = new Image();
+    hd.decoding = 'async';
+    hd.src = urlHd;
+    const finalizar = () => {
+      const decodificar = typeof hd.decode === 'function' ? hd.decode() : Promise.resolve();
+      decodificar
+        .catch(() => undefined)
+        .then(() => {
+          if (this.planoUrl() === urlHd) {
+            this.hdLista.set(true);
+          }
+        });
+    };
+    hd.onload = finalizar;
+    hd.onerror = () => {
+      // Si el HD falla temporalmente en segundo plano, el usuario sigue viendo la vista rápida sin interrupción.
+      this.cargandoHd = false;
+    };
+  }
+
+  /** Si la vista rápida no existe todavía, cae directo al plano HD; si el HD falla en el primer intento, reintenta una vez. */
   onImagenError(): void {
+    if (this.usandoPreview() && !this.hdLista()) {
+      this.usandoPreview.set(false);
+      return;
+    }
     if (this.reintentoImagen() < 1) {
       this.reintentoImagen.update((n) => n + 1);
       return;
