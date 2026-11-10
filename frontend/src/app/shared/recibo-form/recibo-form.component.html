@@ -94,9 +94,25 @@
 
         @if (l.tipo === 'MENSUALIDAD') {
           <div class="mt-3">
+            <label class="flex items-start gap-2 text-sm text-ink cursor-pointer">
+              <input
+                type="checkbox"
+                [name]="'extemporaneo-' + l.uid"
+                [ngModel]="l.extemporaneo"
+                (ngModelChange)="alternarExtemporaneo(i, $event)"
+                class="mt-0.5 h-4 w-4 rounded border-border text-we-primary focus:ring-we-primary/50"
+              />
+              <span>
+                Pago extemporáneo
+                <span class="block text-xs text-ink-muted">Para clientes que ya pasaron su plazo y aún deben saldo: sin meses, solo el monto.</span>
+              </span>
+            </label>
+          </div>
+          @if (!l.extemporaneo) {
+          <div class="mt-3">
             <p class="text-xs text-ink-muted mb-1.5">Meses que cubre * (puedes elegir varios)</p>
             @if (mesesPendientes().length === 0) {
-              <p class="text-sm text-ink-muted">Todos los meses del plazo ya están cubiertos.</p>
+              <p class="text-sm text-ink-muted">Todos los meses del plazo ya están cubiertos. Si el cliente aún debe saldo, marca «Pago extemporáneo».</p>
             } @else {
               <div class="flex flex-wrap gap-2">
                 @for (m of mesesVisibles(l); track m.clave) {
@@ -127,6 +143,7 @@
               </div>
             }
           </div>
+          }
         }
 
         @if (l.tipo === 'APORTACION') {

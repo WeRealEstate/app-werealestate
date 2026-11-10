@@ -63,6 +63,11 @@ public class PagoVenta {
     @CollectionTable(name = "pago_venta_mes", joinColumns = @JoinColumn(name = "pago_id"))
     private List<MesCubierto> meses = new ArrayList<>();
 
+    /** Solo para tipo MENSUALIDAD: pago registrado fuera del plazo del plan (ya pasaron o ya están cubiertos todos los
+     * meses y aún hay saldo). No lleva meses y cuenta como mensualidad para el saldo y las comisiones. */
+    @Column(nullable = false)
+    private boolean extemporaneo;
+
     protected PagoVenta() {
         // JPA
     }
@@ -73,7 +78,8 @@ public class PagoVenta {
             BigDecimal monto,
             TipoAbono tipo,
             VentaAportacion aportacion,
-            List<MesCubierto> meses) {
+            List<MesCubierto> meses,
+            boolean extemporaneo) {
         this.venta = venta;
         this.recibo = recibo;
         this.fecha = recibo.getFecha();
@@ -81,6 +87,7 @@ public class PagoVenta {
         this.tipo = tipo;
         this.aportacion = aportacion;
         if (meses != null) this.meses.addAll(meses);
+        this.extemporaneo = extemporaneo;
     }
 
     public Long getId() {
@@ -111,6 +118,10 @@ public class PagoVenta {
         return aportacion;
     }
 
+    public boolean isExtemporaneo() {
+        return extemporaneo;
+    }
+
     public List<MesCubierto> getMeses() {
         return meses;
     }
@@ -121,8 +132,10 @@ public class PagoVenta {
     }
 
     /** Edición de datos no financieros (monto y fecha nunca cambian: ver ReciboVenta). */
-    public void actualizarConcepto(TipoAbono tipo, VentaAportacion aportacion, List<MesCubierto> meses) {
+    public void actualizarConcepto(
+            TipoAbono tipo, VentaAportacion aportacion, List<MesCubierto> meses, boolean extemporaneo) {
         this.tipo = tipo;
+        this.extemporaneo = extemporaneo;
         this.aportacion = aportacion;
         this.meses.clear();
         if (meses != null) this.meses.addAll(meses);

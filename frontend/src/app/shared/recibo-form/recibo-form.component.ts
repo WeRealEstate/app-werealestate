@@ -14,6 +14,8 @@ interface LineaForm {
   /** Claves 'yyyy-MM' de los meses que cubre (solo MENSUALIDAD). */
   meses: string[];
   aportacionId: number | null;
+  /** Solo MENSUALIDAD: pago fuera del plazo del plan; sin meses. */
+  extemporaneo: boolean;
   /** true cuando el monto se escribió a mano: deja de sugerirse solo. */
   montoManual: boolean;
   verTodosLosMeses: boolean;
@@ -115,6 +117,7 @@ export class ReciboFormComponent {
       l.tipo = tipo;
       l.meses = [];
       l.aportacionId = null;
+      l.extemporaneo = false;
       l.montoManual = false;
       l.monto = null;
       if (tipo === 'MENSUALIDAD') {
@@ -128,6 +131,23 @@ export class ReciboFormComponent {
           l.aportacionId = sinPagar.id;
           l.monto = sinPagar.monto;
         }
+      }
+    });
+  }
+
+  /** Pago extemporáneo: el cliente ya pasó el plazo (o ya tiene todos los meses cubiertos) y aún debe saldo. Sin meses,
+   * solo monto; al desmarcarlo vuelve a pedir los meses. */
+  alternarExtemporaneo(indice: number, valor: boolean): void {
+    this.actualizarLinea(indice, (l) => {
+      l.extemporaneo = valor;
+      l.meses = [];
+      l.montoManual = false;
+      if (valor) {
+        l.monto = null;
+      } else {
+        const primero = this.mesesPendientes().find((m) => !this.mesEnOtraLinea(indice, m.clave));
+        if (primero) l.meses = [primero.clave];
+        this.sugerirMonto(l);
       }
     });
   }
@@ -199,7 +219,7 @@ export class ReciboFormComponent {
       const n = this.lineas().length > 1 ? ` (concepto ${i + 1})` : '';
       if (!l.tipo) return `Elige el tipo de abono${n}.`;
       if (!l.monto || l.monto <= 0) return `Ingresa un monto válido${n}.`;
-      if (l.tipo === 'MENSUALIDAD' && l.meses.length === 0) return `Elige el mes o los meses que cubre la mensualidad${n}.`;
+      if (l.tipo === 'MENSUALIDAD' && !l.extemporaneo && l.meses.length === 0) return `Elige el mes o los meses que cubre la mensualidad${n}.`;
       if (l.tipo === 'APORTACION' && l.aportacionId === null) return `Elige qué aportación programada paga${n}.`;
     }
     return null;
@@ -207,6 +227,7 @@ export class ReciboFormComponent {
 
   private lineaARequest(l: LineaForm): LineaReciboRequest {
     const base = { tipo: l.tipo as TipoAbono, monto: l.monto! };
+    if (l.tipo === 'MENSUALIDAD' && l.extemporaneo) return { ...base, extemporaneo: true };
     if (l.tipo === 'MENSUALIDAD') {
       return {
         ...base,
@@ -249,7 +270,7 @@ export class ReciboFormComponent {
 let siguienteUid = 0;
 
 function nuevaLinea(): LineaForm {
-  return { uid: siguienteUid++, tipo: '', monto: null, meses: [], aportacionId: null, montoManual: false, verTodosLosMeses: false };
+  return { uid: siguienteUid++, tipo: '', monto: null, meses: [], aportacionId: null, extemporaneo: false, montoManual: false, verTodosLosMeses: false };
 }
 
 function hoy(): string {

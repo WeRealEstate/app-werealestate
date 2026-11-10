@@ -467,7 +467,7 @@ public class VentaService {
                     java.time.LocalDate.now(),
                     request.folio().trim(),
                     "Dinero recibido al apartar el lote",
-                    List.of(new PagoVentaCreateRequest.Linea(TipoAbono.APARTADO, monto, null, null))));
+                    List.of(new PagoVentaCreateRequest.Linea(TipoAbono.APARTADO, monto, null, null, null))));
         } else {
             if (venta.getPlazoMeses() == null || venta.getMensualidad() == null) {
                 throw new ValidationException("Esta venta no tiene mensualidades: aplica el depósito al saldo");
@@ -661,28 +661,44 @@ public class VentaService {
 
     /** Valida lo que cada tipo exige y arma la línea. */
     private PagoVenta construirLinea(Venta venta, ReciboVenta recibo, PagoVentaCreateRequest.Linea linea) {
-        Referencias ref = validarReferencias(venta, linea.tipo(), linea.meses(), linea.aportacionId());
-        return new PagoVenta(venta, recibo, linea.monto(), linea.tipo(), ref.aportacion(), ref.meses());
+        boolean extemporaneo = Boolean.TRUE.equals(linea.extemporaneo());
+        Referencias ref = validarReferencias(venta, linea.tipo(), linea.meses(), linea.aportacionId(), extemporaneo);
+        return new PagoVenta(venta, recibo, linea.monto(), linea.tipo(), ref.aportacion(), ref.meses(), extemporaneo);
     }
 
     private record Referencias(List<MesCubierto> meses, VentaAportacion aportacion) {
     }
 
-    /** Mensualidad = meses dentro del plazo de la venta; aportación = una aportación programada de
-     * esta misma venta; enganche y apartado, nada más. */
+    /** Mensualidad = meses dentro del plazo de la venta (o, si es extemporánea, ningún mes: el cliente ya pasó el plazo
+     * sin terminar de pagar y el dinero solo abona al saldo); aportación = una aportación programada de esta misma
+     * venta; enganche y apartado, nada más. */
     private Referencias validarReferencias(
-            Venta venta, TipoAbono tipo, List<PagoVentaCreateRequest.Mes> mesesPedidos, Long aportacionId) {
+            Venta venta,
+            TipoAbono tipo,
+            List<PagoVentaCreateRequest.Mes> mesesPedidos,
+            Long aportacionId,
+            boolean extemporaneo) {
         boolean traeMeses = mesesPedidos != null && !mesesPedidos.isEmpty();
+
+        if (extemporaneo && tipo != TipoAbono.MENSUALIDAD) {
+            throw new ValidationException("Solo una mensualidad puede ser un pago extemporáneo");
+        }
 
         if (tipo == TipoAbono.MENSUALIDAD) {
             if (venta.getPlazoMeses() == null || venta.getPlazoMeses() < 1 || venta.getMensualidad() == null) {
                 throw new ValidationException("Esta venta no tiene mensualidades");
             }
-            if (!traeMeses) {
-                throw new ValidationException("Indica el mes o los meses que cubre la mensualidad");
-            }
             if (aportacionId != null) {
                 throw new ValidationException("Una mensualidad no se liga a una aportación");
+            }
+            if (extemporaneo) {
+                if (traeMeses) {
+                    throw new ValidationException("Un pago extemporáneo no lleva meses: solo abona al saldo");
+                }
+                return new Referencias(List.of(), null);
+            }
+            if (!traeMeses) {
+                throw new ValidationException("Indica el mes o los meses que cubre la mensualidad");
             }
             YearMonth primero = YearMonth.from(venta.getFechaVenta()).plusMonths(venta.isPrimeraMensualidadMesVenta() ? 0 : 1);
             YearMonth ultimo = primero.plusMonths(venta.getPlazoMeses() - 1L);
@@ -740,7 +756,7 @@ public class VentaService {
         String aportacion = l.getAportacion() == null
                 ? ""
                 : " (" + YearMonth.of(l.getAportacion().getAnio(), l.getAportacion().getMes()) + ")";
-        return tipo + " $" + l.getMonto().toPlainString() + meses + aportacion;
+        return tipo + " $" + l.getMonto().toPlainString() + meses + aportacion + (l.isExtemporaneo() ? " (extemporáneo)" : "");
     }
 
     // ---------------------------------------------------------------- editar / anular un recibo
@@ -784,8 +800,9 @@ public class VentaService {
             if (pago == null) {
                 throw new ValidationException("La línea " + linea.pagoId() + " no pertenece a este recibo");
             }
-            Referencias ref = validarReferencias(venta, linea.tipo(), linea.meses(), linea.aportacionId());
-            aplicar.add(() -> pago.actualizarConcepto(linea.tipo(), ref.aportacion(), ref.meses()));
+            boolean extemporaneo = Boolean.TRUE.equals(linea.extemporaneo());
+            Referencias ref = validarReferencias(venta, linea.tipo(), linea.meses(), linea.aportacionId(), extemporaneo);
+            aplicar.add(() -> pago.actualizarConcepto(linea.tipo(), ref.aportacion(), ref.meses(), extemporaneo));
         }
 
         recibo.setFolio(folio);

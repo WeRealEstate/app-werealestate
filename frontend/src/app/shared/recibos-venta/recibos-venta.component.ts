@@ -27,6 +27,7 @@ interface LineaEdicion {
   tipo: TipoAbono | '';
   meses: string[];
   aportacionId: number | null;
+  extemporaneo: boolean;
 }
 
 /** Historial de abonos de una venta, agrupado por recibo (un folio, una o más líneas): permite
@@ -90,6 +91,7 @@ export class RecibosVentaComponent {
 
   /** "nov 2026, dic 2026" o la aportación que paga; vacío si no aplica. */
   detalleConcepto(p: PagoVenta): string {
+    if (p.tipo === 'MENSUALIDAD' && p.extemporaneo) return 'Pago extemporáneo';
     if (p.tipo === 'MENSUALIDAD') return p.meses.map((m) => etiquetaMes(m.anio, m.mes)).join(', ');
     if (p.tipo === 'APORTACION') {
       const a = this.venta().aportaciones.find((x) => x.id === p.aportacionId);
@@ -171,6 +173,7 @@ export class RecibosVentaComponent {
         tipo: p.tipo ?? '',
         meses: p.meses.map((m) => claveMes(m.anio, m.mes)),
         aportacionId: p.aportacionId,
+        extemporaneo: p.extemporaneo,
       })),
     );
     this.errorModal.set(null);
@@ -184,7 +187,7 @@ export class RecibosVentaComponent {
     this.editLineas.update((ls) =>
       ls.map((l, i) => {
         if (i !== indice) return l;
-        const cambio: LineaEdicion = { ...l, tipo, meses: [], aportacionId: null };
+        const cambio: LineaEdicion = { ...l, tipo, meses: [], aportacionId: null, extemporaneo: false };
         if (tipo === 'MENSUALIDAD') {
           const primero = this.mesesElegibles().find((m) => !this.mesEnOtraLinea(indice, m.clave));
           if (primero) cambio.meses = [primero.clave];
@@ -192,6 +195,17 @@ export class RecibosVentaComponent {
           cambio.aportacionId = this.aportacionesOpciones()[0]?.id ?? null;
         }
         return cambio;
+      }),
+    );
+  }
+
+  alternarExtemporaneoEdicion(indice: number, valor: boolean): void {
+    this.editLineas.update((ls) =>
+      ls.map((l, i) => {
+        if (i !== indice) return l;
+        if (valor) return { ...l, extemporaneo: true, meses: [] };
+        const primero = this.mesesElegibles().find((m) => !this.mesEnOtraLinea(indice, m.clave));
+        return { ...l, extemporaneo: false, meses: primero ? [primero.clave] : [] };
       }),
     );
   }
@@ -219,7 +233,7 @@ export class RecibosVentaComponent {
     }
     for (const l of this.editLineas()) {
       if (!l.tipo) return void this.errorModal.set('Elige el tipo de abono de cada concepto.');
-      if (l.tipo === 'MENSUALIDAD' && l.meses.length === 0) {
+      if (l.tipo === 'MENSUALIDAD' && !l.extemporaneo && l.meses.length === 0) {
         return void this.errorModal.set('Elige el mes o los meses que cubre la mensualidad.');
       }
       if (l.tipo === 'APORTACION' && l.aportacionId === null) {
@@ -236,8 +250,9 @@ export class RecibosVentaComponent {
         lineas: this.editLineas().map((l) => ({
           pagoId: l.pagoId,
           tipo: l.tipo as TipoAbono,
+          extemporaneo: l.tipo === 'MENSUALIDAD' && l.extemporaneo,
           meses:
-            l.tipo === 'MENSUALIDAD'
+            l.tipo === 'MENSUALIDAD' && !l.extemporaneo
               ? l.meses.map((c) => {
                   const [anio, mes] = c.split('-').map(Number);
                   return { anio, mes };

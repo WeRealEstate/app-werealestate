@@ -19,6 +19,7 @@ public record ReciboEditarRequest(
             @NotNull Long pagoId,
             @NotNull TipoAbono tipo,
             @Valid List<PagoVentaCreateRequest.Mes> meses,
-            Long aportacionId) {
+            Long aportacionId,
+            Boolean extemporaneo) {
     }
 }

@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.12.2', fecha: '2026-11-10', cambios: [
+    "Abonos: nueva casilla «Pago extemporáneo» al registrar (o corregir) una mensualidad. Sirve para clientes que ya pasaron su plazo, o ya tienen todos los meses cubiertos, y aún deben saldo: no pide meses, solo el monto, y abona al saldo y a las comisiones como una mensualidad. El recibo y su bitácora lo muestran como «Pago extemporáneo».",
+  ] },
   { version: '11.13.5', fecha: '2026-11-09', cambios: [
     "Cotizador público: se agregó nuevamente el acceso directo 'Score de ventas' en la portada principal junto a los enlaces de los planos de Samai y Aldea Nanuu.",
   ] },

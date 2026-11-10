@@ -26,7 +26,9 @@ public record PagoVentaCreateRequest(
             // Solo MENSUALIDAD: al menos un mes.
             @Valid List<Mes> meses,
             // Solo APORTACION: la aportación programada de la venta que paga.
-            Long aportacionId) {
+            Long aportacionId,
+            // Solo MENSUALIDAD: pago fuera del plazo del plan; sin meses, solo monto.
+            Boolean extemporaneo) {
     }
 
     public record Mes(@NotNull @Min(2000) @Max(2200) Integer anio, @NotNull @Min(1) @Max(12) Integer mes) {

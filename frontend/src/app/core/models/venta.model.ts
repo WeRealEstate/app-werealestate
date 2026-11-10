@@ -196,6 +196,8 @@ export interface PagoVenta {
   meses: MesCubierto[];
   /** Solo APORTACION: la aportación programada que paga. */
   aportacionId: number | null;
+  /** Solo MENSUALIDAD: pago extemporáneo (fuera del plazo del plan, sin meses; solo abona al saldo). */
+  extemporaneo: boolean;
   /** null en los abonos anteriores a que se pidiera el folio: por completar. */
   folio: string | null;
   notas: string | null;
@@ -222,7 +224,7 @@ export interface ReciboHistorial {
 export interface ReciboEditarRequest {
   folio: string;
   notas: string | null;
-  lineas: { pagoId: number; tipo: TipoAbono; meses?: MesCubierto[]; aportacionId?: number | null }[];
+  lineas: { pagoId: number; tipo: TipoAbono; meses?: MesCubierto[]; aportacionId?: number | null; extemporaneo?: boolean }[];
 }
 
 export interface LineaReciboRequest {
@@ -232,6 +234,8 @@ export interface LineaReciboRequest {
   meses?: MesCubierto[];
   /** Solo APORTACION. */
   aportacionId?: number | null;
+  /** Solo MENSUALIDAD: pago fuera del plazo del plan; va sin meses. */
+  extemporaneo?: boolean;
 }
 
 /** Un recibo: folio, fecha, nota y una o más líneas (un concepto cada una). */

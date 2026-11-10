@@ -20,6 +20,8 @@ public record PagoVentaDto(
         List<MesCubiertoDto> meses,
         // Solo APORTACION: la aportación programada que paga.
         Long aportacionId,
+        // Solo MENSUALIDAD: pago extemporáneo (fuera del plazo del plan, sin meses).
+        boolean extemporaneo,
         String folio,
         String notas,
         UsuarioResumenDto registradoPor,
@@ -45,6 +47,7 @@ public record PagoVentaDto(
                         .sorted(Comparator.comparingInt(MesCubiertoDto::anio).thenComparingInt(MesCubiertoDto::mes))
                         .toList(),
                 pago.getAportacion() != null ? pago.getAportacion().getId() : null,
+                pago.isExtemporaneo(),
                 pago.getFolio(),
                 pago.getNotas(),
                 UsuarioResumenDto.from(pago.getRegistradoPor()),
