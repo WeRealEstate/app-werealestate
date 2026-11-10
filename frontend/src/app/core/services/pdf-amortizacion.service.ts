@@ -118,17 +118,18 @@ export class PdfAmortizacionService {
     const filas = a.filas;
     autoTable(doc, {
       startY: y + 3,
-      head: [['N.º', 'FECHA', 'CONCEPTO', 'MONTO', 'PAGADO', 'SALDO', 'ESTADO']],
+      head: [['N.º', 'FECHA', 'CONCEPTO', 'MONTO', 'PAGADO', 'ABONADO EN EL MES', 'SALDO', 'ESTADO']],
       body: filas.map((f) => [
         f.numero ?? '—',
         fechaCorta(f.fecha),
         f.concepto,
         dinero(f.monto),
         dinero(f.pagado),
+        f.fecha ? dinero(f.abonadoMes) : '—',
         f.fecha ? dinero(f.saldo) : '—',
         etiquetaEstadoPago(f.estado, f.fecha, a.corte),
       ]),
-      foot: [['', '', 'Total', dinero(sumar(filas.map((f) => f.monto))), dinero(sumar(filas.map((f) => f.pagado))), '', '']],
+      foot: [['', '', 'Total', dinero(sumar(filas.map((f) => f.monto))), dinero(sumar(filas.map((f) => f.pagado))), dinero(sumar(filas.map((f) => f.abonadoMes))), '', '']],
       showFoot: 'lastPage',
       margin: { left: MARGEN, right: MARGEN, top: 30, bottom: ALTO_PIE + 4 },
       theme: 'grid',
@@ -142,8 +143,9 @@ export class PdfAmortizacionService {
         2: { cellWidth: 'auto' },
         3: { halign: 'right', cellWidth: 26 },
         4: { halign: 'right', cellWidth: 26 },
-        5: { halign: 'right', cellWidth: 28 },
-        6: { halign: 'center', cellWidth: 21 },
+        5: { halign: 'right', cellWidth: 26 },
+        6: { halign: 'right', cellWidth: 26 },
+        7: { halign: 'center', cellWidth: 21 },
       },
       didParseCell: (hook) => {
         if (hook.section === 'foot' && hook.column.index >= 3) hook.cell.styles.halign = 'right';
@@ -151,7 +153,7 @@ export class PdfAmortizacionService {
         const estado: EstadoPagoPlan | undefined = filas[hook.row.index]?.estado;
         if (estado === 'ATRASADO') hook.cell.styles.fillColor = FONDO_ATRASADO;
         if (estado === 'LE_TOCA') hook.cell.styles.fillColor = FONDO_LE_TOCA;
-        if (hook.column.index === 6) {
+        if (hook.column.index === 7) {
           hook.cell.styles.fontStyle = 'bold';
           hook.cell.styles.textColor = estado === 'PAGADO' ? VERDE : estado === 'ATRASADO' ? ROJO : estado === 'LE_TOCA' ? AMBAR : MUTED;
         }
@@ -167,6 +169,7 @@ export class PdfAmortizacionService {
     const notas = [
       'Lo abonado cubre los pagos del más antiguo al más nuevo. Un pago cuenta como atrasado desde el día siguiente a su fecha.',
       'Saldo: lo que falta del precio después de cada pago, según el plan.',
+      'Abonado en el mes: el dinero recibido ese mes, según la fecha de cada recibo.',
     ];
     if (filas.some((f) => f.concepto === CONCEPTO_SIN_FECHA)) {
       notas.push(`${CONCEPTO_SIN_FECHA}: parte del precio a la que la venta no le asigna fecha (por ejemplo, anualidades); no cuenta como atraso.`);

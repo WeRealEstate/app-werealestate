@@ -49,6 +49,7 @@ export class TablaAmortizacionComponent {
   readonly conSinFecha = computed(() => this.amortizacion().filas.some((f) => f.concepto === CONCEPTO_SIN_FECHA));
   readonly totalMonto = computed(() => redondear(this.amortizacion().filas.reduce((s, f) => s + f.monto, 0)));
   readonly totalPagado = computed(() => redondear(this.amortizacion().filas.reduce((s, f) => s + f.pagado, 0)));
+  readonly totalAbonadoMes = computed(() => redondear(this.amortizacion().filas.reduce((s, f) => s + f.abonadoMes, 0)));
   readonly idTabla = computed(() => `tabla-amortizacion-${this.amortizacion().ventaId}`);
 
   constructor() {

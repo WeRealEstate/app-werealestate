@@ -54,7 +54,9 @@ public record AmortizacionDto(
      * que no tiene fecha); fecha null = parte del precio sin fecha en el plan. pagado: lo que ya cubre lo abonado;
      * saldo: lo que falta del precio después de este pago según el plan. arrastre: faltante de una mensualidad vencida
      * pagada en parte que se pasó al pago siguiente (ver CalendarioPagos): negativo en la fila que lo cedió (su monto
-     * baja a lo que se alcanzó a pagar) y positivo en la que lo recibe (su monto lo incluye); cero en las demás. */
+     * baja a lo que se alcanzó a pagar) y positivo en la que lo recibe (su monto lo incluye); cero en las demás.
+     * abonadoMes: el dinero que de verdad se recibió en el mes de este pago, según la fecha de cada recibo vigente
+     * (no depende de cómo el plan reparte lo abonado); la suma de la columna es lo abonado. */
     public record Fila(
             Integer numero,
             LocalDate fecha,
@@ -63,6 +65,17 @@ public record AmortizacionDto(
             BigDecimal pagado,
             BigDecimal saldo,
             EstadoPagoPlan estado,
-            BigDecimal arrastre) {
+            BigDecimal arrastre,
+            BigDecimal abonadoMes) {
+
+        /** Sin lo abonado por mes (lo llena EstadoCuentaService con las fechas de los recibos). */
+        public Fila(Integer numero, LocalDate fecha, String concepto, BigDecimal monto, BigDecimal pagado,
+                BigDecimal saldo, EstadoPagoPlan estado, BigDecimal arrastre) {
+            this(numero, fecha, concepto, monto, pagado, saldo, estado, arrastre, BigDecimal.ZERO);
+        }
+
+        public Fila conAbonadoMes(BigDecimal abonado) {
+            return new Fila(numero, fecha, concepto, monto, pagado, saldo, estado, arrastre, abonado);
+        }
     }
 }

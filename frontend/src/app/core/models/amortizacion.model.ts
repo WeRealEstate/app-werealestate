@@ -37,6 +37,8 @@ export interface FilaAmortizacion {
   /** Faltante de una mensualidad vencida pagada en parte que se pasó al pago siguiente: negativo en la fila que lo cedió
    * (su monto es lo que se alcanzó a pagar) y positivo en la que lo recibe (su monto lo incluye). */
   arrastre: number;
+  /** Dinero realmente recibido en el mes de este pago (por la fecha de cada recibo vigente); informativo. */
+  abonadoMes: number;
 }
 
 /** Respuesta de GET /api/ventas/{id}/amortizacion y de cada elemento de GET /api/clientes/{id}/amortizaciones. */
