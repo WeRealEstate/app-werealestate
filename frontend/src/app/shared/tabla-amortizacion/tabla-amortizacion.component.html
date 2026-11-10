@@ -78,22 +78,22 @@
 
       <div
         #caja
-        class="mt-3 max-h-[30rem] overflow-auto rounded-xl border border-border focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50"
+        class="mt-3 max-h-[30rem] overflow-y-auto overflow-x-hidden rounded-xl border border-border focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50"
         tabindex="0"
         role="region"
         [attr.aria-label]="'Tabla de amortización de la venta #' + a.ventaNumero"
         data-testid="tabla-amortizacion"
       >
-        <table class="w-full min-w-[42rem] text-left text-sm">
-          <thead class="text-xs uppercase tracking-wide text-ink-muted">
+        <table class="w-full text-left text-xs sm:text-sm">
+          <thead class="text-[10px] uppercase tracking-wide text-ink-muted sm:text-xs">
             <tr>
-              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-3 py-2.5 text-center font-semibold">N.º</th>
-              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-3 py-2.5 font-semibold">Fecha</th>
-              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-3 py-2.5 font-semibold">Concepto</th>
-              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-3 py-2.5 text-right font-semibold">Mensualidad</th>
-              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-3 py-2.5 text-right font-semibold" title="Dinero recibido en ese mes, según la fecha de cada recibo">Monto pagado</th>
-              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-3 py-2.5 text-right font-semibold">Saldo</th>
-              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-3 py-2.5 font-semibold">Estado</th>
+              <th scope="col" class="hidden sticky top-0 z-10 border-b border-border bg-surface-2 px-2 py-2.5 sm:px-3 text-center font-semibold sm:table-cell">N.º</th>
+              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-2 py-2.5 sm:px-3 font-semibold">Fecha</th>
+              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-2 py-2.5 sm:px-3 font-semibold">Concepto</th>
+              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-2 py-2.5 sm:px-3 text-right font-semibold">Mensualidad</th>
+              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-2 py-2.5 sm:px-3 text-right font-semibold" title="Dinero recibido en ese mes, según la fecha de cada recibo">Monto pagado</th>
+              <th scope="col" class="hidden sticky top-0 z-10 border-b border-border bg-surface-2 px-2 py-2.5 sm:px-3 text-right font-semibold sm:table-cell">Saldo</th>
+              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-2 py-2.5 sm:px-3 font-semibold">Estado</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-border">
@@ -103,16 +103,16 @@
                 [attr.data-actual]="i === indiceActual() ? '' : null"
                 [attr.data-estado]="f.estado"
               >
-                <td class="whitespace-nowrap px-3 py-2 text-center tabular-nums text-ink-muted">{{ f.numero ?? '—' }}</td>
-                <td class="whitespace-nowrap px-3 py-2 tabular-nums text-ink">{{ fecha(f.fecha) }}</td>
-                <td class="px-3 py-2 text-ink">
+                <td class="hidden px-3 py-2 text-center tabular-nums text-ink-muted sm:table-cell">{{ f.numero ?? '—' }}</td>
+                <td class="px-2 py-2 tabular-nums text-ink sm:px-3">{{ fecha(f.fecha) }}</td>
+                <td class="px-2 py-2 text-ink sm:px-3">
                   {{ f.concepto }}
                   @if (f.arrastre > 0) {
                     <span class="block text-xs text-ink-muted">Incluye ${{ money(f.arrastre) }} que faltaron de meses anteriores</span>
                   }
                 </td>
-                <td class="whitespace-nowrap px-3 py-2 text-right tabular-nums text-ink">${{ money(f.monto) }}</td>
-                <td class="whitespace-nowrap px-3 py-2 text-right tabular-nums">
+                <td class="px-2 py-2 text-right tabular-nums text-ink sm:px-3">${{ money(f.monto) }}</td>
+                <td class="px-2 py-2 text-right tabular-nums sm:px-3">
                   @if (!f.fecha) {
                     <span class="text-ink-muted">—</span>
                   } @else if (f.pagos.length === 0) {
@@ -120,29 +120,32 @@
                   } @else {
                     @for (p of f.pagos; track $index) {
                       <span class="block text-ink">
-                        <span class="mr-1.5 text-xs text-ink-muted">{{ fecha(p.fecha) }}</span>${{ money(p.monto) }}
+                        <span class="block text-[11px] text-ink-muted sm:mr-1.5 sm:inline sm:text-xs">{{ fecha(p.fecha) }}</span>${{ money(p.monto) }}
                       </span>
                     }
                   }
                 </td>
-                <td class="whitespace-nowrap px-3 py-2 text-right tabular-nums text-ink-muted">{{ f.fecha ? '$' + money(f.saldo) : '—' }}</td>
-                <td class="whitespace-nowrap px-3 py-2">
-                  <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold" [class]="estadoClases[f.estado]">{{ etiquetaEstado(f.estado, f.fecha, a.corte) }}</span>
+                <td class="hidden px-3 py-2 text-right tabular-nums text-ink-muted sm:table-cell">{{ f.fecha ? '$' + money(f.saldo) : '—' }}</td>
+                <td class="px-2 py-2 sm:px-3">
+                  <span class="inline-block rounded-full px-2 py-0.5 text-center text-[11px] font-semibold sm:text-xs" [class]="estadoClases[f.estado]">{{ etiquetaEstado(f.estado, f.fecha, a.corte) }}</span>
                 </td>
               </tr>
             }
           </tbody>
-          <tfoot class="border-t border-border bg-surface-2 text-sm font-semibold text-ink">
+          <tfoot class="border-t border-border bg-surface-2 text-xs font-semibold text-ink sm:text-sm">
             <tr>
-              <td class="px-3 py-2.5" colspan="4">Total pagado</td>
-              <td class="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">${{ money(totalAbonadoMes()) }}</td>
-              <td colspan="2"></td>
+              <td class="hidden sm:table-cell"></td>
+              <td class="px-2 py-2.5 sm:px-3" colspan="2">Total pagado</td>
+              <td></td>
+              <td class="px-2 py-2.5 text-right tabular-nums sm:px-3">${{ money(totalAbonadoMes()) }}</td>
+              <td class="hidden sm:table-cell"></td>
+              <td></td>
             </tr>
           </tfoot>
         </table>
       </div>
       <p class="mt-2 text-xs text-ink-muted">
-        Mensualidad: lo que toca pagar ese mes más lo que quedó pendiente de los meses anteriores Monto pagado: cada abono del mes con su fecha; lo que se paga de más no adelanta la mensualidad siguiente. Un mes aparece atrasado si lo pagado en él no cubrió lo que le tocaba; un pago cuenta como atrasado desde el día siguiente a su fecha. Saldo: lo que falta del precio después de cada pago, según el plan.
+        Mensualidad: lo que toca pagar ese mes más lo que quedó pendiente de los meses anteriores. Monto pagado: cada abono del mes con su fecha; lo que se paga de más no adelanta la mensualidad siguiente. Un mes aparece atrasado si lo pagado en él no cubrió lo que le tocaba; un pago cuenta como atrasado desde el día siguiente a su fecha. Saldo: lo que falta del precio después de cada pago, según el plan.
         @if (conSinFecha()) {
           «{{ sinFecha }}» es la parte del precio a la que la venta no le asigna fecha (por ejemplo, anualidades de ventas anteriores): no cuenta como atraso.
         }

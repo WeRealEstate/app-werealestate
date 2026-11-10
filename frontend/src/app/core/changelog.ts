@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.14.8', fecha: '2026-11-10', cambios: [
+    "Tabla de amortización: se ajustó el diseño para que quepa en el ancho disponible, sin desplazamiento horizontal (en pantallas angostas se oculta el N.º y el Saldo, y la fecha de cada abono va sobre su monto).",
+  ] },
   { version: '11.14.7', fecha: '2026-11-10', cambios: [
     "Número de contrato: cambiarlo o quitarlo cuando la venta ya tiene uno ahora pide tu contraseña (con una cuenta regresiva de 10 segundos, como al eliminar una venta), tanto en el detalle de la venta como en la ficha del cliente. Capturar el primer número sigue siendo directo.",
   ] },
