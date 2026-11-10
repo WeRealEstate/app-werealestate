@@ -118,7 +118,7 @@ export class PdfAmortizacionService {
     const filas = a.filas;
     autoTable(doc, {
       startY: y + 3,
-      head: [['N.º', 'FECHA', 'CONCEPTO', 'MONTO', 'MONTO PAGADO', 'SALDO', 'ESTADO']],
+      head: [['N.º', 'FECHA', 'CONCEPTO', 'MENSUALIDAD', 'MONTO PAGADO', 'SALDO', 'ESTADO']],
       body: filas.map((f) => [
         f.numero ?? '—',
         fechaCorta(f.fecha),
