@@ -24,6 +24,8 @@ const VERDE: Rgb = [21, 128, 61];
 const AMBAR: Rgb = [146, 64, 14];
 const FONDO_ATRASADO: Rgb = [253, 236, 236];
 const FONDO_LE_TOCA: Rgb = [255, 247, 230];
+const AZUL_ABONADO: Rgb = [3, 105, 161];
+const FONDO_ABONADO: Rgb = [235, 246, 253];
 
 const FUENTE = 'Montserrat';
 const MARGEN = 18;
@@ -124,7 +126,7 @@ export class PdfAmortizacionService {
         fechaCorta(f.fecha),
         f.concepto,
         dinero(f.monto),
-        f.fecha ? (f.pagos.length ? f.pagos.map((x) => `${fechaCorta(x.fecha)}  ${dinero(x.monto)}`).join('\n') : dinero(0)) : '—',
+        f.fecha ? (f.pagos.length ? f.pagos.map((x) => `${fechaCorta(x.fecha)}  ${dinero(x.monto)}${x.aCuentaComision ? ' (a cuenta de comisión)' : ''}`).join('\n') : dinero(0)) : '—',
         f.fecha ? dinero(f.saldo) : '—',
         etiquetaEstadoPago(f.estado, f.fecha, a.corte),
       ]),
@@ -151,9 +153,10 @@ export class PdfAmortizacionService {
         const estado: EstadoPagoPlan | undefined = filas[hook.row.index]?.estado;
         if (estado === 'ATRASADO') hook.cell.styles.fillColor = FONDO_ATRASADO;
         if (estado === 'LE_TOCA') hook.cell.styles.fillColor = FONDO_LE_TOCA;
+        if (estado === 'ABONADO') hook.cell.styles.fillColor = FONDO_ABONADO;
         if (hook.column.index === 6) {
           hook.cell.styles.fontStyle = 'bold';
-          hook.cell.styles.textColor = estado === 'PAGADO' ? VERDE : estado === 'ATRASADO' ? ROJO : estado === 'LE_TOCA' ? AMBAR : MUTED;
+          hook.cell.styles.textColor = estado === 'PAGADO' ? VERDE : estado === 'ATRASADO' ? ROJO : estado === 'LE_TOCA' ? AMBAR : estado === 'ABONADO' ? AZUL_ABONADO : MUTED;
         }
       },
       // En las hojas que siguen, la banda de arriba igual que en la primera.
@@ -167,7 +170,7 @@ export class PdfAmortizacionService {
     const notas = [
       'Mensualidad: lo que toca pagar ese mes más lo que quedó pendiente de los meses anteriores Un pago cuenta como atrasado desde el día siguiente a su fecha.',
       'Saldo: lo que falta del precio después de cada pago, según el plan.',
-      'Monto pagado: cada abono del mes con su fecha; lo que se paga de más no adelanta la mensualidad siguiente.',
+      'Monto pagado: cada abono del mes con su fecha; lo que se paga de más no adelanta la mensualidad siguiente. Estado: Pagado (cubrió la mensualidad), Abonado (algún pago, sin cubrirla) o Atrasado (su fecha pasó sin ningún pago).',
     ];
     if (filas.some((f) => f.concepto === CONCEPTO_SIN_FECHA)) {
       notas.push(`${CONCEPTO_SIN_FECHA}: parte del precio a la que la venta no le asigna fecha (por ejemplo, anualidades); no cuenta como atraso.`);

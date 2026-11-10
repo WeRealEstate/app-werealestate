@@ -724,6 +724,7 @@ public class ComisionService {
         return switch (pago.getTipo()) {
             case ENGANCHE -> "Enganche";
             case MENSUALIDAD -> "Mensualidad";
+            case A_CUENTA_COMISION -> "A cuenta de comisión";
             case APORTACION -> "Aportación";
             case APARTADO -> "Apartado";
         };
@@ -815,7 +816,7 @@ public class ComisionService {
         if (pago.getTipo() == null) return BigDecimal.ZERO;
         return switch (pago.getTipo()) {
             case ENGANCHE -> pago.getMonto();
-            case MENSUALIDAD, APORTACION -> pago.getMonto().divide(new BigDecimal("2"), 2, RoundingMode.HALF_UP);
+            case MENSUALIDAD, A_CUENTA_COMISION, APORTACION -> pago.getMonto().divide(new BigDecimal("2"), 2, RoundingMode.HALF_UP);
             case APARTADO -> BigDecimal.ZERO;
         };
     }

@@ -61,11 +61,11 @@ class TablaMensualTest {
         // Junio: dos abonos de días distintos, cada uno en su línea.
         assertThat(f.get(2).pagos()).extracting(p -> p.fecha().getDayOfMonth()).containsExactly(22, 30);
         // Julio también quedó corto: el faltante se suma a agosto, y así hasta el último renglón.
-        assertThat(f.get(3).estado()).isEqualTo(EstadoPagoPlan.ATRASADO);
+        assertThat(f.get(3).estado()).isEqualTo(EstadoPagoPlan.ABONADO); // pagó algo, no toda la mensualidad
         assertThat(f.get(3).monto()).isEqualByComparingTo("21540.87");
         assertThat(f.get(4).monto()).isEqualByComparingTo("28221.16");
         assertThat(f.get(5).monto()).isEqualByComparingTo("34901.45");
-        assertThat(f.get(5).estado()).isEqualTo(EstadoPagoPlan.ATRASADO);
+        assertThat(f.get(5).estado()).isEqualTo(EstadoPagoPlan.ABONADO);
         assertThat(f.get(6).monto()).isEqualByComparingTo("32169.24"); // octubre: venció sin pagos
         assertThat(f.get(6).estado()).isEqualTo(EstadoPagoPlan.ATRASADO);
         assertThat(f.get(7).monto()).isEqualByComparingTo("48849.50"); // noviembre: lo suyo más todo lo atrasado
@@ -93,5 +93,28 @@ class TablaMensualTest {
         assertThat(f.get(2).estado()).isEqualTo(EstadoPagoPlan.LE_TOCA);
         assertThat(f.get(2).monto()).isEqualByComparingTo("16680.29");
         assertThat(f.get(7).saldo()).isEqualByComparingTo("0");
+    }
+
+    @Test
+    void losCuatroEstadosPorMesYLaEtiquetaDeACuentaDeComision() {
+        PagoVenta aCuenta = mock(PagoVenta.class);
+        when(aCuenta.getFecha()).thenReturn(LocalDate.of(2026, 6, 15));
+        when(aCuenta.getMonto()).thenReturn(d("16680.29"));
+        when(aCuenta.getTipo()).thenReturn(com.werealestate.backend.model.TipoAbono.A_CUENTA_COMISION);
+        List<PagoVenta> pagos = List.of(
+                pago(4, 10, "10000"),   // enganche cubierto
+                pago(5, 10, "5000"),    // mayo: algo, no toda la mensualidad
+                aCuenta);               // junio (más lo que faltó de mayo no alcanza, pero llegó dinero): ver abajo
+
+        List<Fila> f = TablaMensual.construir(plan(), List.of(), d("126762"), pagos, HOY);
+
+        assertThat(f.get(0).estado()).isEqualTo(EstadoPagoPlan.PAGADO);
+        assertThat(f.get(1).estado()).isEqualTo(EstadoPagoPlan.ABONADO);
+        assertThat(f.get(2).pagos()).hasSize(1);
+        assertThat(f.get(2).pagos().get(0).aCuentaComision()).isTrue();
+        assertThat(f.get(1).pagos().get(0).aCuentaComision()).isFalse();
+        // Julio en adelante, vencidos y sin ningún pago: Atrasado.
+        assertThat(f.get(3).estado()).isEqualTo(EstadoPagoPlan.ATRASADO);
+        assertThat(f.get(6).estado()).isEqualTo(EstadoPagoPlan.ATRASADO);
     }
 }

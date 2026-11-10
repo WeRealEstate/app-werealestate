@@ -169,13 +169,19 @@ export interface VentaUpdateRequest {
 
 /** Para qué es una línea de un recibo. Los abonos anteriores a que existieran los tipos no lo
  * tienen (null): se completan a mano. */
-export type TipoAbono = 'MENSUALIDAD' | 'ENGANCHE' | 'APARTADO' | 'APORTACION';
+export type TipoAbono = 'MENSUALIDAD' | 'ENGANCHE' | 'APARTADO' | 'APORTACION' | 'A_CUENTA_COMISION';
+
+/** Los tipos que cubren meses del plan (mensualidad y «a cuenta de comisión», que se comporta igual). */
+export function esTipoMensual(tipo: TipoAbono | '' | null | undefined): boolean {
+  return tipo === 'MENSUALIDAD' || tipo === 'A_CUENTA_COMISION';
+}
 
 export const TIPO_ABONO_LABELS: Record<TipoAbono, string> = {
   MENSUALIDAD: 'Mensualidad',
   ENGANCHE: 'Enganche',
   APARTADO: 'Apartado',
   APORTACION: 'Aportación',
+  A_CUENTA_COMISION: 'A cuenta de comisión',
 };
 
 export interface MesCubierto {

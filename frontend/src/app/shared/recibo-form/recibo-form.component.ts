@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Amortizacion } from '../../core/models/amortizacion.model';
-import { LineaReciboRequest, PagoVenta, TIPO_ABONO_LABELS, TipoAbono, Venta } from '../../core/models/venta.model';
+import { LineaReciboRequest, PagoVenta, TIPO_ABONO_LABELS, TipoAbono, Venta, esTipoMensual } from '../../core/models/venta.model';
 import { ToastService } from '../../core/services/toast.service';
 import { VentasService } from '../../core/services/ventas.service';
 import { MesPlan, claveMes as clave, etiquetaMes, mesesDelPlan } from '../../core/utils/plan-mensualidades';
@@ -49,7 +49,7 @@ export class ReciboFormComponent {
   readonly guardando = signal(false);
   readonly error = signal<string | null>(null);
 
-  /** Los cuatro tipos siempre salen; los que esta venta no puede recibir se muestran deshabilitados
+  /** Los cinco tipos siempre salen; los que esta venta no puede recibir se muestran deshabilitados
    * con la razón (por ejemplo, una venta de contado no tiene mensualidades). */
   readonly tiposDisponibles = computed(() => {
     const v = this.venta();
@@ -57,6 +57,7 @@ export class ReciboFormComponent {
     const tieneAportaciones = v.aportaciones.length > 0;
     return [
       { valor: 'MENSUALIDAD' as TipoAbono, label: TIPO_ABONO_LABELS.MENSUALIDAD, deshabilitado: !tienePlan, motivo: 'esta venta no tiene mensualidades' },
+      { valor: 'A_CUENTA_COMISION' as TipoAbono, label: TIPO_ABONO_LABELS.A_CUENTA_COMISION, deshabilitado: !tienePlan, motivo: 'esta venta no tiene mensualidades' },
       { valor: 'ENGANCHE' as TipoAbono, label: TIPO_ABONO_LABELS.ENGANCHE, deshabilitado: false, motivo: '' },
       { valor: 'APARTADO' as TipoAbono, label: TIPO_ABONO_LABELS.APARTADO, deshabilitado: false, motivo: '' },
       { valor: 'APORTACION' as TipoAbono, label: TIPO_ABONO_LABELS.APORTACION, deshabilitado: !tieneAportaciones, motivo: 'esta venta no tiene aportaciones programadas' },
@@ -70,7 +71,7 @@ export class ReciboFormComponent {
   private readonly mesesCubiertos = computed(() => {
     const cubiertos = new Set<string>();
     for (const p of this.pagos()) {
-      if (p.tipo === 'MENSUALIDAD' && !p.anulado) for (const m of p.meses) cubiertos.add(clave(m.anio, m.mes));
+      if (esTipoMensual(p.tipo) && !p.anulado) for (const m of p.meses) cubiertos.add(clave(m.anio, m.mes));
     }
     return cubiertos;
   });
@@ -161,7 +162,7 @@ export class ReciboFormComponent {
       l.extemporaneo = false;
       l.montoManual = false;
       l.monto = null;
-      if (tipo === 'MENSUALIDAD') {
+      if (esTipoMensual(tipo)) {
         // Por defecto, el primer mes pendiente que no esté ya elegido en otra línea.
         const primero = this.mesesPendientes().find((m) => !this.mesEnOtraLinea(indice, m.clave));
         if (primero) l.meses = [primero.clave];
@@ -260,7 +261,7 @@ export class ReciboFormComponent {
       const n = this.lineas().length > 1 ? ` (concepto ${i + 1})` : '';
       if (!l.tipo) return `Elige el tipo de abono${n}.`;
       if (!l.monto || l.monto <= 0) return `Ingresa un monto válido${n}.`;
-      if (l.tipo === 'MENSUALIDAD' && !l.extemporaneo && l.meses.length === 0) return `Elige el mes o los meses que cubre la mensualidad${n}.`;
+      if (esTipoMensual(l.tipo) && !l.extemporaneo && l.meses.length === 0) return `Elige el mes o los meses que cubre la mensualidad${n}.`;
       if (l.tipo === 'APORTACION' && l.aportacionId === null) return `Elige qué aportación programada paga${n}.`;
     }
     return null;
@@ -268,8 +269,8 @@ export class ReciboFormComponent {
 
   private lineaARequest(l: LineaForm): LineaReciboRequest {
     const base = { tipo: l.tipo as TipoAbono, monto: l.monto! };
-    if (l.tipo === 'MENSUALIDAD' && l.extemporaneo) return { ...base, extemporaneo: true };
-    if (l.tipo === 'MENSUALIDAD') {
+    if (esTipoMensual(l.tipo) && l.extemporaneo) return { ...base, extemporaneo: true };
+    if (esTipoMensual(l.tipo)) {
       return {
         ...base,
         meses: l.meses.map((c) => {

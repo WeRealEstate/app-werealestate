@@ -108,6 +108,7 @@ export class TablaAmortizacionComponent {
   claseFila(estado: EstadoPagoPlan): string {
     if (estado === 'ATRASADO') return 'bg-red-50 dark:bg-red-500/[0.07]';
     if (estado === 'LE_TOCA') return 'bg-amber-50 dark:bg-amber-500/[0.07]';
+    if (estado === 'ABONADO') return 'bg-sky-50 dark:bg-sky-500/[0.06]';
     return '';
   }
 

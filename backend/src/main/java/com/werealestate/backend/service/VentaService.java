@@ -689,11 +689,11 @@ public class VentaService {
             boolean extemporaneo) {
         boolean traeMeses = mesesPedidos != null && !mesesPedidos.isEmpty();
 
-        if (extemporaneo && tipo != TipoAbono.MENSUALIDAD) {
+        if (extemporaneo && !tipo.esMensual()) {
             throw new ValidationException("Solo una mensualidad puede ser un pago extemporáneo");
         }
 
-        if (tipo == TipoAbono.MENSUALIDAD) {
+        if (tipo.esMensual()) {
             if (venta.getPlazoMeses() == null || venta.getPlazoMeses() < 1 || venta.getMensualidad() == null) {
                 throw new ValidationException("Esta venta no tiene mensualidades");
             }
@@ -752,6 +752,7 @@ public class VentaService {
     private static String describirLinea(PagoVenta l) {
         String tipo = l.getTipo() == null ? "Sin tipo" : switch (l.getTipo()) {
             case MENSUALIDAD -> "Mensualidad";
+            case A_CUENTA_COMISION -> "A cuenta de comisión";
             case ENGANCHE -> "Enganche";
             case APARTADO -> "Apartado";
             case APORTACION -> "Aportación";

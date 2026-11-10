@@ -4,6 +4,7 @@ import com.werealestate.backend.dto.AmortizacionDto.Fila;
 import com.werealestate.backend.dto.AmortizacionDto.PagoMes;
 import com.werealestate.backend.model.EstadoPagoPlan;
 import com.werealestate.backend.model.PagoVenta;
+import com.werealestate.backend.model.TipoAbono;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -21,8 +22,10 @@ import java.util.TreeMap;
  *       bajando renglón por renglón hasta el último. Lo pagado de más NO se adelanta a la mensualidad siguiente: solo
  *       cuenta en el monto pagado del mes.</li>
  *   <li>Monto pagado = los abonos vigentes de ese mes, cada uno con su fecha, sin sumarlos entre sí.</li>
- *   <li>Estado: Pagado si ese mes cubrió lo que le tocaba; si no, Atrasado (si su fecha ya pasó) o, el primero sin
- *       cubrir que aún no vence, "Le toca".</li>
+ *   <li>Estado: Pagado si ese mes cubrió lo que le tocaba; Abonado si recibió algún pago pero no toda la
+ *       mensualidad; sin ningún pago, Atrasado (si su fecha ya pasó) o, el primero que aún no vence, "Le toca"
+ *       (los que siguen, Pendiente). Un abono «a cuenta de comisión» cuenta igual por su monto y solo lleva su
+ *       etiqueta.</li>
  * </ul>
  * Un abono anterior al primer mes del plan va al primer renglón; uno de un mes sin renglón, al renglón del mes anterior
  * más cercano (y uno posterior al plan, al último). Los renglones que aún no vencen no pasan su faltante al siguiente:
@@ -58,7 +61,7 @@ final class TablaMensual {
             for (PagoVenta p : pagos) {
                 Map.Entry<YearMonth, Integer> destino = primeroDelMes.floorEntry(YearMonth.from(p.getFecha()));
                 if (destino == null) destino = primeroDelMes.firstEntry();
-                porFila.get(destino.getValue()).add(new PagoMes(p.getFecha(), p.getMonto()));
+                porFila.get(destino.getValue()).add(new PagoMes(p.getFecha(), p.getMonto(), p.getTipo() == TipoAbono.A_CUENTA_COMISION));
             }
         }
 
@@ -78,6 +81,8 @@ final class TablaMensual {
             EstadoPagoPlan estado;
             if (resta.compareTo(TOLERANCIA) <= 0) {
                 estado = EstadoPagoPlan.PAGADO;
+            } else if (pagado.signum() > 0) {
+                estado = EstadoPagoPlan.ABONADO;
             } else if (vencido) {
                 estado = EstadoPagoPlan.ATRASADO;
             } else if (proxima == null || c.fecha().equals(proxima)) {

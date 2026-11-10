@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { PagoVenta, ReciboHistorial, TIPO_ABONO_LABELS, TipoAbono, Venta } from '../../core/models/venta.model';
+import { PagoVenta, ReciboHistorial, TIPO_ABONO_LABELS, TipoAbono, Venta, esTipoMensual } from '../../core/models/venta.model';
 import { MesPlan, claveMes, etiquetaMes, mesesDelPlan } from '../../core/utils/plan-mensualidades';
 import { ToastService } from '../../core/services/toast.service';
 import { VentasService } from '../../core/services/ventas.service';
@@ -91,8 +91,8 @@ export class RecibosVentaComponent {
 
   /** "nov 2026, dic 2026" o la aportación que paga; vacío si no aplica. */
   detalleConcepto(p: PagoVenta): string {
-    if (p.tipo === 'MENSUALIDAD' && p.extemporaneo) return 'Pago extemporáneo';
-    if (p.tipo === 'MENSUALIDAD') return p.meses.map((m) => etiquetaMes(m.anio, m.mes)).join(', ');
+    if (esTipoMensual(p.tipo) && p.extemporaneo) return 'Pago extemporáneo';
+    if (esTipoMensual(p.tipo)) return p.meses.map((m) => etiquetaMes(m.anio, m.mes)).join(', ');
     if (p.tipo === 'APORTACION') {
       const a = this.venta().aportaciones.find((x) => x.id === p.aportacionId);
       return a ? etiquetaMes(a.anio, a.mes) : '';
@@ -131,6 +131,7 @@ export class RecibosVentaComponent {
     const tieneAportaciones = v.aportaciones.length > 0;
     return [
       { valor: 'MENSUALIDAD' as TipoAbono, label: TIPO_ABONO_LABELS.MENSUALIDAD, deshabilitado: !tienePlan, motivo: 'esta venta no tiene mensualidades' },
+      { valor: 'A_CUENTA_COMISION' as TipoAbono, label: TIPO_ABONO_LABELS.A_CUENTA_COMISION, deshabilitado: !tienePlan, motivo: 'esta venta no tiene mensualidades' },
       { valor: 'ENGANCHE' as TipoAbono, label: TIPO_ABONO_LABELS.ENGANCHE, deshabilitado: false, motivo: '' },
       { valor: 'APARTADO' as TipoAbono, label: TIPO_ABONO_LABELS.APARTADO, deshabilitado: false, motivo: '' },
       { valor: 'APORTACION' as TipoAbono, label: TIPO_ABONO_LABELS.APORTACION, deshabilitado: !tieneAportaciones, motivo: 'esta venta no tiene aportaciones programadas' },
@@ -145,7 +146,7 @@ export class RecibosVentaComponent {
     if (!recibo) return [];
     const ocupados = new Set<string>();
     for (const p of this.pagos()) {
-      if (p.tipo === 'MENSUALIDAD' && !p.anulado && p.reciboId !== recibo.id) {
+      if (esTipoMensual(p.tipo) && !p.anulado && p.reciboId !== recibo.id) {
         for (const m of p.meses) ocupados.add(claveMes(m.anio, m.mes));
       }
     }
@@ -190,7 +191,7 @@ export class RecibosVentaComponent {
       ls.map((l, i) => {
         if (i !== indice) return l;
         const cambio: LineaEdicion = { ...l, tipo, meses: [], aportacionId: null, extemporaneo: false };
-        if (tipo === 'MENSUALIDAD') {
+        if (esTipoMensual(tipo)) {
           const primero = this.mesesElegibles().find((m) => !this.mesEnOtraLinea(indice, m.clave));
           if (primero) cambio.meses = [primero.clave];
         } else if (tipo === 'APORTACION') {
@@ -239,7 +240,7 @@ export class RecibosVentaComponent {
     }
     for (const l of this.editLineas()) {
       if (!l.tipo) return void this.errorModal.set('Elige el tipo de abono de cada concepto.');
-      if (l.tipo === 'MENSUALIDAD' && !l.extemporaneo && l.meses.length === 0) {
+      if (esTipoMensual(l.tipo) && !l.extemporaneo && l.meses.length === 0) {
         return void this.errorModal.set('Elige el mes o los meses que cubre la mensualidad.');
       }
       if (l.tipo === 'APORTACION' && l.aportacionId === null) {
@@ -257,9 +258,9 @@ export class RecibosVentaComponent {
         lineas: this.editLineas().map((l) => ({
           pagoId: l.pagoId,
           tipo: l.tipo as TipoAbono,
-          extemporaneo: l.tipo === 'MENSUALIDAD' && l.extemporaneo,
+          extemporaneo: esTipoMensual(l.tipo) && l.extemporaneo,
           meses:
-            l.tipo === 'MENSUALIDAD' && !l.extemporaneo
+            esTipoMensual(l.tipo) && !l.extemporaneo
               ? l.meses.map((c) => {
                   const [anio, mes] = c.split('-').map(Number);
                   return { anio, mes };

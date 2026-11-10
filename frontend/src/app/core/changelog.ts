@@ -15,6 +15,10 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.15.0', fecha: '2026-11-10', cambios: [
+    "Tabla de amortización: estados por mes. Atrasado = el mes ya pasó sin ningún pago, Abonado = hubo algún pago pero no toda la mensualidad, Pagado = cubrió la mensualidad. El mes actual sin pagos sigue como «Paga este mes» y los siguientes como «Pendiente».",
+    "Abonos: nuevo tipo «A cuenta de comisión» al registrar o editar un recibo. Se registra con sus meses como una mensualidad, abona igual al saldo y a la comisión del asesor (50 %), y en la tabla de amortización el abono lleva la etiqueta «A cuenta de comisión».",
+  ] },
   { version: '11.14.12', fecha: '2026-11-10', cambios: [
     "Tabla de amortización: el aviso de scroll ahora también aparece arriba («Renglones anteriores») cuando hay renglones por encima de lo que se ve, además del de abajo.",
   ] },

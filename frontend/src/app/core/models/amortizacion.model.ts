@@ -1,12 +1,14 @@
-/** Cómo va un pago de la tabla de amortización (ver backend service/CalendarioPagos): ya cubierto por lo abonado,
- * vencido sin cubrir (desde el día siguiente a su fecha), el siguiente que toca o uno de los que siguen. */
-export type EstadoPagoPlan = 'PAGADO' | 'ATRASADO' | 'LE_TOCA' | 'PENDIENTE';
+/** Cómo va un pago de la tabla de amortización (ver backend service/CalendarioPagos y TablaMensual): cubierto,
+ * vencido sin ningún pago (desde el día siguiente a su fecha), el siguiente que toca, uno de los que siguen o, solo en
+ * la tabla mes con mes, ABONADO (recibió algún pago pero no toda la mensualidad). */
+export type EstadoPagoPlan = 'PAGADO' | 'ATRASADO' | 'LE_TOCA' | 'PENDIENTE' | 'ABONADO';
 
 export const ESTADO_PAGO_PLAN_LABELS: Record<EstadoPagoPlan, string> = {
   PAGADO: 'Pagado',
   ATRASADO: 'Atrasado',
   LE_TOCA: 'Paga este mes',
   PENDIENTE: 'Pendiente',
+  ABONADO: 'Abonado',
 };
 
 /** Etiqueta del estado de una fila. «Paga este mes» solo si el pago es del mes en curso (el del día del estado de
@@ -21,6 +23,7 @@ export const ESTADO_PAGO_PLAN_CLASES: Record<EstadoPagoPlan, string> = {
   ATRASADO: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300',
   LE_TOCA: 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300',
   PENDIENTE: 'bg-surface-2 text-ink-muted',
+  ABONADO: 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300',
 };
 
 /** Un pago del plan. numero: su lugar en el plazo (null en enganche, contado, aportación fuera del plazo y lo que
@@ -47,6 +50,8 @@ export interface FilaAmortizacion {
 export interface PagoMes {
   fecha: string;
   monto: number;
+  /** true si el abono es del tipo «A cuenta de comisión» (solo se distingue con una etiqueta). */
+  aCuentaComision: boolean;
 }
 
 /** Respuesta de GET /api/ventas/{id}/amortizacion y de cada elemento de GET /api/clientes/{id}/amortizaciones. */
