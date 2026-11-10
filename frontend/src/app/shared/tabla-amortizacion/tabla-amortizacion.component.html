@@ -84,17 +84,17 @@
         [attr.aria-label]="'Tabla de amortización de la venta #' + a.ventaNumero"
         data-testid="tabla-amortizacion"
       >
-        <table class="w-full table-fixed text-left text-xs sm:text-sm">
+        <table class="w-full table-fixed text-left text-xs sm:text-[13px]">
           <colgroup>
             <col class="hidden sm:table-column sm:w-[5%]" />
-            <col class="w-[17%] sm:w-[11%]" />
+            <col class="w-[17%] sm:w-[12%]" />
             <col class="w-[22%] sm:w-[22%]" />
             <col class="w-[22%] sm:w-[14%]" />
-            <col class="w-[21%] sm:w-[22%]" />
-            <col class="hidden sm:table-column sm:w-[13%]" />
+            <col class="w-[21%] sm:w-[20%]" />
+            <col class="hidden sm:table-column sm:w-[14%]" />
             <col class="w-[18%] sm:w-[13%]" />
           </colgroup>
-          <thead class="text-[10px] uppercase tracking-wide text-ink-muted sm:text-xs">
+          <thead class="text-[10px] uppercase tracking-wide text-ink-muted sm:text-[11px]">
             <tr>
               <th scope="col" class="hidden sticky top-0 z-10 border-b border-border bg-surface-2 px-2 py-2.5 sm:px-3 text-center font-semibold sm:table-cell">N.º</th>
               <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-2 py-2.5 sm:px-3 font-semibold">Fecha</th>
@@ -112,16 +112,16 @@
                 [attr.data-actual]="i === indiceActual() ? '' : null"
                 [attr.data-estado]="f.estado"
               >
-                <td class="hidden px-3 py-2 text-center tabular-nums text-ink-muted sm:table-cell">{{ f.numero ?? '—' }}</td>
-                <td class="px-2 py-2 tabular-nums text-ink sm:px-3">{{ fecha(f.fecha) }}</td>
-                <td class="px-2 py-2 text-ink sm:px-3">
+                <td class="hidden px-3 py-3 text-center tabular-nums text-ink-muted sm:table-cell">{{ f.numero ?? '—' }}</td>
+                <td class="px-2 py-3 tabular-nums text-ink sm:px-3">{{ fecha(f.fecha) }}</td>
+                <td class="px-2 py-3 text-ink sm:px-3">
                   {{ f.concepto }}
                   @if (f.arrastre > 0) {
                     <span class="block text-xs text-ink-muted">Incluye ${{ money(f.arrastre) }} de meses anteriores</span>
                   }
                 </td>
-                <td class="px-2 py-2 text-right tabular-nums text-ink sm:px-3">${{ money(f.monto) }}</td>
-                <td class="px-2 py-2 text-right tabular-nums sm:px-3">
+                <td class="px-2 py-3 text-right tabular-nums text-ink sm:px-3">${{ money(f.monto) }}</td>
+                <td class="px-2 py-3 text-right tabular-nums sm:px-3">
                   @if (!f.fecha) {
                     <span class="text-ink-muted">—</span>
                   } @else if (f.pagos.length === 0) {
@@ -129,13 +129,13 @@
                   } @else {
                     @for (p of f.pagos; track $index) {
                       <span class="block text-ink">
-                        <span class="block text-[11px] text-ink-muted sm:mr-1.5 sm:inline sm:text-xs">{{ fecha(p.fecha) }}</span>${{ money(p.monto) }}
+                        <span class="block text-[11px] leading-tight text-ink-muted">{{ fecha(p.fecha) }}</span>${{ money(p.monto) }}
                       </span>
                     }
                   }
                 </td>
-                <td class="hidden px-3 py-2 text-right tabular-nums text-ink-muted sm:table-cell">{{ f.fecha ? '$' + money(f.saldo) : '—' }}</td>
-                <td class="px-2 py-2 sm:px-3">
+                <td class="hidden px-3 py-3 text-right tabular-nums text-ink-muted sm:table-cell">{{ f.fecha ? '$' + money(f.saldo) : '—' }}</td>
+                <td class="px-2 py-3 sm:px-3">
                   <span class="inline-block max-w-full break-words rounded-full px-2 py-0.5 text-center text-[10px] font-semibold leading-tight sm:text-xs" [class]="estadoClases[f.estado]">{{ etiquetaEstado(f.estado, f.fecha, a.corte) }}</span>
                 </td>
               </tr>
