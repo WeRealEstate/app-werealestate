@@ -35,6 +35,8 @@ export interface ResumenLeads {
 
 export interface Lead {
   id: number;
+  /** Consecutivo del lead dentro de su asesor (1, 2, 3…). */
+  numero: number;
   nombreCliente: string;
   telefono: string;
   email: string | null;

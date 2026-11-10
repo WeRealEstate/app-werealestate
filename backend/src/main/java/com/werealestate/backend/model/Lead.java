@@ -46,6 +46,10 @@ public class Lead {
     @JoinColumn(name = "asesor_id", nullable = false)
     private Usuario asesor;
 
+    /** Consecutivo del lead dentro de su asesor (1, 2, 3…); lo asigna LeadService al guardarlo o reasignarlo. */
+    @Column(nullable = false)
+    private Long numero;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private EstadoLead estado = EstadoLead.NUEVO;
@@ -113,6 +117,14 @@ public class Lead {
 
     public Long getId() {
         return id;
+    }
+
+    public Long getNumero() {
+        return numero;
+    }
+
+    public void setNumero(Long numero) {
+        this.numero = numero;
     }
 
     public String getNombreCliente() {

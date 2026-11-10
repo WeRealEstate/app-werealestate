@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.14.0', fecha: '2026-11-10', cambios: [
+    "Leads numerados: cada lead tiene un número consecutivo dentro de su asesor (1, 2, 3…) que no cambia al filtrar ni ordenar. Se ve en la lista (columna N.º), en el detalle, en las tarjetas del pipeline y en la exportación a Excel/CSV, y el buscador encuentra un lead por su número (por ejemplo «12» o «#12»). Los leads que ya existían se numeraron por su fecha de creación. Si se reasigna un lead, toma el siguiente número del asesor que lo recibe.",
+  ] },
   { version: '11.13.9', fecha: '2026-11-10', cambios: [
     "Registrar abono: los meses que se pueden cobrar ahora salen de la tabla de amortización (los que aún no están pagados por completo), no de los meses que algún recibo ya marcó. Antes, si todos los meses del plazo ya estaban marcados pero faltaba dinero (por ejemplo, la última mensualidad), el formulario decía que todo estaba cubierto y no dejaba registrar el pago. Al elegir un mes, el monto sugerido es lo que le falta a ese mes.",
   ] },

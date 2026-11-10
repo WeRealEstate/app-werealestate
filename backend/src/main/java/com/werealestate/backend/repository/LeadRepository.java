@@ -37,6 +37,14 @@ public interface LeadRepository extends JpaRepository<Lead, Long>, JpaSpecificat
 
     boolean existsByAsesorId(Long asesorId);
 
+    /** Candado que dura lo que la transacción, para que dos altas del mismo asesor no tomen el mismo número. */
+    @Query(value = "select 1 from (select pg_advisory_xact_lock(:clave)) t", nativeQuery = true)
+    Integer bloquearNumeracion(@Param("clave") long clave);
+
+    /** El siguiente número libre del asesor (el mayor que ha tenido + 1; los huecos por reasignar no se reutilizan). */
+    @Query(value = "select coalesce(max(numero), 0) + 1 from lead where asesor_id = :asesorId", nativeQuery = true)
+    long siguienteNumero(@Param("asesorId") Long asesorId);
+
     long countByAsesorIdAndArchivadoFalse(Long asesorId);
 
     /** Cohorte de leads creados en el periodo, para el dashboard de desempeño. */

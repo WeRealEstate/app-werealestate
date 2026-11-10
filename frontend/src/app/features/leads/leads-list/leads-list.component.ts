@@ -264,6 +264,7 @@ export class LeadsListComponent {
 
   private datosExportacion(leads: Lead[]) {
     const filas = leads.map((l) => ({
+      numero: l.numero,
       cliente: l.nombreCliente,
       telefono: l.telefono,
       email: l.email ?? '',
@@ -282,6 +283,7 @@ export class LeadsListComponent {
     }));
 
     const encabezados = {
+      numero: 'N.º',
       cliente: 'Cliente',
       telefono: 'Teléfono',
       email: 'Correo',

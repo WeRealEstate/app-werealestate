@@ -51,10 +51,14 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 @Transactional
 public class LeadService {
+
+    /** Base del candado de numeración por asesor (se le suma el id del asesor). */
+    private static final long CLAVE_NUMERACION = 7_600_000_000L;
 
     private final LeadRepository leadRepository;
     private final DesarrolloRepository desarrolloRepository;
@@ -64,6 +68,7 @@ public class LeadService {
     private final ComisionRepository comisionRepository;
     private final EtiquetaRepository etiquetaRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final TransactionTemplate transaccion;
     private final int diasFrio;
     private final int diasSinContactarNuevo;
 
@@ -76,6 +81,7 @@ public class LeadService {
             ComisionRepository comisionRepository,
             EtiquetaRepository etiquetaRepository,
             CurrentUserProvider currentUserProvider,
+            TransactionTemplate transaccion,
             @Value("${app.lead.dias-frio}") int diasFrio,
             @Value("${app.lead.dias-sin-contactar-nuevo}") int diasSinContactarNuevo) {
         this.leadRepository = leadRepository;
@@ -86,6 +92,7 @@ public class LeadService {
         this.comisionRepository = comisionRepository;
         this.etiquetaRepository = etiquetaRepository;
         this.currentUserProvider = currentUserProvider;
+        this.transaccion = transaccion;
         this.diasFrio = diasFrio;
         this.diasSinContactarNuevo = diasSinContactarNuevo;
     }
@@ -120,9 +127,15 @@ public class LeadService {
 
         if (busqueda != null && !busqueda.isBlank()) {
             String comodin = "%" + busqueda.trim().toLowerCase() + "%";
-            spec = spec.and((root, query, cb) -> cb.or(
-                    cb.like(cb.lower(root.get("nombreCliente")), comodin),
-                    cb.like(cb.lower(root.get("telefono")), comodin)));
+            // Un número solo ("12" o "#12") también busca el lead con ese número.
+            String sinAlmohadilla = busqueda.trim().startsWith("#") ? busqueda.trim().substring(1) : busqueda.trim();
+            Long numeroBuscado = sinAlmohadilla.matches("\\d{1,15}") ? Long.valueOf(sinAlmohadilla) : null;
+            spec = spec.and((root, query, cb) -> {
+                var coincide = cb.or(
+                        cb.like(cb.lower(root.get("nombreCliente")), comodin),
+                        cb.like(cb.lower(root.get("telefono")), comodin));
+                return numeroBuscado == null ? coincide : cb.or(coincide, cb.equal(root.get("numero"), numeroBuscado));
+            });
         }
 
         if ("FRIOS".equalsIgnoreCase(estado)) {
@@ -214,7 +227,25 @@ public class LeadService {
         lead.setEstadoRepublica(request.pais() == Pais.EXTRANJERO ? null : request.estadoRepublica());
         lead.setDesarrolloDetalle(normalizarDetalleDesarrollo(desarrollo, request.desarrolloDetalle()));
 
-        return toDto(leadRepository.save(lead));
+        return toDto(guardarConNumero(lead));
+    }
+
+    /** Le da al lead el siguiente número de su asesor y lo guarda, todo en la misma transacción y con un candado por
+     * asesor: así dos altas a la vez (o una importación y un alta) no repiten número. */
+    private Lead guardarConNumero(Lead lead) {
+        return transaccion.execute(estado -> {
+            asignarNumero(lead);
+            return leadRepository.save(lead);
+        });
+    }
+
+    private void asignarNumero(Lead lead) {
+        lead.setNumero(siguienteNumeroDe(lead.getAsesor().getId()));
+    }
+
+    private long siguienteNumeroDe(Long asesorId) {
+        leadRepository.bloquearNumeracion(CLAVE_NUMERACION + asesorId);
+        return leadRepository.siguienteNumero(asesorId);
     }
 
     /**
@@ -253,7 +284,7 @@ public class LeadService {
                         desarrollo,
                         asesor,
                         null);
-                lead = leadRepository.save(lead);
+                lead = guardarConNumero(lead);
 
                 if (item.notas() != null && !item.notas().isBlank()) {
                     Seguimiento seguimiento = new Seguimiento(
@@ -365,8 +396,13 @@ public class LeadService {
         if (!nuevoAsesor.getId().equals(lead.getAsesor().getId())) {
             // Las etiquetas son privadas de cada asesor: al cambiar de dueño, las del anterior ya no aplican.
             lead.getEtiquetas().clear();
+            // Recibe el siguiente número del asesor que lo recibe; el anterior queda como hueco, no se reutiliza.
+            // Se calcula antes de cambiar el asesor: la consulta vacía los cambios pendientes y el lead (con el asesor
+            // nuevo y su número viejo) podría chocar con otro del mismo número.
+            Long numero = siguienteNumeroDe(nuevoAsesor.getId());
+            lead.setAsesor(nuevoAsesor);
+            lead.setNumero(numero);
         }
-        lead.setAsesor(nuevoAsesor);
         return toDto(leadRepository.save(lead));
     }
 

@@ -11,6 +11,8 @@ import java.util.List;
 
 public record LeadDto(
         Long id,
+        // Consecutivo dentro de su asesor (1, 2, 3…).
+        Long numero,
         String nombreCliente,
         String telefono,
         String email,
@@ -36,6 +38,7 @@ public record LeadDto(
         ColumnaPersonalizada columna = lead.getColumnaPersonalizada();
         return new LeadDto(
                 lead.getId(),
+                lead.getNumero(),
                 lead.getNombreCliente(),
                 lead.getTelefono(),
                 lead.getEmail(),
