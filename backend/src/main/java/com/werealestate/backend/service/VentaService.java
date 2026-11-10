@@ -761,9 +761,10 @@ public class VentaService {
 
     // ---------------------------------------------------------------- editar / anular un recibo
 
-    /** Edita solo lo NO financiero de un recibo: folio, nota y, por línea, tipo, meses y aportación.
-     * El monto y la fecha no se tocan (los libros no se reescriben): si están mal, se anula el recibo
-     * y se registra uno nuevo. Un recibo anulado no se edita. Deja constancia en la bitácora. */
+    /** Edita un recibo: folio, nota, fecha y, por línea, tipo, meses y aportación. El monto no se toca: si está mal,
+     * se anula el recibo y se registra uno nuevo. Al corregir la fecha, Finanzas toma el abono en el mes nuevo y las
+     * comisiones se reconstruyen con ella (el sábado de entrega cambia); lo ya entregado no se modifica. Un recibo
+     * anulado no se edita. Deja constancia en la bitácora. */
     public List<PagoVentaDto> editarRecibo(Long ventaId, Long reciboId, ReciboEditarRequest request) {
         Usuario actual = exigirAdminOLider();
         Venta venta = obtenerEntidad(ventaId);
@@ -792,6 +793,11 @@ public class VentaService {
         if (!java.util.Objects.equals(recibo.getNotas(), notas)) {
             cambios.add("Nota actualizada");
         }
+        java.time.LocalDate fechaNueva = request.fecha() != null ? request.fecha() : recibo.getFecha();
+        java.time.format.DateTimeFormatter dma = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        if (!fechaNueva.equals(recibo.getFecha())) {
+            cambios.add("Fecha " + recibo.getFecha().format(dma) + " → " + fechaNueva.format(dma));
+        }
 
         // Se validan todas las líneas antes de guardar nada.
         List<Runnable> aplicar = new ArrayList<>();
@@ -807,6 +813,8 @@ public class VentaService {
 
         recibo.setFolio(folio);
         recibo.setNotas(notas);
+        recibo.cambiarFecha(fechaNueva);
+        lineas.forEach(l -> l.actualizarFecha(fechaNueva));
         aplicar.forEach(Runnable::run);
         pagoVentaRepository.saveAll(lineas);
         String despues = describirLineas(lineas);
@@ -816,7 +824,7 @@ public class VentaService {
         reciboVentaRepository.save(recibo);
         reciboHistorialRepository.save(new ReciboVentaHistorial(
                 recibo, AccionRecibo.EDITADO, actual, cambios.isEmpty() ? "Sin cambios" : String.join(" | ", cambios)));
-        // El tipo de cada línea define cuánto aporta a la comisión (regla por tipo de abono).
+        // El tipo de cada línea define cuánto aporta a la comisión (regla por tipo de abono) y la fecha, cuándo toca.
         comisionService.sincronizar(venta);
         return pagoVentaRepository.findByReciboId(reciboId).stream().map(PagoVentaDto::from).toList();
     }

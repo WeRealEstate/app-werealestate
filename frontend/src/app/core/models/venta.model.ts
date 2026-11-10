@@ -220,9 +220,11 @@ export interface ReciboHistorial {
   detalle: string | null;
 }
 
-/** Edita solo lo no financiero de un recibo: el monto y la fecha no cambian (si están mal, se anula y se registra otro). */
+/** Edita un recibo: folio, nota, fecha y el concepto de cada línea. El monto no cambia (si está mal, se anula y se registra otro). */
 export interface ReciboEditarRequest {
   folio: string;
+  /** aaaa-mm-dd; null = no se toca. */
+  fecha: string | null;
   notas: string | null;
   lineas: { pagoId: number; tipo: TipoAbono; meses?: MesCubierto[]; aportacionId?: number | null; extemporaneo?: boolean }[];
 }

@@ -131,7 +131,12 @@ public class PagoVenta {
         return !recibo.isAnulado();
     }
 
-    /** Edición de datos no financieros (monto y fecha nunca cambian: ver ReciboVenta). */
+    /** La fecha de la línea es copia de la de su recibo: se mantiene igual cuando se corrige la del recibo. */
+    public void actualizarFecha(LocalDate nueva) {
+        this.fecha = nueva;
+    }
+
+    /** Edición del concepto (el monto nunca cambia; la fecha solo por {@link #actualizarFecha}). */
     public void actualizarConcepto(
             TipoAbono tipo, VentaAportacion aportacion, List<MesCubierto> meses, boolean extemporaneo) {
         this.tipo = tipo;

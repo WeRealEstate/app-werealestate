@@ -8,10 +8,11 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 
-/** Edita los datos NO financieros de un recibo: folio, nota y, por línea, tipo, meses y aportación.
- * El monto y la fecha no se cambian: si están mal, se anula el recibo y se registra uno nuevo. */
+/** Edita un recibo: folio, nota, fecha y, por línea, tipo, meses y aportación. El monto no se cambia: si está mal,
+ * se anula el recibo y se registra uno nuevo. fecha: null = no se toca. */
 public record ReciboEditarRequest(
         @NotBlank @Size(max = 50) String folio,
+        java.time.LocalDate fecha,
         @Size(max = 500) String notas,
         @NotEmpty @Valid List<Linea> lineas) {
 

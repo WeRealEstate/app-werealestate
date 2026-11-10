@@ -118,6 +118,7 @@ export class RecibosVentaComponent {
   readonly editando = signal<Recibo | null>(null);
   readonly editFolio = signal('');
   readonly editNotas = signal('');
+  readonly editFecha = signal('');
   readonly editLineas = signal<LineaEdicion[]>([]);
   readonly guardando = signal(false);
   readonly errorModal = signal<string | null>(null);
@@ -166,6 +167,7 @@ export class RecibosVentaComponent {
     this.editando.set(r);
     this.editFolio.set(r.folio ?? '');
     this.editNotas.set(r.notas ?? '');
+    this.editFecha.set(r.fecha.slice(0, 10));
     this.editLineas.set(
       r.lineas.map((p) => ({
         pagoId: p.id,
@@ -231,6 +233,10 @@ export class RecibosVentaComponent {
       this.errorModal.set('Ingresa el folio del abono.');
       return;
     }
+    if (!this.editFecha()) {
+      this.errorModal.set('Ingresa la fecha del abono.');
+      return;
+    }
     for (const l of this.editLineas()) {
       if (!l.tipo) return void this.errorModal.set('Elige el tipo de abono de cada concepto.');
       if (l.tipo === 'MENSUALIDAD' && !l.extemporaneo && l.meses.length === 0) {
@@ -246,6 +252,7 @@ export class RecibosVentaComponent {
     try {
       await this.ventasService.editarRecibo(this.venta().id, recibo.id, {
         folio: this.editFolio().trim(),
+        fecha: this.editFecha(),
         notas: this.editNotas().trim() || null,
         lineas: this.editLineas().map((l) => ({
           pagoId: l.pagoId,

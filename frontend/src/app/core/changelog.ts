@@ -15,8 +15,11 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.14.4', fecha: '2026-11-10', cambios: [
+    "Abonos: ahora se puede corregir la fecha de un recibo al editarlo (Administración y Admin). Finanzas toma el abono en el mes nuevo, la tabla de amortización y las comisiones se recalculan con la fecha corregida, y el cambio queda en la bitácora del recibo. Lo que ya se pagó de comisión no se modifica.",
+  ] },
   { version: '11.14.3', fecha: '2026-11-10', cambios: [
-    "Tabla de amortización: nueva columna «Abonado en el mes» con el dinero que el cliente realmente dio cada mes, según la fecha de sus recibos (también en el PDF). Es informativa: los pagados, atrasos, estados y comisiones se calculan igual que antes.",
+    "Tabla de amortización: nueva columna «Monto pagado» con el dinero que el cliente realmente dio cada mes, según la fecha de sus recibos (también en el PDF). Es informativa: los pagados, atrasos, estados y comisiones se calculan igual que antes.",
   ] },
   { version: '11.14.2', fecha: '2026-11-10', cambios: [
     "Cotizador: en SAMAI Campestre, los lotes mayores a 200 m² ahora se cotizan a $600 por m² cuando la forma de pago es de contado (manteniendo el precio por m² normal en cualquier otra modalidad de pago).",

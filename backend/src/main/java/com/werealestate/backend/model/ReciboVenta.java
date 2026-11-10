@@ -75,6 +75,11 @@ public class ReciboVenta {
         this.registradoPor = registradoPor;
     }
 
+    /** Corrige la fecha del abono (la bitácora lo anota; ver VentaService.editarRecibo). */
+    public void cambiarFecha(LocalDate nueva) {
+        this.fecha = nueva;
+    }
+
     public Long getId() {
         return id;
     }

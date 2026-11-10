@@ -118,7 +118,7 @@ export class PdfAmortizacionService {
     const filas = a.filas;
     autoTable(doc, {
       startY: y + 3,
-      head: [['N.º', 'FECHA', 'CONCEPTO', 'MONTO', 'ABONADO EN EL MES', 'SALDO', 'ESTADO']],
+      head: [['N.º', 'FECHA', 'CONCEPTO', 'MONTO', 'MONTO PAGADO', 'SALDO', 'ESTADO']],
       body: filas.map((f) => [
         f.numero ?? '—',
         fechaCorta(f.fecha),
@@ -167,7 +167,7 @@ export class PdfAmortizacionService {
     const notas = [
       'Lo abonado cubre los pagos del más antiguo al más nuevo. Un pago cuenta como atrasado desde el día siguiente a su fecha.',
       'Saldo: lo que falta del precio después de cada pago, según el plan.',
-      'Abonado en el mes: el dinero recibido ese mes, según la fecha de cada recibo.',
+      'Monto pagado: el dinero recibido ese mes, según la fecha de cada recibo.',
     ];
     if (filas.some((f) => f.concepto === CONCEPTO_SIN_FECHA)) {
       notas.push(`${CONCEPTO_SIN_FECHA}: parte del precio a la que la venta no le asigna fecha (por ejemplo, anualidades); no cuenta como atraso.`);

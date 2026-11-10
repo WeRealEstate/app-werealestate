@@ -89,12 +89,21 @@
     <form (ngSubmit)="guardarEdicion()" class="modal-panel-enter flex max-h-[90vh] w-full max-w-lg flex-col rounded-xl border border-border bg-surface p-5 shadow-lg">
       <h2 id="editar-recibo-titulo" class="font-heading text-lg font-semibold text-ink">Editar recibo</h2>
       <p class="mt-1 text-xs text-ink-muted">
-        Solo se corrige lo que no mueve dinero: folio, nota, tipo, meses y aportación. Si el monto o la fecha están mal,
+        Puedes corregir folio, fecha, nota, tipo, meses y aportación. Si cambias la fecha, Finanzas toma el abono en el
+        mes nuevo y las comisiones se recalculan con ella (lo que ya se pagó no se modifica). Si el monto está mal,
         anula este recibo y registra uno nuevo.
       </p>
 
       <div class="mt-4 space-y-4 overflow-y-auto pr-1">
-        <div class="grid gap-3 sm:grid-cols-2">
+        <div class="grid gap-3 sm:grid-cols-3">
+          <div>
+            <label for="er-fecha" class="mb-1 block text-xs font-medium text-ink-muted">Fecha *</label>
+            <input
+              id="er-fecha" name="fecha" type="date"
+              [ngModel]="editFecha()" (ngModelChange)="editFecha.set($event)"
+              class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+            />
+          </div>
           <div>
             <label for="er-folio" class="mb-1 block text-xs font-medium text-ink-muted">Folio *</label>
             <input
