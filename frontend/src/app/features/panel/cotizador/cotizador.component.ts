@@ -331,7 +331,7 @@ export class CotizadorComponent implements OnInit {
     if (!this.requiereLoteEnCaptura) {
       return null;
     }
-    return { manzana: this.blockNumber, lote: this.lotNumber, superficie: this.selectedArea, pricePerM2: this.pricePerM2 };
+    return { manzana: this.blockNumber, lote: this.lotNumber, superficie: this.selectedArea, pricePerM2: this.precioM2Vigente };
   }
 
   /** Todos los lotes de la cotización: los ya confirmados más el que está en captura ahora mismo
@@ -436,6 +436,7 @@ export class CotizadorComponent implements OnInit {
   private aplicarPrecioMacrolote(): void {
     if (this.selectedProject === 'samai' && this.selectedArea > SUPERFICIE_MACROLOTE_M2) {
       this.pricePerM2 = 170;
+      this.quitarContado();
     }
   }
 
@@ -560,22 +561,44 @@ export class CotizadorComponent implements OnInit {
     return this.todosLosLotes.reduce((suma, l) => suma + l.superficie * l.pricePerM2, 0);
   }
 
+  /** En SAMAI, cuando se cotiza un solo lote mayor a 200 m² (fuera de macrolote) y la forma de
+   * pago es de contado, el precio por m² pasa a $600 MXN; con cualquier otra forma de pago se
+   * mantiene el precio por m² normal del lote. */
+  get aplicaPrecioContadoMayor200(): boolean {
+    return (
+      !this.esMultiLote &&
+      this.esContado &&
+      this.selectedProject === 'samai' &&
+      this.selectedArea > 200 &&
+      this.pricePerM2 !== 170
+    );
+  }
+
+  /** Precio por m² vigente del lote actual ($600/m² si aplica contado en SAMAI para > 200 m²,
+   * o el pricePerM2 base en cualquier otro caso). */
+  get precioM2Vigente(): number {
+    return this.aplicaPrecioContadoMayor200 ? 600 : this.pricePerM2;
+  }
+
   /** Precio solo del lote que se está capturando ahora mismo (Manzana/Lote/Superficie de arriba),
    * sin sumar los ya agregados a la lista — lo que se muestra en la caja de "Configuración del
    * terreno", a diferencia de totalPrice/displayedLandPrice que son el total combinado. 0 si con
    * varios lotes ya agregados se dejó en blanco a propósito (ver requiereLoteEnCaptura). */
   get precioLoteActual(): number {
-    return this.requiereLoteEnCaptura ? this.selectedArea * this.pricePerM2 : 0;
+    return this.requiereLoteEnCaptura ? this.selectedArea * this.precioM2Vigente : 0;
   }
 
-  /** El precio de contado con descuento ($120,000 fijo) es una promoción exclusiva del lote
-   * estándar de SAMAI de 200 m² exactos, no se prorratea a otros tamaños (antes sí se escalaba
-   * proporcionalmente, pero ese precio especial nunca aplicó más que a ese tamaño puntual). Para
-   * cualquier otro tamaño en SAMAI, para Nanuu, o cuando la cotización combina varios lotes,
-   * "Contado" cobra el precio de lista sin descuento. */
+  /** En SAMAI, el lote estándar de 200 m² de contado tiene un precio especial fijo de $120,000, y
+   * los lotes mayores a 200 m² (fuera de macrolote) se cotizan a $600/m² solo cuando el pago es
+   * de contado. En cualquier otro caso cobra el precio de lista. */
   get cashPrice(): number {
-    if (!this.esMultiLote && this.selectedProject === 'samai' && this.selectedArea === 200) {
-      return 120000;
+    if (!this.esMultiLote && this.selectedProject === 'samai' && this.pricePerM2 !== 170) {
+      if (this.selectedArea === 200) {
+        return 120000;
+      }
+      if (this.selectedArea > 200) {
+        return this.selectedArea * 600;
+      }
     }
 
     return this.totalPrice;
@@ -1217,7 +1240,7 @@ export class CotizadorComponent implements OnInit {
       lotes,
 
       area: this.superficieTotal,
-      pricePerM2: this.esMultiLote ? this.precioM2Promedio : this.pricePerM2,
+      pricePerM2: this.esMultiLote ? this.precioM2Promedio : this.precioM2Vigente,
 
       totalPrice: this.displayedLandPrice,
 

@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.14.2', fecha: '2026-11-10', cambios: [
+    "Cotizador: en SAMAI Campestre, los lotes mayores a 200 m² ahora se cotizan a $600 por m² cuando la forma de pago es de contado (manteniendo el precio por m² normal en cualquier otra modalidad de pago).",
+  ] },
   { version: '11.14.1', fecha: '2026-11-10', cambios: [
     "Cotizador: el precio especial de contado para lotes estándar de SAMAI Campestre (200 m²) se actualizó a $120,000.",
   ] },

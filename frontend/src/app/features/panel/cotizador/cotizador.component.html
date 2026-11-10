@@ -294,7 +294,7 @@
               class="w-full appearance-none rounded-xl border border-border bg-surface-2 px-4 py-3.5 pr-12 text-sm font-medium text-ink outline-none transition-all focus:border-we-primary focus:bg-surface focus:ring-4 focus:ring-we-primary/10"
             >
               @if (selectedProject === 'samai') {
-                <option [ngValue]="800">$800 MXN - Lote</option>
+                <option [ngValue]="800">{{ aplicaPrecioContadoMayor200 ? '$600 MXN - Lote' : '$800 MXN - Lote' }}</option>
                 <option [ngValue]="170">$170 MXN - Hectárea</option>
               }
               @if (selectedProject === 'nanuu') {
@@ -334,9 +334,9 @@
                 type="button"
                 weMotionPress
                 (click)="selectCustomArea()"
-                [disabled]="esContado || loteBloqueado"
-                [class.opacity-40]="esContado || loteBloqueado"
-                [class.cursor-not-allowed]="esContado || loteBloqueado"
+                [disabled]="loteBloqueado"
+                [class.opacity-40]="loteBloqueado"
+                [class.cursor-not-allowed]="loteBloqueado"
                 [class.border-we-primary]="isCustomArea"
                 [class.text-we-primary]="isCustomArea"
                 [class.shadow-md]="isCustomArea"
