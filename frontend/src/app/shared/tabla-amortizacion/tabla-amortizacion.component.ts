@@ -1,5 +1,5 @@
 import { Component, ElementRef, computed, effect, inject, input, model, signal, viewChild } from '@angular/core';
-import { LucideChevronDown, LucideChevronRight, LucideDownload } from '@lucide/angular';
+import { LucideChevronDown, LucideChevronRight, LucideChevronUp, LucideDownload } from '@lucide/angular';
 import {
   Amortizacion,
   CONCEPTO_SIN_FECHA,
@@ -19,7 +19,7 @@ import { ToastService } from '../../core/services/toast.service';
  */
 @Component({
   selector: 'app-tabla-amortizacion',
-  imports: [LucideChevronDown, LucideChevronRight, LucideDownload],
+  imports: [LucideChevronDown, LucideChevronRight, LucideChevronUp, LucideDownload],
   templateUrl: './tabla-amortizacion.component.html',
 })
 export class TablaAmortizacionComponent {
@@ -35,6 +35,10 @@ export class TablaAmortizacionComponent {
   readonly generando = signal(false);
   /** true mientras la caja tenga renglones por ver más abajo (muestra el aviso de seguir bajando). */
   readonly hayMas = signal(false);
+  /** true si la caja ya se desplazó y quedan renglones por ver arriba; alturaEncabezado: para ponerlos debajo del
+   * encabezado fijo de la tabla. */
+  readonly hayArriba = signal(false);
+  readonly alturaEncabezado = signal(44);
 
   readonly etiquetaEstado = etiquetaEstadoPago;
   readonly estadoClases = ESTADO_PAGO_PLAN_CLASES;
@@ -80,6 +84,15 @@ export class TablaAmortizacionComponent {
   actualizarIndicador(): void {
     const caja = this.caja()?.nativeElement;
     this.hayMas.set(!!caja && caja.scrollTop + caja.clientHeight < caja.scrollHeight - 4);
+    this.hayArriba.set(!!caja && caja.scrollTop > 4);
+    const encabezado = caja?.querySelector('thead')?.getBoundingClientRect().height;
+    if (encabezado) this.alturaEncabezado.set(encabezado);
+  }
+
+  /** El aviso de arriba también es un botón: sube un buen tramo. */
+  subir(): void {
+    const caja = this.caja()?.nativeElement;
+    caja?.scrollBy({ top: -caja.clientHeight * 0.8, behavior: 'smooth' });
   }
 
   /** El aviso también es un botón: baja un buen tramo de la tabla. */

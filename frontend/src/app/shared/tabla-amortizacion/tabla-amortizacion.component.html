@@ -155,6 +155,21 @@
           </tfoot>
         </table>
       </div>
+        @if (hayArriba()) {
+          <!-- Aviso de que hay renglones arriba (debajo del encabezado fijo): se apaga al volver al inicio. -->
+          <div
+            class="pointer-events-none absolute inset-x-px z-20 flex h-14 items-start justify-center bg-linear-to-b from-surface to-transparent pt-2"
+            [style.top.px]="alturaEncabezado() + 1" data-testid="indicador-renglones-arriba"
+          >
+            <button
+              type="button" (click)="subir()"
+              class="pointer-events-auto inline-flex items-center gap-1 rounded-full border border-border bg-surface-2 px-3 py-1 text-xs font-medium text-ink-muted shadow-sm hover:text-ink"
+            >
+              <svg lucideChevronUp [size]="14" aria-hidden="true"></svg>
+              Renglones anteriores
+            </button>
+          </div>
+        }
         @if (hayMas()) {
           <!-- Aviso de que hay más renglones abajo: se apaga al llegar al final de la caja. -->
           <div class="pointer-events-none absolute inset-x-px bottom-px flex h-16 items-end justify-center rounded-b-xl bg-linear-to-t from-surface to-transparent pb-2" data-testid="indicador-mas-renglones">

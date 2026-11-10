@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.14.12', fecha: '2026-11-10', cambios: [
+    "Tabla de amortización: el aviso de scroll ahora también aparece arriba («Renglones anteriores») cuando hay renglones por encima de lo que se ve, además del de abajo.",
+  ] },
   { version: '11.14.11', fecha: '2026-11-10', cambios: [
     "Tabla de amortización: cuando hay más renglones abajo, aparece un difuminado con el aviso «Más renglones» (se puede pulsar para bajar) y desaparece al llegar al final.",
   ] },
