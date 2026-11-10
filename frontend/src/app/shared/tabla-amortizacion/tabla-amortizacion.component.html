@@ -109,8 +109,6 @@
                   {{ f.concepto }}
                   @if (f.arrastre > 0) {
                     <span class="block text-xs text-ink-muted">Incluye ${{ money(f.arrastre) }} que faltaron de meses anteriores</span>
-                  } @else if (f.arrastre < 0) {
-                    <span class="block text-xs text-ink-muted">Menos ${{ money(-f.arrastre) }} pagados de más antes</span>
                   }
                 </td>
                 <td class="whitespace-nowrap px-3 py-2 text-right tabular-nums text-ink">${{ money(f.monto) }}</td>
@@ -144,7 +142,7 @@
         </table>
       </div>
       <p class="mt-2 text-xs text-ink-muted">
-        Mensualidad: lo que toca pagar ese mes más lo que quedó pendiente de los meses anteriores (o menos lo que se pagó de más). Monto pagado: cada abono del mes con su fecha. Un mes aparece atrasado si lo pagado en él no cubrió lo que le tocaba; un pago cuenta como atrasado desde el día siguiente a su fecha. Saldo: lo que falta del precio después de cada pago, según el plan.
+        Mensualidad: lo que toca pagar ese mes más lo que quedó pendiente de los meses anteriores Monto pagado: cada abono del mes con su fecha; lo que se paga de más no adelanta la mensualidad siguiente. Un mes aparece atrasado si lo pagado en él no cubrió lo que le tocaba; un pago cuenta como atrasado desde el día siguiente a su fecha. Saldo: lo que falta del precio después de cada pago, según el plan.
         @if (conSinFecha()) {
           «{{ sinFecha }}» es la parte del precio a la que la venta no le asigna fecha (por ejemplo, anualidades de ventas anteriores): no cuenta como atraso.
         }

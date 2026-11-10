@@ -165,9 +165,9 @@ export class PdfAmortizacionService {
     // Notas al pie de la tabla.
     const finTabla = (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y;
     const notas = [
-      'Mensualidad: lo que toca pagar ese mes más lo que quedó pendiente de los meses anteriores (o menos lo que se pagó de más). Un pago cuenta como atrasado desde el día siguiente a su fecha.',
+      'Mensualidad: lo que toca pagar ese mes más lo que quedó pendiente de los meses anteriores Un pago cuenta como atrasado desde el día siguiente a su fecha.',
       'Saldo: lo que falta del precio después de cada pago, según el plan.',
-      'Monto pagado: cada abono del mes con su fecha.',
+      'Monto pagado: cada abono del mes con su fecha; lo que se paga de más no adelanta la mensualidad siguiente.',
     ];
     if (filas.some((f) => f.concepto === CONCEPTO_SIN_FECHA)) {
       notas.push(`${CONCEPTO_SIN_FECHA}: parte del precio a la que la venta no le asigna fecha (por ejemplo, anualidades); no cuenta como atraso.`);

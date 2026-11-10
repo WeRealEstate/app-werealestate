@@ -50,22 +50,25 @@ class TablaMensualTest {
         List<Fila> f = TablaMensual.construir(plan(), List.of(), d("126762"), pagos, HOY);
 
         assertThat(f).hasSize(8);
-        // Abril: pagó de más (17,400 contra 10,000): los 7,400 bajan la mensualidad de mayo.
+        // Abril: pagó de más (17,400 contra 10,000): se suma al total pagado y NO baja la mensualidad de mayo.
         assertThat(f.get(0).monto()).isEqualByComparingTo("10000");
         assertThat(f.get(0).pagos()).hasSize(2);
         assertThat(f.get(0).abonadoMes()).isEqualByComparingTo("17400");
-        assertThat(f.get(1).monto()).isEqualByComparingTo("9280.29");
-        assertThat(f.get(1).arrastre()).isEqualByComparingTo("-7400");
+        assertThat(f.get(1).monto()).isEqualByComparingTo("16680.29");
+        assertThat(f.get(1).arrastre()).isEqualByComparingTo("0");
+        // Mayo pagó de menos (10,000 de 16,680.29): el faltante pasa a junio.
+        assertThat(f.get(2).monto()).isEqualByComparingTo("23360.58");
         // Junio: dos abonos de días distintos, cada uno en su línea.
         assertThat(f.get(2).pagos()).extracting(p -> p.fecha().getDayOfMonth()).containsExactly(22, 30);
-        // Julio quedó corto: el faltante se suma a agosto, y así hasta el último renglón.
+        // Julio también quedó corto: el faltante se suma a agosto, y así hasta el último renglón.
         assertThat(f.get(3).estado()).isEqualTo(EstadoPagoPlan.ATRASADO);
-        assertThat(f.get(4).monto()).isEqualByComparingTo("20821.16");
-        assertThat(f.get(5).monto()).isEqualByComparingTo("27501.45");
+        assertThat(f.get(3).monto()).isEqualByComparingTo("21540.87");
+        assertThat(f.get(4).monto()).isEqualByComparingTo("28221.16");
+        assertThat(f.get(5).monto()).isEqualByComparingTo("34901.45");
         assertThat(f.get(5).estado()).isEqualTo(EstadoPagoPlan.ATRASADO);
-        assertThat(f.get(6).monto()).isEqualByComparingTo("24769.24"); // octubre: venció sin pagos
+        assertThat(f.get(6).monto()).isEqualByComparingTo("32169.24"); // octubre: venció sin pagos
         assertThat(f.get(6).estado()).isEqualTo(EstadoPagoPlan.ATRASADO);
-        assertThat(f.get(7).monto()).isEqualByComparingTo("41449.50"); // noviembre: lo suyo más todo lo atrasado
+        assertThat(f.get(7).monto()).isEqualByComparingTo("48849.50"); // noviembre: lo suyo más todo lo atrasado
         assertThat(f.get(7).estado()).isEqualTo(EstadoPagoPlan.LE_TOCA);
     }
 

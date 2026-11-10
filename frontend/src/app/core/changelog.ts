@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.14.6', fecha: '2026-11-10', cambios: [
+    "Tabla de amortización: cuando el cliente paga más de lo que toca en un mes, el excedente solo se suma al monto pagado de ese mes; la mensualidad siguiente se queda igual (ya no se descuenta como adelanto). Si paga menos, el faltante se sigue sumando a la mensualidad siguiente.",
+  ] },
   { version: '11.14.5', fecha: '2026-11-10', cambios: [
     "Tabla de amortización mes con mes: «Mensualidad» es lo que toca pagar ese mes más lo que quedó pendiente de los meses anteriores (o menos lo pagado de más), de modo que el atraso va bajando hasta el último renglón; «Monto pagado» muestra cada abono del mes con su fecha, sin sumarlos; y el estado de cada mes depende de lo que se pagó en él. También en el PDF. El saldo, los atrasos totales, Finanzas y Comisiones se calculan igual que antes.",
   ] },

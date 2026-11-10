@@ -17,15 +17,16 @@ import java.util.TreeMap;
  * {@link CalendarioPagos} (todo lo abonado cubre del pago más antiguo al más nuevo, que usan Finanzas, Comisiones y
  * Clientes y no se toca), aquí cada abono se ubica en el mes en que se dio:
  * <ul>
- *   <li>Mensualidad = lo que tocaba pagar ese mes más lo que quedó pendiente de los meses anteriores (o menos lo que se
- *       pagó de más antes). El atraso va bajando renglón por renglón hasta el último.</li>
+ *   <li>Mensualidad = lo que tocaba pagar ese mes más lo que quedó pendiente de los meses anteriores. El atraso va
+ *       bajando renglón por renglón hasta el último. Lo pagado de más NO se adelanta a la mensualidad siguiente: solo
+ *       cuenta en el monto pagado del mes.</li>
  *   <li>Monto pagado = los abonos vigentes de ese mes, cada uno con su fecha, sin sumarlos entre sí.</li>
  *   <li>Estado: Pagado si ese mes cubrió lo que le tocaba; si no, Atrasado (si su fecha ya pasó) o, el primero sin
  *       cubrir que aún no vence, "Le toca".</li>
  * </ul>
  * Un abono anterior al primer mes del plan va al primer renglón; uno de un mes sin renglón, al renglón del mes anterior
- * más cercano (y uno posterior al plan, al último). En los renglones que aún no vencen solo se arrastra lo pagado de
- * más, nunca un faltante: el atraso se muestra una sola vez, en el siguiente pago. Solo informativo: no cambia el
+ * más cercano (y uno posterior al plan, al último). Los renglones que aún no vencen no pasan su faltante al siguiente:
+ * el atraso se muestra una sola vez, en el siguiente pago. Solo informativo: no cambia el
  * saldo, los atrasos de los demás módulos ni las comisiones.
  */
 final class TablaMensual {
@@ -62,15 +63,16 @@ final class TablaMensual {
         }
 
         List<Fila> filas = new ArrayList<>();
-        BigDecimal arrastre = BigDecimal.ZERO; // + = pendiente de antes, − = pagado de más
+        BigDecimal arrastre = BigDecimal.ZERO; // lo que quedó pendiente de meses anteriores (nunca negativo)
         BigDecimal programado = BigDecimal.ZERO;
         LocalDate proxima = null;
         for (int i = 0; i < conceptos.size(); i++) {
             CalendarioPagos.Concepto c = conceptos.get(i);
             List<PagoMes> delMes = porFila.get(i);
             BigDecimal pagado = delMes.stream().map(PagoMes::monto).reduce(BigDecimal.ZERO, BigDecimal::add);
-            BigDecimal toca = c.monto().add(arrastre).max(BigDecimal.ZERO);
-            BigDecimal resta = c.monto().add(arrastre).subtract(pagado); // + falta, − sobra
+            BigDecimal arrastreRecibido = arrastre;
+            BigDecimal toca = c.monto().add(arrastre);
+            BigDecimal resta = toca.subtract(pagado); // + falta, − pagó de más (no se adelanta)
             boolean vencido = c.fecha().isBefore(hoy);
 
             EstadoPagoPlan estado;
@@ -90,20 +92,16 @@ final class TablaMensual {
                     c.numero(), c.fecha(), c.concepto(), toca,
                     toca.subtract(resta.max(BigDecimal.ZERO)).max(BigDecimal.ZERO),
                     precio.subtract(programado).max(BigDecimal.ZERO), estado,
-                    toca.subtract(c.monto()), pagado, List.copyOf(delMes)));
-            // Lo que falta pasa al siguiente solo si este renglón ya venció; lo pagado de más siempre pasa.
-            arrastre = vencido ? resta : resta.min(BigDecimal.ZERO);
+                    arrastreRecibido, pagado, List.copyOf(delMes)));
+            // Lo que falta pasa al siguiente solo si este renglón ya venció; lo pagado de más no pasa.
+            arrastre = vencido ? resta.max(BigDecimal.ZERO) : BigDecimal.ZERO;
         }
 
-        // Lo que el plan no fecha: un renglón final que nunca vence; lo pagado de más lo va cubriendo.
+        // Lo que el plan no fecha: un renglón final que nunca vence (en esta vista no recibe abonos).
         if (filasMotor.size() > conceptos.size()) {
             Fila sinFecha = filasMotor.get(filasMotor.size() - 1);
-            BigDecimal sobra = arrastre.negate().max(BigDecimal.ZERO);
-            BigDecimal pagado = sinFecha.monto().min(sobra);
-            boolean cubierto = sinFecha.monto().subtract(pagado).compareTo(TOLERANCIA) <= 0;
-            filas.add(new Fila(null, null, sinFecha.concepto(), sinFecha.monto(), pagado, BigDecimal.ZERO,
-                    cubierto ? EstadoPagoPlan.PAGADO : EstadoPagoPlan.PENDIENTE, BigDecimal.ZERO,
-                    BigDecimal.ZERO, List.of()));
+            filas.add(new Fila(null, null, sinFecha.concepto(), sinFecha.monto(), BigDecimal.ZERO, BigDecimal.ZERO,
+                    EstadoPagoPlan.PENDIENTE, BigDecimal.ZERO, BigDecimal.ZERO, List.of()));
         }
         return filas;
     }
