@@ -97,7 +97,7 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-border">
-            @for (f of a.filas; track $index; let i = $index) {
+            @for (f of a.detalleMensual; track $index; let i = $index) {
               <tr
                 [class]="claseFila(f.estado)"
                 [attr.data-actual]="i === indiceActual() ? '' : null"
@@ -107,14 +107,26 @@
                 <td class="whitespace-nowrap px-3 py-2 tabular-nums text-ink">{{ fecha(f.fecha) }}</td>
                 <td class="px-3 py-2 text-ink">
                   {{ f.concepto }}
-                  @if (f.arrastre < 0) {
-                    <span class="block text-xs text-ink-muted">Faltaron ${{ money(-f.arrastre) }}: se suman al siguiente pago</span>
-                  } @else if (f.arrastre > 0) {
-                    <span class="block text-xs text-ink-muted">Incluye ${{ money(f.arrastre) }} que faltaron del pago anterior</span>
+                  @if (f.arrastre > 0) {
+                    <span class="block text-xs text-ink-muted">Incluye ${{ money(f.arrastre) }} que faltaron de meses anteriores</span>
+                  } @else if (f.arrastre < 0) {
+                    <span class="block text-xs text-ink-muted">Menos ${{ money(-f.arrastre) }} pagados de más antes</span>
                   }
                 </td>
                 <td class="whitespace-nowrap px-3 py-2 text-right tabular-nums text-ink">${{ money(f.monto) }}</td>
-                <td class="whitespace-nowrap px-3 py-2 text-right tabular-nums" [class.text-ink-muted]="!f.abonadoMes" [class.text-ink]="f.abonadoMes > 0">{{ f.fecha ? '$' + money(f.abonadoMes) : '—' }}</td>
+                <td class="whitespace-nowrap px-3 py-2 text-right tabular-nums">
+                  @if (!f.fecha) {
+                    <span class="text-ink-muted">—</span>
+                  } @else if (f.pagos.length === 0) {
+                    <span class="text-ink-muted">$0.00</span>
+                  } @else {
+                    @for (p of f.pagos; track $index) {
+                      <span class="block text-ink">
+                        <span class="mr-1.5 text-xs text-ink-muted">{{ fecha(p.fecha) }}</span>${{ money(p.monto) }}
+                      </span>
+                    }
+                  }
+                </td>
                 <td class="whitespace-nowrap px-3 py-2 text-right tabular-nums text-ink-muted">{{ f.fecha ? '$' + money(f.saldo) : '—' }}</td>
                 <td class="whitespace-nowrap px-3 py-2">
                   <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold" [class]="estadoClases[f.estado]">{{ etiquetaEstado(f.estado, f.fecha, a.corte) }}</span>
@@ -124,8 +136,7 @@
           </tbody>
           <tfoot class="border-t border-border bg-surface-2 text-sm font-semibold text-ink">
             <tr>
-              <td class="px-3 py-2.5" colspan="3">Total</td>
-              <td class="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">${{ money(totalMonto()) }}</td>
+              <td class="px-3 py-2.5" colspan="4">Total pagado</td>
               <td class="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">${{ money(totalAbonadoMes()) }}</td>
               <td colspan="2"></td>
             </tr>
@@ -133,7 +144,7 @@
         </table>
       </div>
       <p class="mt-2 text-xs text-ink-muted">
-        Lo abonado cubre los pagos del más antiguo al más nuevo; un pago cuenta como atrasado desde el día siguiente a su fecha. Si una mensualidad vencida se pagó en parte, se da por pagada y lo que faltó se suma al siguiente pago. Saldo: lo que falta del precio después de cada pago, según el plan. «Monto pagado» es el dinero que el cliente realmente dio ese mes, según la fecha de cada recibo; no cambia el cálculo de pagado ni de atrasos.
+        Mensualidad: lo que toca pagar ese mes más lo que quedó pendiente de los meses anteriores (o menos lo que se pagó de más). Monto pagado: cada abono del mes con su fecha. Un mes aparece atrasado si lo pagado en él no cubrió lo que le tocaba; un pago cuenta como atrasado desde el día siguiente a su fecha. Saldo: lo que falta del precio después de cada pago, según el plan.
         @if (conSinFecha()) {
           «{{ sinFecha }}» es la parte del precio a la que la venta no le asigna fecha (por ejemplo, anualidades de ventas anteriores): no cuenta como atraso.
         }

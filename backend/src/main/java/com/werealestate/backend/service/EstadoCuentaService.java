@@ -20,9 +20,7 @@ import com.werealestate.backend.repository.VentaRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.YearMonth;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -149,36 +147,8 @@ public class EstadoCuentaService {
                 cuenta.atrasadoDesde(),
                 cuenta.proximaFecha(),
                 cuenta.proximoMonto(),
-                conAbonadoMes(cuenta.filas(), pagos));
-    }
-
-    /**
-     * Pone en cada renglón con fecha el dinero realmente recibido en su mes (por la fecha de cada recibo vigente), para
-     * que se vea lo que el cliente fue dando mes con mes aunque el plan reparta lo abonado distinto (del pago más
-     * antiguo al más nuevo). Solo informativo: no cambia pagado, estados ni atrasos. El mes con varios renglones
-     * (enganche y mensualidad el mismo mes) lo lleva el primero, para no contarlo dos veces; lo recibido antes del
-     * primer mes del plan va al primer renglón y lo de un mes sin renglón al renglón del mes anterior más cercano. La
-     * columna suma siempre lo abonado.
-     */
-    static List<AmortizacionDto.Fila> conAbonadoMes(List<AmortizacionDto.Fila> filas, List<PagoVenta> pagos) {
-        // Primer renglón de cada mes del plan, de la fecha más antigua a la más nueva.
-        java.util.TreeMap<YearMonth, Integer> primeroDelMes = new java.util.TreeMap<>();
-        for (int i = 0; i < filas.size(); i++) {
-            LocalDate f = filas.get(i).fecha();
-            if (f != null) primeroDelMes.putIfAbsent(YearMonth.from(f), i);
-        }
-        BigDecimal[] porFila = new BigDecimal[filas.size()];
-        Arrays.fill(porFila, BigDecimal.ZERO);
-        if (!primeroDelMes.isEmpty()) {
-            for (PagoVenta p : pagos) {
-                Map.Entry<YearMonth, Integer> destino = primeroDelMes.floorEntry(YearMonth.from(p.getFecha()));
-                if (destino == null) destino = primeroDelMes.firstEntry();
-                porFila[destino.getValue()] = porFila[destino.getValue()].add(p.getMonto());
-            }
-        }
-        List<AmortizacionDto.Fila> resultado = new ArrayList<>(filas.size());
-        for (int i = 0; i < filas.size(); i++) resultado.add(filas.get(i).conAbonadoMes(porFila[i]));
-        return resultado;
+                cuenta.filas(),
+                TablaMensual.construir(conceptos, cuenta.filas(), precio, pagos, hoy));
     }
 
     private Usuario exigirAdminOLider() {

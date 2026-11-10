@@ -39,6 +39,14 @@ export interface FilaAmortizacion {
   arrastre: number;
   /** Dinero realmente recibido en el mes de este pago (por la fecha de cada recibo vigente); informativo. */
   abonadoMes: number;
+  /** Cada abono vigente de ese mes con su fecha (solo en detalleMensual). */
+  pagos: PagoMes[];
+}
+
+/** Un abono con su fecha. */
+export interface PagoMes {
+  fecha: string;
+  monto: number;
 }
 
 /** Respuesta de GET /api/ventas/{id}/amortizacion y de cada elemento de GET /api/clientes/{id}/amortizaciones. */
@@ -75,7 +83,10 @@ export interface Amortizacion {
   atrasadoDesde: string | null;
   proximaFecha: string | null;
   proximoMonto: number | null;
+  /** Reparto del dinero del más antiguo al más nuevo (lo usa el formulario de abonos). */
   filas: FilaAmortizacion[];
+  /** La tabla mes con mes (la que se muestra y va al PDF): mensualidad esperada más lo atrasado, y los abonos de cada mes. */
+  detalleMensual: FilaAmortizacion[];
 }
 
 /** Concepto del renglón que junta la parte del precio sin fecha en el plan (anualidades de ventas anteriores). */

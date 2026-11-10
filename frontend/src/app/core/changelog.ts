@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.14.5', fecha: '2026-11-10', cambios: [
+    "Tabla de amortización mes con mes: «Mensualidad» es lo que toca pagar ese mes más lo que quedó pendiente de los meses anteriores (o menos lo pagado de más), de modo que el atraso va bajando hasta el último renglón; «Monto pagado» muestra cada abono del mes con su fecha, sin sumarlos; y el estado de cada mes depende de lo que se pagó en él. También en el PDF. El saldo, los atrasos totales, Finanzas y Comisiones se calculan igual que antes.",
+  ] },
   { version: '11.14.4', fecha: '2026-11-10', cambios: [
     "Abonos: ahora se puede corregir la fecha de un recibo al editarlo (Administración y Admin). Finanzas toma el abono en el mes nuevo, la tabla de amortización y las comisiones se recalculan con la fecha corregida, y el cambio queda en la bitácora del recibo. Lo que ya se pagó de comisión no se modifica.",
   ] },

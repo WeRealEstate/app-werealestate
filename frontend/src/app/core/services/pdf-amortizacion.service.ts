@@ -115,7 +115,7 @@ export class PdfAmortizacionService {
     doc.setFont(FUENTE, 'bold');
     doc.setFontSize(10);
     doc.text('TABLA DE AMORTIZACIÓN', MARGEN, y);
-    const filas = a.filas;
+    const filas = a.detalleMensual;
     autoTable(doc, {
       startY: y + 3,
       head: [['N.º', 'FECHA', 'CONCEPTO', 'MENSUALIDAD', 'MONTO PAGADO', 'SALDO', 'ESTADO']],
@@ -124,11 +124,11 @@ export class PdfAmortizacionService {
         fechaCorta(f.fecha),
         f.concepto,
         dinero(f.monto),
-        f.fecha ? dinero(f.abonadoMes) : '—',
+        f.fecha ? (f.pagos.length ? f.pagos.map((x) => `${fechaCorta(x.fecha)}  ${dinero(x.monto)}`).join('\n') : dinero(0)) : '—',
         f.fecha ? dinero(f.saldo) : '—',
         etiquetaEstadoPago(f.estado, f.fecha, a.corte),
       ]),
-      foot: [['', '', 'Total', dinero(sumar(filas.map((f) => f.monto))), dinero(sumar(filas.map((f) => f.abonadoMes))), '', '']],
+      foot: [['', '', 'Total pagado', '', dinero(sumar(filas.map((f) => f.abonadoMes))), '', '']],
       showFoot: 'lastPage',
       margin: { left: MARGEN, right: MARGEN, top: 30, bottom: ALTO_PIE + 4 },
       theme: 'grid',
@@ -141,7 +141,7 @@ export class PdfAmortizacionService {
         1: { halign: 'center', cellWidth: 22 },
         2: { cellWidth: 'auto' },
         3: { halign: 'right', cellWidth: 26 },
-        4: { halign: 'right', cellWidth: 30 },
+        4: { halign: 'right', cellWidth: 38 },
         5: { halign: 'right', cellWidth: 28 },
         6: { halign: 'center', cellWidth: 21 },
       },
@@ -165,9 +165,9 @@ export class PdfAmortizacionService {
     // Notas al pie de la tabla.
     const finTabla = (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y;
     const notas = [
-      'Lo abonado cubre los pagos del más antiguo al más nuevo. Un pago cuenta como atrasado desde el día siguiente a su fecha.',
+      'Mensualidad: lo que toca pagar ese mes más lo que quedó pendiente de los meses anteriores (o menos lo que se pagó de más). Un pago cuenta como atrasado desde el día siguiente a su fecha.',
       'Saldo: lo que falta del precio después de cada pago, según el plan.',
-      'Monto pagado: el dinero recibido ese mes, según la fecha de cada recibo.',
+      'Monto pagado: cada abono del mes con su fecha.',
     ];
     if (filas.some((f) => f.concepto === CONCEPTO_SIN_FECHA)) {
       notas.push(`${CONCEPTO_SIN_FECHA}: parte del precio a la que la venta no le asigna fecha (por ejemplo, anualidades); no cuenta como atraso.`);
