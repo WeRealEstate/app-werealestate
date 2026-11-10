@@ -255,4 +255,12 @@
       </form>
     </div>
   }
+
+  @if (confirmandoContratoDe(); as v) {
+    <app-confirmar-cambio-contrato
+      [anterior]="v.numeroContrato ?? ''" [nuevo]="contratoBorrador().trim()"
+      [guardando]="guardandoContrato()" [error]="errorConfirmacionContrato()"
+      (confirmado)="enviarContrato(v, $event)" (cancelado)="confirmandoContratoDe.set(null)"
+    />
+  }
 </div>

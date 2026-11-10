@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.14.7', fecha: '2026-11-10', cambios: [
+    "Número de contrato: cambiarlo o quitarlo cuando la venta ya tiene uno ahora pide tu contraseña (con una cuenta regresiva de 10 segundos, como al eliminar una venta), tanto en el detalle de la venta como en la ficha del cliente. Capturar el primer número sigue siendo directo.",
+  ] },
   { version: '11.14.6', fecha: '2026-11-10', cambios: [
     "Tabla de amortización: cuando el cliente paga más de lo que toca en un mes, el excedente solo se suma al monto pagado de ese mes; la mensualidad siguiente se queda igual (ya no se descuenta como adelanto). Si paga menos, el faltante se sigue sumando a la mensualidad siguiente.",
   ] },

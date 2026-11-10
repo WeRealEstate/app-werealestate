@@ -40,8 +40,8 @@ export class ClientesService {
 
   /** Número de contrato de una venta del cliente (desde su detalle); mismo efecto que en el detalle de la venta,
    * pero por una ruta que exige el módulo Clientes en vez del de Ventas. */
-  guardarNumeroContratoDeVenta(ventaId: number, numeroContrato: string | null): Promise<Venta> {
-    return firstValueFrom(this.http.put<Venta>(`${this.baseUrl}/ventas/${ventaId}/numero-contrato`, { numeroContrato }));
+  guardarNumeroContratoDeVenta(ventaId: number, numeroContrato: string | null, password: string | null = null): Promise<Venta> {
+    return firstValueFrom(this.http.put<Venta>(`${this.baseUrl}/ventas/${ventaId}/numero-contrato`, { numeroContrato, password }));
   }
 
   /** Cambia el número del cliente en un desarrollo (se mueve junto con quienes lo comparten). */

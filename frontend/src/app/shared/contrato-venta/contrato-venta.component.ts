@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { MEDIO_FIRMA_LABELS, MedioFirma, Venta } from '../../core/models/venta.model';
 import { ToastService } from '../../core/services/toast.service';
 import { VentasService } from '../../core/services/ventas.service';
+import { ConfirmarCambioContratoComponent } from '../confirmar-cambio-contrato/confirmar-cambio-contrato.component';
 
 /** Contrato de la venta: si ya está firmado, desde cuándo y cómo (en físico o por DocuSign), más un
  * enlace opcional a su carpeta de Drive. Con la regla de comisión por tipo de abono (ventas nuevas),
@@ -12,7 +13,7 @@ import { VentasService } from '../../core/services/ventas.service';
 @Component({
   selector: 'app-contrato-venta',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, ConfirmarCambioContratoComponent],
   template: `
     <div class="mt-6 rounded-2xl border border-border bg-surface p-5">
       <div class="flex flex-wrap items-start justify-between gap-3">
@@ -60,6 +61,13 @@ import { VentasService } from '../../core/services/ventas.service';
       </form>
       @if (errorNumero()) {
         <p class="mt-2 text-xs text-red-600 dark:text-red-400" role="alert" data-testid="error-numero-contrato">{{ errorNumero() }}</p>
+      }
+      @if (confirmandoNumero()) {
+        <app-confirmar-cambio-contrato
+          [anterior]="venta().numeroContrato ?? ''" [nuevo]="numeroContrato().trim()"
+          [guardando]="guardandoNumero()" [error]="errorConfirmacion()"
+          (confirmado)="enviarNumero($event)" (cancelado)="confirmandoNumero.set(false)"
+        />
       }
 
       <form (ngSubmit)="guardar()" class="mt-4 space-y-4">
@@ -136,6 +144,9 @@ export class ContratoVentaComponent {
   readonly numeroContrato = signal('');
   readonly guardandoNumero = signal(false);
   readonly errorNumero = signal<string | null>(null);
+  /** Ventana de contraseña: se abre al cambiar o quitar un número que la venta ya tiene. */
+  readonly confirmandoNumero = signal(false);
+  readonly errorConfirmacion = signal<string | null>(null);
 
   constructor() {
     // Se reinicia con lo guardado cada vez que la venta se vuelve a cargar.
@@ -160,21 +171,36 @@ export class ContratoVentaComponent {
     return this.numeroContrato().trim() !== (this.venta().numeroContrato ?? '');
   }
 
-  /** El número de contrato se guarda aparte de la firma: es opcional y no depende de que ya esté firmado. */
+  /** El número de contrato se guarda aparte de la firma: es opcional y no depende de que ya esté firmado. Capturarlo la
+   * primera vez es directo; cambiar o quitar uno existente pide antes la contraseña. */
   async guardarNumero(): Promise<void> {
     if (this.guardandoNumero() || !this.cambioNumero()) return;
+    this.errorNumero.set(null);
+    if (this.venta().numeroContrato) {
+      this.errorConfirmacion.set(null);
+      this.confirmandoNumero.set(true);
+      return;
+    }
+    await this.enviarNumero(null);
+  }
+
+  async enviarNumero(password: string | null): Promise<void> {
+    if (this.guardandoNumero()) return;
     this.guardandoNumero.set(true);
     this.errorNumero.set(null);
+    this.errorConfirmacion.set(null);
     try {
-      await this.ventasService.guardarNumeroContrato(this.venta().id, this.numeroContrato().trim() || null);
+      await this.ventasService.guardarNumeroContrato(this.venta().id, this.numeroContrato().trim() || null, password);
+      this.confirmandoNumero.set(false);
       this.toast.success('Número de contrato guardado.');
       this.guardado.emit();
     } catch (e) {
-      this.errorNumero.set(
+      const mensaje =
         e instanceof HttpErrorResponse && typeof e.error?.message === 'string'
           ? e.error.message
-          : 'No se pudo guardar el número de contrato.',
-      );
+          : 'No se pudo guardar el número de contrato.';
+      if (this.confirmandoNumero()) this.errorConfirmacion.set(mensaje);
+      else this.errorNumero.set(mensaje);
     } finally {
       this.guardandoNumero.set(false);
     }

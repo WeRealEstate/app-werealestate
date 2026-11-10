@@ -347,13 +347,22 @@ public class VentaService {
     }
 
     /** Pone, cambia o quita (vacío) el número de contrato de la venta. Es texto libre pero no puede repetirse en
-     * otra venta (sin importar mayúsculas). Lo pueden usar admin y administración, igual que el resto de Ventas. */
+     * otra venta (sin importar mayúsculas). Lo pueden usar admin y administración, igual que el resto de Ventas. Poner
+     * el primero es libre; cambiar o quitar uno que ya existe exige la contraseña de quien lo hace (como eliminar). */
     public VentaDto registrarNumeroContrato(Long ventaId, com.werealestate.backend.dto.NumeroContratoRequest request) {
-        exigirAdminOLider();
+        Usuario actual = exigirAdminOLider();
         Venta venta = obtenerEntidad(ventaId);
         String numero = request.numeroContrato() == null || request.numeroContrato().isBlank()
                 ? null
                 : request.numeroContrato().trim();
+        if (venta.getNumeroContrato() != null && !venta.getNumeroContrato().equals(numero)) {
+            if (request.password() == null || request.password().isBlank()) {
+                throw new ValidationException("Escribe tu contraseña para cambiar o quitar el número de contrato");
+            }
+            if (!passwordEncoder.matches(request.password(), actual.getPassword())) {
+                throw new ForbiddenOperationException("Contraseña incorrecta");
+            }
+        }
         if (numero != null) {
             ventaRepository.findFirstByNumeroContratoIgnoreCase(numero)
                     .filter(otra -> !otra.getId().equals(ventaId))

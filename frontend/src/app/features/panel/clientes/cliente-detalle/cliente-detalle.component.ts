@@ -16,12 +16,13 @@ import {
 import { ClientesService } from '../../../../core/services/clientes.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { ClienteFormModalComponent } from '../../../../shared/cliente-form-modal/cliente-form-modal.component';
+import { ConfirmarCambioContratoComponent } from '../../../../shared/confirmar-cambio-contrato/confirmar-cambio-contrato.component';
 import { TablaAmortizacionComponent } from '../../../../shared/tabla-amortizacion/tabla-amortizacion.component';
 import { WeLoaderComponent } from '../../../../shared/we-loader/we-loader.component';
 
 @Component({
   selector: 'app-cliente-detalle',
-  imports: [WeLoaderComponent, FormsModule, RouterLink, ClienteFormModalComponent, TablaAmortizacionComponent, LucideExternalLink, LucidePencil],
+  imports: [WeLoaderComponent, FormsModule, RouterLink, ClienteFormModalComponent, TablaAmortizacionComponent, ConfirmarCambioContratoComponent, LucideExternalLink, LucidePencil],
   templateUrl: './cliente-detalle.component.html',
 })
 export class ClienteDetalleComponent {
@@ -150,6 +151,10 @@ export class ClienteDetalleComponent {
     if (!this.guardandoContrato()) this.editandoContratoDe.set(null);
   }
 
+  /** Ventana de contraseña: al cambiar o quitar un número que la venta ya tiene (poner el primero es directo). */
+  readonly confirmandoContratoDe = signal<ClienteVenta | null>(null);
+  readonly errorConfirmacionContrato = signal<string | null>(null);
+
   async guardarContrato(v: ClienteVenta): Promise<void> {
     if (this.guardandoContrato()) return;
     const nuevo = this.contratoBorrador().trim() || null;
@@ -157,10 +162,22 @@ export class ClienteDetalleComponent {
       this.editandoContratoDe.set(null);
       return;
     }
+    if (v.numeroContrato) {
+      this.errorConfirmacionContrato.set(null);
+      this.confirmandoContratoDe.set(v);
+      return;
+    }
+    await this.enviarContrato(v, null);
+  }
+
+  async enviarContrato(v: ClienteVenta, password: string | null): Promise<void> {
+    if (this.guardandoContrato()) return;
+    const nuevo = this.contratoBorrador().trim() || null;
     this.guardandoContrato.set(true);
     this.errorContrato.set(null);
+    this.errorConfirmacionContrato.set(null);
     try {
-      const venta = await this.clientesService.guardarNumeroContratoDeVenta(v.ventaId, nuevo);
+      const venta = await this.clientesService.guardarNumeroContratoDeVenta(v.ventaId, nuevo, password);
       this.cliente.update((c) =>
         c ? { ...c, ventas: c.ventas.map((x) => (x.ventaId === v.ventaId ? { ...x, numeroContrato: venta.numeroContrato } : x)) } : c,
       );
@@ -168,12 +185,14 @@ export class ClienteDetalleComponent {
       this.amortizaciones.update((lista) =>
         lista ? lista.map((a) => (a.ventaId === v.ventaId ? { ...a, numeroContrato: venta.numeroContrato } : a)) : lista,
       );
+      this.confirmandoContratoDe.set(null);
       this.editandoContratoDe.set(null);
       this.toast.success(nuevo ? `Contrato ${nuevo} guardado en la venta #${v.numero}.` : `Se quitó el número de contrato de la venta #${v.numero}.`);
     } catch (e) {
-      this.errorContrato.set(
-        e instanceof HttpErrorResponse && typeof e.error?.message === 'string' ? e.error.message : 'No se pudo guardar el número de contrato.',
-      );
+      const mensaje =
+        e instanceof HttpErrorResponse && typeof e.error?.message === 'string' ? e.error.message : 'No se pudo guardar el número de contrato.';
+      if (this.confirmandoContratoDe()) this.errorConfirmacionContrato.set(mensaje);
+      else this.errorContrato.set(mensaje);
     } finally {
       this.guardandoContrato.set(false);
     }
