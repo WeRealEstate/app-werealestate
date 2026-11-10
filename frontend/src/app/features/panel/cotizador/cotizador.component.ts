@@ -568,14 +568,14 @@ export class CotizadorComponent implements OnInit {
     return this.requiereLoteEnCaptura ? this.selectedArea * this.pricePerM2 : 0;
   }
 
-  /** El precio de contado con descuento ($110,000 fijo) es una promoción exclusiva del lote
+  /** El precio de contado con descuento ($120,000 fijo) es una promoción exclusiva del lote
    * estándar de SAMAI de 200 m² exactos, no se prorratea a otros tamaños (antes sí se escalaba
    * proporcionalmente, pero ese precio especial nunca aplicó más que a ese tamaño puntual). Para
    * cualquier otro tamaño en SAMAI, para Nanuu, o cuando la cotización combina varios lotes,
    * "Contado" cobra el precio de lista sin descuento. */
   get cashPrice(): number {
     if (!this.esMultiLote && this.selectedProject === 'samai' && this.selectedArea === 200) {
-      return 110000;
+      return 120000;
     }
 
     return this.totalPrice;

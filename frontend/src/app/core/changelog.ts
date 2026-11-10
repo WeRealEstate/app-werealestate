@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.14.1', fecha: '2026-11-10', cambios: [
+    "Cotizador: el precio especial de contado para lotes estándar de SAMAI Campestre (200 m²) se actualizó a $120,000.",
+  ] },
   { version: '11.14.0', fecha: '2026-11-10', cambios: [
     "Leads numerados: cada lead tiene un número consecutivo dentro de su asesor (1, 2, 3…) que no cambia al filtrar ni ordenar. Se ve en la lista (columna N.º), en el detalle, en las tarjetas del pipeline y en la exportación a Excel/CSV, y el buscador encuentra un lead por su número (por ejemplo «12» o «#12»). Los leads que ya existían se numeraron por su fecha de creación. Si se reasigna un lead, toma el siguiente número del asesor que lo recibe.",
   ] },
