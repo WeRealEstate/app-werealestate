@@ -40,22 +40,25 @@ class CalendarioPagosTest {
 
         assertThat(f).hasSize(33);
         assertThat(f.get(0)).isEqualTo(new AmortizacionDto.Fila(null, LocalDate.of(2026, 8, 15), "Enganche",
-                d("20000"), d("20000"), d("160000"), EstadoPagoPlan.PAGADO));
+                d("20000"), d("20000"), d("160000"), EstadoPagoPlan.PAGADO, BigDecimal.ZERO));
         assertThat(f.get(1)).isEqualTo(new AmortizacionDto.Fila(1, LocalDate.of(2026, 9, 15), "Mensualidad",
-                d("5000"), d("5000"), d("155000"), EstadoPagoPlan.PAGADO));
+                d("5000"), d("5000"), d("155000"), EstadoPagoPlan.PAGADO, BigDecimal.ZERO));
+        // La mensualidad 2 venció y solo se abonaron 2 mil: se da por pagada con eso y los 3 mil que faltaron se suman a
+        // la siguiente (que aún no vence: le toca por 8 mil).
         assertThat(f.get(2)).isEqualTo(new AmortizacionDto.Fila(2, LocalDate.of(2026, 10, 15), "Mensualidad",
-                d("5000"), d("2000"), d("150000"), EstadoPagoPlan.ATRASADO));
+                d("2000"), d("2000"), d("153000"), EstadoPagoPlan.PAGADO, d("-3000")));
         assertThat(f.get(3).estado()).isEqualTo(EstadoPagoPlan.LE_TOCA);
+        assertThat(f.get(3).monto()).isEqualByComparingTo("8000");
+        assertThat(f.get(3).arrastre()).isEqualByComparingTo("3000");
         assertThat(f.get(3).fecha()).isEqualTo(LocalDate.of(2026, 11, 15));
         assertThat(f.get(4).estado()).isEqualTo(EstadoPagoPlan.PENDIENTE);
         assertThat(f.get(32).saldo()).isEqualByComparingTo("0");
 
-        assertThat(c.atrasoMonto()).isEqualByComparingTo("3000");
-        assertThat(c.pagosAtrasados()).isEqualTo(1);
-        assertThat(c.mensualidadesAtrasadas()).isEqualTo(1);
-        assertThat(c.atrasadoDesde()).isEqualTo(LocalDate.of(2026, 10, 15));
+        assertThat(c.atrasoMonto()).isEqualByComparingTo("0");
+        assertThat(c.pagosAtrasados()).isZero();
+        assertThat(c.atrasadoDesde()).isNull();
         assertThat(c.proximaFecha()).isEqualTo(LocalDate.of(2026, 11, 15));
-        assertThat(c.proximoMonto()).isEqualByComparingTo("5000");
+        assertThat(c.proximoMonto()).isEqualByComparingTo("8000");
         assertThat(c.saldo()).isEqualByComparingTo("153000");
     }
 
@@ -178,5 +181,44 @@ class CalendarioPagosTest {
         assertThat(c.filas().get(2).estado()).isEqualTo(EstadoPagoPlan.LE_TOCA);
         assertThat(c.pagosAtrasados()).isZero();
         assertThat(c.atrasoMonto()).isEqualByComparingTo("0");
+    }
+
+    @Test
+    void mensualidadVencidaPagadaEnParteSeDaPorPagadaYSuFaltantePasaALaSiguiente() {
+        // Venta real: enganche 10 mil y 7 mensualidades (la última de 16,680.26 por el redondeo); lleva 75,900.
+        Venta v = venta(LocalDate.of(2026, 4, 10), "16680.29", 7, "Enganche", "10000", 10, false);
+        LocalDate hoy = LocalDate.of(2026, 11, 10);
+        List<CalendarioPagos.Concepto> conceptos = CalendarioPagos.conceptos(v, d("126762"), List.of());
+        CalendarioPagos.EstadoDeCuenta c = CalendarioPagos.estadoDeCuenta(conceptos, d("126762"), d("75900"), hoy);
+        List<AmortizacionDto.Fila> f = c.filas();
+
+        // La 4 se alcanzó a pagar en parte: queda Pagada con lo abonado y los 821.16 que faltaron se suman a la 5.
+        assertThat(f.get(4).estado()).isEqualTo(EstadoPagoPlan.PAGADO);
+        assertThat(f.get(4).monto()).isEqualByComparingTo("15859.13");
+        assertThat(f.get(4).arrastre()).isEqualByComparingTo("-821.16");
+        assertThat(f.get(5).estado()).isEqualTo(EstadoPagoPlan.ATRASADO);
+        assertThat(f.get(5).monto()).isEqualByComparingTo("17501.45");
+        assertThat(f.get(5).arrastre()).isEqualByComparingTo("821.16");
+        assertThat(f.get(6).estado()).isEqualTo(EstadoPagoPlan.ATRASADO);
+        assertThat(f.get(7).estado()).isEqualTo(EstadoPagoPlan.LE_TOCA);
+
+        // El total no cambia (la tabla sigue sumando el precio) y el atraso es el mismo dinero, en 2 pagos en vez de 3.
+        assertThat(f.stream().map(AmortizacionDto.Fila::monto).reduce(BigDecimal.ZERO, BigDecimal::add))
+                .isEqualByComparingTo("126762");
+        assertThat(c.atrasoMonto()).isEqualByComparingTo("34181.74");
+        assertThat(c.pagosAtrasados()).isEqualTo(2);
+        assertThat(c.mensualidadesAtrasadas()).isEqualTo(2);
+        assertThat(c.atrasadoDesde()).isEqualTo(LocalDate.of(2026, 9, 10));
+        assertThat(c.saldo()).isEqualByComparingTo("50862");
+    }
+
+    @Test
+    void sinPagoSiguienteLaMensualidadParcialSigueAtrasada() {
+        // Una sola mensualidad, ya vencida y pagada en parte: no hay a dónde pasar el faltante.
+        Venta v = venta(LocalDate.of(2026, 9, 3), "5000", 1, null, null, 3, false);
+        CalendarioPagos.EstadoDeCuenta c = cuenta(v, "5000", "2000", List.of());
+
+        assertThat(c.filas().get(0).estado()).isEqualTo(EstadoPagoPlan.ATRASADO);
+        assertThat(c.atrasoMonto()).isEqualByComparingTo("3000");
     }
 }

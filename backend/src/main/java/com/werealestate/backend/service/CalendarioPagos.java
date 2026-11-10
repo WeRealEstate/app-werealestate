@@ -30,7 +30,10 @@ import java.util.TreeMap;
  * la tabla de amortización esa parte queda en un renglón final "Sin fecha en el plan".
  *
  * <p>Estado de cuenta: lo abonado (recibos vigentes) va cubriendo los pagos del más antiguo al más nuevo. Un pago que
- * no quedó cubierto está atrasado desde el día siguiente a su fecha.
+ * no quedó cubierto está atrasado desde el día siguiente a su fecha. Excepción (decisión del usuario): una mensualidad
+ * vencida a la que sí llegó dinero pero no alcanzó se da por pagada con lo que se abonó, y lo que le faltó se suma al
+ * pago siguiente (la fila baja su monto a lo pagado y la siguiente lo sube); así el total siempre cuadra con el precio
+ * y el atraso lo lleva el pago siguiente. Si no hay un pago siguiente, queda atrasada como cualquier otra.
  */
 public final class CalendarioPagos {
 
@@ -158,14 +161,26 @@ public final class CalendarioPagos {
         BigDecimal proximoMonto = BigDecimal.ZERO;
         List<AmortizacionDto.Fila> filas = new ArrayList<>();
 
-        for (Concepto c : conceptos) {
-            BigDecimal pagado = c.monto().min(porAplicar);
+        BigDecimal arrastre = BigDecimal.ZERO;
+        for (int i = 0; i < conceptos.size(); i++) {
+            Concepto c = conceptos.get(i);
+            BigDecimal arrastreRecibido = arrastre;
+            BigDecimal monto = c.monto().add(arrastreRecibido);
+            arrastre = BigDecimal.ZERO;
+            BigDecimal pagado = monto.min(porAplicar);
             porAplicar = porAplicar.subtract(pagado);
-            programado = programado.add(c.monto());
-            BigDecimal falta = c.monto().subtract(pagado);
+            BigDecimal falta = monto.subtract(pagado);
+            BigDecimal ajuste = arrastreRecibido;
             EstadoPagoPlan estado;
             if (falta.compareTo(TOLERANCIA) <= 0) {
                 estado = EstadoPagoPlan.PAGADO;
+            } else if (c.mensualidad() && c.fecha().isBefore(hoy) && pagado.compareTo(TOLERANCIA) > 0
+                    && i < conceptos.size() - 1) {
+                // Pago parcial de una mensualidad vencida: se da por pagada y su faltante pasa a la siguiente.
+                estado = EstadoPagoPlan.PAGADO;
+                arrastre = falta;
+                ajuste = falta.negate();
+                monto = pagado;
             } else if (c.fecha().isBefore(hoy)) {
                 estado = EstadoPagoPlan.ATRASADO;
                 atraso = atraso.add(falta);
@@ -179,8 +194,9 @@ public final class CalendarioPagos {
             } else {
                 estado = EstadoPagoPlan.PENDIENTE;
             }
-            filas.add(new AmortizacionDto.Fila(c.numero(), c.fecha(), c.concepto(), c.monto(), pagado,
-                    precio.subtract(programado).max(BigDecimal.ZERO), estado));
+            programado = programado.add(monto);
+            filas.add(new AmortizacionDto.Fila(c.numero(), c.fecha(), c.concepto(), monto, pagado,
+                    precio.subtract(programado).max(BigDecimal.ZERO), estado, ajuste));
         }
 
         // Lo del precio que el plan no fecha (anualidades viejas): un renglón final que nunca vence; lo abonado de más
@@ -190,7 +206,7 @@ public final class CalendarioPagos {
             BigDecimal pagado = sinFecha.min(porAplicar);
             boolean cubierto = sinFecha.subtract(pagado).compareTo(TOLERANCIA) <= 0;
             filas.add(new AmortizacionDto.Fila(null, null, SIN_FECHA, sinFecha, pagado, BigDecimal.ZERO,
-                    cubierto ? EstadoPagoPlan.PAGADO : EstadoPagoPlan.PENDIENTE));
+                    cubierto ? EstadoPagoPlan.PAGADO : EstadoPagoPlan.PENDIENTE, BigDecimal.ZERO));
         }
 
         return new EstadoDeCuenta(

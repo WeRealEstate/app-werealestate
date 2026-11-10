@@ -52,7 +52,9 @@ public record AmortizacionDto(
 
     /** Un pago del plan. numero: su lugar en el plazo (null en enganche, contado, aportación fuera del plazo y lo
      * que no tiene fecha); fecha null = parte del precio sin fecha en el plan. pagado: lo que ya cubre lo abonado;
-     * saldo: lo que falta del precio después de este pago según el plan. */
+     * saldo: lo que falta del precio después de este pago según el plan. arrastre: faltante de una mensualidad vencida
+     * pagada en parte que se pasó al pago siguiente (ver CalendarioPagos): negativo en la fila que lo cedió (su monto
+     * baja a lo que se alcanzó a pagar) y positivo en la que lo recibe (su monto lo incluye); cero en las demás. */
     public record Fila(
             Integer numero,
             LocalDate fecha,
@@ -60,6 +62,7 @@ public record AmortizacionDto(
             BigDecimal monto,
             BigDecimal pagado,
             BigDecimal saldo,
-            EstadoPagoPlan estado) {
+            EstadoPagoPlan estado,
+            BigDecimal arrastre) {
     }
 }

@@ -105,7 +105,14 @@
               >
                 <td class="whitespace-nowrap px-3 py-2 text-center tabular-nums text-ink-muted">{{ f.numero ?? '—' }}</td>
                 <td class="whitespace-nowrap px-3 py-2 tabular-nums text-ink">{{ fecha(f.fecha) }}</td>
-                <td class="px-3 py-2 text-ink">{{ f.concepto }}</td>
+                <td class="px-3 py-2 text-ink">
+                  {{ f.concepto }}
+                  @if (f.arrastre < 0) {
+                    <span class="block text-xs text-ink-muted">Faltaron ${{ money(-f.arrastre) }}: se suman al siguiente pago</span>
+                  } @else if (f.arrastre > 0) {
+                    <span class="block text-xs text-ink-muted">Incluye ${{ money(f.arrastre) }} que faltaron del pago anterior</span>
+                  }
+                </td>
                 <td class="whitespace-nowrap px-3 py-2 text-right tabular-nums text-ink">${{ money(f.monto) }}</td>
                 <td class="whitespace-nowrap px-3 py-2 text-right tabular-nums" [class.text-ink-muted]="f.pagado === 0" [class.text-ink]="f.pagado > 0">${{ money(f.pagado) }}</td>
                 <td class="whitespace-nowrap px-3 py-2 text-right tabular-nums text-ink-muted">{{ f.fecha ? '$' + money(f.saldo) : '—' }}</td>
@@ -126,7 +133,7 @@
         </table>
       </div>
       <p class="mt-2 text-xs text-ink-muted">
-        Lo abonado cubre los pagos del más antiguo al más nuevo; un pago cuenta como atrasado desde el día siguiente a su fecha. Saldo: lo que falta del precio después de cada pago, según el plan.
+        Lo abonado cubre los pagos del más antiguo al más nuevo; un pago cuenta como atrasado desde el día siguiente a su fecha. Si una mensualidad vencida se pagó en parte, se da por pagada y lo que faltó se suma al siguiente pago. Saldo: lo que falta del precio después de cada pago, según el plan.
         @if (conSinFecha()) {
           «{{ sinFecha }}» es la parte del precio a la que la venta no le asigna fecha (por ejemplo, anualidades de ventas anteriores): no cuenta como atraso.
         }

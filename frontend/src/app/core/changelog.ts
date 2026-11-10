@@ -15,7 +15,10 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
-  { version: '11.12.2', fecha: '2026-11-10', cambios: [
+  { version: '11.13.7', fecha: '2026-11-10', cambios: [
+    "Tabla de amortización: si una mensualidad ya vencida se pagó en parte, ahora sale como Pagada con lo que se abonó, y lo que faltó se suma al siguiente pago (que lo lleva como atrasado o como el que le toca). La tabla sigue sumando el precio y el atraso es el mismo dinero, pero cuenta un pago atrasado menos. Se aplica igual en Clientes, Ventas, Finanzas y Comisiones.",
+  ] },
+  { version: '11.13.6', fecha: '2026-11-10', cambios: [
     "Abonos: nueva casilla «Pago extemporáneo» al registrar (o corregir) una mensualidad. Sirve para clientes que ya pasaron su plazo, o ya tienen todos los meses cubiertos, y aún deben saldo: no pide meses, solo el monto, y abona al saldo y a las comisiones como una mensualidad. El recibo y su bitácora lo muestran como «Pago extemporáneo».",
   ] },
   { version: '11.13.5', fecha: '2026-11-09', cambios: [
