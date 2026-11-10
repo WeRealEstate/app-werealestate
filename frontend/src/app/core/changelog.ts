@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.13.9', fecha: '2026-11-10', cambios: [
+    "Registrar abono: los meses que se pueden cobrar ahora salen de la tabla de amortización (los que aún no están pagados por completo), no de los meses que algún recibo ya marcó. Antes, si todos los meses del plazo ya estaban marcados pero faltaba dinero (por ejemplo, la última mensualidad), el formulario decía que todo estaba cubierto y no dejaba registrar el pago. Al elegir un mes, el monto sugerido es lo que le falta a ese mes.",
+  ] },
   { version: '11.13.8', fecha: '2026-11-10', cambios: [
     "Lenguaje más formal: en la tabla de amortización (y su PDF) el estado «Le toca» ahora dice «Paga este mes» (o «Próximo pago» cuando ese pago cae en un mes posterior), y el resumen dice «Próximo pago el …» en Ventas, Clientes y la tabla. También se cambiaron «Gente que vende…» por «Personas que venden…», «tiene gente reportándole» por «tiene personas a su cargo» y «Suelta aquí a quien quieras sacar de un equipo» por «Arrastra aquí a quien quieras retirar de un equipo».",
   ] },

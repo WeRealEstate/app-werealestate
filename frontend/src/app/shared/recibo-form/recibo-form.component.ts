@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Amortizacion } from '../../core/models/amortizacion.model';
 import { LineaReciboRequest, PagoVenta, TIPO_ABONO_LABELS, TipoAbono, Venta } from '../../core/models/venta.model';
 import { ToastService } from '../../core/services/toast.service';
 import { VentasService } from '../../core/services/ventas.service';
@@ -74,7 +75,47 @@ export class ReciboFormComponent {
     return cubiertos;
   });
 
-  readonly mesesPendientes = computed(() => this.mesesDelPlan().filter((m) => !this.mesesCubiertos().has(m.clave)));
+  /** Tabla de amortización de la venta (la misma que ve el usuario en el detalle). Se vuelve a pedir cada vez que
+   * cambian sus pagos. null mientras carga o si no se pudo pedir: entonces se usan los meses de los recibos. */
+  private readonly amortizacion = signal<Amortizacion | null>(null);
+  private pedidoAmortizacion = 0;
+
+  constructor() {
+    effect(() => {
+      const id = this.venta().id;
+      this.pagos();
+      const pedido = ++this.pedidoAmortizacion;
+      this.ventasService
+        .amortizacion(id)
+        .then((a) => {
+          if (pedido === this.pedidoAmortizacion) this.amortizacion.set(a);
+        })
+        .catch(() => {
+          if (pedido === this.pedidoAmortizacion) this.amortizacion.set(null);
+        });
+    });
+  }
+
+  /** Lo que aún falta de cada mensualidad según la tabla (clave 'yyyy-MM' → monto): las que no salen Pagadas.
+   * null si la tabla no está disponible. Un mes que un recibo ya marcó puede seguir faltando si se pagó de menos. */
+  private readonly faltantePorMes = computed<Map<string, number> | null>(() => {
+    const a = this.amortizacion();
+    if (!a) return null;
+    const faltante = new Map<string, number>();
+    for (const f of a.filas) {
+      if (f.numero === null || f.fecha === null || f.concepto !== 'Mensualidad' || f.estado === 'PAGADO') continue;
+      faltante.set(f.fecha.slice(0, 7), Math.max(0, Math.round((f.monto - f.pagado) * 100) / 100));
+    }
+    return faltante;
+  });
+
+  /** Meses que se pueden cobrar: los que la tabla de amortización aún muestra sin cubrir del todo. Si la tabla no está
+   * disponible, los que ningún recibo ha marcado como cubiertos. */
+  readonly mesesPendientes = computed(() => {
+    const faltante = this.faltantePorMes();
+    if (faltante) return this.mesesDelPlan().filter((m) => faltante.has(m.clave));
+    return this.mesesDelPlan().filter((m) => !this.mesesCubiertos().has(m.clave));
+  });
 
   /** Aportaciones programadas con su estado (si ya tienen un pago registrado). */
   readonly aportacionesOpciones = computed(() => {
@@ -245,7 +286,11 @@ export class ReciboFormComponent {
   private sugerirMonto(l: LineaForm): void {
     if (l.montoManual) return;
     const mensualidad = this.venta().mensualidad ?? 0;
-    l.monto = l.meses.length > 0 ? Math.round(mensualidad * l.meses.length * 100) / 100 : null;
+    const faltante = this.faltantePorMes();
+    // Con la tabla disponible se sugiere lo que falta de cada mes elegido (puede ser menos o más que la mensualidad).
+    const porMes = (c: string) => faltante?.get(c) ?? mensualidad;
+    const suma = l.meses.reduce((total, c) => total + porMes(c), 0);
+    l.monto = l.meses.length > 0 ? Math.round(suma * 100) / 100 : null;
   }
 
   private actualizarLinea(indice: number, cambio: (l: LineaForm) => void): void {
