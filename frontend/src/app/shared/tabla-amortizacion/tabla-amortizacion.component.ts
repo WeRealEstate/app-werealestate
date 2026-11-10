@@ -33,6 +33,8 @@ export class TablaAmortizacionComponent {
 
   private readonly caja = viewChild<ElementRef<HTMLElement>>('caja');
   readonly generando = signal(false);
+  /** true mientras la caja tenga renglones por ver más abajo (muestra el aviso de seguir bajando). */
+  readonly hayMas = signal(false);
 
   readonly etiquetaEstado = etiquetaEstadoPago;
   readonly estadoClases = ESTADO_PAGO_PLAN_CLASES;
@@ -66,10 +68,24 @@ export class TablaAmortizacionComponent {
   private irAlPagoActual(): void {
     const caja = this.caja()?.nativeElement;
     const fila = caja?.querySelector<HTMLElement>('tr[data-actual]');
-    if (!caja || !fila) return;
+    if (!caja) return;
+    if (!fila) return this.actualizarIndicador();
     const encabezado = caja.querySelector('thead')?.getBoundingClientRect().height ?? 0;
     const anterior = (fila.previousElementSibling?.previousElementSibling as HTMLElement | null) ?? fila;
     caja.scrollTop = Math.max(0, anterior.offsetTop - encabezado);
+    this.actualizarIndicador();
+  }
+
+  /** Recalcula si quedan renglones por ver debajo de lo visible (se llama al abrir y en cada scroll). */
+  actualizarIndicador(): void {
+    const caja = this.caja()?.nativeElement;
+    this.hayMas.set(!!caja && caja.scrollTop + caja.clientHeight < caja.scrollHeight - 4);
+  }
+
+  /** El aviso también es un botón: baja un buen tramo de la tabla. */
+  bajar(): void {
+    const caja = this.caja()?.nativeElement;
+    caja?.scrollBy({ top: caja.clientHeight * 0.8, behavior: 'smooth' });
   }
 
   /** Índice del primer renglón que todavía no está pagado (el que se marca como actual). */

@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.14.11', fecha: '2026-11-10', cambios: [
+    "Tabla de amortización: cuando hay más renglones abajo, aparece un difuminado con el aviso «Más renglones» (se puede pulsar para bajar) y desaparece al llegar al final.",
+  ] },
   { version: '11.14.10', fecha: '2026-11-10', cambios: [
     "Tabla de amortización: letra y columnas reajustadas para que nada se encime (la fecha de cada abono va sobre su monto y los renglones tienen más aire).",
   ] },
