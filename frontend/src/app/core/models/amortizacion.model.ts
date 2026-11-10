@@ -52,6 +52,8 @@ export interface PagoMes {
   monto: number;
   /** true si el abono es del tipo «A cuenta de comisión» (solo se distingue con una etiqueta). */
   aCuentaComision: boolean;
+  /** Folio del recibo (null en abonos muy viejos sin folio). */
+  folio: string | null;
 }
 
 /** Respuesta de GET /api/ventas/{id}/amortizacion y de cada elemento de GET /api/clientes/{id}/amortizaciones. */

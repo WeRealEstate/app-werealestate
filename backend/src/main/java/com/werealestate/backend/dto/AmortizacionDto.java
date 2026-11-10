@@ -54,8 +54,9 @@ public record AmortizacionDto(
         // lo pagado de más) y los abonos que de verdad se dieron en él, cada uno con su fecha. Ver TablaMensual.
         List<Fila> detalleMensual) {
 
-    /** Un abono vigente (una línea de recibo) con su fecha; aCuentaComision si es del tipo «A cuenta de comisión». */
-    public record PagoMes(LocalDate fecha, BigDecimal monto, boolean aCuentaComision) {
+    /** Un abono vigente (una línea de recibo) con su fecha; aCuentaComision si es del tipo «A cuenta de comisión»;
+     * folio: el del recibo (null en abonos muy viejos sin folio). */
+    public record PagoMes(LocalDate fecha, BigDecimal monto, boolean aCuentaComision, String folio) {
     }
 
     /** Un pago del plan. numero: su lugar en el plazo (null en enganche, contado, aportación fuera del plazo y lo

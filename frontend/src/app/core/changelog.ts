@@ -15,6 +15,12 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.15.2', fecha: '2026-11-10', cambios: [
+    "Ventas: la lista ahora está dividida por desarrollo, con SAMAI primero y luego Nanuu, cada uno con su título, su total de ventas y su propio «Cargar más». Una venta con lotes de dos desarrollos aparece en el del primer lote. El selector de desarrollo sigue funcionando.",
+  ] },
+  { version: '11.15.1', fecha: '2026-11-10', cambios: [
+    "PDF de la tabla de amortización: cada abono del mes ahora muestra el folio de su recibo, junto con su fecha y monto.",
+  ] },
   { version: '11.15.0', fecha: '2026-11-10', cambios: [
     "Tabla de amortización: estados por mes. Atrasado = el mes ya pasó sin ningún pago, Abonado = hubo algún pago pero no toda la mensualidad, Pagado = cubrió la mensualidad. El mes actual sin pagos sigue como «Paga este mes» y los siguientes como «Pendiente».",
     "Abonos: nuevo tipo «A cuenta de comisión» al registrar o editar un recibo. Se registra con sus meses como una mensualidad, abona igual al saldo y a la comisión del asesor (50 %), y en la tabla de amortización el abono lleva la etiqueta «A cuenta de comisión».",

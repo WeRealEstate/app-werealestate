@@ -15,6 +15,23 @@ const TAMANO_PAGINA = 10;
 /** Espera esto antes de volver a consultar al servidor mientras el usuario sigue escribiendo. */
 const DEBOUNCE_BUSQUEDA_MS = 350;
 
+/** Un desarrollo dentro de la lista: sus ventas ya cargadas (clasificadas por el desarrollo de su primer lote, como
+ * se ve en la columna Desarrollo), si hay más por cargar y cuántas ventas tiene en total. */
+interface Seccion {
+  desarrollo: Desarrollo;
+  ventas: Venta[];
+  hayMas: boolean;
+  pagina: number;
+  cargandoMas: boolean;
+  total: number | null;
+}
+
+/** SAMAI primero, luego Nanuu y al final cualquier otro desarrollo por nombre (igual que la lista de Clientes). */
+function ordenDesarrollo(d: Desarrollo): number {
+  const n = d.nombre.toLowerCase();
+  return n.includes('samai') ? 0 : n.includes('nanuu') ? 1 : 2;
+}
+
 @Component({
   selector: 'app-ventas-list',
   standalone: true,
@@ -25,10 +42,10 @@ export class VentasListComponent {
   private readonly ventasService = inject(VentasService);
   private readonly leadsService = inject(LeadsService);
 
-  readonly ventas = signal<Venta[]>([]);
+  /** La lista dividida por desarrollo (secciones sin ventas no se muestran). */
+  readonly secciones = signal<Seccion[]>([]);
+  readonly seccionesConVentas = computed(() => this.secciones().filter((s) => s.ventas.length > 0));
   readonly isLoading = signal(true);
-  readonly isLoadingMore = signal(false);
-  readonly hayMas = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly filtro = signal('');
   /** Desarrollos para el selector, y el elegido (null = todos). Siempre arranca en "Todos". */
@@ -52,8 +69,12 @@ export class VentasListComponent {
 
   constructor() {
     void this.cargarContadores();
-    this.cargar();
-    this.leadsService.listarDesarrollosGestionables().then((d) => this.desarrollos.set(d)).catch(() => undefined);
+    // La lista se divide por desarrollo, así que primero se necesitan los desarrollos.
+    this.leadsService
+      .listarDesarrollosGestionables()
+      .then((d) => this.desarrollos.set([...d].sort((a, b) => ordenDesarrollo(a) - ordenDesarrollo(b) || a.nombre.localeCompare(b.nombre, 'es'))))
+      .catch(() => undefined)
+      .finally(() => void this.cargar());
   }
 
   /** Al cambiar de desarrollo se recarga la lista desde la primera página y los contadores de ese desarrollo. */
@@ -84,14 +105,31 @@ export class VentasListComponent {
     this.debounceHandle = setTimeout(() => this.cargar(), DEBOUNCE_BUSQUEDA_MS);
   }
 
+  /** Carga la primera página de cada desarrollo (o solo del elegido en el selector), cada uno con su propio "Cargar más". */
   async cargar(): Promise<void> {
     this.isLoading.set(true);
     this.errorMessage.set(null);
     try {
-      const resultado = await this.buscarPagina(0, TAMANO_PAGINA);
-      this.ventas.set(resultado.contenido);
-      this.hayMas.set(resultado.hayMas);
-      this.pagina = 0;
+      const elegido = this.desarrolloId();
+      const destinos = this.desarrollos().filter((d) => elegido === null || d.id === elegido);
+      if (destinos.length === 0) throw new Error('Sin desarrollos');
+      const secciones = await Promise.all(
+        destinos.map(async (desarrollo): Promise<Seccion> => {
+          const [resultado, contadores] = await Promise.all([
+            this.buscarPagina(desarrollo.id, 0),
+            this.ventasService.contadores(desarrollo.id).catch(() => null),
+          ]);
+          return {
+            desarrollo,
+            ventas: this.delDesarrollo(resultado.contenido, desarrollo.id),
+            hayMas: resultado.hayMas,
+            pagina: 0,
+            cargandoMas: false,
+            total: contadores?.ventasRegistradas ?? null,
+          };
+        }),
+      );
+      this.secciones.set(secciones);
     } catch {
       this.errorMessage.set('No se pudo cargar el historial de ventas.');
     } finally {
@@ -99,29 +137,42 @@ export class VentasListComponent {
     }
   }
 
-  async cargarMas(): Promise<void> {
-    if (this.isLoadingMore() || !this.hayMas()) return;
-    this.isLoadingMore.set(true);
+  async cargarMas(seccion: Seccion): Promise<void> {
+    if (seccion.cargandoMas || !seccion.hayMas) return;
+    this.actualizarSeccion(seccion.desarrollo.id, { cargandoMas: true });
     try {
-      const siguiente = this.pagina + 1;
-      const resultado = await this.buscarPagina(siguiente, TAMANO_PAGINA);
-      this.ventas.update((actuales) => [...actuales, ...resultado.contenido]);
-      this.hayMas.set(resultado.hayMas);
-      this.pagina = siguiente;
+      const siguiente = seccion.pagina + 1;
+      const resultado = await this.buscarPagina(seccion.desarrollo.id, siguiente);
+      const nuevas = this.delDesarrollo(resultado.contenido, seccion.desarrollo.id);
+      this.secciones.update((lista) =>
+        lista.map((s) =>
+          s.desarrollo.id === seccion.desarrollo.id
+            ? { ...s, ventas: [...s.ventas, ...nuevas], hayMas: resultado.hayMas, pagina: siguiente, cargandoMas: false }
+            : s,
+        ),
+      );
     } catch {
+      this.actualizarSeccion(seccion.desarrollo.id, { cargandoMas: false });
       this.errorMessage.set('No se pudieron cargar más ventas.');
-    } finally {
-      this.isLoadingMore.set(false);
     }
   }
 
-  private buscarPagina(pagina: number, tamano: number) {
+  private actualizarSeccion(id: number, cambios: Partial<Seccion>): void {
+    this.secciones.update((lista) => lista.map((s) => (s.desarrollo.id === id ? { ...s, ...cambios } : s)));
+  }
+
+  /** Una venta con lotes de dos desarrollos se clasifica por su primer lote (el que muestra la columna Desarrollo). */
+  private delDesarrollo(ventas: Venta[], desarrolloId: number): Venta[] {
+    return ventas.filter((v) => v.lotes[0]?.lote.desarrollo.id === desarrolloId);
+  }
+
+  private buscarPagina(desarrolloId: number, pagina: number) {
     return this.ventasService.buscarPaginado({
       busqueda: this.filtro().trim() || undefined,
       orden: this.orden(),
       pagina,
-      tamano,
-      desarrolloId: this.desarrolloId(),
+      tamano: TAMANO_PAGINA,
+      desarrolloId,
     });
   }
 

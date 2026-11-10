@@ -61,7 +61,7 @@ final class TablaMensual {
             for (PagoVenta p : pagos) {
                 Map.Entry<YearMonth, Integer> destino = primeroDelMes.floorEntry(YearMonth.from(p.getFecha()));
                 if (destino == null) destino = primeroDelMes.firstEntry();
-                porFila.get(destino.getValue()).add(new PagoMes(p.getFecha(), p.getMonto(), p.getTipo() == TipoAbono.A_CUENTA_COMISION));
+                porFila.get(destino.getValue()).add(new PagoMes(p.getFecha(), p.getMonto(), p.getTipo() == TipoAbono.A_CUENTA_COMISION, p.getFolio()));
             }
         }
 
