@@ -84,14 +84,13 @@
         [attr.aria-label]="'Tabla de amortización de la venta #' + a.ventaNumero"
         data-testid="tabla-amortizacion"
       >
-        <table class="w-full min-w-[48rem] text-left text-sm">
+        <table class="w-full min-w-[42rem] text-left text-sm">
           <thead class="text-xs uppercase tracking-wide text-ink-muted">
             <tr>
               <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-3 py-2.5 text-center font-semibold">N.º</th>
               <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-3 py-2.5 font-semibold">Fecha</th>
               <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-3 py-2.5 font-semibold">Concepto</th>
               <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-3 py-2.5 text-right font-semibold">Monto</th>
-              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-3 py-2.5 text-right font-semibold">Pagado</th>
               <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-3 py-2.5 text-right font-semibold" title="Dinero recibido en ese mes, según la fecha de cada recibo">Abonado en el mes</th>
               <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-3 py-2.5 text-right font-semibold">Saldo</th>
               <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-3 py-2.5 font-semibold">Estado</th>
@@ -115,7 +114,6 @@
                   }
                 </td>
                 <td class="whitespace-nowrap px-3 py-2 text-right tabular-nums text-ink">${{ money(f.monto) }}</td>
-                <td class="whitespace-nowrap px-3 py-2 text-right tabular-nums" [class.text-ink-muted]="f.pagado === 0" [class.text-ink]="f.pagado > 0">${{ money(f.pagado) }}</td>
                 <td class="whitespace-nowrap px-3 py-2 text-right tabular-nums" [class.text-ink-muted]="!f.abonadoMes" [class.text-ink]="f.abonadoMes > 0">{{ f.fecha ? '$' + money(f.abonadoMes) : '—' }}</td>
                 <td class="whitespace-nowrap px-3 py-2 text-right tabular-nums text-ink-muted">{{ f.fecha ? '$' + money(f.saldo) : '—' }}</td>
                 <td class="whitespace-nowrap px-3 py-2">
@@ -128,7 +126,6 @@
             <tr>
               <td class="px-3 py-2.5" colspan="3">Total</td>
               <td class="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">${{ money(totalMonto()) }}</td>
-              <td class="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">${{ money(totalPagado()) }}</td>
               <td class="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">${{ money(totalAbonadoMes()) }}</td>
               <td colspan="2"></td>
             </tr>

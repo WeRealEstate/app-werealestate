@@ -118,18 +118,17 @@ export class PdfAmortizacionService {
     const filas = a.filas;
     autoTable(doc, {
       startY: y + 3,
-      head: [['N.º', 'FECHA', 'CONCEPTO', 'MONTO', 'PAGADO', 'ABONADO EN EL MES', 'SALDO', 'ESTADO']],
+      head: [['N.º', 'FECHA', 'CONCEPTO', 'MONTO', 'ABONADO EN EL MES', 'SALDO', 'ESTADO']],
       body: filas.map((f) => [
         f.numero ?? '—',
         fechaCorta(f.fecha),
         f.concepto,
         dinero(f.monto),
-        dinero(f.pagado),
         f.fecha ? dinero(f.abonadoMes) : '—',
         f.fecha ? dinero(f.saldo) : '—',
         etiquetaEstadoPago(f.estado, f.fecha, a.corte),
       ]),
-      foot: [['', '', 'Total', dinero(sumar(filas.map((f) => f.monto))), dinero(sumar(filas.map((f) => f.pagado))), dinero(sumar(filas.map((f) => f.abonadoMes))), '', '']],
+      foot: [['', '', 'Total', dinero(sumar(filas.map((f) => f.monto))), dinero(sumar(filas.map((f) => f.abonadoMes))), '', '']],
       showFoot: 'lastPage',
       margin: { left: MARGEN, right: MARGEN, top: 30, bottom: ALTO_PIE + 4 },
       theme: 'grid',
@@ -142,10 +141,9 @@ export class PdfAmortizacionService {
         1: { halign: 'center', cellWidth: 22 },
         2: { cellWidth: 'auto' },
         3: { halign: 'right', cellWidth: 26 },
-        4: { halign: 'right', cellWidth: 26 },
-        5: { halign: 'right', cellWidth: 26 },
-        6: { halign: 'right', cellWidth: 26 },
-        7: { halign: 'center', cellWidth: 21 },
+        4: { halign: 'right', cellWidth: 30 },
+        5: { halign: 'right', cellWidth: 28 },
+        6: { halign: 'center', cellWidth: 21 },
       },
       didParseCell: (hook) => {
         if (hook.section === 'foot' && hook.column.index >= 3) hook.cell.styles.halign = 'right';
@@ -153,7 +151,7 @@ export class PdfAmortizacionService {
         const estado: EstadoPagoPlan | undefined = filas[hook.row.index]?.estado;
         if (estado === 'ATRASADO') hook.cell.styles.fillColor = FONDO_ATRASADO;
         if (estado === 'LE_TOCA') hook.cell.styles.fillColor = FONDO_LE_TOCA;
-        if (hook.column.index === 7) {
+        if (hook.column.index === 6) {
           hook.cell.styles.fontStyle = 'bold';
           hook.cell.styles.textColor = estado === 'PAGADO' ? VERDE : estado === 'ATRASADO' ? ROJO : estado === 'LE_TOCA' ? AMBAR : MUTED;
         }
