@@ -84,7 +84,16 @@
         [attr.aria-label]="'Tabla de amortización de la venta #' + a.ventaNumero"
         data-testid="tabla-amortizacion"
       >
-        <table class="w-full text-left text-xs sm:text-sm">
+        <table class="w-full table-fixed text-left text-xs sm:text-sm">
+          <colgroup>
+            <col class="hidden sm:table-column sm:w-[5%]" />
+            <col class="w-[17%] sm:w-[11%]" />
+            <col class="w-[22%] sm:w-[22%]" />
+            <col class="w-[22%] sm:w-[14%]" />
+            <col class="w-[21%] sm:w-[22%]" />
+            <col class="hidden sm:table-column sm:w-[13%]" />
+            <col class="w-[18%] sm:w-[13%]" />
+          </colgroup>
           <thead class="text-[10px] uppercase tracking-wide text-ink-muted sm:text-xs">
             <tr>
               <th scope="col" class="hidden sticky top-0 z-10 border-b border-border bg-surface-2 px-2 py-2.5 sm:px-3 text-center font-semibold sm:table-cell">N.º</th>
@@ -108,7 +117,7 @@
                 <td class="px-2 py-2 text-ink sm:px-3">
                   {{ f.concepto }}
                   @if (f.arrastre > 0) {
-                    <span class="block text-xs text-ink-muted">Incluye ${{ money(f.arrastre) }} que faltaron de meses anteriores</span>
+                    <span class="block text-xs text-ink-muted">Incluye ${{ money(f.arrastre) }} de meses anteriores</span>
                   }
                 </td>
                 <td class="px-2 py-2 text-right tabular-nums text-ink sm:px-3">${{ money(f.monto) }}</td>
@@ -127,7 +136,7 @@
                 </td>
                 <td class="hidden px-3 py-2 text-right tabular-nums text-ink-muted sm:table-cell">{{ f.fecha ? '$' + money(f.saldo) : '—' }}</td>
                 <td class="px-2 py-2 sm:px-3">
-                  <span class="inline-block rounded-full px-2 py-0.5 text-center text-[11px] font-semibold sm:text-xs" [class]="estadoClases[f.estado]">{{ etiquetaEstado(f.estado, f.fecha, a.corte) }}</span>
+                  <span class="inline-block max-w-full break-words rounded-full px-2 py-0.5 text-center text-[10px] font-semibold leading-tight sm:text-xs" [class]="estadoClases[f.estado]">{{ etiquetaEstado(f.estado, f.fecha, a.corte) }}</span>
                 </td>
               </tr>
             }

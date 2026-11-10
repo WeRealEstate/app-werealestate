@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.14.9', fecha: '2026-11-10', cambios: [
+    "Tabla de amortización: las columnas ahora tienen un ancho fijo proporcional, así que la tabla se ve completa (incluido el Estado) y alineada, sin cortes ni desplazamiento horizontal.",
+  ] },
   { version: '11.14.8', fecha: '2026-11-10', cambios: [
     "Tabla de amortización: se ajustó el diseño para que quepa en el ancho disponible, sin desplazamiento horizontal (en pantallas angostas se oculta el N.º y el Saldo, y la fecha de cada abono va sobre su monto).",
   ] },
