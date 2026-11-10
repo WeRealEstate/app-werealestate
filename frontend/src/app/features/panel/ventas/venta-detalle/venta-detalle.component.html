@@ -418,7 +418,7 @@
           <div>
             <p class="font-semibold">Atrasado · {{ cuentaAtraso(a.pagosAtrasados, a.mensualidadesAtrasadas) }} (${{ money(a.atrasoMonto) }}) desde el {{ fechaCorta(a.atrasadoDesde) }}</p>
             @if (a.proximaFecha && a.proximoMonto) {
-              <p class="mt-0.5">Le toca el {{ fechaCorta(a.proximaFecha) }}: ${{ money(a.proximoMonto) }}</p>
+              <p class="mt-0.5">Próximo pago el {{ fechaCorta(a.proximaFecha) }}: ${{ money(a.proximoMonto) }}</p>
             }
           </div>
         </div>

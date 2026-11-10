@@ -122,7 +122,7 @@ public class ComercializadoraService {
         AsesorExterno a = integrante(comercializadoraId, asesorId);
         if (asesorRepository.existsByLiderDirectoId(asesorId)) {
             throw new ConflictException(
-                    "No se puede quitar a " + a.getNombre() + ": tiene gente reportándole en Comunidades We. Reasígnala antes.");
+                    "No se puede quitar a " + a.getNombre() + ": tiene personas a su cargo en Comunidades We. Reasígnalas antes.");
         }
         boolean conHistorial = ventaRepository.existsByAsesorExternoId(asesorId)
                 || comisionRepository.existsByAsesorExternoId(asesorId)

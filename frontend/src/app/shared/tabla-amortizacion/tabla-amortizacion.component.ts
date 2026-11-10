@@ -4,7 +4,7 @@ import {
   Amortizacion,
   CONCEPTO_SIN_FECHA,
   ESTADO_PAGO_PLAN_CLASES,
-  ESTADO_PAGO_PLAN_LABELS,
+  etiquetaEstadoPago,
   EstadoPagoPlan,
   cuentaAtraso,
   fechaCorta,
@@ -34,7 +34,7 @@ export class TablaAmortizacionComponent {
   private readonly caja = viewChild<ElementRef<HTMLElement>>('caja');
   readonly generando = signal(false);
 
-  readonly estadoLabels = ESTADO_PAGO_PLAN_LABELS;
+  readonly etiquetaEstado = etiquetaEstadoPago;
   readonly estadoClases = ESTADO_PAGO_PLAN_CLASES;
   readonly sinFecha = CONCEPTO_SIN_FECHA;
   readonly fecha = fechaCorta;

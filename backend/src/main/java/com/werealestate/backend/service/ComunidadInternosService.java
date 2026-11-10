@@ -63,7 +63,7 @@ public class ComunidadInternosService {
         if (asesorExternoRepository.existsByLiderDirectoId(ficha.getId())) {
             throw new ConflictException(
                     "No se puede quitar a " + ficha.getNombre()
-                            + " de Comunidades We: tiene gente reportándole. Reasígnalos o quítalos del equipo primero.");
+                            + " de Comunidades We: tiene personas a su cargo. Reasígnalas o quítalas del equipo primero.");
         }
         if (asesorExternoRepository.existsByTraidoPorAsesorId(ficha.getId())) {
             // Figura como "quien trajo" a alguien: se conserva la fila pero fuera del árbol y inactiva.

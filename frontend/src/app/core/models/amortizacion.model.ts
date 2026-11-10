@@ -5,9 +5,16 @@ export type EstadoPagoPlan = 'PAGADO' | 'ATRASADO' | 'LE_TOCA' | 'PENDIENTE';
 export const ESTADO_PAGO_PLAN_LABELS: Record<EstadoPagoPlan, string> = {
   PAGADO: 'Pagado',
   ATRASADO: 'Atrasado',
-  LE_TOCA: 'Le toca',
+  LE_TOCA: 'Paga este mes',
   PENDIENTE: 'Pendiente',
 };
+
+/** Etiqueta del estado de una fila. «Paga este mes» solo si el pago es del mes en curso (el del día del estado de
+ * cuenta, `corte`); si el siguiente pago sin cubrir cae en un mes posterior se dice «Próximo pago». */
+export function etiquetaEstadoPago(estado: EstadoPagoPlan, fecha: string | null, corte: string): string {
+  if (estado === 'LE_TOCA' && fecha && fecha.slice(0, 7) !== corte.slice(0, 7)) return 'Próximo pago';
+  return ESTADO_PAGO_PLAN_LABELS[estado];
+}
 
 export const ESTADO_PAGO_PLAN_CLASES: Record<EstadoPagoPlan, string> = {
   PAGADO: 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300',

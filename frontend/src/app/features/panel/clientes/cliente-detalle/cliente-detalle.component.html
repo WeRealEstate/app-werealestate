@@ -127,7 +127,7 @@
                       <span class="inline-flex whitespace-nowrap rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700 dark:bg-green-500/15 dark:text-green-300">Al corriente</span>
                     }
                     @if (v.saldo > 0 && v.proximaFecha && v.proximoMonto) {
-                      <p class="mt-0.5 whitespace-nowrap text-xs text-ink-muted">Le toca el {{ fecha(v.proximaFecha) }}: ${{ money(v.proximoMonto) }}</p>
+                      <p class="mt-0.5 whitespace-nowrap text-xs text-ink-muted">Próximo pago el {{ fecha(v.proximaFecha) }}: ${{ money(v.proximoMonto) }}</p>
                     }
                   </td>
                 </tr>

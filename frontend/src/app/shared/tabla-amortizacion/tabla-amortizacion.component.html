@@ -32,7 +32,7 @@
             <span class="inline-flex rounded-full bg-we-primary/10 px-2 py-0.5 text-xs font-medium text-we-primary dark:text-we-blue-light">Copropietario</span>
           }
           @if (a.proximaFecha && a.proximoMonto) {
-            <span class="text-xs text-ink-muted">Le toca el {{ fecha(a.proximaFecha) }}: ${{ money(a.proximoMonto) }}</span>
+            <span class="text-xs text-ink-muted">Próximo pago el {{ fecha(a.proximaFecha) }}: ${{ money(a.proximoMonto) }}</span>
           }
         </span>
       </span>
@@ -117,7 +117,7 @@
                 <td class="whitespace-nowrap px-3 py-2 text-right tabular-nums" [class.text-ink-muted]="f.pagado === 0" [class.text-ink]="f.pagado > 0">${{ money(f.pagado) }}</td>
                 <td class="whitespace-nowrap px-3 py-2 text-right tabular-nums text-ink-muted">{{ f.fecha ? '$' + money(f.saldo) : '—' }}</td>
                 <td class="whitespace-nowrap px-3 py-2">
-                  <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold" [class]="estadoClases[f.estado]">{{ estadoLabels[f.estado] }}</span>
+                  <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold" [class]="estadoClases[f.estado]">{{ etiquetaEstado(f.estado, f.fecha, a.corte) }}</span>
                 </td>
               </tr>
             }

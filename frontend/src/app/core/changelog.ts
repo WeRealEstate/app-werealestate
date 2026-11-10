@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.13.8', fecha: '2026-11-10', cambios: [
+    "Lenguaje más formal: en la tabla de amortización (y su PDF) el estado «Le toca» ahora dice «Paga este mes» (o «Próximo pago» cuando ese pago cae en un mes posterior), y el resumen dice «Próximo pago el …» en Ventas, Clientes y la tabla. También se cambiaron «Gente que vende…» por «Personas que venden…», «tiene gente reportándole» por «tiene personas a su cargo» y «Suelta aquí a quien quieras sacar de un equipo» por «Arrastra aquí a quien quieras retirar de un equipo».",
+  ] },
   { version: '11.13.7', fecha: '2026-11-10', cambios: [
     "Tabla de amortización: si una mensualidad ya vencida se pagó en parte, ahora sale como Pagada con lo que se abonó, y lo que faltó se suma al siguiente pago (que lo lleva como atrasado o como el que le toca). La tabla sigue sumando el precio y el atraso es el mismo dinero, pero cuenta un pago atrasado menos. Se aplica igual en Clientes, Ventas, Finanzas y Comisiones.",
   ] },

@@ -3,7 +3,7 @@ import type { jsPDF } from 'jspdf';
 import {
   Amortizacion,
   CONCEPTO_SIN_FECHA,
-  ESTADO_PAGO_PLAN_LABELS,
+  etiquetaEstadoPago,
   EstadoPagoPlan,
   fechaCorta,
   frasePagosAtrasados,
@@ -126,7 +126,7 @@ export class PdfAmortizacionService {
         dinero(f.monto),
         dinero(f.pagado),
         f.fecha ? dinero(f.saldo) : '—',
-        ESTADO_PAGO_PLAN_LABELS[f.estado],
+        etiquetaEstadoPago(f.estado, f.fecha, a.corte),
       ]),
       foot: [['', '', 'Total', dinero(sumar(filas.map((f) => f.monto))), dinero(sumar(filas.map((f) => f.pagado))), '', '']],
       showFoot: 'lastPage',

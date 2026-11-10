@@ -131,7 +131,7 @@ public class AsesorExternoService {
         if (asesorExternoRepository.existsByLiderDirectoId(id)) {
             throw new ConflictException(
                     "No se puede eliminar a " + asesor.getNombre()
-                            + ": tiene gente reportándole en Teams. Reasígnalos o quítalos del equipo primero.");
+                            + ": tiene personas a su cargo en Teams. Reasígnalas o quítalas del equipo primero.");
         }
 
         if (asesorExternoRepository.existsByTraidoPorAsesorId(id)) {
@@ -243,7 +243,7 @@ public class AsesorExternoService {
         if (tieneDependientes && tipo != asesor.getTipo()) {
             throw new ConflictException(
                     "No se puede cambiar el tipo de " + asesor.getNombre()
-                            + ": tiene gente reportándole en Teams. Reasígnalos o quítalos del equipo primero.");
+                            + ": tiene personas a su cargo en Teams. Reasígnalas o quítalas del equipo primero.");
         }
 
         if (tipo != TipoAsesorExterno.LINEA) {
