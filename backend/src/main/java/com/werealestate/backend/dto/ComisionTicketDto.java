@@ -24,7 +24,7 @@ public record ComisionTicketDto(
         boolean asesorExterno,
         // true si es la comisión del copropietario de la venta: su monto va en "Comisión secundaria".
         boolean secundaria,
-        Long ventaNumero,
+        String ventaNumero,
         boolean ventaEliminada,
         String cliente,
         String desarrollo,

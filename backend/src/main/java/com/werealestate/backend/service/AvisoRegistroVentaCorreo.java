@@ -38,7 +38,7 @@ public class AvisoRegistroVentaCorreo {
     /** Lo que publica WeFormPublicoService.enviar al guardar un registro de venta. Lleva ya los textos del correo:
      * en segundo plano no hay transacción abierta para leer la venta. */
     public record RegistroDeVentaRecibido(
-            String cliente, String asesor, String desarrollo, String formulario, Long numeroVenta, List<String> lotes) {}
+            String cliente, String asesor, String desarrollo, String formulario, String numeroVenta, List<String> lotes) {}
 
     private final ObjectProvider<JavaMailSender> mailSender;
     private final String remitente;
@@ -62,7 +62,7 @@ public class AvisoRegistroVentaCorreo {
     public void alRecibirRegistro(RegistroDeVentaRecibido registro) {
         JavaMailSender sender = mailSender.getIfAvailable();
         if (sender == null || remitente.isEmpty()) {
-            log.info("Correo sin configurar (MAIL_USERNAME / MAIL_PASSWORD): no se avisó a finanzas de la venta #{}",
+            log.info("Correo sin configurar (MAIL_USERNAME / MAIL_PASSWORD): no se avisó a finanzas de la venta {}",
                     registro.numeroVenta());
             return;
         }
@@ -70,18 +70,18 @@ public class AvisoRegistroVentaCorreo {
             try {
                 if (esperasMs[intento - 1] > 0) Thread.sleep(esperasMs[intento - 1]);
                 sender.send(mensaje(sender, registro));
-                log.info("Aviso de la venta #{} enviado a {}", registro.numeroVenta(), DESTINATARIO);
+                log.info("Aviso de la venta {} enviado a {}", registro.numeroVenta(), DESTINATARIO);
                 return;
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                log.warn("Se interrumpió el aviso de la venta #{}", registro.numeroVenta());
+                log.warn("Se interrumpió el aviso de la venta {}", registro.numeroVenta());
                 return;
             } catch (Exception e) {
-                log.warn("No se pudo enviar el aviso de la venta #{} (intento {} de {}): {}",
+                log.warn("No se pudo enviar el aviso de la venta {} (intento {} de {}): {}",
                         registro.numeroVenta(), intento, esperasMs.length, e.toString());
             }
         }
-        log.error("No se envió el aviso de la venta #{} a {}", registro.numeroVenta(), DESTINATARIO);
+        log.error("No se envió el aviso de la venta {} a {}", registro.numeroVenta(), DESTINATARIO);
     }
 
     private MimeMessage mensaje(JavaMailSender sender, RegistroDeVentaRecibido registro)
@@ -102,7 +102,7 @@ public class AvisoRegistroVentaCorreo {
                 new String[] {"Asesor", r.asesor()},
                 new String[] {"Desarrollo", r.desarrollo()},
                 new String[] {r.lotes().size() == 1 ? "Lote" : "Lotes", String.join("\n", r.lotes())},
-                new String[] {"Venta", "#" + r.numeroVenta()},
+                new String[] {"Venta", r.numeroVenta()},
                 new String[] {"Formulario", r.formulario()});
     }
 

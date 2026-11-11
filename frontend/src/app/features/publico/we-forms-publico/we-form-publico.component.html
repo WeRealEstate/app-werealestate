@@ -37,7 +37,7 @@
           <p class="mt-2 text-sm text-ink">
             {{ r.clienteNombre }} {{ r.clienteNuevo ? 'quedó registrado como cliente nuevo' : 'ya estaba registrado y se vinculó a esta venta' }}.
           </p>
-          <p class="mt-1 text-sm text-ink-muted">Se creó la <span class="font-semibold text-ink">venta #{{ r.ventaNumero }}</span> y los lotes quedaron en proceso de firma. Administración la revisará.</p>
+          <p class="mt-1 text-sm text-ink-muted">Se creó la <span class="font-semibold text-ink">venta {{ r.ventaNumero }}</span> y los lotes quedaron en proceso de firma. Administración la revisará.</p>
           <button type="button" (click)="nuevoRegistroDeVenta()" class="mt-5 w-full rounded-lg bg-we-primary px-4 py-3 text-sm font-semibold text-white hover:bg-we-primary/90 min-h-[44px]">
             Registrar otra venta
           </button>

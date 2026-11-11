@@ -22,7 +22,7 @@ public record LoteDto(
         boolean sinVentaRegistrada,
         // Número de la venta en la que está el lote (null = en ninguna). Solo para admin y administración: con venta,
         // su estado lo manda la venta y no se cambia a mano (ver LoteService.cambiarEstado).
-        Long ventaNumero,
+        String ventaNumero,
         // Precio por m² que aplica (el propio del lote o el del desarrollo), el propio (null si no tiene) y el total.
         BigDecimal precioM2,
         BigDecimal precioM2Propio,
@@ -70,7 +70,7 @@ public record LoteDto(
     /** Para /panel/lotes, /panel/plano y el formulario de Ventas (admin y administración): en qué venta está el lote
      * y si es un VENDIDO sin ninguna ("Reservado por We"). Ver LoteService.marcarVentas; en cualquier otro contexto
      * van en falso y null, no vale la pena la consulta extra. */
-    public LoteDto conVenta(boolean sinVentaRegistrada, Long ventaNumero) {
+    public LoteDto conVenta(boolean sinVentaRegistrada, String ventaNumero) {
         return new LoteDto(
                 id, desarrollo, manzana, numeroLote, superficie, estado, fechaCambioEstado, cambiadoPor, mapaPoligono,
                 fechaExpiraApartado, montoApartado, sinVentaRegistrada, ventaNumero, precioM2, precioM2Propio, precio);

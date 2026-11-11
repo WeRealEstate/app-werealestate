@@ -117,7 +117,7 @@ export async function exportarReportePdf(
       r.asesorNombre,
       r.clienteNombre ?? '',
       r.clienteNuevo ? 'Nuevo' : 'Existente',
-      r.ventaNumero ? `#${r.ventaNumero}` : '',
+      r.ventaNumero ? r.ventaNumero : '',
     ]),
   );
 

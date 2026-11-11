@@ -183,7 +183,7 @@ class VentaLotesContratoTest {
         when(ventaLotes.findFirstByLoteIdOrderByIdDesc(1L)).thenReturn(Optional.of(new VentaLote(otra, lote, BigDecimal.TEN)));
 
         ConflictException e = assertThrows(ConflictException.class, () -> service.crear(nueva(false)));
-        assertTrue(e.getMessage().contains("ya está en la venta #3"));
+        assertTrue(e.getMessage().contains("ya está en la venta 3"));
         verify(ventaLotes, never()).save(any());
     }
 

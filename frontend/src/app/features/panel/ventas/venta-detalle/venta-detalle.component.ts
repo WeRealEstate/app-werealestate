@@ -62,7 +62,7 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
 
   /** id estable de la venta (para escribir); se conoce al cargarla por el número de la dirección. */
   private ventaId: number | null = null;
-  private numeroEnUrl!: number;
+  private numeroEnUrl!: string;
 
   /** Temporal: permite modificar los datos capturados de la venta (no sus lotes/precios). Se va a
    * quitar más adelante — avisan cuándo. */
@@ -87,6 +87,11 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
   readonly edicionPrimeraMensualidadMesVenta = signal(false);
   /** Número de venta en la edición: arranca con el actual; si se cambia, el servidor recorre las consecutivas. */
   readonly numeroEdicion = signal<number | null>(null);
+  /** "S-" / "N-" de la venta, para mostrar los números del campo de edición. */
+  readonly prefijoNumero = computed(() => {
+    const e = this.venta()?.etiqueta ?? '';
+    return e.includes('-') ? e.slice(0, e.indexOf('-') + 1) : '';
+  });
   /** Venta registrada desde We Forms: marcar la fecha de venta como definitiva al guardar (cambiarla también la confirma). */
   readonly confirmarFechaEdicion = signal(false);
 
@@ -156,7 +161,7 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.numeroEnUrl = Number(this.route.snapshot.paramMap.get('numero'));
+    this.numeroEnUrl = this.route.snapshot.paramMap.get('numero') ?? '';
     this.cargar();
     this.usuariosService.paraVenta().then((u) => this.asesoresInternos.set(u));
     this.asesoresExternosService.listarActivos().then((a) => this.asesoresExternos.set(a));
@@ -164,7 +169,7 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
 
   /** Si el número de la venta cambió (se editó su fecha o se registró otra con fecha anterior), la
    * dirección se actualiza en su lugar para que un refresh o un enlace copiado abra esta misma venta. */
-  private sincronizarDireccion(numero: number): void {
+  private sincronizarDireccion(numero: string): void {
     if (numero === this.numeroEnUrl) return;
     this.numeroEnUrl = numero;
     this.location.replaceState(`/panel/ventas/${numero}`);
@@ -190,7 +195,7 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
       this.pagos.set(pagos);
       this.historialRecibos.set(historial);
       this.amortizacion.set(amortizacion);
-      this.sincronizarDireccion(venta.numero);
+      this.sincronizarDireccion(venta.etiqueta);
     } catch {
       this.errorMessage.set('No se pudo cargar la venta.');
     } finally {
@@ -337,7 +342,7 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
         notas: v.notas?.trim() || null,
       });
       this.venta.set(actualizada);
-      this.sincronizarDireccion(actualizada.numero);
+      this.sincronizarDireccion(actualizada.etiqueta);
       this.editando.set(false);
       this.toast.success('Venta actualizada.');
     } catch (error) {

@@ -24,7 +24,7 @@ public record FinanzasIngresosDto(IngresoMes mesActual, List<IngresoMes> meses) 
 
     public record Concepto(
             Long ventaId,
-            Long ventaNumero,
+            String ventaNumero,
             String cliente,
             String desarrollo,
             String concepto,
@@ -34,7 +34,7 @@ public record FinanzasIngresosDto(IngresoMes mesActual, List<IngresoMes> meses) 
 
     /** monto negativo = contra-asiento de un recibo anulado (en la fecha de la anulación). */
     public record Abono(
-            Long ventaId, Long ventaNumero, String cliente, LocalDate fecha, BigDecimal monto, String concepto) {
+            Long ventaId, String ventaNumero, String cliente, LocalDate fecha, BigDecimal monto, String concepto) {
     }
 
     /** Detalle de un mes: qué se espera de quién y qué día, y los abonos que sí llegaron. */

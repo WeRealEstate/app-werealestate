@@ -216,7 +216,7 @@ public class ComisionService {
     /** La venta se va a eliminar: su comisión se queda en el historial ("Venta eliminada"), con el
      * número de venta que tenía. Lo ya ganado sigue pudiéndose entregar; deja de acumular. */
     public void desvincularVenta(Venta venta) {
-        comisionRepository.findAllByVentaId(venta.getId()).forEach(c -> c.desvincularVenta(venta.getNumero()));
+        comisionRepository.findAllByVentaId(venta.getId()).forEach(c -> c.desvincularVenta(venta.getNumeroGlobal(), venta.getEtiqueta()));
         comisionRepository.flush();
     }
 
@@ -536,8 +536,8 @@ public class ComisionService {
         LocalDate fecha = request.fecha() != null ? request.fecha() : LocalDate.now();
         String notas = request.notas() == null || request.notas().isBlank() ? null : request.notas().trim();
         String concepto = "Comisión · " + comision.getCliente()
-                + (comision.getVenta() != null && comision.getVenta().getNumero() != null
-                        ? " (venta #" + comision.getVenta().getNumero() + ")"
+                + (comision.getVenta() != null
+                        ? " (venta " + comision.getVenta().getEtiqueta() + ")"
                         : "");
         Gasto gasto = gastoRepository.save(new Gasto(
                 concepto, OrigenGasto.COMISION, tipoGastoComisiones(), fecha, request.monto(), actual));
@@ -648,7 +648,7 @@ public class ComisionService {
                 externo ? comision.getAsesorExterno().getNombre() : comision.getUsuarioAsesor().getNombre(),
                 externo,
                 comision.isSecundaria(),
-                venta != null ? venta.getNumero() : comision.getVentaNumero(),
+                venta != null ? venta.getEtiqueta() : comision.getVentaEtiqueta(),
                 venta == null,
                 comision.getCliente(),
                 entrega.getDesarrollo(),
@@ -1003,7 +1003,7 @@ public class ComisionService {
         return new ComisionDto(
                 c.getId(),
                 venta != null ? venta.getId() : null,
-                venta != null ? venta.getNumero() : c.getVentaNumero(),
+                venta != null ? venta.getEtiqueta() : c.getVentaEtiqueta(),
                 venta == null,
                 c.getCliente(),
                 asesor,

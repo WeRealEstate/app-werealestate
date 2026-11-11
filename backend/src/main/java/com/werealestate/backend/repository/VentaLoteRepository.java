@@ -56,9 +56,10 @@ public interface VentaLoteRepository extends JpaRepository<VentaLote, Long> {
     /** Todas las ventas que incluyen un lote (normalmente una; más solo con datos de antes de que se impidiera). */
     List<VentaLote> findByLoteId(Long loteId);
 
-    /** Número de venta de cada lote del conjunto que ya está en alguna: filas [loteId, número]. Si un lote quedó en
-     * más de una (datos de antes de que se impidiera), trae la de número mayor. Ver LoteService.marcarVentas. */
-    @Query("select vl.lote.id, max(vl.venta.numero) from VentaLote vl where vl.lote.id in :loteIds group by vl.lote.id")
+    /** La venta de cada lote del conjunto que ya está en alguna: filas [loteId, venta], de la de número global menor a
+     * la mayor (si un lote quedó en más de una, datos de antes de que se impidiera, la última fila es la de número
+     * mayor). Ver LoteService.marcarVentas. */
+    @Query("select vl.lote.id, vl.venta from VentaLote vl where vl.lote.id in :loteIds order by vl.venta.numero")
     List<Object[]> numeroDeVentaPorLote(@Param("loteIds") java.util.Collection<Long> loteIds);
 
     /** Lotes que están en una venta pero no están Vendidos ni En proceso de firma (datos de antes de que la venta

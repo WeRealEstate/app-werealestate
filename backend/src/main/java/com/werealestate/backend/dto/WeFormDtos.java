@@ -75,7 +75,7 @@ public final class WeFormDtos {
 
     public record Respuesta(
             Long id, LocalDateTime fechaEnvio, String asesorNombre, Long clienteId, String clienteNombre,
-            boolean clienteNuevo, Long ventaId, Long ventaNumero, List<ItemRespuesta> items) {
+            boolean clienteNuevo, Long ventaId, String ventaNumero, List<ItemRespuesta> items) {
     }
 
     // ------------------------------------------------------------------ estadísticas
@@ -128,6 +128,6 @@ public final class WeFormDtos {
     public record RespuestaEnvio(@NotNull Long preguntaId, JsonNode valor) {
     }
 
-    public record EnvioResultado(Long respuestaId, Long ventaNumero, String clienteNombre, boolean clienteNuevo) {
+    public record EnvioResultado(Long respuestaId, String ventaNumero, String clienteNombre, boolean clienteNuevo) {
     }
 }

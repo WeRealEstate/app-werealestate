@@ -27,7 +27,7 @@ export class TablaAmortizacionComponent {
   private readonly toast = inject(ToastService);
 
   readonly amortizacion = input.required<Amortizacion>();
-  /** Encabezado del bloque; sin él: "Venta #13 · SAMAI Campestre · Mz 3 / Lote 1". */
+  /** Encabezado del bloque; sin él: "Venta S-13 · SAMAI Campestre · Mz 3 / Lote 1". */
   readonly titulo = input<string | null>(null);
   readonly abierta = model(false);
 
@@ -47,7 +47,7 @@ export class TablaAmortizacionComponent {
 
   readonly encabezado = computed(() => {
     const a = this.amortizacion();
-    return this.titulo() ?? [`Venta #${a.ventaNumero}`, a.desarrollos.join(', '), a.lotes.join(', ')].filter(Boolean).join(' · ');
+    return this.titulo() ?? [`Venta ${a.ventaNumero}`, a.desarrollos.join(', '), a.lotes.join(', ')].filter(Boolean).join(' · ');
   });
 
   readonly cuentaAtrasados = computed(() => cuentaAtraso(this.amortizacion().pagosAtrasados, this.amortizacion().mensualidadesAtrasadas));

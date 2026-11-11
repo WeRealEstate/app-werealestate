@@ -69,7 +69,8 @@ export interface NumeracionCliente {
 
 export interface ClienteVenta {
   ventaId: number;
-  numero: number;
+  /** El número de la venta en su desarrollo: "S-12", "N-5". */
+  numero: string;
   fechaVenta: string;
   desarrollos: string[];
   lotes: string[];

@@ -6,7 +6,7 @@ import { MonedaInputDirective } from '../moneda-input/moneda-input.directive';
 
 const ESPERA_CONSULTA_MS = 300;
 
-/** Campo "Número de venta" del formulario de alta y de modificación. En alta, vacío = automático (el
+/** Campo "Número de venta" (dentro del desarrollo de la venta: S-1, S-2… / N-1, N-2…) del formulario de alta y de modificación. En alta, vacío = automático (el
  * siguiente: mayor + 1); en modificación arranca con el número actual (`numeroActual`). Mientras se
  * escribe avisa si el número ya lo tiene otra venta (y cuántas se recorrerían +1 al guardar) o si deja
  * huecos. El valor (`numero`) es null cuando no hay nada escrito (= automático / sin cambios). */
@@ -23,6 +23,9 @@ export class NumeroVentaComponent {
   /** Edición: el id de la venta (para no avisar que "choca" consigo misma) y su número actual. */
   readonly excluirId = input<number | null>(null);
   readonly numeroActual = input<number | null>(null);
+  /** El desarrollo cuya numeración se usa (el del primer lote) y su letra ("S-", "N-") para mostrar los números. */
+  readonly desarrolloId = input<number | null>(null);
+  readonly prefijo = input('');
 
   readonly info = signal<NumeracionVenta | null>(null);
   readonly siguiente = signal<number | null>(null);
@@ -34,17 +37,18 @@ export class NumeroVentaComponent {
     effect((onCleanup) => {
       const n = this.numero();
       const excluir = this.excluirId();
+      const desarrollo = this.desarrolloId();
       clearTimeout(this.temporizador);
       this.info.set(null);
-      this.temporizador = setTimeout(() => void this.consultar(n, excluir), n ? ESPERA_CONSULTA_MS : 0);
+      this.temporizador = setTimeout(() => void this.consultar(n, excluir, desarrollo), n ? ESPERA_CONSULTA_MS : 0);
       onCleanup(() => clearTimeout(this.temporizador));
     });
   }
 
-  private async consultar(n: number | null, excluir: number | null): Promise<void> {
+  private async consultar(n: number | null, excluir: number | null, desarrollo: number | null): Promise<void> {
     this.consultando.set(true);
     try {
-      const r = await this.ventasService.numeracion(n, excluir);
+      const r = await this.ventasService.numeracion(n, excluir, desarrollo);
       this.siguiente.set(r.siguiente);
       // Solo vale si el campo sigue igual a como se consultó.
       if (this.numero() === n) this.info.set(r);

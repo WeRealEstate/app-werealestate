@@ -149,7 +149,7 @@ export interface WeFormRespuesta {
   clienteNombre: string | null;
   clienteNuevo: boolean;
   ventaId: number | null;
-  ventaNumero: number | null;
+  ventaNumero: string | null;
   items: WeFormItemRespuesta[];
 }
 
@@ -232,7 +232,7 @@ export interface WeFormPublico {
 
 export interface WeFormEnvioResultado {
   respuestaId: number;
-  ventaNumero: number;
+  ventaNumero: string;
   clienteNombre: string;
   clienteNuevo: boolean;
 }

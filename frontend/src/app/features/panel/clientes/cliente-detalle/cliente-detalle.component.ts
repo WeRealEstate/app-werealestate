@@ -187,7 +187,7 @@ export class ClienteDetalleComponent {
       );
       this.confirmandoContratoDe.set(null);
       this.editandoContratoDe.set(null);
-      this.toast.success(nuevo ? `Contrato ${nuevo} guardado en la venta #${v.numero}.` : `Se quitó el número de contrato de la venta #${v.numero}.`);
+      this.toast.success(nuevo ? `Contrato ${nuevo} guardado en la venta ${v.numero}.` : `Se quitó el número de contrato de la venta ${v.numero}.`);
     } catch (e) {
       const mensaje =
         e instanceof HttpErrorResponse && typeof e.error?.message === 'string' ? e.error.message : 'No se pudo guardar el número de contrato.';

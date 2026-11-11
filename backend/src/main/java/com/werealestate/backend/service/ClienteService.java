@@ -489,7 +489,7 @@ public class ClienteService {
                         CalendarioPagos.EstadoDeCuenta cuenta = cuentaDe(v, precio, abonado);
                         return new ClienteDto.ClienteVentaDto(
                                 v.getId(),
-                                v.getNumero(),
+                                v.getEtiqueta(),
                                 v.getFechaVenta(),
                                 new ArrayList<>(new LinkedHashSet<>(
                                         lotes.stream().map(l -> l.getLote().getDesarrollo().getNombre()).toList())),

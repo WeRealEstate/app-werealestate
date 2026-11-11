@@ -474,7 +474,7 @@
                 está en una venta pero aparece como {{ estadoLabels[lote.estado] }}.
               }
               <button type="button" (click)="verVenta(lote)" class="font-semibold text-we-primary hover:underline dark:text-we-blue-light">
-                Ver venta #{{ lote.ventaNumero }}
+                Ver venta {{ lote.ventaNumero }}
               </button>
             </p>
             @if (!estadosDeVenta.has(lote.estado)) {
@@ -485,7 +485,7 @@
                 class="mt-2 w-full rounded-lg bg-we-primary px-3 py-2 text-sm font-semibold text-white hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150 disabled:opacity-60"
                 data-testid="alinear-con-venta"
               >
-                {{ alineando() === lote.id ? 'Alineando…' : 'Alinear con la venta #' + lote.ventaNumero }}
+                {{ alineando() === lote.id ? 'Alineando…' : 'Alinear con la venta ' + lote.ventaNumero }}
               </button>
             }
           }

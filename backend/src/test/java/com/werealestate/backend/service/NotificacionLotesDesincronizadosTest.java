@@ -56,7 +56,7 @@ class NotificacionLotesDesincronizadosTest {
         Lote disponible = lote(4L, "1", "4", EstadoLote.DISPONIBLE);
         Venta venta = mock(Venta.class);
         when(venta.getId()).thenReturn(20L);
-        when(venta.getNumero()).thenReturn(2L);
+        when(venta.getEtiqueta()).thenReturn("S-2");
         VentaLote vl = mock(VentaLote.class);
         when(vl.getLote()).thenReturn(disponible);
         when(vl.getVenta()).thenReturn(venta);
@@ -105,7 +105,7 @@ class NotificacionLotesDesincronizadosTest {
 
             NotificacionDto desalineado = avisos.get(1);
             assertThat(desalineado.tipo()).isEqualTo("LOTE_VENTA_DESALINEADA");
-            assertThat(desalineado.mensaje()).isEqualTo("Mz 1 / Lote 4 de SAMAI Campestre está en la venta #2 pero aparece "
+            assertThat(desalineado.mensaje()).isEqualTo("Mz 1 / Lote 4 de SAMAI Campestre está en la venta S-2 pero aparece "
                     + "como Disponible. Debe estar Vendido (contrato firmado) o En proceso de firma.");
             assertThat(desalineado.loteId()).isEqualTo(4L);
             assertThat(desalineado.ventaId()).isEqualTo(20L);

@@ -44,7 +44,7 @@ export interface Comision {
   id: number;
   /** null cuando la venta ya no existe: la comisión se queda en el historial. */
   ventaId: number | null;
-  ventaNumero: number | null;
+  ventaNumero: string | null;
   ventaEliminada: boolean;
   cliente: string;
   asesorNombre: string;
@@ -154,7 +154,7 @@ export interface ComisionTicket {
   asesorExterno: boolean;
   /** Comisión del copropietario: su monto va en "Comisión secundaria". */
   secundaria: boolean;
-  ventaNumero: number | null;
+  ventaNumero: string | null;
   ventaEliminada: boolean;
   cliente: string;
   desarrollo: string | null;
@@ -275,7 +275,7 @@ export interface FinanzasValor {
     manzana: string;
     numeroLote: string;
     ventaId: number;
-    ventaNumero: number;
+    ventaNumero: string;
     cliente: string;
     precio: number;
   }[];
@@ -301,7 +301,7 @@ export interface FinanzasIngresos {
 
 export interface IngresoConcepto {
   ventaId: number;
-  ventaNumero: number;
+  ventaNumero: string;
   cliente: string;
   desarrollo: string;
   concepto: string;
@@ -311,7 +311,7 @@ export interface IngresoConcepto {
 
 export interface IngresoAbono {
   ventaId: number;
-  ventaNumero: number;
+  ventaNumero: string;
   cliente: string;
   fecha: string;
   /** Negativo = contra-asiento de un recibo anulado (en la fecha de la anulación). */

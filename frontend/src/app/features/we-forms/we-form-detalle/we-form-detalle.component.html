@@ -201,7 +201,7 @@
                     [class]="r.clienteNuevo ? 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300' : 'bg-surface-2 text-ink-muted'">
                     {{ r.clienteNuevo ? 'Cliente nuevo' : 'Cliente existente' }}
                   </span>
-                  @if (r.ventaNumero) { <span class="rounded-md bg-we-primary/10 px-2 py-0.5 text-[11px] font-medium text-we-primary dark:text-we-blue-light">Venta #{{ r.ventaNumero }}</span> }
+                  @if (r.ventaNumero) { <span class="rounded-md bg-we-primary/10 px-2 py-0.5 text-[11px] font-medium text-we-primary dark:text-we-blue-light">Venta {{ r.ventaNumero }}</span> }
                 </div>
               </button>
               @if (expandidas().has(r.id)) {

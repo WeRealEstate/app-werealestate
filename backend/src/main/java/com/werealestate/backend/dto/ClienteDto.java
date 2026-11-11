@@ -65,7 +65,8 @@ public record ClienteDto(
 
     public record ClienteVentaDto(
             Long ventaId,
-            Long numero,
+            // "S-12" / "N-5": el número de la venta en su desarrollo.
+            String numero,
             LocalDate fechaVenta,
             List<String> desarrollos,
             List<String> lotes,

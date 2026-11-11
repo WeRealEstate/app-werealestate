@@ -12,7 +12,7 @@ import java.util.List;
  */
 public record AmortizacionDto(
         Long ventaId,
-        Long ventaNumero,
+        String ventaNumero,
         LocalDate fechaVenta,
         // Titular de la venta. clienteNumeros: su número en el desarrollo de la venta ("S-40"; uno por desarrollo si
         // la venta mezcla lotes de dos), vacío si aún no tiene.

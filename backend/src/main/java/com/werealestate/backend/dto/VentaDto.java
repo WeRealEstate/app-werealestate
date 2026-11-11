@@ -8,9 +8,11 @@ import java.util.List;
 
 public record VentaDto(
         Long id,
-        // Posición de la venta ordenada por fecha de venta (la más antigua es la 1), sin importar en qué
-        // orden se registraron; se calcula al consultar (ver VentaRepository.numerosDe), no se guarda.
+        // Número de la venta dentro de su desarrollo (1, 2, 3…, sin saltos) y cómo se ve: "S-12" (SAMAI) o "N-5" (Aldea
+        // Nanuu). desarrolloId = el desarrollo con el que cuenta (el de su primer lote). Ver EtiquetaVenta.
         Long numero,
+        String etiqueta,
+        Long desarrolloId,
         List<VentaLoteDto> lotes,
         // Aportaciones programadas de la venta (ver VentaAportacion); vacía si no las tiene.
         List<VentaAportacionDto> aportaciones,
@@ -51,7 +53,6 @@ public record VentaDto(
 
     public static VentaDto from(
             Venta venta,
-            Long numero,
             List<VentaLoteDto> lotes,
             List<VentaAportacionDto> aportaciones,
             List<ClienteResumenDto> copropietarios,
@@ -59,7 +60,9 @@ public record VentaDto(
         BigDecimal precioVenta = lotes.stream().map(VentaLoteDto::precio).reduce(BigDecimal.ZERO, BigDecimal::add);
         return new VentaDto(
                 venta.getId(),
-                numero,
+                venta.getNumeroDesarrollo() != null ? venta.getNumeroDesarrollo() : venta.getNumeroGlobal(),
+                venta.getEtiqueta(),
+                venta.getDesarrollo() != null ? venta.getDesarrollo().getId() : null,
                 lotes,
                 aportaciones,
                 venta.getCliente(),

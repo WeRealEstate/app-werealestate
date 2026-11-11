@@ -80,11 +80,11 @@ class LoteVentaReglasTest {
     /** El lote queda en la venta con ese número. */
     private void enVenta(Lote lote, long numeroVenta) {
         Venta venta = mock(Venta.class);
-        when(venta.getNumero()).thenReturn(numeroVenta);
+        when(venta.getEtiqueta()).thenReturn("S-" + numeroVenta);
         VentaLote vl = new VentaLote(venta, lote, new BigDecimal("1000"));
         when(ventaLotes.findFirstByLoteIdOrderByIdDesc(lote.getId())).thenReturn(Optional.of(vl));
         when(ventaLotes.existsByLoteId(lote.getId())).thenReturn(true);
-        numeros.add(new Object[] {lote.getId(), numeroVenta});
+        numeros.add(new Object[] {lote.getId(), venta});
     }
 
     private static CambiarEstadoLoteRequest a(EstadoLote estado) {
@@ -97,7 +97,7 @@ class LoteVentaReglasTest {
         enVenta(lote, 7);
 
         ConflictException e = assertThrows(ConflictException.class, () -> service.cambiarEstado(1L, a(EstadoLote.DISPONIBLE)));
-        assertTrue(e.getMessage().contains("venta #7"));
+        assertTrue(e.getMessage().contains("venta S-7"));
         assertEquals(EstadoLote.VENDIDO, lote.getEstado());
         verify(movimientos, never()).save(any());
     }
@@ -120,7 +120,7 @@ class LoteVentaReglasTest {
         assertThrows(ConflictException.class, () -> service.cambiarEstado(1L, a(EstadoLote.APARTADO)));
         LoteDto dto = service.cambiarEstado(1L, a(EstadoLote.VENDIDO));
         assertEquals(EstadoLote.VENDIDO, lote.getEstado());
-        assertEquals(4L, dto.ventaNumero());
+        assertEquals("S-4", dto.ventaNumero());
     }
 
     @Test
@@ -222,7 +222,7 @@ class LoteVentaReglasTest {
 
         List<LoteDto> plano = service.obtenerMapa(10L).lotes();
 
-        assertEquals(5L, plano.get(0).ventaNumero());
+        assertEquals("S-5", plano.get(0).ventaNumero());
         assertTrue(!plano.get(0).sinVentaRegistrada());
         assertNull(plano.get(1).ventaNumero());
         assertTrue(plano.get(1).sinVentaRegistrada());
@@ -235,13 +235,13 @@ class LoteVentaReglasTest {
     private Venta ventaDe(Lote lote, long id, long numero, boolean firmada) {
         Venta venta = mock(Venta.class);
         when(venta.getId()).thenReturn(id);
-        when(venta.getNumero()).thenReturn(numero);
+        when(venta.getEtiqueta()).thenReturn("S-" + numero);
         when(venta.getCliente()).thenReturn("Mary Carmen González Sánchez");
         when(venta.getAsesorNombre()).thenReturn("Yeshu Hernández");
         when(venta.isContratoFirmado()).thenReturn(firmada);
         VentaLote vl = new VentaLote(venta, lote, new BigDecimal("1000"));
         when(ventaLotes.findByLoteId(lote.getId())).thenReturn(List.of(vl));
-        numeros.add(new Object[] {lote.getId(), numero});
+        numeros.add(new Object[] {lote.getId(), venta});
         return venta;
     }
 
@@ -255,9 +255,9 @@ class LoteVentaReglasTest {
 
         assertEquals(EstadoLote.EN_PROCESO_DE_FIRMA, sinFirma.getEstado());
         assertEquals(null, sinFirma.getMontoApartado());
-        assertEquals(18L, dto.ventaNumero());
+        assertEquals("S-18", dto.ventaNumero());
         verify(movimientos).save(argThat(m -> m.getEstadoNuevo() == EstadoLote.EN_PROCESO_DE_FIRMA
-                && "Alineado con la venta #18".equals(m.getNota())
+                && "Alineado con la venta S-18".equals(m.getNota())
                 && "Mary Carmen González Sánchez".equals(m.getNombreCliente())));
 
         Lote firmado = lote(2, EstadoLote.DISPONIBLE);

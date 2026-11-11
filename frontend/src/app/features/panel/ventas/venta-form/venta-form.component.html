@@ -237,7 +237,7 @@
     <app-copropietarios-editor [(copropietarios)]="copropietarios" [principalId]="clienteElegido()?.id ?? null" />
 
     <div class="max-w-md">
-      <app-numero-venta [(numero)]="numeroVenta" />
+      <app-numero-venta [(numero)]="numeroVenta" [desarrolloId]="desarrolloDeNumeracion()?.id ?? null" [prefijo]="prefijoNumeracion()" />
     </div>
 
     <div class="grid grid-cols-2 gap-4">

@@ -51,8 +51,12 @@ export const MODALIDAD_PAGO_LABELS: Record<ModalidadPago, string> = {
 
 export interface Venta {
   id: number;
-  /** Número de venta: automático (el siguiente, mayor + 1) o escrito a mano al registrarla; se puede cambiar. */
+  /** Número de la venta dentro de su desarrollo: automático (el siguiente, mayor + 1 del desarrollo) o escrito a mano al
+   * registrarla; se puede cambiar. Lo que se muestra y va en la dirección es `etiqueta` ("S-12", "N-5"). */
   numero: number;
+  etiqueta: string;
+  /** El desarrollo con el que cuenta la venta (el de su primer lote). */
+  desarrolloId: number | null;
   lotes: VentaLote[];
   /** Vacía si la venta no se pactó con aportaciones. */
   aportaciones: VentaAportacion[];

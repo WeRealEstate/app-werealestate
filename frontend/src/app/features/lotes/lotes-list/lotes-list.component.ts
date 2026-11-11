@@ -370,7 +370,7 @@ export class LotesListComponent {
       const actualizado = await this.lotesService.alinearConVenta(lote.id);
       this.lotes.update((lista) => lista.map((l) => (l.id === actualizado.id ? actualizado : l)));
       this.toast.success(
-        `Mz ${lote.manzana} / Lote ${lote.numeroLote} quedó ${this.estadoLabels[actualizado.estado]}, igual que su venta #${lote.ventaNumero}.`,
+        `Mz ${lote.manzana} / Lote ${lote.numeroLote} quedó ${this.estadoLabels[actualizado.estado]}, igual que su venta ${lote.ventaNumero}.`,
       );
     } catch (error) {
       this.toast.error(this.mensajeError(error, 'No se pudo alinear el lote con su venta.'));

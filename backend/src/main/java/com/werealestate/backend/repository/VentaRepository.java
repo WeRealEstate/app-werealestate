@@ -12,6 +12,12 @@ public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecific
 
     Optional<Venta> findByNumero(Long numero);
 
+    /** La venta con ese número dentro de un desarrollo ("S-12" = SAMAI, 12). */
+    Optional<Venta> findByDesarrolloIdAndNumeroDesarrollo(Long desarrolloId, Long numeroDesarrollo);
+
+    /** Igual, buscando el desarrollo por su nombre (para abrir una venta desde su dirección /panel/ventas/S-12). */
+    Optional<Venta> findByDesarrolloNombreAndNumeroDesarrollo(String desarrollo, Long numeroDesarrollo);
+
     /** La venta que ya lleva ese número de contrato (sin importar mayúsculas), si hay alguna. */
     Optional<Venta> findFirstByNumeroContratoIgnoreCase(String numeroContrato);
 
@@ -46,6 +52,37 @@ public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecific
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = "update venta set numero = :numero where id = :id", nativeQuery = true)
     int fijarNumero(@Param("id") long id, @Param("numero") long numero);
+
+    // ---- Numeración por desarrollo (V77): lo mismo que el número global de arriba, acotado a un desarrollo.
+
+    /** El número más alto de un desarrollo (0 si aún no tiene ventas): el siguiente automático es este + 1. */
+    @Query("select coalesce(max(v.numeroDesarrollo), 0) from Venta v where v.desarrollo.id = :desarrolloId")
+    long maxNumeroDesarrollo(@Param("desarrolloId") long desarrolloId);
+
+    @Query(
+            value = "select numero_desarrollo from venta where desarrollo_id = :desarrolloId and numero_desarrollo >= :desde order by numero_desarrollo",
+            nativeQuery = true)
+    java.util.List<Long> numerosDesarrolloDesde(@Param("desarrolloId") long desarrolloId, @Param("desde") long desde);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(
+            value = "update venta set numero_desarrollo = numero_desarrollo + 1 where desarrollo_id = :desarrolloId "
+                    + "and numero_desarrollo between :desde and :hasta and id <> :exceptoId",
+            nativeQuery = true)
+    int recorrerDesarrollo(
+            @Param("desarrolloId") long desarrolloId, @Param("desde") long desde, @Param("hasta") long hasta,
+            @Param("exceptoId") long exceptoId);
+
+    /** Resta 1 a las ventas de ese desarrollo posteriores a la eliminada: la numeración no queda con hueco. */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(
+            value = "update venta set numero_desarrollo = numero_desarrollo - 1 where desarrollo_id = :desarrolloId and numero_desarrollo > :desde",
+            nativeQuery = true)
+    int bajarDesarrolloDesde(@Param("desarrolloId") long desarrolloId, @Param("desde") long desde);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = "update venta set numero_desarrollo = :numero where id = :id", nativeQuery = true)
+    int fijarNumeroDesarrollo(@Param("id") long id, @Param("numero") long numero);
 
     boolean existsByUsuarioAsesorId(Long usuarioId);
 

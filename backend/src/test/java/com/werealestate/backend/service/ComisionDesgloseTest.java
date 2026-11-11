@@ -99,7 +99,8 @@ class ComisionDesgloseTest {
     private Venta venta(long id, boolean contratoFirmado, String... desarrollosDeLaVenta) {
         Venta v = mock(Venta.class);
         when(v.getId()).thenReturn(id);
-        when(v.getNumero()).thenReturn(id);
+        when(v.getNumeroGlobal()).thenReturn(id);
+        when(v.getEtiqueta()).thenReturn("S-" + id);
         when(v.isContratoFirmado()).thenReturn(contratoFirmado);
         for (String d : desarrollosDeLaVenta) desarrollos.add(new Object[] {id, d});
         return v;

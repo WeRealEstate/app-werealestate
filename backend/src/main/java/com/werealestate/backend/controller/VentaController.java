@@ -66,8 +66,9 @@ public class VentaController {
      * y cuántas se recorrerían: para avisarlo en el formulario antes de guardar. */
     @GetMapping("/numeracion")
     public NumeracionVentaDto numeracion(
-            @RequestParam(required = false) Long numero, @RequestParam(required = false) Long excluirId) {
-        return ventaService.consultarNumeracion(numero, excluirId);
+            @RequestParam(required = false) Long numero, @RequestParam(required = false) Long excluirId,
+            @RequestParam(required = false) Long desarrolloId) {
+        return ventaService.consultarNumeracion(numero, excluirId, desarrolloId);
     }
 
     @GetMapping("/samai-campestre/lotes-vendidos")
@@ -77,7 +78,7 @@ public class VentaController {
 
     /** Abrir una venta por su número visible (/panel/ventas/11), ver VentaService.obtenerPorNumero. */
     @GetMapping("/por-numero/{numero}")
-    public VentaDto obtenerPorNumero(@PathVariable Long numero) {
+    public VentaDto obtenerPorNumero(@PathVariable String numero) {
         return ventaService.obtenerPorNumero(numero);
     }
 

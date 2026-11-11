@@ -38,6 +38,14 @@ public class Venta {
     @Column(name = "numero", updatable = false, nullable = false)
     private Long numero;
 
+    /** El desarrollo con el que cuenta la venta (el de su primer lote) y su número dentro de él: "S-12", "N-5". */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "desarrollo_id")
+    private Desarrollo desarrollo;
+
+    @Column(name = "numero_desarrollo", updatable = false)
+    private Long numeroDesarrollo;
+
     /** Nombre del cliente tal como se vio al registrar la venta (se actualiza si se edita el nombre del
      * cliente ligado); sirve para listas y búsquedas sin cargar la ficha. */
     @Column(nullable = false, length = 200)
@@ -274,8 +282,27 @@ public class Venta {
         this.numero = numero;
     }
 
-    public Long getNumero() {
+    /** El número global de siempre: ya no se muestra; queda como respaldo interno (ver V77). */
+    public Long getNumeroGlobal() {
         return numero;
+    }
+
+    public Desarrollo getDesarrollo() {
+        return desarrollo;
+    }
+
+    public Long getNumeroDesarrollo() {
+        return numeroDesarrollo;
+    }
+
+    public void numerar(Desarrollo desarrollo, Long numeroDesarrollo) {
+        this.desarrollo = desarrollo;
+        this.numeroDesarrollo = numeroDesarrollo;
+    }
+
+    /** El número que ve la gente: "S-12" (ver {@link EtiquetaVenta}). */
+    public String getEtiqueta() {
+        return EtiquetaVenta.de(desarrollo, numeroDesarrollo, numero);
     }
 
     public Cliente getClienteRef() {

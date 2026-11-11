@@ -31,6 +31,9 @@ public class VentaComision {
     @Column(name = "venta_numero")
     private Long ventaNumero;
 
+    @Column(name = "venta_etiqueta", length = 20)
+    private String ventaEtiqueta;
+
     @Column(nullable = false, length = 200)
     private String cliente;
 
@@ -123,9 +126,16 @@ public class VentaComision {
     }
 
     /** La venta se eliminó: la comisión se queda en el historial con el número y cliente que tenía. */
-    public void desvincularVenta(Long numeroDeLaVenta) {
+    public void desvincularVenta(Long numeroDeLaVenta, String etiquetaDeLaVenta) {
         this.ventaNumero = numeroDeLaVenta;
+        this.ventaEtiqueta = etiquetaDeLaVenta;
         this.venta = null;
+    }
+
+    /** El número de la venta como se mostraba ("S-12"); las comisiones de ventas eliminadas antes de V77 solo tienen el
+     * número global viejo. */
+    public String getVentaEtiqueta() {
+        return ventaEtiqueta != null ? ventaEtiqueta : (ventaNumero != null ? String.valueOf(ventaNumero) : null);
     }
 
     public Long getVentaNumero() {

@@ -134,7 +134,7 @@
                               <li class="flex justify-between gap-3">
                                 <span class="text-ink-muted">
                                   {{ fecha(c.fechaEsperada) }} ·
-                                  <a [routerLink]="['/panel/ventas', c.ventaNumero]" class="text-we-primary hover:underline">#{{ c.ventaNumero }}</a>
+                                  <a [routerLink]="['/panel/ventas', c.ventaNumero]" class="text-we-primary hover:underline">{{ c.ventaNumero }}</a>
                                   {{ c.cliente }} · {{ c.concepto }}
                                 </span>
                                 <span class="font-medium text-ink">${{ money(c.esperado) }}</span>
@@ -153,7 +153,7 @@
                               <li class="flex justify-between gap-3">
                                 <span class="text-ink-muted">
                                   {{ fecha(a.fecha) }} ·
-                                  <a [routerLink]="['/panel/ventas', a.ventaNumero]" class="text-we-primary hover:underline">#{{ a.ventaNumero }}</a>
+                                  <a [routerLink]="['/panel/ventas', a.ventaNumero]" class="text-we-primary hover:underline">{{ a.ventaNumero }}</a>
                                   {{ a.cliente }}
                                   @if (a.monto < 0) {
                                     <span class="ml-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-500/15 dark:text-red-300">{{ a.concepto }}</span>
@@ -174,7 +174,7 @@
                                 <span class="text-ink-muted">
                                   {{ fecha(a.fecha) }} ·
                                   @if (a.ventaId) {
-                                    <a [routerLink]="['/panel/ventas', a.ventaNumero]" class="text-we-primary hover:underline">#{{ a.ventaNumero }}</a>
+                                    <a [routerLink]="['/panel/ventas', a.ventaNumero]" class="text-we-primary hover:underline">{{ a.ventaNumero }}</a>
                                   } @else {
                                     <span>Venta eliminada</span>
                                   }

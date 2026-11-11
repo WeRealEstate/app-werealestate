@@ -182,7 +182,7 @@
                       class="inline-flex shrink-0 whitespace-nowrap rounded-full bg-we-primary/10 px-2 py-0.5 text-[11px] font-semibold text-we-primary hover:underline dark:bg-we-blue-light/15 dark:text-we-blue-light"
                       title="Ver la venta de este lote"
                     >
-                      Venta #{{ lote.ventaNumero }}
+                      Venta {{ lote.ventaNumero }}
                     </a>
                   }
                   @if (lote.sinVentaRegistrada) {
@@ -209,7 +209,7 @@
                       class="rounded-full bg-we-primary px-2.5 py-1 font-semibold text-white hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150 disabled:opacity-60"
                       data-testid="alinear-con-venta"
                     >
-                      {{ alineando() === lote.id ? 'Alineando…' : 'Alinear con la venta #' + lote.ventaNumero }}
+                      {{ alineando() === lote.id ? 'Alineando…' : 'Alinear con la venta ' + lote.ventaNumero }}
                     </button>
                   </div>
                 }

@@ -312,7 +312,7 @@
                   </tr>
                   @for (i of g.items; track i.comision.id) {
                     <tr>
-                      <td class="py-3 pl-6 pr-3 text-ink-muted">#{{ i.comision.ventaNumero ?? '—' }}</td>
+                      <td class="py-3 pl-6 pr-3 text-ink-muted">{{ i.comision.ventaNumero ?? '—' }}</td>
                       <td class="px-3 py-3 font-medium text-ink">
                         {{ i.comision.cliente }}
                         @if (i.comision.retrasada) {
@@ -343,7 +343,7 @@
                                generado al corte menos lo ya pagado. En celular, un renglón por abono en lugar de la tabla. -->
                           <div class="max-w-3xl" data-testid="abonos-sabado">
                             <table class="hidden w-full table-fixed text-xs sm:table">
-                              <caption class="sr-only">Cálculo de la comisión de la venta #{{ i.comision.ventaNumero ?? '—' }}</caption>
+                              <caption class="sr-only">Cálculo de la comisión de la venta {{ i.comision.ventaNumero ?? '—' }}</caption>
                               <colgroup>
                                 <col class="w-24" />
                                 <col />
@@ -501,7 +501,7 @@
                 <tr class="hover:bg-surface-2 transition-colors duration-150">
                   <td data-label="Venta" class="px-3 py-3">
                     @if (c.ventaId !== null && c.ventaNumero !== null) {
-                      <a [routerLink]="['/panel/ventas', c.ventaNumero]" class="text-we-primary hover:underline">#{{ c.ventaNumero }}</a>
+                      <a [routerLink]="['/panel/ventas', c.ventaNumero]" class="text-we-primary hover:underline">{{ c.ventaNumero }}</a>
                     } @else {
                       <span class="text-xs text-ink-muted">Venta eliminada</span>
                     }

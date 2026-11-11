@@ -96,7 +96,7 @@
             <td class="px-3 py-3 text-ink-muted">{{ l.desarrollo }}</td>
             <td class="px-3 py-3 text-ink-muted">{{ l.manzana }}</td>
             <td class="px-3 py-3 text-ink">{{ l.numeroLote }}</td>
-            <td class="px-3 py-3"><a [routerLink]="['/panel/ventas', l.ventaNumero]" class="text-we-primary hover:underline">#{{ l.ventaNumero }}</a></td>
+            <td class="px-3 py-3"><a [routerLink]="['/panel/ventas', l.ventaNumero]" class="text-we-primary hover:underline">{{ l.ventaNumero }}</a></td>
             <td class="px-3 py-3 text-ink">{{ l.cliente }}</td>
             <td class="px-3 py-3 text-right font-medium text-ink">${{ money(l.precio) }}</td>
           </tr>

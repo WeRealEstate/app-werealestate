@@ -186,7 +186,7 @@ public class NotificacionService {
         for (VentaLote vl : ventaLoteRepository.findConLoteFueraDeEstadoDeVenta()) {
             Lote lote = vl.getLote();
             notificaciones.add(NotificacionDto.loteVentaDesalineada(
-                    nombreLote(lote) + " está en la venta #" + vl.getVenta().getNumero() + " pero aparece como "
+                    nombreLote(lote) + " está en la venta " + vl.getVenta().getEtiqueta() + " pero aparece como "
                             + etiqueta(lote.getEstado()) + ". Debe estar Vendido (contrato firmado) o En proceso de firma.",
                     lote.getId(),
                     vl.getVenta().getId(),
@@ -292,7 +292,7 @@ public class NotificacionService {
             java.math.BigDecimal total = lotes.stream().map(VentaLote::getPrecio).reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
             String por = v.getRegistradaPor() != null ? " Registrada por " + v.getRegistradaPor().getNombre() + "." : "";
             notificaciones.add(NotificacionDto.ventaNueva(
-                    "Nueva venta #" + v.getNumero() + ": " + v.getCliente() + " · " + detalle + " · $"
+                    "Nueva venta " + v.getEtiqueta() + ": " + v.getCliente() + " · " + detalle + " · $"
                             + String.format("%,.2f", total) + " · asesor " + v.getAsesorNombre() + "." + por,
                     v.getId(),
                     firma));
@@ -333,7 +333,7 @@ public class NotificacionService {
             notificaciones.add(NotificacionDto.registroVentaNuevo(
                     "Nueva venta registrada por " + r.getAsesorNombre() + ": " + cliente + (r.isClienteNuevo() ? " (cliente nuevo)" : "")
                             + (lotes.isEmpty() ? "" : " · " + lotes)
-                            + (v != null ? " · venta #" + v.getNumero() : "") + ".",
+                            + (v != null ? " · venta " + v.getEtiqueta() : "") + ".",
                     r.getId(),
                     v != null ? v.getId() : null,
                     firma));

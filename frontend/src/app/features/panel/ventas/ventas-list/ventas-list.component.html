@@ -67,10 +67,10 @@
     <!-- Teléfono: tarjetas en vez de tabla -->
     <div class="mt-3 space-y-3 md:hidden">
       @for (v of s.ventas; track v.id) {
-        <a [routerLink]="['/panel/ventas', v.numero]" class="block rounded-xl border border-border bg-surface p-4 active:scale-[0.99] transition-transform duration-150">
+        <a [routerLink]="['/panel/ventas', v.etiqueta]" class="block rounded-xl border border-border bg-surface p-4 active:scale-[0.99] transition-transform duration-150">
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
-              <p class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Venta {{ v.numero }} · {{ v.fechaVenta | date: 'dd/MM/yyyy' }}</p>
+              <p class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Venta {{ v.etiqueta }} · {{ v.fechaVenta | date: 'dd/MM/yyyy' }}</p>
               <p class="mt-0.5 truncate font-heading text-base font-semibold text-ink">{{ v.cliente }}@if (v.copropietarios.length > 0) { <span class="ml-1 rounded-full bg-surface-2 px-1.5 py-0.5 align-middle text-[11px] font-semibold text-ink-muted">+{{ v.copropietarios.length }}</span> }</p>
             </div>
             <span class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold" [class]="v.saldoPendiente > 0 ? 'bg-surface-2 text-ink' : 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300'">
@@ -121,7 +121,7 @@
         <tbody class="divide-y divide-border bg-surface">
           @for (v of s.ventas; track v.id; let i = $index) {
             <tr class="stagger-item hover:bg-surface-2 transition-colors duration-150" [style.animation-delay.ms]="i < 8 ? i * 40 : 0">
-              <td class="px-4 py-3 font-semibold text-ink">{{ v.numero }}</td>
+              <td class="px-4 py-3 font-semibold text-ink">{{ v.etiqueta }}</td>
               <td class="px-4 py-3 text-ink-muted">{{ v.fechaVenta | date: 'dd/MM/yyyy' }}</td>
               <td class="px-4 py-3 font-medium text-ink">{{ v.cliente }}@if (v.copropietarios.length > 0) { <span class="ml-1 rounded-full bg-surface-2 px-1.5 py-0.5 text-[11px] font-semibold text-ink-muted" title="Copropiedad">+{{ v.copropietarios.length }}</span> }</td>
               <td class="px-4 py-3 text-ink-muted">{{ v.asesor.nombre }}</td>
@@ -139,7 +139,7 @@
               </td>
               <td class="px-4 py-3 text-right">
                 <a
-                  [routerLink]="['/panel/ventas', v.numero]"
+                  [routerLink]="['/panel/ventas', v.etiqueta]"
                   aria-label="Ver venta"
                   class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-2 hover:text-we-blue-light
                          transition-colors duration-150 active:scale-90"

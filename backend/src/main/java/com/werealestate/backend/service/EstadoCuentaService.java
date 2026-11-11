@@ -120,7 +120,7 @@ public class EstadoCuentaService {
 
         return new AmortizacionDto(
                 venta.getId(),
-                venta.getNumero(),
+                venta.getEtiqueta(),
                 venta.getFechaVenta(),
                 titular != null ? titular.getId() : null,
                 titular != null ? titular.nombreCompleto() : venta.getCliente(),

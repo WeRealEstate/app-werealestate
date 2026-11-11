@@ -279,6 +279,18 @@ export class VentaFormComponent {
 
   /** El asesor elegido arriba, como señal (para validar que el copropietario sea otra persona). */
   readonly asesorSeleccionado = toSignal(this.form.controls.asesor.valueChanges, { initialValue: '' });
+  private readonly desarrolloIdElegido = toSignal(this.form.controls.desarrolloId.valueChanges, { initialValue: null as number | null });
+  /** El número de la venta cuenta dentro del desarrollo de su primer lote (o, mientras no haya lotes, del elegido). */
+  readonly desarrolloDeNumeracion = computed<Desarrollo | null>(() => {
+    const primero = this.lotesAgregados()[0]?.lote.desarrollo;
+    if (primero) return primero;
+    const id = this.desarrolloIdElegido();
+    return this.desarrollos().find((d) => d.id === id) ?? null;
+  });
+  readonly prefijoNumeracion = computed(() => {
+    const n = (this.desarrolloDeNumeracion()?.nombre ?? '').toLowerCase();
+    return n.includes('samai') ? 'S-' : n.includes('nanuu') ? 'N-' : '';
+  });
 
   /** Mini-formulario para agregar un lote a la lista (separado del form principal: no se envía
    * directo, cada "Agregar" lo empuja a lotesAgregados). */
@@ -527,7 +539,7 @@ export class VentaFormComponent {
     await this.onDesarrolloChange(String(desarrolloId));
     const enOtraVenta = this.lotesDelDesarrollo().find((l) => l.id === loteId && l.ventaNumero != null);
     if (enOtraVenta) {
-      this.errorMessage.set(`Ese lote ya está en la venta #${enOtraVenta.ventaNumero}.`);
+      this.errorMessage.set(`Ese lote ya está en la venta ${enOtraVenta.ventaNumero}.`);
       return;
     }
     if (!this.lotesDisponiblesParaAgregar().some((l) => l.id === loteId)) return;
@@ -644,7 +656,7 @@ export class VentaFormComponent {
             'La venta se registró, pero no se pudo aplicar el depósito de apartado como abono. Regístralo a mano en la venta.',
           );
         }
-        await this.router.navigate(['/panel/ventas', venta.numero]);
+        await this.router.navigate(['/panel/ventas', venta.etiqueta]);
         return;
       }
 

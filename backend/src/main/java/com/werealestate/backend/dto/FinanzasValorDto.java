@@ -21,7 +21,7 @@ public record FinanzasValorDto(
             String manzana,
             String numeroLote,
             Long ventaId,
-            Long ventaNumero,
+            String ventaNumero,
             String cliente,
             BigDecimal precio) {
     }

@@ -11,7 +11,7 @@ public record ComisionDto(
         Long id,
         // null cuando la venta ya no existe (ventaEliminada): la comisión se queda en el historial.
         Long ventaId,
-        Long ventaNumero,
+        String ventaNumero,
         boolean ventaEliminada,
         String cliente,
         String asesorNombre,

@@ -481,7 +481,7 @@ public class WeFormService {
                 r.getCliente() != null ? r.getCliente().nombreCompleto() : null,
                 r.isClienteNuevo(),
                 r.getVenta() != null ? r.getVenta().getId() : null,
-                r.getVenta() != null ? r.getVenta().getNumero() : null,
+                r.getVenta() != null ? r.getVenta().getEtiqueta() : null,
                 items.stream()
                         .map(i -> new WeFormDtos.ItemRespuesta(
                                 i.getId(), i.getPreguntaTitulo(), i.getPreguntaTipo(), i.getValor(),

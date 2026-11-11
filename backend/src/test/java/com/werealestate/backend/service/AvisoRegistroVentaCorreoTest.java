@@ -29,7 +29,7 @@ class AvisoRegistroVentaCorreoTest {
 
     private static final AvisoRegistroVentaCorreo.RegistroDeVentaRecibido REGISTRO =
             new AvisoRegistroVentaCorreo.RegistroDeVentaRecibido("Ana López", "Beto Externo", "SAMAI Campestre",
-                    "Registro SAMAI", 7L, List.of("Manzana 3, Lote 1", "Manzana 3, Lote 2"));
+                    "Registro SAMAI", "S-7", List.of("Manzana 3, Lote 1", "Manzana 3, Lote 2"));
 
     private JavaMailSender sender;
     private ObjectProvider<JavaMailSender> proveedor;
@@ -80,14 +80,14 @@ class AvisoRegistroVentaCorreoTest {
         assertTrue(texto.contains("Asesor: Beto Externo"));
         assertTrue(texto.contains("Desarrollo: SAMAI Campestre"));
         assertTrue(texto.contains("Lotes: Manzana 3, Lote 1; Manzana 3, Lote 2"));
-        assertTrue(texto.contains("Venta: #7"));
+        assertTrue(texto.contains("Venta: S-7"));
         assertTrue(texto.contains("Formulario: Registro SAMAI"));
     }
 
     @Test
     void unSoloLoteDiceLote() {
         var unLote = new AvisoRegistroVentaCorreo.RegistroDeVentaRecibido(
-                "Ana", "Beto", "Aldea Nanuu", "Registro Nanuu", 3L, List.of("Manzana 1, Lote 9"));
+                "Ana", "Beto", "Aldea Nanuu", "Registro Nanuu", "N-3", List.of("Manzana 1, Lote 9"));
 
         assertTrue(AvisoRegistroVentaCorreo.texto(unLote).contains("Lote: Manzana 1, Lote 9"));
         assertTrue(AvisoRegistroVentaCorreo.html(unLote).contains(">Lote<"));
@@ -96,7 +96,7 @@ class AvisoRegistroVentaCorreoTest {
     @Test
     void elHtmlNoInterpretaLoQueEscribioElAsesor() {
         var conEtiquetas = new AvisoRegistroVentaCorreo.RegistroDeVentaRecibido(
-                "Ana <script>alert(1)</script>", "Beto & Co", "SAMAI Campestre", "Registro <b>", 8L, List.of("Manzana 1, Lote 1"));
+                "Ana <script>alert(1)</script>", "Beto & Co", "SAMAI Campestre", "Registro <b>", "S-8", List.of("Manzana 1, Lote 1"));
 
         String html = AvisoRegistroVentaCorreo.html(conEtiquetas);
         assertFalse(html.contains("<script>"));

@@ -89,7 +89,7 @@ public class FinanzasService {
                     vl.getLote().getManzana(),
                     vl.getLote().getNumeroLote(),
                     venta.getId(),
-                    venta.getNumero(),
+                    venta.getEtiqueta(),
                     venta.getCliente(),
                     vl.getPrecio()));
         }
@@ -198,14 +198,14 @@ public class FinanzasService {
             for (CalendarioPagos.Concepto c : calendario(datos, venta)) {
                 if (YearMonth.from(c.fecha()).equals(ym)) {
                     esperados.add(new FinanzasIngresosDto.Concepto(
-                            venta.getId(), venta.getNumero(), venta.getCliente(), desarrollo, descripcion(c, venta),
+                            venta.getId(), venta.getEtiqueta(), venta.getCliente(), desarrollo, descripcion(c, venta),
                             c.fecha(), c.monto()));
                 }
             }
             for (Movimiento m : datos.movimientosDe(venta.getId())) {
                 if (YearMonth.from(m.fecha()).equals(ym)) {
                     recibidos.add(new FinanzasIngresosDto.Abono(
-                            venta.getId(), venta.getNumero(), venta.getCliente(), m.fecha(), m.monto(),
+                            venta.getId(), venta.getEtiqueta(), venta.getCliente(), m.fecha(), m.monto(),
                             m.anulacion() ? "Anulación de recibo" : "Abono"));
                 }
             }
@@ -317,12 +317,12 @@ public class FinanzasService {
     }
 
     /** Dinero que un asesor devolvió de una comisión ya entregada. */
-    private record Devolucion(Long ventaId, Long ventaNumero, String cliente, LocalDate fecha, BigDecimal monto) {
+    private record Devolucion(Long ventaId, String ventaNumero, String cliente, LocalDate fecha, BigDecimal monto) {
         static Devolucion de(com.werealestate.backend.model.VentaComisionDevolucion d) {
             var c = d.getComision();
             return new Devolucion(
                     c.getVenta() != null ? c.getVenta().getId() : null,
-                    c.getVenta() != null ? c.getVenta().getNumero() : c.getVentaNumero(),
+                    c.getVenta() != null ? c.getVenta().getEtiqueta() : c.getVentaEtiqueta(),
                     c.getCliente(),
                     d.getFecha(),
                     d.getMonto());

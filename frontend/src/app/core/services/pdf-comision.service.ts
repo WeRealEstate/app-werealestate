@@ -546,9 +546,10 @@ function porcentaje(valor: number): string {
   return `${Number(valor.toFixed(2))}%`;
 }
 
-/** Como en el diseño: "#0148". */
-function numeroVenta(numero: number): string {
-  return `#${String(numero).padStart(4, '0')}`;
+/** El número de la venta como se muestra ("S-12", "N-5"); en comisiones de ventas eliminadas antes de la numeración por
+ * desarrollo puede ser solo un número ("148"), que se muestra como "#0148". */
+function numeroVenta(numero: string): string {
+  return /^\d+$/.test(numero) ? `#${numero.padStart(4, '0')}` : numero;
 }
 
 function partesFecha(iso: string): [number, number, number] {

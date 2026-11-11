@@ -86,14 +86,14 @@
             <tbody class="divide-y divide-border">
               @for (v of c.ventas; track v.ventaId) {
                 <tr>
-                  <td class="py-2 pr-3"><a [routerLink]="['/panel/ventas', v.numero]" class="font-medium text-we-primary hover:underline">#{{ v.numero }}</a>@if (v.copropietario) { <span class="ml-1 rounded-full bg-surface-2 px-1.5 py-0.5 text-[11px] font-semibold text-ink-muted">Copropietario</span> }</td>
+                  <td class="py-2 pr-3"><a [routerLink]="['/panel/ventas', v.numero]" class="font-medium text-we-primary hover:underline">{{ v.numero }}</a>@if (v.copropietario) { <span class="ml-1 rounded-full bg-surface-2 px-1.5 py-0.5 text-[11px] font-semibold text-ink-muted">Copropietario</span> }</td>
                   <td class="py-2 pr-3 text-ink-muted">{{ fecha(v.fechaVenta) }}</td>
                   <td class="py-2 pr-3" [attr.data-testid]="'contrato-venta-' + v.ventaId">
                     @if (editandoContratoDe() === v.ventaId) {
                       <form (submit)="$event.preventDefault(); guardarContrato(v)" class="flex items-center gap-1">
                         <input
                           type="text" maxlength="50" autocomplete="off" placeholder="Sin número" data-testid="contrato-input"
-                          [attr.aria-label]="'Número de contrato de la venta #' + v.numero"
+                          [attr.aria-label]="'Número de contrato de la venta ' + v.numero"
                           [ngModel]="contratoBorrador()" [ngModelOptions]="{ standalone: true }"
                           (ngModelChange)="contratoBorrador.set($event); errorContrato.set(null)" (keydown.escape)="cancelarContrato()"
                           class="w-36 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
@@ -108,7 +108,7 @@
                       }
                     } @else {
                       <span class="text-ink">{{ v.numeroContrato || '—' }}</span>
-                      <button type="button" (click)="editarContrato(v)" data-testid="contrato-editar" class="ml-0.5 inline-flex align-middle rounded p-1 text-ink-muted hover:bg-surface-2 hover:text-ink" [attr.aria-label]="'Editar el número de contrato de la venta #' + v.numero" title="Editar el número de contrato">
+                      <button type="button" (click)="editarContrato(v)" data-testid="contrato-editar" class="ml-0.5 inline-flex align-middle rounded p-1 text-ink-muted hover:bg-surface-2 hover:text-ink" [attr.aria-label]="'Editar el número de contrato de la venta ' + v.numero" title="Editar el número de contrato">
                         <svg lucidePencil [size]="14" aria-hidden="true"></svg>
                       </button>
                     }

@@ -254,13 +254,13 @@ public class LoteService {
         if (lotes.isEmpty() || !puedeVerReservadosWe()) {
             return lotes;
         }
-        Map<Long, Long> numeroPorLote = new HashMap<>();
+        Map<Long, String> numeroPorLote = new HashMap<>();
         for (Object[] fila : ventaLoteRepository.numeroDeVentaPorLote(lotes.stream().map(LoteDto::id).toList())) {
-            numeroPorLote.put((Long) fila[0], (Long) fila[1]);
+            numeroPorLote.put((Long) fila[0], ((Venta) fila[1]).getEtiqueta());
         }
         return lotes.stream()
                 .map(l -> {
-                    Long numero = numeroPorLote.get(l.id());
+                    String numero = numeroPorLote.get(l.id());
                     boolean sinVenta = l.estado() == EstadoLote.VENDIDO && numero == null;
                     return numero == null && !sinVenta ? l : l.conVenta(sinVenta, numero);
                 })
@@ -612,8 +612,8 @@ public class LoteService {
      * estados solo se llega registrando la venta, que es la que los pone. Un lote con venta que quedó en otro estado
      * (datos de antes de esta regla) solo puede volver a uno de venta. */
     private void validarContraVenta(Lote lote, EstadoLote nuevoEstado, Usuario actual) {
-        Long numeroVenta = ventaLoteRepository.findFirstByLoteIdOrderByIdDesc(lote.getId())
-                .map(vl -> vl.getVenta().getNumero())
+        String numeroVenta = ventaLoteRepository.findFirstByLoteIdOrderByIdDesc(lote.getId())
+                .map(vl -> vl.getVenta().getEtiqueta())
                 .orElse(null);
         boolean adminOLider = actual.getRol() == Role.ADMIN || actual.getRol() == Role.LIDER_AREA;
         if (numeroVenta != null) {
@@ -621,12 +621,12 @@ public class LoteService {
                 throw new ConflictException("Este lote ya tiene una venta registrada: pide a administración que lo revise");
             }
             if (ESTADOS_DE_VENTA.contains(lote.getEstado())) {
-                throw new ConflictException("Este lote está en la venta #" + numeroVenta + ": su estado lo manda la venta "
+                throw new ConflictException("Este lote está en la venta " + numeroVenta + ": su estado lo manda la venta "
                         + "(Vendido con el contrato firmado, En proceso de firma sin firmar). Para liberarlo, elimina la venta.");
             }
             if (!ESTADOS_DE_VENTA.contains(nuevoEstado)) {
                 throw new ConflictException(
-                        "Este lote está en la venta #" + numeroVenta + ": solo puede pasar a Vendido o En proceso de firma");
+                        "Este lote está en la venta " + numeroVenta + ": solo puede pasar a Vendido o En proceso de firma");
             }
             return;
         }
@@ -871,7 +871,7 @@ public class LoteService {
                         .orElseThrow());
         EstadoLote estado = venta.isContratoFirmado() ? EstadoLote.VENDIDO : EstadoLote.EN_PROCESO_DE_FIRMA;
         cambiarEstadoConHistorial(lote, estado, actual, venta.getAsesorNombre(), venta.getCliente(), null,
-                "Alineado con la venta #" + venta.getNumero());
+                "Alineado con la venta " + venta.getEtiqueta());
         lote.setFechaExpiraApartado(null);
         lote.setMontoApartado(null);
         return conVentas(lote);

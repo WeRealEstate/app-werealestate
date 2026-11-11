@@ -50,8 +50,9 @@ export class VentasService {
   }
 
   /** Siguiente número automático y, si `numero` ya lo tiene otra venta (distinta de `excluirId`), cuál y cuántas se recorrerían. */
-  numeracion(numero?: number | null, excluirId?: number | null): Promise<NumeracionVenta> {
+  numeracion(numero?: number | null, excluirId?: number | null, desarrolloId?: number | null): Promise<NumeracionVenta> {
     let params = new HttpParams();
+    if (desarrolloId) params = params.set('desarrolloId', desarrolloId);
     if (numero) params = params.set('numero', numero);
     if (excluirId) params = params.set('excluirId', excluirId);
     return firstValueFrom(this.http.get<NumeracionVenta>(`${this.baseUrl}/numeracion`, { params }));
@@ -66,11 +67,10 @@ export class VentasService {
     return firstValueFrom(this.http.get<number>(`${this.baseUrl}/samai-campestre/lotes-vendidos`));
   }
 
-  /** Abrir una venta por su número visible (/panel/ventas/11). El número puede cambiar si alguien lo
-   * edita o recorre, así que solo sirve para encontrarla: lo que escribe (abonos, modificar) usa el `id`
-   * de la venta devuelta. */
-  obtenerPorNumero(numero: number): Promise<Venta> {
-    return firstValueFrom(this.http.get<Venta>(`${this.baseUrl}/por-numero/${numero}`));
+  /** Abrir una venta por su número visible (/panel/ventas/S-12). El número puede cambiar si alguien lo edita o
+   * recorre, así que solo sirve para encontrarla: lo que escribe (abonos, modificar) usa el `id` de la venta devuelta. */
+  obtenerPorNumero(etiqueta: string): Promise<Venta> {
+    return firstValueFrom(this.http.get<Venta>(`${this.baseUrl}/por-numero/${encodeURIComponent(etiqueta)}`));
   }
 
   obtener(id: number): Promise<Venta> {

@@ -25,6 +25,8 @@ import com.werealestate.backend.exception.ValidationException;
 import com.werealestate.backend.model.AsesorExterno;
 import com.werealestate.backend.model.Cliente;
 import com.werealestate.backend.model.EstadoLote;
+import com.werealestate.backend.model.Desarrollo;
+import com.werealestate.backend.model.EtiquetaVenta;
 import com.werealestate.backend.model.Lote;
 import com.werealestate.backend.model.AccionRecibo;
 import com.werealestate.backend.model.MedioFirma;
@@ -150,9 +152,25 @@ public class VentaService {
     }
 
     private Venta crearVenta(VentaCreateRequest request, Usuario registradaPor, boolean registroDeVenta) {
+        // El desarrollo con el que cuenta la venta: el de su primer lote (en una venta con lotes de dos desarrollos
+        // manda el primero). Su número es consecutivo dentro de ese desarrollo.
+        if (request.lotes() == null || request.lotes().isEmpty()) {
+            throw new ValidationException("La venta necesita al menos un lote");
+        }
+        Long primerLoteId = request.lotes().get(0).loteId();
+        Desarrollo desarrolloDeNumeracion = loteRepository.findById(primerLoteId)
+                .orElseThrow(() -> new ValidationException("Lote no encontrado"))
+                .getDesarrollo();
         // Primero el número (puede recorrer otras ventas y vacía el contexto de persistencia): todavía
         // no se ha cargado nada de esta operación.
-        long numeroVenta = reservarNumero(request.numero(), 0L);
+        long numeroVenta = reservarNumeroGlobal();
+        Long numeroEnDesarrollo = ClienteNumeracionService.prefijo(desarrolloDeNumeracion.getNombre()) == null
+                ? null
+                : reservarNumero(request.numero(), desarrolloDeNumeracion.getId(), 0L, -1L);
+        // Recorrer números vacía el contexto de persistencia: se vuelve a leer el desarrollo para que siga administrado.
+        desarrolloDeNumeracion = loteRepository.findById(primerLoteId)
+                .orElseThrow(() -> new ValidationException("Lote no encontrado"))
+                .getDesarrollo();
 
         Set<Long> loteIdsUnicos = new HashSet<>();
         for (VentaLoteItemRequest item : request.lotes()) {
@@ -162,7 +180,7 @@ public class VentaService {
             // Ni estar en dos ventas: la venta es la que manda el estado del lote (ver LoteService.cambiarEstado).
             ventaLoteRepository.findFirstByLoteIdOrderByIdDesc(item.loteId()).ifPresent(otra -> {
                 throw new ConflictException("El lote Mz " + otra.getLote().getManzana() + " / Lote "
-                        + otra.getLote().getNumeroLote() + " ya está en la venta #" + otra.getVenta().getNumero());
+                        + otra.getLote().getNumeroLote() + " ya está en la venta " + otra.getVenta().getEtiqueta());
             });
         }
 
@@ -201,6 +219,7 @@ public class VentaService {
                 request.mensualidad(), request.plazoMeses(), engancheLabel, request.enganche(),
                 request.diaPago(), Boolean.TRUE.equals(request.primeraMensualidadMesVenta()), notas);
         venta.setNumero(numeroVenta);
+        venta.numerar(desarrolloDeNumeracion, numeroEnDesarrollo);
         venta.setModalidadPago(request.modalidadPago());
         venta.ligarCliente(clienteRef);
         venta.setRegistradaPor(registradaPor);
@@ -368,7 +387,7 @@ public class VentaService {
                     .filter(otra -> !otra.getId().equals(ventaId))
                     .ifPresent(otra -> {
                         throw new ConflictException(
-                                "El número de contrato " + numero + " ya lo tiene la venta #" + otra.getNumero());
+                                "El número de contrato " + numero + " ya lo tiene la venta " + otra.getEtiqueta());
                     });
         }
         venta.setNumeroContrato(numero);
@@ -389,10 +408,13 @@ public class VentaService {
     /** Para abrir una venta desde su dirección (/panel/ventas/11): el número solo sirve para
      * encontrarla; todo lo que escribe (abonos, modificar) sigue usando el id estable de la venta
      * que devuelve esto, porque un número puede cambiar si se registra otra venta con fecha anterior. */
-    public VentaDto obtenerPorNumero(Long numero) {
+    public VentaDto obtenerPorNumero(String etiqueta) {
         exigirAdminOLider();
-        return toDto(
-                ventaRepository.findByNumero(numero).orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada")));
+        EtiquetaVenta.Escrita escrita = EtiquetaVenta.leer(etiqueta)
+                .orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada"));
+        return toDto(ventaRepository
+                .findByDesarrolloNombreAndNumeroDesarrollo(EtiquetaVenta.nombreDe(escrita.prefijo()), escrita.numero())
+                .orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada")));
     }
 
     /** Modifica los datos capturados de una venta (cliente, fechas, términos de financiamiento);
@@ -449,9 +471,10 @@ public class VentaService {
         comisionService.sincronizar(venta);
         // Si se pidió otro número, se mueve (recorriendo las consecutivas si estaba ocupado) y se vuelve a
         // leer la venta con el número nuevo. La fecha ya no cambia el número.
-        if (request.numero() != null && !request.numero().equals(venta.getNumero())) {
-            long nuevo = reservarNumero(request.numero(), venta.getId(), venta.getNumero());
-            ventaRepository.fijarNumero(venta.getId(), nuevo);
+        if (request.numero() != null && venta.getDesarrollo() != null && venta.getNumeroDesarrollo() != null
+                && !request.numero().equals(venta.getNumeroDesarrollo())) {
+            long nuevo = reservarNumero(request.numero(), venta.getDesarrollo().getId(), venta.getId(), venta.getNumeroDesarrollo());
+            ventaRepository.fijarNumeroDesarrollo(venta.getId(), nuevo);
         }
         return toDto(obtenerEntidad(id));
     }
@@ -519,7 +542,9 @@ public class VentaService {
         }
         Venta venta = obtenerEntidad(id);
         ventaRepository.bloquearNumeracion();
-        long numeroEliminado = venta.getNumero();
+        long numeroEliminado = venta.getNumeroGlobal();
+        Long desarrolloEliminado = venta.getDesarrollo() != null ? venta.getDesarrollo().getId() : null;
+        Long numeroDesarrolloEliminado = venta.getNumeroDesarrollo();
 
         comisionService.desvincularVenta(venta);
         // El registro de venta de We Forms que originó la venta se conserva, solo deja de apuntar a ella.
@@ -547,8 +572,11 @@ public class VentaService {
                 loteService.liberarPorVentaEliminada(loteId);
             }
         }
-        // Las ventas con número mayor bajan 1: la numeración no queda con hueco.
+        // Las ventas con número mayor bajan 1 (el global y el de su desarrollo): la numeración no queda con hueco.
         ventaRepository.bajarDesde(numeroEliminado);
+        if (desarrolloEliminado != null && numeroDesarrolloEliminado != null) {
+            ventaRepository.bajarDesarrolloDesde(desarrolloEliminado, numeroDesarrolloEliminado);
+        }
     }
 
     /** Para el ícono de "ver información de venta" en /panel/lotes: qué venta vendió este lote, si
@@ -564,23 +592,15 @@ public class VentaService {
 
     /** ascendente = la venta más antigua primero (número 1 arriba); si no, la más reciente primero.
      * Ordena por número de venta (automático = mayor + 1, o el que se escribió a mano).
-     * desarrolloId (opcional): solo las ventas con al menos un lote de ese desarrollo; una venta mixta
-     * aparece en cada desarrollo que toca. */
+     * desarrolloId (opcional): solo las ventas que cuentan en ese desarrollo (el de su primer lote, ver
+     * EtiquetaVenta); una venta con lotes de dos desarrollos aparece solo en el de su primer lote. */
     public PaginaDto<VentaDto> buscarPaginado(
             String busqueda, boolean ascendente, int pagina, int tamano, Long desarrolloId) {
         exigirAdminOLider();
         Specification<Venta> spec = (root, query, cb) -> cb.conjunction();
 
         if (desarrolloId != null) {
-            spec = spec.and((root, query, cb) -> {
-                jakarta.persistence.criteria.Subquery<Long> sub = query.subquery(Long.class);
-                jakarta.persistence.criteria.Root<VentaLote> vl = sub.from(VentaLote.class);
-                sub.select(vl.<Long>get("id"))
-                        .where(
-                                cb.equal(vl.get("venta"), root),
-                                cb.equal(vl.get("lote").get("desarrollo").get("id"), desarrolloId));
-                return cb.exists(sub);
-            });
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("desarrollo").get("id"), desarrolloId));
         }
 
         if (busqueda != null && !busqueda.isBlank()) {
@@ -591,14 +611,28 @@ public class VentaService {
                 // venta cuyo asesor sea del otro tipo.
                 Join<Venta, Usuario> usuarioAsesor = root.join("usuarioAsesor", JoinType.LEFT);
                 Join<Venta, AsesorExterno> asesorExterno = root.join("asesorExterno", JoinType.LEFT);
-                return cb.or(
+                java.util.List<jakarta.persistence.criteria.Predicate> opciones = new java.util.ArrayList<>(java.util.List.of(
                         cb.like(cb.lower(root.get("cliente")), comodin),
                         cb.like(cb.lower(usuarioAsesor.get("nombre")), comodin),
-                        cb.like(cb.lower(asesorExterno.get("nombre")), comodin));
+                        cb.like(cb.lower(asesorExterno.get("nombre")), comodin)));
+                // El número de venta: "S-12" / "n5" (letra y número) o solo "12" (ese número en cualquier desarrollo).
+                String texto = busqueda.trim();
+                EtiquetaVenta.leer(texto).ifPresent(e -> opciones.add(cb.and(
+                        cb.equal(root.get("desarrollo").get("nombre"), EtiquetaVenta.nombreDe(e.prefijo())),
+                        cb.equal(root.get("numeroDesarrollo"), e.numero()))));
+                String soloNumero = texto.startsWith("#") ? texto.substring(1) : texto;
+                if (!soloNumero.isEmpty() && soloNumero.length() <= 8 && soloNumero.chars().allMatch(Character::isDigit)) {
+                    opciones.add(cb.equal(root.get("numeroDesarrollo"), Long.parseLong(soloNumero)));
+                }
+                return cb.or(opciones.toArray(jakarta.persistence.criteria.Predicate[]::new));
             });
         }
         spec = spec.and((root, query, cb) -> {
-            query.orderBy(ascendente ? cb.asc(root.get("numero")) : cb.desc(root.get("numero")));
+            // Dentro de un desarrollo, por su número; sin filtro de desarrollo, SAMAI antes que Nanuu (por el id del
+            // desarrollo) y luego por número.
+            query.orderBy(
+                    cb.asc(root.get("desarrollo").get("id")),
+                    ascendente ? cb.asc(root.get("numeroDesarrollo")) : cb.desc(root.get("numeroDesarrollo")));
             return cb.conjunction();
         });
 
@@ -902,7 +936,7 @@ public class VentaService {
         List<ClienteResumenDto> copropietarios = copropietarioRepository.findByVentaIdOrderByOrdenAsc(venta.getId()).stream()
                 .map(cp -> ClienteResumenDto.from(cp.getCliente()))
                 .toList();
-        return VentaDto.from(venta, venta.getNumero(), lotes, aportaciones, copropietarios, totalAbonado(venta.getId()));
+        return VentaDto.from(venta, lotes, aportaciones, copropietarios, totalAbonado(venta.getId()));
     }
 
     /**
@@ -935,7 +969,6 @@ public class VentaService {
         return ventas.stream()
                 .map(v -> VentaDto.from(
                         v,
-                        v.getNumero(),
                         lotes.getOrDefault(v.getId(), List.of()),
                         aportaciones.getOrDefault(v.getId(), List.of()),
                         copropietarios.getOrDefault(v.getId(), List.of()),
@@ -963,52 +996,55 @@ public class VentaService {
         }
     }
 
-    /** Deja libre el número que se quiere para una venta y devuelve el que le toca: sin número pedido, el
-     * siguiente automático (mayor + 1); con número pedido, ese mismo — y si otra venta ya lo tiene, se
-     * recorren +1 esa y las que le siguen de forma consecutiva (se detiene en el primer hueco). Va con
-     * candado para que dos registros simultáneos no se pisen. exceptoId = la venta que se está moviendo
-     * (0 si es una nueva) y numeroActual = el que tenía (-1 si es nueva): al irse, deja libre su lugar. */
-    private long reservarNumero(Long pedido, long exceptoId) {
-        return reservarNumero(pedido, exceptoId, -1L);
+    /** El número global de siempre (respaldo interno, ya no se muestra): el siguiente = mayor + 1. Va con candado. */
+    private long reservarNumeroGlobal() {
+        ventaRepository.bloquearNumeracion();
+        return ventaRepository.maxNumero() + 1;
     }
 
-    private long reservarNumero(Long pedido, long exceptoId, long numeroActual) {
+    /** Deja libre el número que se quiere para una venta dentro de su desarrollo y devuelve el que le toca: sin número
+     * pedido, el siguiente automático (mayor + 1 de ese desarrollo); con número pedido, ese mismo — y si otra venta
+     * del desarrollo ya lo tiene, se recorren +1 esa y las que le siguen de forma consecutiva (se detiene en el primer
+     * hueco). Va con candado para que dos registros simultáneos no se pisen. exceptoId = la venta que se está moviendo
+     * (0 si es una nueva) y numeroActual = el que tenía (-1 si es nueva): al irse, deja libre su lugar. */
+    private long reservarNumero(Long pedido, long desarrolloId, long exceptoId, long numeroActual) {
         ventaRepository.bloquearNumeracion();
         if (pedido == null) {
-            return ventaRepository.maxNumero() + 1;
+            return ventaRepository.maxNumeroDesarrollo(desarrolloId) + 1;
         }
-        long hasta = finDeLaRacha(pedido, numeroActual);
+        long hasta = finDeLaRacha(desarrolloId, pedido, numeroActual);
         if (hasta >= pedido) {
-            ventaRepository.recorrer(pedido, hasta, exceptoId);
+            ventaRepository.recorrerDesarrollo(desarrolloId, pedido, hasta, exceptoId);
         }
         return pedido;
     }
 
-    /** Último número de la racha de consecutivos que empieza en "desde" (sin contar el que se está
-     * moviendo, que se va de su lugar); desde - 1 si "desde" está libre. */
-    private long finDeLaRacha(long desde, long numeroIgnorado) {
-        java.util.Set<Long> enUso = new java.util.HashSet<>(ventaRepository.numerosDesde(desde));
+    /** Último número de la racha de consecutivos que empieza en "desde" dentro del desarrollo (sin contar el que se
+     * está moviendo, que se va de su lugar); desde - 1 si "desde" está libre. */
+    private long finDeLaRacha(long desarrolloId, long desde, long numeroIgnorado) {
+        java.util.Set<Long> enUso = new java.util.HashSet<>(ventaRepository.numerosDesarrolloDesde(desarrolloId, desde));
         enUso.remove(numeroIgnorado);
         long fin = desde - 1;
         while (enUso.contains(fin + 1)) fin++;
         return fin;
     }
 
-    /** Para el formulario: el siguiente número automático y, si el número consultado ya está ocupado
+    /** Para el formulario: el siguiente número automático del desarrollo y, si el número consultado ya está ocupado
      * (por una venta distinta de excluirId), cuál es y cuántas ventas se recorrerían. */
     @Transactional(readOnly = true)
-    public NumeracionVentaDto consultarNumeracion(Long numero, Long excluirId) {
+    public NumeracionVentaDto consultarNumeracion(Long numero, Long excluirId, Long desarrolloId) {
         exigirAdminOLider();
-        long siguiente = ventaRepository.maxNumero() + 1;
+        if (desarrolloId == null) return new NumeracionVentaDto(1, null, null, null, 0);
+        long siguiente = ventaRepository.maxNumeroDesarrollo(desarrolloId) + 1;
         if (numero == null || numero < 1) {
             return new NumeracionVentaDto(siguiente, null, null, null, 0);
         }
-        Venta ocupante = ventaRepository.findByNumero(numero).orElse(null);
+        Venta ocupante = ventaRepository.findByDesarrolloIdAndNumeroDesarrollo(desarrolloId, numero).orElse(null);
         if (ocupante == null || ocupante.getId().equals(excluirId)) {
             return new NumeracionVentaDto(siguiente, null, null, null, 0);
         }
-        Long ignorado = excluirId == null ? null : ventaRepository.findById(excluirId).map(Venta::getNumero).orElse(null);
-        long fin = finDeLaRacha(numero, ignorado == null ? -1L : ignorado);
+        Long ignorado = excluirId == null ? null : ventaRepository.findById(excluirId).map(Venta::getNumeroDesarrollo).orElse(null);
+        long fin = finDeLaRacha(desarrolloId, numero, ignorado == null ? -1L : ignorado);
         return new NumeracionVentaDto(
                 siguiente, ocupante.getId(), ocupante.getCliente(), ocupante.getFechaVenta(), (int) (fin - numero + 1));
     }

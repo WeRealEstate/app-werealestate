@@ -59,7 +59,7 @@ export interface PagoMes {
 /** Respuesta de GET /api/ventas/{id}/amortizacion y de cada elemento de GET /api/clientes/{id}/amortizaciones. */
 export interface Amortizacion {
   ventaId: number;
-  ventaNumero: number;
+  ventaNumero: string;
   fechaVenta: string;
   /** El titular: nombre, su número en el desarrollo de la venta ("S-40") y teléfono. */
   clienteId: number | null;
