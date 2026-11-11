@@ -117,6 +117,7 @@ public class EstadoCuentaService {
                 .map(cp -> cp.getCliente().nombreCompleto())
                 .toList();
         boolean conPlazo = venta.getMensualidad() != null && venta.getPlazoMeses() != null;
+        CalendarioPagos.Plan original = CalendarioPagos.planOriginal(venta);
 
         return new AmortizacionDto(
                 venta.getId(),
@@ -149,7 +150,9 @@ public class EstadoCuentaService {
                 cuenta.proximoMonto(),
                 cuenta.filas(),
                 TablaMensual.construir(conceptos, cuenta.filas(), precio, pagos, hoy),
-                reestructuraciones(venta));
+                reestructuraciones(venta),
+                original.primerMes().toString(),
+                precio.subtract(original.conPagoInicialPublico() ? original.enganche() : BigDecimal.ZERO));
     }
 
     private static List<AmortizacionDto.Reestructuracion> reestructuraciones(Venta venta) {

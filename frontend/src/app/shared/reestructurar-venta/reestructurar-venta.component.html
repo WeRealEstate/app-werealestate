@@ -26,9 +26,9 @@
       </div>
 
       <div class="mt-4 rounded-lg bg-surface-2 px-3.5 py-3 text-sm text-ink">
-        <p>Saldo a repartir: <strong>${{ money(saldo()) }}</strong></p>
+        <p>Monto a repartir: <strong>${{ money(saldo()) }}</strong> <span class="text-xs text-ink-muted">(precio menos enganche)</span></p>
         <p class="mt-1 text-xs text-ink-muted">
-          Lo pagado hasta hoy se queda como está. El plan nuevo reparte el saldo, incluidos los pagos atrasados; el precio de la venta no cambia.
+          Se rehace todo el plan desde el primer mes de la venta ({{ etiquetaMes(primerMes()) }}). Los abonos ya registrados se vuelven a aplicar en orden y los meses vencidos que no alcancen a cubrirse salen atrasados. El precio de la venta no cambia.
         </p>
       </div>
 
@@ -45,12 +45,8 @@
         </label>
       </div>
 
-      <label class="mt-3 flex items-start gap-2.5 text-sm text-ink">
-        <input type="checkbox" class="mt-0.5 h-4 w-4" [checked]="primeraEnMesActual()" (change)="primeraEnMesActual.set($any($event.target).checked)" />
-        <span>El primer pago del plan nuevo es este mes <span class="block text-xs text-ink-muted">Si no, empieza el mes siguiente.</span></span>
-      </label>
       @if (meses().length > 0) {
-        <p class="mt-2 text-xs text-ink-muted">Plan nuevo: de {{ etiquetaMes(meses()[0]) }} a {{ etiquetaMes(meses()[meses().length - 1]) }}.</p>
+        <p class="mt-3 text-xs text-ink-muted">Plan nuevo: de {{ etiquetaMes(meses()[0]) }} a {{ etiquetaMes(meses()[meses().length - 1]) }}.</p>
       }
 
       <div class="mt-4">
@@ -86,7 +82,7 @@
           <p>Mensualidad: <strong>${{ money(mensualidad() ?? 0) }}</strong>
             @if (aportaciones().length > 0) { · Aportaciones: <strong>${{ money(sumaAportaciones()) }}</strong> }
           </p>
-          <p class="mt-0.5 text-xs text-ink-muted">Se calcula con el saldo de hoy; el sistema ajusta los centavos en el último pago.</p>
+          <p class="mt-0.5 text-xs text-ink-muted">El sistema ajusta los centavos en la última mensualidad.</p>
         }
       </div>
 

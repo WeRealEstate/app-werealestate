@@ -11,10 +11,10 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * Cambia el plan de pagos de una venta (ver VentaService.reestructurar). El plan nuevo reparte el saldo de hoy en
- * {@code plazoMeses} meses a partir del mes en curso ({@code primeraEnMesActual}) o del siguiente; los meses con una
+ * Cambia el plan de pagos de una venta (ver VentaService.reestructurar). Rehace todo el plan: {@code plazoMeses} meses
+ * desde el primer mes del plan original de la venta, que reparten el precio menos el enganche; los meses con una
  * aportación (anualidad) pagan esa aportación y el resto se reparte en mensualidades iguales que calcula el servidor.
- * Exige la contraseña de quien lo hace y un motivo.
+ * {@code primeraEnMesActual} ya no se usa (el inicio es el de la venta). Exige la contraseña y un motivo.
  */
 public record VentaReestructurarRequest(
         @NotBlank String password,

@@ -257,4 +257,32 @@ class CalendarioPagosTest {
         assertThat(CalendarioPagos.rangoDeMeses(v)).containsExactly(
                 java.time.YearMonth.of(2026, 9), java.time.YearMonth.of(2029, 4));
     }
+
+    @Test
+    void reestructuracionCompletaRehaceTodoElPlanDesdeLaVenta() {
+        // Venta de mayo, mensualidades desde junio de 2,700; lleva 5,400. Se rehace a 10 meses desde junio con una
+        // aportación de 10,000 en febrero de 2027: los meses de agosto a octubre (vencidos sin cubrir) salen atrasados.
+        Venta v = venta(LocalDate.of(2026, 5, 20), "2700", 100, null, null, 1, false);
+        com.werealestate.backend.model.VentaReestructuracion r = new com.werealestate.backend.model.VentaReestructuracion(
+                v, HOY, d("5400"), d("37000"), "Ajuste", null,
+                LocalDate.of(2026, 5, 20), "Prueba", d("2700"), 100, 1, false, null, null, "antes", "después").comoCompleta();
+        org.springframework.test.util.ReflectionTestUtils.setField(r, "id", 9L);
+        v.agregarReestructuracion(r);
+        v.aplicarPlanReestructurado("Reestructurada", LocalDate.of(2026, 5, 20), d("3000"), 10, 1, false);
+        VentaAportacion aportacion = new VentaAportacion(v, 2027, 2, d("10000"), 9L);
+
+        CalendarioPagos.EstadoDeCuenta c = cuenta(v, "37000", "5400", List.of(aportacion));
+        List<AmortizacionDto.Fila> f = c.filas();
+
+        assertThat(f).hasSize(10).allMatch(x -> x.tramo() == 1);
+        assertThat(f.get(0).fecha()).isEqualTo(LocalDate.of(2026, 6, 1));
+        assertThat(f.get(8).concepto()).isEqualTo("Aportación");
+        assertThat(f.stream().map(AmortizacionDto.Fila::monto).reduce(BigDecimal.ZERO, BigDecimal::add))
+                .isEqualByComparingTo("37000");
+        // 5,400 cubren junio (3,000) y parte de julio; julio pasa su faltante a agosto (arrastre) y de ahí en
+        // adelante lo vencido sale atrasado.
+        assertThat(f.get(0).estado()).isEqualTo(EstadoPagoPlan.PAGADO);
+        assertThat(c.pagosAtrasados()).isGreaterThan(0);
+        assertThat(c.atrasadoDesde()).isEqualTo(LocalDate.of(2026, 8, 1));
+    }
 }

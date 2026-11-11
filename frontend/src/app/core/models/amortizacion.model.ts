@@ -116,6 +116,10 @@ export interface Amortizacion {
   detalleMensual: FilaAmortizacion[];
   /** Cambios del plan de pagos, del más antiguo al más reciente. */
   reestructuraciones: ReestructuracionPlan[];
+  /** Primer mes del plan original de la venta ("2026-06"): desde ahí se rehace el plan al reestructurar. */
+  primerMesPlan: string | null;
+  /** Lo que reparte un plan rehecho: precio menos el enganche capturado. */
+  montoAReestructurar: number;
 }
 
 /** Concepto del renglón que junta la parte del precio sin fecha en el plan (anualidades de ventas anteriores). */

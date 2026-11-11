@@ -17,6 +17,8 @@ interface LineaForm {
   aportacionId: number | null;
   /** Solo MENSUALIDAD: pago fuera del plazo del plan; sin meses. */
   extemporaneo: boolean;
+  /** Solo APARTADO: true = se aplica a la mensualidad de uno o varios meses; false = va a la deuda total. */
+  aplicarAMes: boolean;
   /** true cuando el monto se escribió a mano: deja de sugerirse solo. */
   montoManual: boolean;
   verTodosLosMeses: boolean;
@@ -71,7 +73,7 @@ export class ReciboFormComponent {
   private readonly mesesCubiertos = computed(() => {
     const cubiertos = new Set<string>();
     for (const p of this.pagos()) {
-      if (esTipoMensual(p.tipo) && !p.anulado) for (const m of p.meses) cubiertos.add(clave(m.anio, m.mes));
+      if ((esTipoMensual(p.tipo) || p.tipo === 'APARTADO') && !p.anulado) for (const m of p.meses) cubiertos.add(clave(m.anio, m.mes));
     }
     return cubiertos;
   });
@@ -160,6 +162,7 @@ export class ReciboFormComponent {
       l.meses = [];
       l.aportacionId = null;
       l.extemporaneo = false;
+      l.aplicarAMes = false;
       l.montoManual = false;
       l.monto = null;
       if (esTipoMensual(tipo)) {
@@ -193,6 +196,27 @@ export class ReciboFormComponent {
       }
     });
   }
+
+  /** Apartado: a la deuda total (por defecto) o a la mensualidad de uno o varios meses. El monto no cambia: es el
+   * dinero que se recibió. Para la comisión sigue contando como apartado. */
+  alternarAplicarAMes(indice: number, valor: boolean): void {
+    this.actualizarLinea(indice, (l) => {
+      l.aplicarAMes = valor;
+      l.meses = [];
+      if (valor) {
+        const primero = this.mesesPendientes().find((m) => !this.mesEnOtraLinea(indice, m.clave));
+        if (primero) l.meses = [primero.clave];
+      }
+    });
+  }
+
+  /** true si la línea debe elegir meses: mensualidad normal o apartado aplicado a un mes. */
+  pideMeses(l: LineaForm): boolean {
+    return (esTipoMensual(l.tipo) && !l.extemporaneo) || (l.tipo === 'APARTADO' && l.aplicarAMes);
+  }
+
+  /** El apartado solo puede ir a un mes si la venta tiene mensualidades. */
+  readonly ventaConMensualidades = computed(() => !!(this.venta().plazoMeses && this.venta().mensualidad));
 
   alternarMes(indice: number, claveMes: string): void {
     this.actualizarLinea(indice, (l) => {
@@ -262,6 +286,7 @@ export class ReciboFormComponent {
       if (!l.tipo) return `Elige el tipo de abono${n}.`;
       if (!l.monto || l.monto <= 0) return `Ingresa un monto válido${n}.`;
       if (esTipoMensual(l.tipo) && !l.extemporaneo && l.meses.length === 0) return `Elige el mes o los meses que cubre la mensualidad${n}.`;
+      if (l.tipo === 'APARTADO' && l.aplicarAMes && l.meses.length === 0) return `Elige el mes o los meses a los que se aplica el apartado${n}.`;
       if (l.tipo === 'APORTACION' && l.aportacionId === null) return `Elige qué aportación programada paga${n}.`;
     }
     return null;
@@ -270,7 +295,7 @@ export class ReciboFormComponent {
   private lineaARequest(l: LineaForm): LineaReciboRequest {
     const base = { tipo: l.tipo as TipoAbono, monto: l.monto! };
     if (esTipoMensual(l.tipo) && l.extemporaneo) return { ...base, extemporaneo: true };
-    if (esTipoMensual(l.tipo)) {
+    if (esTipoMensual(l.tipo) || (l.tipo === 'APARTADO' && l.aplicarAMes)) {
       return {
         ...base,
         meses: l.meses.map((c) => {
@@ -285,7 +310,7 @@ export class ReciboFormComponent {
 
   /** Sugiere mensualidad × meses elegidos mientras el monto no se haya escrito a mano. */
   private sugerirMonto(l: LineaForm): void {
-    if (l.montoManual) return;
+    if (l.montoManual || l.tipo === 'APARTADO') return;
     const mensualidad = this.venta().mensualidad ?? 0;
     const faltante = this.faltantePorMes();
     // Con la tabla disponible se sugiere lo que falta de cada mes elegido (puede ser menos o más que la mensualidad).
@@ -316,7 +341,7 @@ export class ReciboFormComponent {
 let siguienteUid = 0;
 
 function nuevaLinea(): LineaForm {
-  return { uid: siguienteUid++, tipo: '', monto: null, meses: [], aportacionId: null, extemporaneo: false, montoManual: false, verTodosLosMeses: false };
+  return { uid: siguienteUid++, tipo: '', monto: null, meses: [], aportacionId: null, extemporaneo: false, aplicarAMes: false, montoManual: false, verTodosLosMeses: false };
 }
 
 function hoy(): string {

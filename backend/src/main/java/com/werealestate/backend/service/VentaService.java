@@ -745,27 +745,23 @@ public class VentaService {
             if (!traeMeses) {
                 throw new ValidationException("Indica el mes o los meses que cubre la mensualidad");
             }
-            // Con reestructuraciones, el rango va del primer mes del plan original al último del plan vigente.
-            YearMonth[] rango = CalendarioPagos.rangoDeMeses(venta);
-            YearMonth primero = rango[0];
-            YearMonth ultimo = rango[1];
-            Set<YearMonth> vistos = new HashSet<>();
-            List<MesCubierto> meses = new ArrayList<>();
-            for (PagoVentaCreateRequest.Mes m : mesesPedidos) {
-                YearMonth ym = YearMonth.of(m.anio(), m.mes());
-                if (ym.isBefore(primero) || ym.isAfter(ultimo)) {
-                    throw new ValidationException("El mes " + ym + " está fuera del plazo de la venta (" + primero + " a " + ultimo + ")");
-                }
-                if (!vistos.add(ym)) {
-                    throw new ValidationException("El mes " + ym + " está repetido");
-                }
-                meses.add(new MesCubierto(m.anio(), m.mes()));
+            return new Referencias(mesesDelPlazo(venta, mesesPedidos), null);
+        }
+
+        // Un apartado va a la deuda total (sin meses) o, si así se eligió, a la mensualidad de uno o varios meses: solo
+        // cambia a qué mes se aplica en la tabla; para la comisión sigue contando como apartado (decisión del usuario).
+        if (tipo == TipoAbono.APARTADO && traeMeses) {
+            if (venta.getPlazoMeses() == null || venta.getPlazoMeses() < 1 || venta.getMensualidad() == null) {
+                throw new ValidationException("Esta venta no tiene mensualidades: el apartado va a la deuda total");
             }
-            return new Referencias(meses, null);
+            if (aportacionId != null) {
+                throw new ValidationException("Un apartado no se liga a una aportación");
+            }
+            return new Referencias(mesesDelPlazo(venta, mesesPedidos), null);
         }
 
         if (traeMeses) {
-            throw new ValidationException("Solo una mensualidad cubre meses");
+            throw new ValidationException("Solo una mensualidad o un apartado cubren meses");
         }
         if (tipo == TipoAbono.APORTACION) {
             if (aportacionId == null) {
@@ -780,6 +776,27 @@ public class VentaService {
             throw new ValidationException("Solo una aportación se liga a una aportación programada");
         }
         return new Referencias(List.of(), null);
+    }
+
+    /** Valida que los meses estén dentro del plazo (con reestructuraciones, del primer mes del plan original al último
+     * del vigente) y no se repitan. */
+    private static List<MesCubierto> mesesDelPlazo(Venta venta, List<PagoVentaCreateRequest.Mes> mesesPedidos) {
+        YearMonth[] rango = CalendarioPagos.rangoDeMeses(venta);
+        YearMonth primero = rango[0];
+        YearMonth ultimo = rango[1];
+        Set<YearMonth> vistos = new HashSet<>();
+        List<MesCubierto> meses = new ArrayList<>();
+        for (PagoVentaCreateRequest.Mes m : mesesPedidos) {
+            YearMonth ym = YearMonth.of(m.anio(), m.mes());
+            if (ym.isBefore(primero) || ym.isAfter(ultimo)) {
+                throw new ValidationException("El mes " + ym + " está fuera del plazo de la venta (" + primero + " a " + ultimo + ")");
+            }
+            if (!vistos.add(ym)) {
+                throw new ValidationException("El mes " + ym + " está repetido");
+            }
+            meses.add(new MesCubierto(m.anio(), m.mes()));
+        }
+        return meses;
     }
 
     /** "Enganche $20,000 · Mensualidad $10,000 (2026-11, 2026-12)" para la bitácora. */
@@ -983,7 +1000,16 @@ public class VentaService {
 
         LocalDate hoy = LocalDate.now();
         int plazo = request.plazoMeses();
-        YearMonth primero = YearMonth.from(hoy).plusMonths(request.primeraEnMesActual() ? 0 : 1);
+        // Se rehace TODO el plan (decisión del usuario): arranca en el primer mes del plan original de la venta y reparte
+        // el precio completo menos el enganche capturado; lo abonado se vuelve a aplicar en orden y los meses vencidos
+        // sin cubrir salen atrasados.
+        CalendarioPagos.Plan original = CalendarioPagos.planOriginal(venta);
+        BigDecimal enganche = original.conPagoInicialPublico() ? original.enganche() : BigDecimal.ZERO;
+        BigDecimal aRepartir = precio.subtract(enganche);
+        if (aRepartir.compareTo(new BigDecimal("0.01")) <= 0) {
+            throw new ConflictException("El enganche cubre todo el precio: no hay mensualidades que reestructurar");
+        }
+        YearMonth primero = original.primerMes();
         YearMonth ultimo = primero.plusMonths(plazo - 1L);
         Map<YearMonth, BigDecimal> aportaciones = new java.util.TreeMap<>();
         for (var a : request.aportaciones() == null ? List.<com.werealestate.backend.dto.VentaReestructurarRequest.Aportacion>of() : request.aportaciones()) {
@@ -997,16 +1023,16 @@ public class VentaService {
         }
         BigDecimal aportado = aportaciones.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
         int regulares = plazo - aportaciones.size();
-        BigDecimal resto = saldo.subtract(aportado);
+        BigDecimal resto = aRepartir.subtract(aportado);
         BigDecimal mensualidad;
         if (regulares == 0) {
             if (resto.abs().compareTo(new BigDecimal("0.01")) > 0) {
-                throw new ValidationException("Todos los meses son aportaciones: deben sumar el saldo ($" + saldo + ")");
+                throw new ValidationException("Todos los meses son aportaciones: deben sumar $" + aRepartir);
             }
             mensualidad = BigDecimal.ZERO;
         } else {
             if (resto.compareTo(new BigDecimal("0.01")) <= 0) {
-                throw new ValidationException("Las aportaciones cubren todo el saldo ($" + saldo + "): reduce alguna o el plazo");
+                throw new ValidationException("Las aportaciones cubren todo lo que hay que repartir ($" + aRepartir + "): reduce alguna o el plazo");
             }
             // Hacia abajo: los centavos que sobran los absorbe la última mensualidad (CalendarioPagos), en lugar de
             // recortar el último pago del plan.
@@ -1019,13 +1045,14 @@ public class VentaService {
                 : "Reestructurada · " + plazo + " meses + aportaciones";
         String resumenNuevo = describirPlan(formaPago, primero, plazo, mensualidad, aportaciones.size(), aportado);
         VentaReestructuracion r = new VentaReestructuracion(
-                venta, hoy, abonado, saldo, request.motivo().trim(), actual,
+                venta, hoy, abonado, aRepartir, request.motivo().trim(), actual,
                 anterior.inicio(), venta.getFormaPago(), anterior.mensualidad(), anterior.plazoMeses(), anterior.diaPago(),
                 anterior.primeraEnMesInicio(), anterior.engancheLabel(), anterior.enganche(),
-                describirPlanVigente(venta), resumenNuevo);
+                describirPlanVigente(venta), resumenNuevo).comoCompleta();
         entityManager.persist(r);
         venta.agregarReestructuracion(r);
-        venta.aplicarPlanReestructurado(formaPago, hoy, mensualidad, plazo, request.diaPago(), request.primeraEnMesActual());
+        venta.aplicarPlanReestructurado(
+                formaPago, original.inicio(), mensualidad, plazo, request.diaPago(), original.primeraEnMesInicio());
         entityManager.flush();
         aportaciones.forEach((ym, monto) -> ventaAportacionRepository.save(
                 new VentaAportacion(venta, ym.getYear(), ym.getMonthValue(), monto, r.getId())));

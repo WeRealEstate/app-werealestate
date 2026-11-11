@@ -82,6 +82,10 @@ public final class CalendarioPagos {
             return mensualidad != null && plazoMeses != null;
         }
 
+        public boolean conPagoInicialPublico() {
+            return conPagoInicial();
+        }
+
         public boolean conPlazoPublico() {
             return conPlazo();
         }
@@ -98,7 +102,10 @@ public final class CalendarioPagos {
 
     /** El plan vigente de la venta (el último, si se reestructuró: ese ya no lleva el pago inicial). */
     public static Plan planVigente(Venta venta) {
-        boolean reestructurada = !venta.getReestructuraciones().isEmpty();
+        // Con una reestructuración por saldo el plan vigente ya no lleva el pago inicial; con una completa sí (rehace
+        // todo el plan desde la venta y conserva el enganche capturado).
+        List<VentaReestructuracion> rs = venta.getReestructuraciones();
+        boolean reestructurada = !rs.isEmpty() && !rs.get(rs.size() - 1).isCompleta();
         return new Plan(
                 venta.getInicioPlan() != null ? venta.getInicioPlan() : venta.getFechaVenta(),
                 venta.getMensualidad(),
@@ -107,6 +114,12 @@ public final class CalendarioPagos {
                 venta.isPrimeraMensualidadMesVenta(),
                 reestructurada ? null : venta.getEngancheLabel(),
                 reestructurada ? null : venta.getEnganche());
+    }
+
+    /** El plan con que se registró la venta (antes de cualquier reestructuración): la primera guarda una copia. */
+    public static Plan planOriginal(Venta venta) {
+        List<VentaReestructuracion> rs = venta.getReestructuraciones();
+        return rs.isEmpty() ? planVigente(venta) : planAnterior(rs.get(0));
     }
 
     /** El plan que reemplazó una reestructuración. */
@@ -172,6 +185,15 @@ public final class CalendarioPagos {
     public static List<Concepto> conceptos(Venta venta, BigDecimal precio, Collection<VentaAportacion> aportacionesDeLaVenta) {
         List<VentaReestructuracion> rs = venta.getReestructuraciones();
         if (rs.isEmpty()) return conceptosDePlan(planVigente(venta), precio, aportacionesDeLaVenta, 0);
+        VentaReestructuracion ultima = rs.get(rs.size() - 1);
+        if (ultima.isCompleta()) {
+            // Rehace todo el plan: un solo tramo desde el primer mes de la venta que reparte el precio completo; lo
+            // abonado se aplica en orden sobre él (y los meses vencidos sin cubrir salen atrasados).
+            List<VentaAportacion> propias = aportacionesDeLaVenta.stream()
+                    .filter(a -> java.util.Objects.equals(a.getReestructuracionId(), ultima.getId()))
+                    .toList();
+            return conceptosDePlan(planVigente(venta), precio, propias, rs.size());
+        }
 
         List<Concepto> resultado = new ArrayList<>();
         BigDecimal abonadoAntes = BigDecimal.ZERO;

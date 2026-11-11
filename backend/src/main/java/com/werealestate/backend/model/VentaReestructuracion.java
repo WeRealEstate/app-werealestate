@@ -82,6 +82,11 @@ public class VentaReestructuracion {
     @Column(name = "resumen_nuevo", nullable = false, length = 300)
     private String resumenNuevo;
 
+    /** true: el plan nuevo rehace todo el plan desde el primer mes de la venta y reparte el precio completo (los abonos
+     * se vuelven a aplicar en orden). false (las primeras que se hicieron): solo repartía el saldo desde el corte. */
+    @Column(nullable = false)
+    private boolean completa;
+
     protected VentaReestructuracion() {
         // JPA
     }
@@ -120,6 +125,14 @@ public class VentaReestructuracion {
         this.resumenAnterior = resumenAnterior;
         this.resumenNuevo = resumenNuevo;
     }
+
+    /** Marca la reestructuración como completa (rehace todo el plan; ver {@link #isCompleta}). */
+    public VentaReestructuracion comoCompleta() {
+        this.completa = true;
+        return this;
+    }
+
+    public boolean isCompleta() { return completa; }
 
     public Long getId() { return id; }
     public Venta getVenta() { return venta; }

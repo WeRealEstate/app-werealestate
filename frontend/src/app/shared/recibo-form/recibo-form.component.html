@@ -108,11 +108,38 @@
               </span>
             </label>
           </div>
-          @if (!l.extemporaneo) {
+        }
+
+        @if (l.tipo === 'APARTADO' && ventaConMensualidades()) {
           <div class="mt-3">
-            <p class="text-xs text-ink-muted mb-1.5">Meses que cubre * (puedes elegir varios)</p>
+            <p class="mb-1.5 text-xs text-ink-muted">¿A dónde va este apartado?</p>
+            <div class="inline-flex rounded-lg border border-border p-0.5" role="radiogroup" aria-label="Destino del apartado">
+              <button type="button" role="radio" [attr.aria-checked]="!l.aplicarAMes" (click)="alternarAplicarAMes(i, false)"
+                [class]="!l.aplicarAMes ? 'bg-we-primary text-white' : 'text-ink-muted hover:text-ink'"
+                class="rounded-md px-3 py-1.5 text-xs font-semibold transition-colors duration-150">
+                A la deuda total
+              </button>
+              <button type="button" role="radio" [attr.aria-checked]="l.aplicarAMes" (click)="alternarAplicarAMes(i, true)"
+                [class]="l.aplicarAMes ? 'bg-we-primary text-white' : 'text-ink-muted hover:text-ink'"
+                class="rounded-md px-3 py-1.5 text-xs font-semibold transition-colors duration-150">
+                A una mensualidad
+              </button>
+            </div>
+            <p class="mt-1 text-xs text-ink-muted">
+              @if (l.aplicarAMes) {
+                Se aplica a la mensualidad de los meses que elijas. Para la comisión sigue contando como apartado.
+              } @else {
+                Abona al saldo de la venta sin ligarse a ningún mes.
+              }
+            </p>
+          </div>
+        }
+
+        @if (pideMeses(l)) {
+          <div class="mt-3">
+            <p class="text-xs text-ink-muted mb-1.5">{{ l.tipo === 'APARTADO' ? 'Meses a los que se aplica *' : 'Meses que cubre *' }} (puedes elegir varios)</p>
             @if (mesesPendientes().length === 0) {
-              <p class="text-sm text-ink-muted">Todos los meses del plazo ya están cubiertos. Si el cliente aún debe saldo, marca «Pago extemporáneo».</p>
+              <p class="text-sm text-ink-muted">Todos los meses del plazo ya están cubiertos.{{ l.tipo === 'APARTADO' ? ' Deja el apartado en la deuda total.' : ' Si el cliente aún debe saldo, marca «Pago extemporáneo».' }}</p>
             } @else {
               <div class="flex flex-wrap gap-2">
                 @for (m of mesesVisibles(l); track m.clave) {
@@ -143,7 +170,6 @@
               </div>
             }
           </div>
-          }
         }
 
         @if (l.tipo === 'APORTACION') {

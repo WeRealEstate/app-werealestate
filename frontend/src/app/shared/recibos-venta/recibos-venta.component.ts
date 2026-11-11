@@ -93,6 +93,11 @@ export class RecibosVentaComponent {
   detalleConcepto(p: PagoVenta): string {
     if (esTipoMensual(p.tipo) && p.extemporaneo) return 'Pago extemporáneo';
     if (esTipoMensual(p.tipo)) return p.meses.map((m) => etiquetaMes(m.anio, m.mes)).join(', ');
+    if (p.tipo === 'APARTADO') {
+      return p.meses.length > 0
+        ? 'Aplicado a ' + p.meses.map((m) => etiquetaMes(m.anio, m.mes)).join(', ')
+        : 'A la deuda total';
+    }
     if (p.tipo === 'APORTACION') {
       const a = this.venta().aportaciones.find((x) => x.id === p.aportacionId);
       return a ? etiquetaMes(a.anio, a.mes) : '';
@@ -284,8 +289,9 @@ export class RecibosVentaComponent {
           pagoId: l.pagoId,
           tipo: l.tipo as TipoAbono,
           extemporaneo: esTipoMensual(l.tipo) && l.extemporaneo,
+          // Un apartado aplicado a una mensualidad conserva sus meses (se eligen al registrar el abono).
           meses:
-            esTipoMensual(l.tipo) && !l.extemporaneo
+            (esTipoMensual(l.tipo) && !l.extemporaneo) || (l.tipo === 'APARTADO' && l.meses.length > 0)
               ? l.meses.map((c) => {
                   const [anio, mes] = c.split('-').map(Number);
                   return { anio, mes };

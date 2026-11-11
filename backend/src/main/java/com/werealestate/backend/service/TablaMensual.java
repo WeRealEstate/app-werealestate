@@ -153,7 +153,9 @@ final class TablaMensual {
             int fila = filaDelMes(conceptos, YearMonth.of(p.getAportacion().getAnio(), p.getAportacion().getMes()));
             if (fila >= 0) return List.of(new Parte(fila, p.getMonto()));
         }
-        if (tipo != null && tipo.esMensual() && !p.isExtemporaneo() && p.getMeses() != null && !p.getMeses().isEmpty()) {
+        // Un apartado con meses (se eligió aplicarlo a una mensualidad) se ubica igual que una mensualidad.
+        if (tipo != null && (tipo.esMensual() || tipo == TipoAbono.APARTADO) && !p.isExtemporaneo()
+                && p.getMeses() != null && !p.getMeses().isEmpty()) {
             java.util.LinkedHashSet<Integer> filas = new java.util.LinkedHashSet<>();
             p.getMeses().stream()
                     .map(m -> YearMonth.of(m.getAnio(), m.getMes()))

@@ -13,9 +13,10 @@ interface FilaAportacion {
 }
 
 /**
- * Cambia el plan de pagos de una venta (p. ej. de mensualidades a anualidades). Lo pagado hasta hoy se respeta y el
- * plan nuevo reparte el saldo de hoy, atrasos incluidos; el precio no cambia. La mensualidad que se muestra es una
- * vista previa: la calcula el servidor con la misma regla (saldo menos aportaciones, entre los meses sin aportación).
+ * Cambia el plan de pagos de una venta (p. ej. de mensualidades a anualidades). Rehace TODO el plan desde el primer mes
+ * de la venta (decisión del usuario): reparte el precio menos el enganche y los abonos ya registrados se vuelven a
+ * aplicar en orden; los meses vencidos sin cubrir salen atrasados. La mensualidad que se muestra es una vista previa:
+ * la calcula el servidor con la misma regla (monto menos aportaciones, entre los meses sin aportación).
  */
 @Component({
   selector: 'app-reestructurar-venta',
@@ -28,8 +29,10 @@ export class ReestructurarVentaComponent {
   private readonly toast = inject(ToastService);
 
   readonly venta = input.required<Venta>();
-  /** Saldo de hoy (precio menos lo abonado), el que reparte el plan nuevo. */
+  /** Lo que reparte el plan rehecho: precio menos enganche. */
   readonly saldo = input.required<number>();
+  /** Primer mes del plan original ("2026-06"): ahí arranca el plan rehecho. */
+  readonly primerMes = input.required<string>();
   readonly guardado = output<void>();
 
   readonly abierto = signal(false);
@@ -44,8 +47,8 @@ export class ReestructurarVentaComponent {
 
   /** Los meses del plan nuevo, del primero al último ("2026-12"). */
   readonly meses = computed(() => {
-    const hoy = new Date();
-    const inicio = new Date(hoy.getFullYear(), hoy.getMonth() + (this.primeraEnMesActual() ? 0 : 1), 1);
+    const [anioInicio, mesInicio] = this.primerMes().split('-').map(Number);
+    const inicio = new Date(anioInicio, mesInicio - 1, 1);
     const plazo = Math.max(0, Math.min(600, Math.floor(this.plazo() || 0)));
     return Array.from({ length: plazo }, (_, k) => {
       const d = new Date(inicio.getFullYear(), inicio.getMonth() + k, 1);

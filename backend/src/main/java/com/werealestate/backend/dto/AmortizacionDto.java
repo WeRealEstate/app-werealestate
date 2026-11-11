@@ -54,7 +54,11 @@ public record AmortizacionDto(
         // lo pagado de más) y los abonos que de verdad se dieron en él, cada uno con su fecha. Ver TablaMensual.
         List<Fila> detalleMensual,
         // Cambios del plan de pagos, del más antiguo al más reciente; tramo = el de las filas del plan que creó.
-        List<Reestructuracion> reestructuraciones) {
+        List<Reestructuracion> reestructuraciones,
+        // Para reestructurar: primer mes del plan original ("2026-06"; null en contado) y lo que se reparte en
+        // mensualidades y aportaciones (precio menos enganche).
+        String primerMesPlan,
+        BigDecimal montoAReestructurar) {
 
     /** Una reestructuración del plan: a partir de las filas con este {@code tramo} corre el plan nuevo. */
     public record Reestructuracion(

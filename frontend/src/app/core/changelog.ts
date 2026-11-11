@@ -15,6 +15,12 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.18.4', fecha: '2026-11-11', cambios: [
+    "Reestructurar plan de pagos ahora rehace todo el plan desde el primer mes de la venta: reparte el precio (menos el enganche) en el plazo y aportaciones que elijas, y los abonos ya registrados se vuelven a aplicar en orden. Así ya no desaparecen los meses entre el último pago y el día del cambio: si no se cubrieron, salen atrasados. Las ventas que ya se reestructuraron con la versión anterior se corrigen volviendo a reestructurarlas.",
+  ] },
+  { version: '11.18.3', fecha: '2026-11-11', cambios: [
+    "Registrar abono: cuando el concepto es Apartado ahora eliges a dónde va el dinero con un botón: «A la deuda total» (como hasta ahora, por defecto) o «A una mensualidad», donde eliges uno o varios meses. En la tabla de amortización ese dinero se ve en el mes elegido y en el historial de abonos dice a qué meses se aplicó. Para la comisión sigue contando como apartado (0 %).",
+  ] },
   { version: '11.18.2', fecha: '2026-11-11', cambios: [
     "Recibos: al editar un recibo ahora también se puede corregir el monto de cada concepto, sin tener que anularlo. Pide tu contraseña y un motivo, no deja que lo abonado pase del precio de la venta y queda en la bitácora del recibo (monto anterior, nuevo y motivo). El saldo, los atrasos, las comisiones y Finanzas se recalculan solos.",
   ] },
