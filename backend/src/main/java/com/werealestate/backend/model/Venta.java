@@ -299,6 +299,12 @@ public class Venta {
         reestructuraciones.add(r);
     }
 
+    /** Agrega el enganche o pago inicial que la venta no tenía (reestructuración con enganche). */
+    public void ponerEnganche(String label, BigDecimal monto) {
+        this.engancheLabel = label;
+        this.enganche = monto;
+    }
+
     /** Pone el plan nuevo de una reestructuración: corre desde {@code inicio} y reparte solo el saldo. El enganche
      * capturado de la venta se conserva como dato (pertenece al plan original). */
     public void aplicarPlanReestructurado(

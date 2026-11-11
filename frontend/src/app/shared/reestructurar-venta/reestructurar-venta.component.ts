@@ -36,6 +36,21 @@ export class ReestructurarVentaComponent {
   readonly guardado = output<void>();
 
   readonly abierto = signal(false);
+  /** Forma de pago del plan nuevo: mensualidades iguales, con enganche / pago inicial o con anualidades/aportaciones. */
+  readonly forma = signal<'MSI' | 'ENGANCHE' | 'ANUALIDADES'>('MSI');
+  /** Enganche que la venta ya tiene: se conserva tal cual (decisión del usuario). */
+  readonly engancheActual = computed(() => {
+    const v = this.venta();
+    return v.enganche && v.enganche > 0 && (v.engancheLabel === 'Enganche' || v.engancheLabel === 'Pago inicial')
+      ? { label: v.engancheLabel, monto: v.enganche }
+      : null;
+  });
+  readonly engancheNuevoLabel = signal<'Enganche' | 'Pago inicial'>('Enganche');
+  readonly engancheNuevo = signal<number | null>(null);
+  /** Lo que reparten mensualidades y aportaciones: el monto de la venta menos el enganche nuevo, si se agrega. */
+  readonly aRepartir = computed(() =>
+    this.saldo() - (this.forma() === 'ENGANCHE' && !this.engancheActual() ? this.engancheNuevo() ?? 0 : 0),
+  );
   readonly plazo = signal(12);
   readonly diaPago = signal(15);
   readonly primeraEnMesActual = signal(false);
@@ -64,7 +79,7 @@ export class ReestructurarVentaComponent {
   readonly mensualidad = computed<number | null>(() => {
     const conAportacion = new Set(this.aportaciones().filter((a) => this.meses().includes(a.mes)).map((a) => a.mes));
     const regulares = this.meses().length - conAportacion.size;
-    const resto = this.saldo() - this.sumaAportaciones();
+    const resto = this.aRepartir() - this.sumaAportaciones();
     if (regulares === 0) return Math.abs(resto) <= 0.01 ? 0 : null;
     if (resto <= 0.01) return null;
     return Math.floor((resto / regulares) * 100 + 1e-6) / 100;
@@ -75,6 +90,12 @@ export class ReestructurarVentaComponent {
     if (!plazo || plazo < 1 || plazo > 600) return 'El plazo debe ser de 1 a 600 meses.';
     const dia = this.diaPago();
     if (!dia || dia < 1 || dia > 31) return 'El día de pago debe ser del 1 al 31.';
+    if (this.forma() === 'ENGANCHE' && !this.engancheActual()) {
+      const e = this.engancheNuevo();
+      if (!e || e <= 0) return 'Escribe el monto del enganche o pago inicial.';
+      if (e >= this.saldo()) return 'El enganche no puede cubrir todo el monto.';
+    }
+    if (this.forma() === 'ANUALIDADES' && this.aportaciones().length === 0) return 'Agrega al menos una aportación o anualidad.';
     const meses = this.aportaciones().map((a) => a.mes);
     if (new Set(meses).size !== meses.length) return 'Hay dos aportaciones en el mismo mes.';
     if (this.aportaciones().some((a) => !this.meses().includes(a.mes))) return 'Hay una aportación fuera del plazo nuevo.';
@@ -100,6 +121,9 @@ export class ReestructurarVentaComponent {
     this.aportaciones.set(
       (v.aportaciones ?? []).map((a) => ({ mes: `${a.anio}-${String(a.mes).padStart(2, '0')}`, monto: a.monto })),
     );
+    this.engancheNuevo.set(null);
+    this.engancheNuevoLabel.set('Enganche');
+    this.forma.set(this.aportaciones().length > 0 ? 'ANUALIDADES' : this.engancheActual() ? 'ENGANCHE' : 'MSI');
     this.motivo.set('');
     this.password.set('');
     this.error.set(null);
@@ -108,6 +132,13 @@ export class ReestructurarVentaComponent {
 
   cerrar(): void {
     if (!this.guardando()) this.abierto.set(false);
+  }
+
+  elegirForma(f: 'MSI' | 'ENGANCHE' | 'ANUALIDADES'): void {
+    this.forma.set(f);
+    // Solo «anualidades» lleva aportaciones; al cambiar a otra forma se quitan.
+    if (f !== 'ANUALIDADES') this.aportaciones.set([]);
+    else if (this.aportaciones().length === 0) this.agregarAportacion();
   }
 
   agregarAportacion(): void {
@@ -152,6 +183,8 @@ export class ReestructurarVentaComponent {
         plazoMeses: this.plazo(),
         diaPago: this.diaPago(),
         primeraEnMesActual: this.primeraEnMesActual(),
+        engancheLabel: this.forma() === 'ENGANCHE' && !this.engancheActual() ? this.engancheNuevoLabel() : null,
+        enganche: this.forma() === 'ENGANCHE' && !this.engancheActual() ? this.engancheNuevo() : null,
         aportaciones: this.aportaciones().map((a) => {
           const [anio, mes] = a.mes.split('-').map(Number);
           return { anio, mes, monto: a.monto ?? 0 };

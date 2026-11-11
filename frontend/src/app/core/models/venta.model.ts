@@ -40,6 +40,9 @@ export interface VentaReestructurarRequest {
   diaPago: number;
   primeraEnMesActual: boolean;
   aportaciones: { anio: number; mes: number; monto: number }[];
+  /** Solo si la venta no tenía enganche y se eligió «Con enganche / pago inicial». */
+  engancheLabel?: string | null;
+  enganche?: number | null;
 }
 
 /** Cómo se firmó el contrato: en físico, por DocuSign o de ambas formas. */

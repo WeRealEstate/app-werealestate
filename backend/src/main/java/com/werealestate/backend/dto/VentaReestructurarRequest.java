@@ -22,7 +22,11 @@ public record VentaReestructurarRequest(
         @NotNull @Min(1) @Max(600) Integer plazoMeses,
         @NotNull @Min(1) @Max(31) Integer diaPago,
         boolean primeraEnMesActual,
-        @Valid List<Aportacion> aportaciones) {
+        @Valid List<Aportacion> aportaciones,
+        // Forma "con enganche / pago inicial" en una venta que no tenía: etiqueta ("Enganche" o "Pago inicial") y monto.
+        // Si la venta ya tiene enganche se conserva el original y estos se ignoran (decisión del usuario).
+        String engancheLabel,
+        @DecimalMin(value = "0.01") BigDecimal enganche) {
 
     public record Aportacion(
             @NotNull @Min(2000) @Max(2200) Integer anio,

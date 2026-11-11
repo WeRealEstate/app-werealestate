@@ -1024,6 +1024,20 @@ public class VentaService {
         // sin cubrir salen atrasados.
         CalendarioPagos.Plan original = CalendarioPagos.planOriginal(venta);
         BigDecimal enganche = original.conPagoInicialPublico() ? original.enganche() : BigDecimal.ZERO;
+        // Enganche nuevo solo si la venta no tenía (si ya tenía, se conserva el original).
+        String engancheNuevoLabel = null;
+        BigDecimal engancheNuevo = null;
+        if (!original.conPagoInicialPublico() && request.enganche() != null && request.enganche().signum() > 0) {
+            engancheNuevoLabel = request.engancheLabel() == null ? "Enganche" : request.engancheLabel().trim();
+            if (!CalendarioPagos.ETIQUETAS_PAGO_INICIAL.contains(engancheNuevoLabel)) {
+                throw new ValidationException("El primer pago debe ser «Enganche» o «Pago inicial»");
+            }
+            if (request.enganche().compareTo(precio) >= 0) {
+                throw new ValidationException("El enganche no puede ser igual o mayor al precio");
+            }
+            engancheNuevo = request.enganche().setScale(2, java.math.RoundingMode.HALF_UP);
+            enganche = engancheNuevo;
+        }
         BigDecimal aRepartir = precio.subtract(enganche);
         if (aRepartir.compareTo(new BigDecimal("0.01")) <= 0) {
             throw new ConflictException("El enganche cubre todo el precio: no hay mensualidades que reestructurar");
@@ -1059,9 +1073,9 @@ public class VentaService {
         }
 
         CalendarioPagos.Plan anterior = CalendarioPagos.planVigente(venta);
-        String formaPago = aportaciones.isEmpty()
-                ? "Reestructurada · " + plazo + " meses"
-                : "Reestructurada · " + plazo + " meses + aportaciones";
+        String formaPago = "Reestructurada · " + (enganche.signum() > 0 ? "con enganche · " : "") + plazo + " meses"
+                + (aportaciones.isEmpty() ? "" : " + aportaciones");
+        if (formaPago.length() > 50) formaPago = formaPago.substring(0, 50);
         String resumenNuevo = describirPlan(formaPago, primero, plazo, mensualidad, aportaciones.size(), aportado);
         VentaReestructuracion r = new VentaReestructuracion(
                 venta, hoy, abonado, aRepartir, request.motivo().trim(), actual,
@@ -1070,6 +1084,7 @@ public class VentaService {
                 describirPlanVigente(venta), resumenNuevo).comoCompleta();
         entityManager.persist(r);
         venta.agregarReestructuracion(r);
+        if (engancheNuevo != null) venta.ponerEnganche(engancheNuevoLabel, engancheNuevo);
         venta.aplicarPlanReestructurado(
                 formaPago, original.inicio(), mensualidad, plazo, request.diaPago(), original.primeraEnMesInicio());
         entityManager.flush();

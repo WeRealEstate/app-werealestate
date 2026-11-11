@@ -32,6 +32,37 @@
         </p>
       </div>
 
+      <div class="mt-4">
+        <p class="text-sm font-medium text-ink">Forma de pago</p>
+        <div class="mt-1.5 grid grid-cols-3 gap-1 rounded-lg border border-border p-0.5" role="radiogroup" aria-label="Forma de pago">
+          @for (o of [{ v: 'MSI', t: 'Mensualidades' }, { v: 'ENGANCHE', t: 'Con enganche / pago inicial' }, { v: 'ANUALIDADES', t: 'Anualidades / aportaciones' }]; track o.v) {
+            <button type="button" role="radio" [attr.aria-checked]="forma() === o.v" (click)="elegirForma($any(o.v))"
+              [class]="forma() === o.v ? 'bg-we-primary text-white' : 'text-ink-muted hover:text-ink'"
+              class="rounded-md px-2 py-2 text-xs font-semibold leading-tight transition-colors duration-150">{{ o.t }}</button>
+          }
+        </div>
+        @if (engancheActual(); as e) {
+          <p class="mt-2 text-xs text-ink-muted">{{ e.label }} de la venta: <strong class="text-ink">${{ money(e.monto) }}</strong> (se conserva).</p>
+        } @else if (forma() === 'ENGANCHE') {
+          <div class="mt-2 grid grid-cols-2 gap-3">
+            <label class="block text-sm font-medium text-ink">
+              Tipo
+              <select [value]="engancheNuevoLabel()" (change)="engancheNuevoLabel.set($any($event.target).value)"
+                class="mt-1.5 block w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink">
+                <option value="Enganche">Enganche</option>
+                <option value="Pago inicial">Pago inicial</option>
+              </select>
+            </label>
+            <label class="block text-sm font-medium text-ink">
+              Monto
+              <input type="number" min="0" step="0.01" [value]="engancheNuevo() ?? ''" (input)="engancheNuevo.set(numero($any($event.target).value))"
+                class="mt-1.5 block w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink" />
+            </label>
+          </div>
+          <p class="mt-1 text-xs text-ink-muted">Se cobra al inicio del plan; el resto se reparte en mensualidades.</p>
+        }
+      </div>
+
       <div class="mt-4 grid grid-cols-2 gap-3">
         <label class="block text-sm font-medium text-ink">
           Plazo (meses)
@@ -49,6 +80,7 @@
         <p class="mt-3 text-xs text-ink-muted">Plan nuevo: de {{ etiquetaMes(meses()[0]) }} a {{ etiquetaMes(meses()[meses().length - 1]) }}.</p>
       }
 
+      @if (forma() === 'ANUALIDADES') {
       <div class="mt-4">
         <div class="flex items-center justify-between">
           <p class="text-sm font-medium text-ink">Aportaciones / anualidades</p>
@@ -75,11 +107,13 @@
         }
       </div>
 
+      }
+
       <div class="mt-4 rounded-lg border border-we-primary/30 bg-we-primary/5 px-3.5 py-3 text-sm text-ink">
         @if (problema(); as p) {
           <p class="text-red-600 dark:text-red-400">{{ p }}</p>
         } @else {
-          <p>Mensualidad: <strong>${{ money(mensualidad() ?? 0) }}</strong>
+          <p>@if (forma() === 'ENGANCHE' && !engancheActual() && engancheNuevo()) { {{ engancheNuevoLabel() }}: <strong>${{ money(engancheNuevo() ?? 0) }}</strong> · }Mensualidad: <strong>${{ money(mensualidad() ?? 0) }}</strong>
             @if (aportaciones().length > 0) { · Aportaciones: <strong>${{ money(sumaAportaciones()) }}</strong> }
           </p>
           <p class="mt-0.5 text-xs text-ink-muted">El sistema ajusta los centavos en la última mensualidad.</p>
