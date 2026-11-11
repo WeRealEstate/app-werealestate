@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.18.9', fecha: '2026-11-11', cambios: [
+    "Reestructurar plan de pagos: el formulario ya abre con el plan actual de la venta (plazo, día de pago y sus aportaciones/anualidades) para solo ajustar lo que cambie.",
+  ] },
   { version: '11.18.8', fecha: '2026-11-11', cambios: [
     "Pagos extemporáneos: solo se pueden registrar después del último mes del plan (dentro del plazo se elige el mes que cubre). En la tabla de amortización y el PDF aparecen en su propio renglón «Pago extemporáneo» en el mes en que se pagaron; los meses del plan se quedan como estaban. Una venta liquidada ya no muestra atraso.",
     "Abonos: ya no se puede registrar un Enganche en una venta sin enganche, ni cobrar una aportación de un plan anterior a una reestructuración.",

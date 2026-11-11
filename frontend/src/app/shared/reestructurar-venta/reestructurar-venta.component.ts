@@ -92,10 +92,14 @@ export class ReestructurarVentaComponent {
   );
 
   abrir(): void {
-    this.plazo.set(12);
-    this.diaPago.set(this.venta().diaPago || 15);
+    // Arranca con el plan vigente de la venta (plazo, día de pago y sus aportaciones/anualidades) para solo ajustarlo.
+    const v = this.venta();
+    this.plazo.set(v.plazoMeses || 12);
+    this.diaPago.set(v.diaPago || 15);
     this.primeraEnMesActual.set(false);
-    this.aportaciones.set([]);
+    this.aportaciones.set(
+      (v.aportaciones ?? []).map((a) => ({ mes: `${a.anio}-${String(a.mes).padStart(2, '0')}`, monto: a.monto })),
+    );
     this.motivo.set('');
     this.password.set('');
     this.error.set(null);
