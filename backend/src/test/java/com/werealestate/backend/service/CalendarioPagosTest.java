@@ -43,22 +43,22 @@ class CalendarioPagosTest {
                 d("20000"), d("20000"), d("160000"), EstadoPagoPlan.PAGADO, BigDecimal.ZERO));
         assertThat(f.get(1)).isEqualTo(new AmortizacionDto.Fila(1, LocalDate.of(2026, 9, 15), "Mensualidad",
                 d("5000"), d("5000"), d("155000"), EstadoPagoPlan.PAGADO, BigDecimal.ZERO));
-        // La mensualidad 2 venció y solo se abonaron 2 mil: se da por pagada con eso y los 3 mil que faltaron se suman a
-        // la siguiente (que aún no vence: le toca por 8 mil).
+        // La mensualidad 2 venció y solo se abonaron 2 mil: sin arrastre (decisión del usuario) queda atrasada con sus
+        // 3 mil pendientes; la siguiente sigue siendo de 5 mil.
         assertThat(f.get(2)).isEqualTo(new AmortizacionDto.Fila(2, LocalDate.of(2026, 10, 15), "Mensualidad",
-                d("2000"), d("2000"), d("153000"), EstadoPagoPlan.PAGADO, d("-3000")));
+                d("5000"), d("2000"), d("150000"), EstadoPagoPlan.ATRASADO, BigDecimal.ZERO));
         assertThat(f.get(3).estado()).isEqualTo(EstadoPagoPlan.LE_TOCA);
-        assertThat(f.get(3).monto()).isEqualByComparingTo("8000");
-        assertThat(f.get(3).arrastre()).isEqualByComparingTo("3000");
+        assertThat(f.get(3).monto()).isEqualByComparingTo("5000");
+        assertThat(f.get(3).arrastre()).isEqualByComparingTo("0");
         assertThat(f.get(3).fecha()).isEqualTo(LocalDate.of(2026, 11, 15));
         assertThat(f.get(4).estado()).isEqualTo(EstadoPagoPlan.PENDIENTE);
         assertThat(f.get(32).saldo()).isEqualByComparingTo("0");
 
-        assertThat(c.atrasoMonto()).isEqualByComparingTo("0");
-        assertThat(c.pagosAtrasados()).isZero();
-        assertThat(c.atrasadoDesde()).isNull();
+        assertThat(c.atrasoMonto()).isEqualByComparingTo("3000");
+        assertThat(c.pagosAtrasados()).isEqualTo(1);
+        assertThat(c.atrasadoDesde()).isEqualTo(LocalDate.of(2026, 10, 15));
         assertThat(c.proximaFecha()).isEqualTo(LocalDate.of(2026, 11, 15));
-        assertThat(c.proximoMonto()).isEqualByComparingTo("8000");
+        assertThat(c.proximoMonto()).isEqualByComparingTo("5000");
         assertThat(c.saldo()).isEqualByComparingTo("153000");
     }
 
@@ -184,7 +184,7 @@ class CalendarioPagosTest {
     }
 
     @Test
-    void mensualidadVencidaPagadaEnParteSeDaPorPagadaYSuFaltantePasaALaSiguiente() {
+    void mensualidadVencidaPagadaEnParteQuedaAtrasadaSinArrastre() {
         // Venta real: enganche 10 mil y 7 mensualidades (la última de 16,680.26 por el redondeo); lleva 75,900.
         Venta v = venta(LocalDate.of(2026, 4, 10), "16680.29", 7, "Enganche", "10000", 10, false);
         LocalDate hoy = LocalDate.of(2026, 11, 10);
@@ -192,23 +192,24 @@ class CalendarioPagosTest {
         CalendarioPagos.EstadoDeCuenta c = CalendarioPagos.estadoDeCuenta(conceptos, d("126762"), d("75900"), hoy);
         List<AmortizacionDto.Fila> f = c.filas();
 
-        // La 4 se alcanzó a pagar en parte: queda Pagada con lo abonado y los 821.16 que faltaron se suman a la 5.
-        assertThat(f.get(4).estado()).isEqualTo(EstadoPagoPlan.PAGADO);
-        assertThat(f.get(4).monto()).isEqualByComparingTo("15859.13");
-        assertThat(f.get(4).arrastre()).isEqualByComparingTo("-821.16");
+        // La 4 se alcanzó a pagar en parte: queda atrasada con los 821.16 que le faltaron; la 5 sigue con lo suyo.
+        assertThat(f.get(4).estado()).isEqualTo(EstadoPagoPlan.ATRASADO);
+        assertThat(f.get(4).monto()).isEqualByComparingTo("16680.29");
+        assertThat(f.get(4).pagado()).isEqualByComparingTo("15859.13");
+        assertThat(f.get(4).arrastre()).isEqualByComparingTo("0");
         assertThat(f.get(5).estado()).isEqualTo(EstadoPagoPlan.ATRASADO);
-        assertThat(f.get(5).monto()).isEqualByComparingTo("17501.45");
-        assertThat(f.get(5).arrastre()).isEqualByComparingTo("821.16");
+        assertThat(f.get(5).monto()).isEqualByComparingTo("16680.29");
+        assertThat(f.get(5).arrastre()).isEqualByComparingTo("0");
         assertThat(f.get(6).estado()).isEqualTo(EstadoPagoPlan.ATRASADO);
         assertThat(f.get(7).estado()).isEqualTo(EstadoPagoPlan.LE_TOCA);
 
-        // El total no cambia (la tabla sigue sumando el precio) y el atraso es el mismo dinero, en 2 pagos en vez de 3.
+        // El total no cambia (la tabla sigue sumando el precio) y el atraso es el mismo dinero, en 3 pagos.
         assertThat(f.stream().map(AmortizacionDto.Fila::monto).reduce(BigDecimal.ZERO, BigDecimal::add))
                 .isEqualByComparingTo("126762");
         assertThat(c.atrasoMonto()).isEqualByComparingTo("34181.74");
-        assertThat(c.pagosAtrasados()).isEqualTo(2);
-        assertThat(c.mensualidadesAtrasadas()).isEqualTo(2);
-        assertThat(c.atrasadoDesde()).isEqualTo(LocalDate.of(2026, 9, 10));
+        assertThat(c.pagosAtrasados()).isEqualTo(3);
+        assertThat(c.mensualidadesAtrasadas()).isEqualTo(3);
+        assertThat(c.atrasadoDesde()).isEqualTo(LocalDate.of(2026, 8, 10));
         assertThat(c.saldo()).isEqualByComparingTo("50862");
     }
 
@@ -279,10 +280,10 @@ class CalendarioPagosTest {
         assertThat(f.get(8).concepto()).isEqualTo("Aportación");
         assertThat(f.stream().map(AmortizacionDto.Fila::monto).reduce(BigDecimal.ZERO, BigDecimal::add))
                 .isEqualByComparingTo("37000");
-        // 5,400 cubren junio (3,000) y parte de julio; julio pasa su faltante a agosto (arrastre) y de ahí en
-        // adelante lo vencido sale atrasado.
+        // 5,400 cubren junio (3,000) y parte de julio; julio queda atrasado con su faltante (sin arrastre) y de ahí
+        // en adelante lo vencido sale atrasado.
         assertThat(f.get(0).estado()).isEqualTo(EstadoPagoPlan.PAGADO);
         assertThat(c.pagosAtrasados()).isGreaterThan(0);
-        assertThat(c.atrasadoDesde()).isEqualTo(LocalDate.of(2026, 8, 1));
+        assertThat(c.atrasadoDesde()).isEqualTo(LocalDate.of(2026, 7, 1));
     }
 }

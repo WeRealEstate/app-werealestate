@@ -120,8 +120,8 @@ final class TablaMensual {
                     toca.subtract(resta.max(BigDecimal.ZERO)).max(BigDecimal.ZERO),
                     precio.subtract(programado).max(BigDecimal.ZERO), estado,
                     arrastreRecibido, pagado, List.copyOf(delMes), c.tramo(), resta.negate().max(BigDecimal.ZERO)));
-            // Lo que falta pasa al siguiente solo si este renglón ya venció; lo pagado de más no pasa.
-            arrastre = vencido ? resta.max(BigDecimal.ZERO) : BigDecimal.ZERO;
+            // Sin arrastre (decisión del usuario): lo que le faltó a un mes se queda en ese mes, no pasa al siguiente.
+            arrastre = BigDecimal.ZERO;
         }
 
         // Lo que el plan no fecha: un renglón final que nunca vence (en esta vista no recibe abonos).

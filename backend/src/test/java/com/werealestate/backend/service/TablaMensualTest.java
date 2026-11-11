@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-/** La tabla mes con mes: cada abono en su mes con su fecha, y el atraso arrastrado hasta el último renglón. */
+/** La tabla mes con mes: cada abono en su mes con su fecha; lo que le falta a un mes se queda en ese mes. */
 class TablaMensualTest {
 
     private static final LocalDate HOY = LocalDate.of(2026, 11, 10);
@@ -41,7 +41,7 @@ class TablaMensualTest {
     }
 
     @Test
-    void mensualidadEsLoEsperadoMasLoAtrasadoYLosPagosDelMesNoSeSuman() {
+    void cadaMesConservaSuMensualidadSinArrastre() {
         List<PagoVenta> pagos = List.of(
                 pago(4, 10, "10000"), pago(4, 27, "7400"), pago(5, 21, "10000"),
                 pago(6, 22, "10000"), pago(6, 30, "8500"), pago(7, 21, "10000"), pago(8, 21, "10000"),
@@ -54,34 +54,18 @@ class TablaMensualTest {
         assertThat(f.get(0).monto()).isEqualByComparingTo("10000");
         assertThat(f.get(0).pagos()).hasSize(2);
         assertThat(f.get(0).abonadoMes()).isEqualByComparingTo("17400");
-        assertThat(f.get(1).monto()).isEqualByComparingTo("16680.29");
-        assertThat(f.get(1).arrastre()).isEqualByComparingTo("0");
-        // Mayo pagó de menos (10,000 de 16,680.29): el faltante pasa a junio.
-        assertThat(f.get(2).monto()).isEqualByComparingTo("23360.58");
-        // Junio: dos abonos de días distintos, cada uno en su línea.
+        // Sin arrastre (decisión del usuario): mayo pagó de menos y su faltante se queda en mayo (Abonado); junio sigue
+        // con su propia mensualidad.
+        assertThat(f.get(1).estado()).isEqualTo(EstadoPagoPlan.ABONADO);
+        assertThat(f.get(2).monto()).isEqualByComparingTo("16680.29");
+        assertThat(f.get(2).arrastre()).isEqualByComparingTo("0");
         assertThat(f.get(2).pagos()).extracting(p -> p.fecha().getDayOfMonth()).containsExactly(22, 30);
-        // Julio también quedó corto: el faltante se suma a agosto, y así hasta el último renglón.
-        assertThat(f.get(3).estado()).isEqualTo(EstadoPagoPlan.ABONADO); // pagó algo, no toda la mensualidad
-        assertThat(f.get(3).monto()).isEqualByComparingTo("21540.87");
-        assertThat(f.get(4).monto()).isEqualByComparingTo("28221.16");
-        assertThat(f.get(5).monto()).isEqualByComparingTo("34901.45");
-        assertThat(f.get(5).estado()).isEqualTo(EstadoPagoPlan.ABONADO);
-        assertThat(f.get(6).monto()).isEqualByComparingTo("32169.24"); // octubre: venció sin pagos
+        assertThat(f.get(3).estado()).isEqualTo(EstadoPagoPlan.ABONADO);
+        assertThat(f.get(3).monto()).isEqualByComparingTo("16680.29");
+        assertThat(f.get(6).monto()).isEqualByComparingTo("16680.29"); // octubre: venció sin pagos
         assertThat(f.get(6).estado()).isEqualTo(EstadoPagoPlan.ATRASADO);
-        assertThat(f.get(7).monto()).isEqualByComparingTo("48849.50"); // noviembre: lo suyo más todo lo atrasado
+        assertThat(f.get(7).monto()).isEqualByComparingTo("16680.26"); // noviembre: solo lo suyo
         assertThat(f.get(7).estado()).isEqualTo(EstadoPagoPlan.LE_TOCA);
-    }
-
-    @Test
-    void losMesesFuturosNoArrastranFaltantes() {
-        List<CalendarioPagos.Concepto> plan = new ArrayList<>(plan());
-        plan.add(new CalendarioPagos.Concepto(8, LocalDate.of(2026, 12, 10), "Mensualidad", d("5"), true));
-        List<Fila> f = TablaMensual.construir(plan, List.of(), d("126767"), List.of(pago(4, 10, "10000")), HOY);
-
-        assertThat(f.get(7).estado()).isEqualTo(EstadoPagoPlan.LE_TOCA); // 10/nov: trae el atraso
-        assertThat(f.get(7).monto()).isGreaterThan(d("16680.26"));
-        assertThat(f.get(8).estado()).isEqualTo(EstadoPagoPlan.PENDIENTE);
-        assertThat(f.get(8).monto()).isEqualByComparingTo("5"); // diciembre: solo lo suyo
     }
 
     @Test

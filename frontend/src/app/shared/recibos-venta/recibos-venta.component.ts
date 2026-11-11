@@ -28,6 +28,8 @@ interface LineaEdicion {
   meses: string[];
   aportacionId: number | null;
   extemporaneo: boolean;
+  /** Solo APARTADO: true = aplicado a la mensualidad de uno o varios meses; false = a la deuda total. */
+  aplicarAMes: boolean;
 }
 
 /** Historial de abonos de una venta, agrupado por recibo (un folio, una o más líneas): permite
@@ -201,6 +203,7 @@ export class RecibosVentaComponent {
         meses: p.meses.map((m) => claveMes(m.anio, m.mes)),
         aportacionId: p.aportacionId,
         extemporaneo: p.extemporaneo,
+        aplicarAMes: p.tipo === 'APARTADO' && p.meses.length > 0,
       })),
     );
     this.errorModal.set(null);
@@ -216,7 +219,7 @@ export class RecibosVentaComponent {
     this.editLineas.update((ls) =>
       ls.map((l, i) => {
         if (i !== indice) return l;
-        const cambio: LineaEdicion = { ...l, tipo, meses: [], aportacionId: null, extemporaneo: false };
+        const cambio: LineaEdicion = { ...l, tipo, meses: [], aportacionId: null, extemporaneo: false, aplicarAMes: false };
         if (esTipoMensual(tipo)) {
           const primero = this.mesesElegibles().find((m) => !this.mesEnOtraLinea(indice, m.clave));
           if (primero) cambio.meses = [primero.clave];
@@ -227,6 +230,18 @@ export class RecibosVentaComponent {
       }),
     );
   }
+
+  /** Apartado: a la deuda total o a la mensualidad de uno o varios meses (cualquier mes del plan: un mes puede recibir
+   * varios abonos). */
+  alternarAplicarAMesEdicion(indice: number, valor: boolean): void {
+    this.editLineas.update((ls) => ls.map((l, i) => (i === indice ? { ...l, aplicarAMes: valor, meses: [] } : l)));
+  }
+
+  mesesDelPlanCompleto(): MesPlan[] {
+    return this.planCompleto();
+  }
+
+  readonly ventaConMensualidades = computed(() => !!(this.venta().plazoMeses && this.venta().mensualidad));
 
   alternarExtemporaneoEdicion(indice: number, valor: boolean): void {
     this.editLineas.update((ls) =>
@@ -272,6 +287,9 @@ export class RecibosVentaComponent {
       if (l.tipo === 'APORTACION' && l.aportacionId === null) {
         return void this.errorModal.set('Elige qué aportación programada paga.');
       }
+      if (l.tipo === 'APARTADO' && l.aplicarAMes && l.meses.length === 0) {
+        return void this.errorModal.set('Elige el mes o los meses a los que se aplica el apartado.');
+      }
       if (!(Number(l.monto) > 0)) return void this.errorModal.set('El monto de cada concepto debe ser mayor a cero.');
     }
     const cambiaMonto = this.hayMontoCambiado();
@@ -291,7 +309,7 @@ export class RecibosVentaComponent {
           extemporaneo: esTipoMensual(l.tipo) && l.extemporaneo,
           // Un apartado aplicado a una mensualidad conserva sus meses (se eligen al registrar el abono).
           meses:
-            (esTipoMensual(l.tipo) && !l.extemporaneo) || (l.tipo === 'APARTADO' && l.meses.length > 0)
+            (esTipoMensual(l.tipo) && !l.extemporaneo) || (l.tipo === 'APARTADO' && l.aplicarAMes)
               ? l.meses.map((c) => {
                   const [anio, mes] = c.split('-').map(Number);
                   return { anio, mes };

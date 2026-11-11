@@ -39,7 +39,7 @@ export interface FilaAmortizacion {
   pagado: number;
   saldo: number;
   estado: EstadoPagoPlan;
-  /** Faltante de una mensualidad vencida pagada en parte que se pasó al pago siguiente: negativo en la fila que lo cedió
+  /** Siempre 0 desde 11.18.6 (sin arrastre: lo que falta se queda en su mes). Antes: faltante que se pasó al pago siguiente; negativo en la fila que lo cedió
    * (su monto es lo que se alcanzó a pagar) y positivo en la que lo recibe (su monto lo incluye). */
   arrastre: number;
   /** Dinero realmente recibido en el mes de este pago (por la fecha de cada recibo vigente); informativo. */

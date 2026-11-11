@@ -31,10 +31,9 @@ import java.util.TreeMap;
  * la tabla de amortización esa parte queda en un renglón final "Sin fecha en el plan".
  *
  * <p>Estado de cuenta: lo abonado (recibos vigentes) va cubriendo los pagos del más antiguo al más nuevo. Un pago que
- * no quedó cubierto está atrasado desde el día siguiente a su fecha. Excepción (decisión del usuario): una mensualidad
- * vencida a la que sí llegó dinero pero no alcanzó se da por pagada con lo que se abonó, y lo que le faltó se suma al
- * pago siguiente (la fila baja su monto a lo pagado y la siguiente lo sube); así el total siempre cuadra con el precio
- * y el atraso lo lleva el pago siguiente. Si no hay un pago siguiente, queda atrasada como cualquier otra.
+ * no quedó cubierto está atrasado desde el día siguiente a su fecha. Sin arrastre (decisión del usuario, 2026-11-11):
+ * una mensualidad vencida que se pagó solo en parte queda atrasada con su faltante en su propio renglón; lo que falta
+ * nunca se suma al pago siguiente.
  */
 public final class CalendarioPagos {
 
@@ -307,13 +306,6 @@ public final class CalendarioPagos {
             EstadoPagoPlan estado;
             if (falta.compareTo(TOLERANCIA) <= 0) {
                 estado = EstadoPagoPlan.PAGADO;
-            } else if (c.mensualidad() && c.fecha().isBefore(hoy) && pagado.compareTo(TOLERANCIA) > 0
-                    && i < conceptos.size() - 1) {
-                // Pago parcial de una mensualidad vencida: se da por pagada y su faltante pasa a la siguiente.
-                estado = EstadoPagoPlan.PAGADO;
-                arrastre = falta;
-                ajuste = falta.negate();
-                monto = pagado;
             } else if (c.fecha().isBefore(hoy)) {
                 estado = EstadoPagoPlan.ATRASADO;
                 atraso = atraso.add(falta);

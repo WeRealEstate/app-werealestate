@@ -15,6 +15,10 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.18.6', fecha: '2026-11-11', cambios: [
+    "Tabla de amortización sin arrastre: si una mensualidad se paga solo en parte, lo que falta se queda en ese mes (sale «Abonado» o atrasado) y ya no se suma a la mensualidad siguiente. Aplica en todo el sistema: tabla, PDF y atrasos de Clientes, Finanzas y Comisiones.",
+    "Editar recibo: cuando el concepto es Apartado ahora también se elige «A la deuda total» o «A una mensualidad» con sus meses, igual que al registrar el abono.",
+  ] },
   { version: '11.18.5', fecha: '2026-11-11', cambios: [
     "Reestructurar plan de pagos: ya no falla cuando el plan nuevo lleva una aportación en el mismo mes que una del plan anterior (antes salía «No se pudo reestructurar la venta»).",
   ] },
