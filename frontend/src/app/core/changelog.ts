@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.18.5', fecha: '2026-11-11', cambios: [
+    "Reestructurar plan de pagos: ya no falla cuando el plan nuevo lleva una aportación en el mismo mes que una del plan anterior (antes salía «No se pudo reestructurar la venta»).",
+  ] },
   { version: '11.18.4', fecha: '2026-11-11', cambios: [
     "Reestructurar plan de pagos ahora rehace todo el plan desde el primer mes de la venta: reparte el precio (menos el enganche) en el plazo y aportaciones que elijas, y los abonos ya registrados se vuelven a aplicar en orden. Así ya no desaparecen los meses entre el último pago y el día del cambio: si no se cubrieron, salen atrasados. Las ventas que ya se reestructuraron con la versión anterior se corrigen volviendo a reestructurarlas.",
   ] },
