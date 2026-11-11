@@ -304,7 +304,7 @@ public class FinanzasService {
             abonado = abonado.add(p.getMonto());
             if (YearMonth.from(p.getFecha()).equals(mesActual)) recibidoMes = recibidoMes.add(p.getMonto());
         }
-        CalendarioPagos.EstadoDeCuenta cuenta = CalendarioPagos.estadoDeCuenta(conceptos, precio, abonado, hoy);
+        CalendarioPagos.EstadoDeCuenta cuenta = CalendarioPagos.estadoDeCuenta(conceptos, precio, pagosVigentes, hoy);
         return new CobroVenta(
                 cuenta.atrasoMonto(), cuenta.mensualidadesAtrasadas(), cuenta.pagosAtrasados(),
                 esperadoMes, recibidoMes, fechaMes, abonado);

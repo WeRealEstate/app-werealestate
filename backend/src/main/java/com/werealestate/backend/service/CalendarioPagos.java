@@ -161,7 +161,8 @@ public final class CalendarioPagos {
             LocalDate atrasadoDesde,
             LocalDate proximaFecha,
             BigDecimal proximoMonto,
-            List<AmortizacionDto.Fila> filas) {
+            List<AmortizacionDto.Fila> filas,
+            List<AmortizacionDto.Fila> mensual) {
 
         public boolean atrasada() {
             return pagosAtrasados > 0;
@@ -344,7 +345,62 @@ public final class CalendarioPagos {
                 atrasadoDesde,
                 proximaFecha,
                 proximaFecha == null ? null : proximoMonto,
-                filas);
+                filas,
+                List.of());
+    }
+
+    /**
+     * El estado de cuenta con la regla por mes (la que se ve en la tabla y en el PDF, decisión del usuario 2026-11-11):
+     * cada abono cuenta en el mes que dice cubrir (ver TablaMensual), lo que le falta a un mes se queda en ese mes y lo
+     * pagado de más se descuenta de la última mensualidad. Atraso: lo que falta de los meses ya vencidos (también de los
+     * que recibieron algo); pero solo cuentan como pagos atrasados (y marcan "desde cuándo") los meses vencidos sin
+     * ningún pago. Lo usan la tabla de amortización, Clientes, Finanzas y Comisiones para que todos digan lo mismo.
+     */
+    public static EstadoDeCuenta estadoDeCuenta(
+            List<Concepto> conceptos, BigDecimal precio, List<com.werealestate.backend.model.PagoVenta> pagos, LocalDate hoy) {
+        BigDecimal abonado = pagos.stream().map(com.werealestate.backend.model.PagoVenta::getMonto)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        EstadoDeCuenta reparto = estadoDeCuenta(conceptos, precio, abonado, hoy);
+        List<AmortizacionDto.Fila> mensual = TablaMensual.construir(conceptos, reparto.filas(), precio, pagos, hoy);
+
+        BigDecimal atraso = BigDecimal.ZERO;
+        int pagosAtrasados = 0;
+        int mensualidadesAtrasadas = 0;
+        LocalDate atrasadoDesde = null;
+        LocalDate primeraParcialVencida = null;
+        LocalDate proximaFecha = null;
+        BigDecimal proximoMonto = BigDecimal.ZERO;
+        for (AmortizacionDto.Fila f : mensual) {
+            if (f.fecha() == null) continue; // "Sin fecha en el plan": nunca vence
+            BigDecimal falta = f.monto().subtract(f.pagado()).max(BigDecimal.ZERO);
+            if (falta.compareTo(TOLERANCIA) <= 0) continue;
+            if (f.fecha().isBefore(hoy)) {
+                atraso = atraso.add(falta);
+                if (f.estado() == EstadoPagoPlan.ATRASADO) {
+                    pagosAtrasados++;
+                    if ("Mensualidad".equals(f.concepto())) mensualidadesAtrasadas++;
+                    if (atrasadoDesde == null) atrasadoDesde = f.fecha();
+                } else if (primeraParcialVencida == null) {
+                    primeraParcialVencida = f.fecha();
+                }
+            } else if (proximaFecha == null || f.fecha().equals(proximaFecha)) {
+                proximaFecha = f.fecha();
+                proximoMonto = proximoMonto.add(falta);
+            }
+        }
+        if (atrasadoDesde == null && atraso.compareTo(TOLERANCIA) > 0) atrasadoDesde = primeraParcialVencida;
+        return new EstadoDeCuenta(
+                precio,
+                abonado,
+                precio.subtract(abonado).max(BigDecimal.ZERO),
+                atraso,
+                pagosAtrasados,
+                mensualidadesAtrasadas,
+                atrasadoDesde,
+                proximaFecha,
+                proximaFecha == null ? null : proximoMonto,
+                reparto.filas(),
+                mensual);
     }
 
     /** El día de pago de la venta en ese mes; en un mes más corto, el último día. */

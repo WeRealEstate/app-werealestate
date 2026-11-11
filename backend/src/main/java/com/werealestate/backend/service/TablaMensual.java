@@ -78,6 +78,26 @@ final class TablaMensual {
         BigDecimal programado = BigDecimal.ZERO;
         LocalDate proxima = null;
         int ultimoTramo = conceptos.stream().mapToInt(CalendarioPagos.Concepto::tramo).max().orElse(0);
+
+        // Lo pagado de más en un mes (excedente) no se queda como "abono a la deuda total": se descuenta de la última
+        // mensualidad, y si no alcanza, de la anterior, y así (decisión del usuario, 2026-11-11). Solo baja la parte
+        // aún no pagada de esos renglones; lo que ya no quepa (todo pagado) queda sin aplicar.
+        BigDecimal[] descuento = new BigDecimal[conceptos.size()];
+        java.util.Arrays.fill(descuento, BigDecimal.ZERO);
+        BigDecimal excedente = BigDecimal.ZERO;
+        for (int i = 0; i < conceptos.size(); i++) {
+            if (conceptos.get(i).tramo() < ultimoTramo) continue;
+            BigDecimal pagadoFila = porFila.get(i).stream().map(PagoMes::monto).reduce(BigDecimal.ZERO, BigDecimal::add);
+            excedente = excedente.add(pagadoFila.subtract(conceptos.get(i).monto()).max(BigDecimal.ZERO));
+        }
+        for (int j = conceptos.size() - 1; j >= 0 && excedente.signum() > 0; j--) {
+            if (conceptos.get(j).tramo() < ultimoTramo) break;
+            BigDecimal pagadoFila = porFila.get(j).stream().map(PagoMes::monto).reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal libre = conceptos.get(j).monto().subtract(pagadoFila).max(BigDecimal.ZERO);
+            BigDecimal baja = libre.min(excedente);
+            descuento[j] = baja;
+            excedente = excedente.subtract(baja);
+        }
         for (int i = 0; i < conceptos.size(); i++) {
             CalendarioPagos.Concepto c = conceptos.get(i);
             List<PagoMes> delMes = porFila.get(i);
@@ -94,8 +114,9 @@ final class TablaMensual {
                 arrastre = BigDecimal.ZERO;
                 continue;
             }
-            BigDecimal arrastreRecibido = arrastre;
-            BigDecimal toca = c.monto().add(arrastre);
+            // arrastre negativo = lo que se le descontó por pagos de más en otros meses.
+            BigDecimal arrastreRecibido = descuento[i].negate();
+            BigDecimal toca = c.monto().subtract(descuento[i]);
             BigDecimal resta = toca.subtract(pagado); // + falta, − pagó de más (no se adelanta)
             boolean vencido = c.fecha().isBefore(hoy);
 
@@ -119,7 +140,7 @@ final class TablaMensual {
                     c.numero(), c.fecha(), c.concepto(), toca,
                     toca.subtract(resta.max(BigDecimal.ZERO)).max(BigDecimal.ZERO),
                     precio.subtract(programado).max(BigDecimal.ZERO), estado,
-                    arrastreRecibido, pagado, List.copyOf(delMes), c.tramo(), resta.negate().max(BigDecimal.ZERO)));
+                    arrastreRecibido, pagado, List.copyOf(delMes), c.tramo(), BigDecimal.ZERO));
             // Sin arrastre (decisión del usuario): lo que le faltó a un mes se queda en ese mes, no pasa al siguiente.
             arrastre = BigDecimal.ZERO;
         }

@@ -15,6 +15,10 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.18.7', fecha: '2026-11-11', cambios: [
+    "Atrasos: un mes que recibió algún pago ya no cuenta como atrasado. «Atrasado desde» empieza en el primer mes vencido sin ningún pago, aunque lo que le faltó a los meses abonados sí se suma al monto atrasado. Aplica en la tabla, el PDF, Clientes, Finanzas y Comisiones.",
+    "Pagos de más: lo que el cliente paga de más en un mes ya no aparece como «excedente a la deuda total». Se descuenta de la última mensualidad (y, si no alcanza, de la anterior), en la pantalla y en el PDF.",
+  ] },
   { version: '11.18.6', fecha: '2026-11-11', cambios: [
     "Tabla de amortización sin arrastre: si una mensualidad se paga solo en parte, lo que falta se queda en ese mes (sale «Abonado» o atrasado) y ya no se suma a la mensualidad siguiente. Aplica en todo el sistema: tabla, PDF y atrasos de Clientes, Finanzas y Comisiones.",
     "Editar recibo: cuando el concepto es Apartado ahora también se elige «A la deuda total» o «A una mensualidad» con sus meses, igual que al registrar el abono.",

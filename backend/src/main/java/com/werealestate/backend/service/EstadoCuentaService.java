@@ -102,7 +102,7 @@ public class EstadoCuentaService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         List<CalendarioPagos.Concepto> conceptos = CalendarioPagos.conceptos(
                 venta, precio, ventaAportacionRepository.findByVentaIdOrderByAnioAscMesAsc(venta.getId()));
-        CalendarioPagos.EstadoDeCuenta cuenta = CalendarioPagos.estadoDeCuenta(conceptos, precio, abonado, hoy);
+        CalendarioPagos.EstadoDeCuenta cuenta = CalendarioPagos.estadoDeCuenta(conceptos, precio, pagos, hoy);
 
         Cliente titular = venta.getClienteRef();
         Set<Long> desarrollosIds = new LinkedHashSet<>();
@@ -149,7 +149,7 @@ public class EstadoCuentaService {
                 cuenta.proximaFecha(),
                 cuenta.proximoMonto(),
                 cuenta.filas(),
-                TablaMensual.construir(conceptos, cuenta.filas(), precio, pagos, hoy),
+                cuenta.mensual(),
                 reestructuraciones(venta),
                 original.primerMes().toString(),
                 precio.subtract(original.conPagoInicialPublico() ? original.enganche() : BigDecimal.ZERO));

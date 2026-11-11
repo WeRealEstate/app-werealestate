@@ -126,7 +126,7 @@ export class PdfAmortizacionService {
         fechaCorta(f.fecha),
         f.concepto,
         dinero(f.monto),
-        f.fecha ? (f.pagos.length ? f.pagos.map((x) => [fechaCorta(x.fecha), x.folio ? `Folio ${x.folio}` : null, `${dinero(x.monto)}${x.parteDe ? ` (parte de ${dinero(x.parteDe)})` : ''}${x.aCuentaComision ? ' (a cuenta de comisión)' : ''}`].filter(Boolean).join('\n')).join('\n\n') + (f.excedente > 0.005 ? `\nExcedente ${dinero(f.excedente)}: abona a la deuda total` : '') : dinero(0)) : '—',
+        f.fecha ? (f.pagos.length ? f.pagos.map((x) => [fechaCorta(x.fecha), x.folio ? `Folio ${x.folio}` : null, `${dinero(x.monto)}${x.parteDe ? ` (parte de ${dinero(x.parteDe)})` : ''}${x.aCuentaComision ? ' (a cuenta de comisión)' : ''}`].filter(Boolean).join('\n')).join('\n\n') : dinero(0)) : '—',
         f.fecha ? dinero(f.saldo) : '—',
         etiquetaEstadoPago(f.estado, f.fecha, a.corte),
       ]),
@@ -170,7 +170,7 @@ export class PdfAmortizacionService {
     const notas = [
       'Mensualidad: lo que toca pagar ese mes; lo que le falte a un mes se queda en ese mes y no pasa al siguiente. Un pago cuenta como atrasado desde el día siguiente a su fecha.',
       'Saldo: lo que falta del precio después de cada pago, según el plan.',
-      'Monto pagado: cada abono en el mes que cubre (el que marca su recibo), con su fecha real y el folio de su recibo; lo que se paga de más no adelanta la mensualidad siguiente. Estado: Pagado (cubrió la mensualidad), Abonado (algún pago, sin cubrirla) o Atrasado (su fecha pasó sin ningún pago).',
+      'Monto pagado: cada abono en el mes que cubre (el que marca su recibo), con su fecha real y el folio de su recibo; lo que se paga de más en un mes se descuenta de la última mensualidad. Estado: Pagado (cubrió la mensualidad), Abonado (algún pago, sin cubrirla) o Atrasado (su fecha pasó sin ningún pago).',
     ];
     if (filas.some((f) => f.concepto === CONCEPTO_SIN_FECHA)) {
       notas.push(`${CONCEPTO_SIN_FECHA}: parte del precio a la que la venta no le asigna fecha (por ejemplo, anualidades); no cuenta como atraso.`);

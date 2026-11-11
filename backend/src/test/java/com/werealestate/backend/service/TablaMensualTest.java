@@ -64,7 +64,8 @@ class TablaMensualTest {
         assertThat(f.get(3).monto()).isEqualByComparingTo("16680.29");
         assertThat(f.get(6).monto()).isEqualByComparingTo("16680.29"); // octubre: venció sin pagos
         assertThat(f.get(6).estado()).isEqualTo(EstadoPagoPlan.ATRASADO);
-        assertThat(f.get(7).monto()).isEqualByComparingTo("16680.26"); // noviembre: solo lo suyo
+        // Noviembre: lo suyo menos lo pagado de más en abril, junio y septiembre (11,951.92).
+        assertThat(f.get(7).monto()).isEqualByComparingTo("4728.34"); 
         assertThat(f.get(7).estado()).isEqualTo(EstadoPagoPlan.LE_TOCA);
     }
 
@@ -132,7 +133,7 @@ class TablaMensualTest {
     }
 
     @Test
-    void unAbonoDeVariosMesesLlenaCadaMensualidadYElExcedenteVaALaDeuda() {
+    void unAbonoDeVariosMesesLlenaCadaMensualidadYElExcedenteBajaLaUltima() {
         List<PagoVenta> pagos = List.of(pago(4, 10, "10000"), mensualidad(5, 10, "40000", 5, 6));
 
         List<Fila> f = TablaMensual.construir(plan(), List.of(), d("126762"), pagos, LocalDate.of(2026, 5, 20));
@@ -140,9 +141,41 @@ class TablaMensualTest {
         assertThat(f.get(1).abonadoMes()).isEqualByComparingTo("16680.29");
         assertThat(f.get(1).pagos().get(0).parteDe()).isEqualByComparingTo("40000");
         assertThat(f.get(2).abonadoMes()).isEqualByComparingTo("23319.71");
-        assertThat(f.get(2).excedente()).isEqualByComparingTo("6639.42");
+        assertThat(f.get(2).excedente()).isEqualByComparingTo("0");
         assertThat(f.get(2).estado()).isEqualTo(EstadoPagoPlan.PAGADO);
-        // El excedente no baja la mensualidad de julio.
+        // El excedente (6,639.42) no baja la mensualidad de julio: se descuenta de la última (noviembre).
         assertThat(f.get(3).monto()).isEqualByComparingTo("16680.29");
+        assertThat(f.get(7).monto()).isEqualByComparingTo("10040.84");
+    }
+
+    @Test
+    void loPagadoDeMasSeDescuentaDeLaUltimaMensualidad() {
+        // Mayo pagó 4 de más: no queda como excedente; la última mensualidad (noviembre) baja 4.
+        List<PagoVenta> pagos = List.of(pago(4, 10, "10000"), mensualidad(5, 10, "16684.29", 5));
+        List<Fila> f = TablaMensual.construir(plan(), List.of(), d("126762"), pagos, LocalDate.of(2026, 5, 20));
+
+        assertThat(f.get(1).estado()).isEqualTo(EstadoPagoPlan.PAGADO);
+        assertThat(f.get(1).excedente()).isEqualByComparingTo("0");
+        assertThat(f.get(7).monto()).isEqualByComparingTo("16676.26");
+        assertThat(f.get(7).arrastre()).isEqualByComparingTo("-4");
+        assertThat(f.get(6).monto()).isEqualByComparingTo("16680.29");
+    }
+
+    @Test
+    void elAtrasoArrancaEnElPrimerMesSinPagoPeroSumaLoQueFaltaDeLosAbonados() {
+        // Junio y julio reciben 2,700 de 2,712.47; agosto a octubre nada. Hoy: 11 de noviembre.
+        List<CalendarioPagos.Concepto> plan = new ArrayList<>();
+        for (int k = 0; k < 10; k++) {
+            plan.add(new CalendarioPagos.Concepto(k + 1, LocalDate.of(2026, 6, 1).plusMonths(k), "Mensualidad",
+                    d("2712.47"), true));
+        }
+        List<PagoVenta> pagos = List.of(mensualidad(7, 24, "2700", 6), mensualidad(9, 21, "2700", 7));
+        CalendarioPagos.EstadoDeCuenta c = CalendarioPagos.estadoDeCuenta(plan, d("27124.70"), pagos, LocalDate.of(2026, 11, 11));
+
+        assertThat(c.atrasadoDesde()).isEqualTo(LocalDate.of(2026, 8, 1));
+        assertThat(c.pagosAtrasados()).isEqualTo(4); // agosto a noviembre (vencido el 1)
+        assertThat(c.atrasoMonto()).isEqualByComparingTo("10874.82"); // 4 × 2,712.47 + 2 × 12.47
+        assertThat(c.mensual().get(0).estado()).isEqualTo(EstadoPagoPlan.ABONADO);
+        assertThat(c.proximaFecha()).isEqualTo(LocalDate.of(2026, 12, 1));
     }
 }

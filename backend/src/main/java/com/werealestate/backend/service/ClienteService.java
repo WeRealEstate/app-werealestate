@@ -408,6 +408,8 @@ public class ClienteService {
         private final Map<Long, List<Venta>> ventasPorCliente = new HashMap<>();
         private final Map<Long, List<VentaLote>> lotesPorVenta = new HashMap<>();
         private final Map<Long, BigDecimal> abonadoPorVenta = new HashMap<>();
+        /** Los abonos vigentes de cada venta: el atraso se calcula por mes (CalendarioPagos.estadoDeCuenta con pagos). */
+        private final Map<Long, List<PagoVenta>> pagosPorVenta = new HashMap<>();
         private final Map<Long, List<VentaAportacion>> aportacionesPorVenta = new HashMap<>();
         /** Estado de cuenta de cada venta a hoy (se calcula la primera vez que se pide). */
         private final Map<Long, CalendarioPagos.EstadoDeCuenta> cuentas = new HashMap<>();
@@ -437,7 +439,9 @@ public class ClienteService {
             }
             for (PagoVenta p : pagoVentaRepository.findAllVigentes()) {
                 abonadoPorVenta.merge(p.getVenta().getId(), p.getMonto(), BigDecimal::add);
+                pagosPorVenta.computeIfAbsent(p.getVenta().getId(), k -> new ArrayList<>()).add(p);
             }
+            pagosPorVenta.values().forEach(l -> l.sort(Comparator.comparing(PagoVenta::getFecha).thenComparing(PagoVenta::getId)));
             for (VentaAportacion a : ventaAportacionRepository.findAll()) {
                 aportacionesPorVenta.computeIfAbsent(a.getVenta().getId(), k -> new ArrayList<>()).add(a);
             }
@@ -462,8 +466,9 @@ public class ClienteService {
             for (VentaLote vl : ventaLoteRepository.findByVentaIdInOrderByIdAsc(ventaIds)) {
                 lotesPorVenta.computeIfAbsent(vl.getVenta().getId(), k -> new ArrayList<>()).add(vl);
             }
-            for (Object[] fila : pagoVentaRepository.totalVigentePorVenta(ventaIds)) {
-                abonadoPorVenta.put((Long) fila[0], (BigDecimal) fila[1]);
+            for (PagoVenta p : pagoVentaRepository.findVigentesByVentaIdIn(ventaIds)) {
+                abonadoPorVenta.merge(p.getVenta().getId(), p.getMonto(), BigDecimal::add);
+                pagosPorVenta.computeIfAbsent(p.getVenta().getId(), k -> new ArrayList<>()).add(p);
             }
             for (VentaAportacion a : ventaAportacionRepository.findByVentaIdInOrderByAnioAscMesAsc(ventaIds)) {
                 aportacionesPorVenta.computeIfAbsent(a.getVenta().getId(), k -> new ArrayList<>()).add(a);
@@ -475,7 +480,7 @@ public class ClienteService {
             return cuentas.computeIfAbsent(v.getId(), id -> CalendarioPagos.estadoDeCuenta(
                     CalendarioPagos.conceptos(v, precio, aportacionesPorVenta.getOrDefault(id, List.of())),
                     precio,
-                    abonado,
+                    pagosPorVenta.getOrDefault(id, List.of()),
                     hoy));
         }
 

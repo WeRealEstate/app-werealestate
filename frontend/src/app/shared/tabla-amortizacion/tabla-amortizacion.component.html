@@ -128,8 +128,8 @@
                 <td class="px-2 py-3 tabular-nums text-ink sm:px-3">{{ fecha(f.fecha) }}</td>
                 <td class="px-2 py-3 text-ink sm:px-3">
                   {{ f.concepto }}
-                  @if (f.arrastre > 0) {
-                    <span class="block text-xs text-ink-muted">Incluye ${{ money(f.arrastre) }} de meses anteriores</span>
+                  @if (f.arrastre < -0.005) {
+                    <span class="block text-xs text-ink-muted">Se descuentan ${{ money(-f.arrastre) }} pagados de más</span>
                   }
                 </td>
                 <td class="px-2 py-3 text-right tabular-nums text-ink sm:px-3">${{ money(f.monto) }}</td>
@@ -150,9 +150,7 @@
                         }
                       </span>
                     }
-                    @if (f.excedente > 0.005) {
-                      <span class="mt-1 block text-[10px] leading-tight text-ink-muted">Excedente ${{ money(f.excedente) }}: abona a la deuda total</span>
-                    }
+
                   }
                 </td>
                 <td class="hidden px-3 py-3 text-right tabular-nums text-ink-muted sm:table-cell">{{ f.fecha ? '$' + money(f.saldo) : '—' }}</td>
@@ -203,7 +201,7 @@
         }
       </div>
       <p class="mt-2 text-xs text-ink-muted">
-        Mensualidad: lo que toca pagar ese mes; lo que le falte a un mes se queda en ese mes y no pasa al siguiente. Monto pagado: cada abono en el mes que cubre (el que marca su recibo), con su fecha real; lo que se paga de más es un excedente que abona a la deuda total y no adelanta la mensualidad siguiente. Estado del mes: Pagado si cubrió su mensualidad; Abonado si recibió algún pago pero no toda; Atrasado si su fecha ya pasó sin ningún pago (cuenta desde el día siguiente). «A cuenta de comisión» marca los abonos que se cubren con la comisión del asesor. Saldo: lo que falta del precio después de cada pago, según el plan.
+        Mensualidad: lo que toca pagar ese mes; lo que le falte a un mes se queda en ese mes y no pasa al siguiente. Monto pagado: cada abono en el mes que cubre (el que marca su recibo), con su fecha real; lo que se paga de más en un mes se descuenta de la última mensualidad (y si no alcanza, de la anterior). Estado del mes: Pagado si cubrió su mensualidad; Abonado si recibió algún pago pero no toda; Atrasado si su fecha ya pasó sin ningún pago (cuenta desde el día siguiente). «A cuenta de comisión» marca los abonos que se cubren con la comisión del asesor. Saldo: lo que falta del precio después de cada pago, según el plan.
         @if (conSinFecha()) {
           «{{ sinFecha }}» es la parte del precio a la que la venta no le asigna fecha (por ejemplo, anualidades de ventas anteriores): no cuenta como atraso.
         }
