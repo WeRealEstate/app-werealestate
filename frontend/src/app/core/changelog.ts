@@ -15,6 +15,10 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.18.8', fecha: '2026-11-11', cambios: [
+    "Pagos extemporáneos: solo se pueden registrar después del último mes del plan (dentro del plazo se elige el mes que cubre). En la tabla de amortización y el PDF aparecen en su propio renglón «Pago extemporáneo» en el mes en que se pagaron; los meses del plan se quedan como estaban. Una venta liquidada ya no muestra atraso.",
+    "Abonos: ya no se puede registrar un Enganche en una venta sin enganche, ni cobrar una aportación de un plan anterior a una reestructuración.",
+  ] },
   { version: '11.18.7', fecha: '2026-11-11', cambios: [
     "Atrasos: un mes que recibió algún pago ya no cuenta como atrasado. «Atrasado desde» empieza en el primer mes vencido sin ningún pago, aunque lo que le faltó a los meses abonados sí se suma al monto atrasado. Aplica en la tabla, el PDF, Clientes, Finanzas y Comisiones.",
     "Pagos de más: lo que el cliente paga de más en un mes ya no aparece como «excedente a la deuda total». Se descuenta de la última mensualidad (y, si no alcanza, de la anterior), en la pantalla y en el PDF.",

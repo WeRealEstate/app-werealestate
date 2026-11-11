@@ -389,6 +389,16 @@ public final class CalendarioPagos {
             }
         }
         if (atrasadoDesde == null && atraso.compareTo(TOLERANCIA) > 0) atrasadoDesde = primeraParcialVencida;
+        // Liquidada (p. ej. con pagos extemporáneos después del plan): los meses abonados se siguen viendo con su faltante,
+        // pero ya no hay atraso que cobrar.
+        if (precio.subtract(abonado).compareTo(TOLERANCIA) <= 0) {
+            atraso = BigDecimal.ZERO;
+            pagosAtrasados = 0;
+            mensualidadesAtrasadas = 0;
+            atrasadoDesde = null;
+        } else if (atraso.compareTo(precio.subtract(abonado)) > 0) {
+            atraso = precio.subtract(abonado); // nunca se debe más de lo que falta del precio
+        }
         return new EstadoDeCuenta(
                 precio,
                 abonado,

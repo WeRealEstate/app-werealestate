@@ -178,4 +178,22 @@ class TablaMensualTest {
         assertThat(c.mensual().get(0).estado()).isEqualTo(EstadoPagoPlan.ABONADO);
         assertThat(c.proximaFecha()).isEqualTo(LocalDate.of(2026, 12, 1));
     }
+
+    @Test
+    void elPagoExtemporaneoVaEnSuPropioRenglonDespuesDelPlan() {
+        // El plan termina en noviembre; en diciembre llega un extemporáneo por lo que falta.
+        PagoVenta ext = pago(12, 5, "50000");
+        when(ext.getTipo()).thenReturn(com.werealestate.backend.model.TipoAbono.MENSUALIDAD);
+        when(ext.isExtemporaneo()).thenReturn(true);
+        List<PagoVenta> pagos = List.of(pago(4, 10, "10000"), mensualidad(5, 10, "16680.29", 5), ext);
+        List<Fila> f = TablaMensual.construir(plan(), List.of(), d("126762"), pagos, LocalDate.of(2026, 12, 20));
+
+        assertThat(f).hasSize(9);
+        assertThat(f.get(8).concepto()).isEqualTo("Pago extemporáneo");
+        assertThat(f.get(8).fecha()).isEqualTo(LocalDate.of(2026, 12, 5));
+        assertThat(f.get(8).monto()).isEqualByComparingTo("50000");
+        assertThat(f.get(8).estado()).isEqualTo(EstadoPagoPlan.PAGADO);
+        assertThat(f.get(2).estado()).isEqualTo(EstadoPagoPlan.ATRASADO); // junio sigue sin pago propio
+        assertThat(f.get(7).arrastre()).isEqualByComparingTo("0"); // el extemporáneo no es "pagado de más"
+    }
 }

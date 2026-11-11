@@ -707,7 +707,7 @@ public class VentaService {
     /** Valida lo que cada tipo exige y arma la línea. */
     private PagoVenta construirLinea(Venta venta, ReciboVenta recibo, PagoVentaCreateRequest.Linea linea) {
         boolean extemporaneo = Boolean.TRUE.equals(linea.extemporaneo());
-        Referencias ref = validarReferencias(venta, linea.tipo(), linea.meses(), linea.aportacionId(), extemporaneo);
+        Referencias ref = validarReferencias(venta, linea.tipo(), linea.meses(), linea.aportacionId(), extemporaneo, recibo.getFecha(), null);
         return new PagoVenta(venta, recibo, linea.monto(), linea.tipo(), ref.aportacion(), ref.meses(), extemporaneo);
     }
 
@@ -722,7 +722,9 @@ public class VentaService {
             TipoAbono tipo,
             List<PagoVentaCreateRequest.Mes> mesesPedidos,
             Long aportacionId,
-            boolean extemporaneo) {
+            boolean extemporaneo,
+            java.time.LocalDate fechaExtemporaneo,
+            Long aportacionActual) {
         boolean traeMeses = mesesPedidos != null && !mesesPedidos.isEmpty();
 
         if (extemporaneo && !tipo.esMensual()) {
@@ -739,6 +741,13 @@ public class VentaService {
             if (extemporaneo) {
                 if (traeMeses) {
                     throw new ValidationException("Un pago extemporáneo no lleva meses: solo abona al saldo");
+                }
+                // Extemporáneo = después de que terminó el plan (decisión del usuario): dentro del plazo es una
+                // mensualidad normal con sus meses.
+                YearMonth[] rango = CalendarioPagos.rangoDeMeses(venta);
+                if (fechaExtemporaneo != null && rango != null && !YearMonth.from(fechaExtemporaneo).isAfter(rango[1])) {
+                    throw new ValidationException("El plan termina en " + rango[1]
+                            + ": un pago extemporáneo solo se registra después; dentro del plazo elige los meses que cubre");
                 }
                 return new Referencias(List.of(), null);
             }
@@ -763,6 +772,9 @@ public class VentaService {
         if (traeMeses) {
             throw new ValidationException("Solo una mensualidad o un apartado cubren meses");
         }
+        if (tipo == TipoAbono.ENGANCHE && (venta.getEnganche() == null || venta.getEnganche().signum() <= 0)) {
+            throw new ValidationException("Esta venta no tiene enganche: registra el pago como mensualidad o apartado");
+        }
         if (tipo == TipoAbono.APORTACION) {
             if (aportacionId == null) {
                 throw new ValidationException("Indica qué aportación programada paga");
@@ -770,6 +782,10 @@ public class VentaService {
             VentaAportacion aportacion = ventaAportacionRepository.findById(aportacionId)
                     .filter(a -> a.getVenta().getId().equals(venta.getId()))
                     .orElseThrow(() -> new ValidationException("Esa aportación no pertenece a esta venta"));
+            // Una aportación de un plan reemplazado no se puede volver a cobrar (sí conservarla en un recibo que ya la tenía).
+            if (!delPlanVigente(venta, aportacion) && !aportacion.getId().equals(aportacionActual)) {
+                throw new ValidationException("Esa aportación es de un plan anterior a la reestructuración: elige una del plan vigente");
+            }
             return new Referencias(List.of(), aportacion);
         }
         if (aportacionId != null) {
@@ -874,7 +890,10 @@ public class VentaService {
                 throw new ValidationException("La línea " + linea.pagoId() + " no pertenece a este recibo");
             }
             boolean extemporaneo = Boolean.TRUE.equals(linea.extemporaneo());
-            Referencias ref = validarReferencias(venta, linea.tipo(), linea.meses(), linea.aportacionId(), extemporaneo);
+            // Solo se revisa la fecha del extemporáneo si se acaba de marcar (los de antes de la regla se pueden seguir editando).
+            Referencias ref = validarReferencias(venta, linea.tipo(), linea.meses(), linea.aportacionId(), extemporaneo,
+                    extemporaneo && !pago.isExtemporaneo() ? fechaNueva : null,
+                    pago.getAportacion() != null ? pago.getAportacion().getId() : null);
             aplicar.add(() -> pago.actualizarConcepto(linea.tipo(), ref.aportacion(), ref.meses(), extemporaneo));
             if (linea.monto() != null && linea.monto().compareTo(pago.getMonto()) != 0) {
                 BigDecimal nuevo = linea.monto().setScale(2, java.math.RoundingMode.HALF_UP);

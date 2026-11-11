@@ -58,10 +58,19 @@ final class TablaMensual {
         TreeMap<YearMonth, Integer> primeroDelMes = new TreeMap<>();
         for (int i = 0; i < conceptos.size(); i++) primeroDelMes.putIfAbsent(YearMonth.from(conceptos.get(i).fecha()), i);
 
+        TreeMap<YearMonth, List<PagoMes>> extemporaneos = new TreeMap<>();
         List<List<PagoMes>> porFila = new ArrayList<>();
         for (int i = 0; i < conceptos.size(); i++) porFila.add(new ArrayList<>());
         if (!primeroDelMes.isEmpty()) {
+            YearMonth ultimoMesDelPlan = primeroDelMes.lastKey();
             for (PagoVenta p : pagos) {
+                // Pago extemporáneo hecho después del último mes del plan: va en su propio renglón, en el mes en que se
+                // pagó (decisión del usuario, 2026-11-11); los meses del plan se quedan como estaban (abonados).
+                if (p.isExtemporaneo() && YearMonth.from(p.getFecha()).isAfter(ultimoMesDelPlan)) {
+                    extemporaneos.computeIfAbsent(YearMonth.from(p.getFecha()), k -> new ArrayList<>())
+                            .add(new PagoMes(p.getFecha(), p.getMonto(), false, p.getFolio(), null));
+                    continue;
+                }
                 List<Parte> partes = ubicar(p, conceptos, primeroDelMes);
                 boolean comision = p.getTipo() == TipoAbono.A_CUENTA_COMISION;
                 for (Parte parte : partes) {
@@ -143,6 +152,22 @@ final class TablaMensual {
                     arrastreRecibido, pagado, List.copyOf(delMes), c.tramo(), BigDecimal.ZERO));
             // Sin arrastre (decisión del usuario): lo que le faltó a un mes se queda en ese mes, no pasa al siguiente.
             arrastre = BigDecimal.ZERO;
+        }
+
+        // Un renglón por cada mes con pagos extemporáneos después del plan: «Pago extemporáneo», pagado con lo que llegó.
+        int tramoFinal = conceptos.isEmpty() ? 0 : ultimoTramo;
+        BigDecimal abonadoAntes = pagos.stream()
+                .filter(p -> !(p.isExtemporaneo() && !extemporaneos.isEmpty()
+                        && !YearMonth.from(p.getFecha()).isBefore(extemporaneos.firstKey())))
+                .map(PagoVenta::getMonto).reduce(BigDecimal.ZERO, BigDecimal::add);
+        for (var e : extemporaneos.entrySet()) {
+            List<PagoMes> delMes = new ArrayList<>(e.getValue());
+            delMes.sort(java.util.Comparator.comparing(PagoMes::fecha));
+            BigDecimal monto = delMes.stream().map(PagoMes::monto).reduce(BigDecimal.ZERO, BigDecimal::add);
+            abonadoAntes = abonadoAntes.add(monto);
+            filas.add(new Fila(null, delMes.get(0).fecha(), "Pago extemporáneo", monto, monto,
+                    precio.subtract(abonadoAntes).max(BigDecimal.ZERO), EstadoPagoPlan.PAGADO,
+                    BigDecimal.ZERO, monto, List.copyOf(delMes), tramoFinal, BigDecimal.ZERO));
         }
 
         // Lo que el plan no fecha: un renglón final que nunca vence (en esta vista no recibe abonos).
