@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.17.1', fecha: '2026-11-11', cambios: [
+    "Clientes: en la ficha del cliente, junto a cada teléfono hay un botón «Llamar ahora» que abre la app de llamadas del dispositivo con el número ya marcado.",
+  ] },
   { version: '11.17.0', fecha: '2026-11-11', cambios: [
     "Menú lateral reorganizado con grupos desplegables: Ventas (Leads, Pipeline, Cotizador, Score de ventas, Ventas y Clientes) e Inventario (Lotes y Plano). El resto de las secciones quedan sueltas debajo. Cada grupo se pliega con su flechita y el menú recuerda cuáles dejaste plegados.",
   ] },

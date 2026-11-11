@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { LucideExternalLink, LucidePencil } from '@lucide/angular';
+import { LucideExternalLink, LucidePencil, LucidePhone } from '@lucide/angular';
 import { Amortizacion, cuentaAtraso, frasePagosAtrasados } from '../../../../core/models/amortizacion.model';
 import { UBICACION_DOCUMENTO_LABELS } from '../../../../core/models/asesor-externo.model';
 import {
@@ -22,7 +22,7 @@ import { WeLoaderComponent } from '../../../../shared/we-loader/we-loader.compon
 
 @Component({
   selector: 'app-cliente-detalle',
-  imports: [WeLoaderComponent, FormsModule, RouterLink, ClienteFormModalComponent, TablaAmortizacionComponent, ConfirmarCambioContratoComponent, LucideExternalLink, LucidePencil],
+  imports: [WeLoaderComponent, FormsModule, RouterLink, ClienteFormModalComponent, TablaAmortizacionComponent, ConfirmarCambioContratoComponent, LucideExternalLink, LucidePencil, LucidePhone],
   templateUrl: './cliente-detalle.component.html',
 })
 export class ClienteDetalleComponent {
@@ -239,5 +239,10 @@ export class ClienteDetalleComponent {
 
   domicilio(c: Cliente): string {
     return [c.calle, c.colonia, c.codigoPostal ? 'CP ' + c.codigoPostal : null, c.municipio, c.estado].filter(Boolean).join(', ');
+  }
+
+  /** Enlace tel: que abre la app de llamadas del dispositivo; deja solo dígitos y el + inicial. */
+  enlaceTel(telefono: string): string {
+    return 'tel:' + telefono.replace(/(?!^\+)[^\d]/g, '');
   }
 }
