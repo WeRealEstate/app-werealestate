@@ -89,9 +89,9 @@
     <form (ngSubmit)="guardarEdicion()" class="modal-panel-enter flex max-h-[90vh] w-full max-w-lg flex-col rounded-xl border border-border bg-surface p-5 shadow-lg">
       <h2 id="editar-recibo-titulo" class="font-heading text-lg font-semibold text-ink">Editar recibo</h2>
       <p class="mt-1 text-xs text-ink-muted">
-        Puedes corregir folio, fecha, nota, tipo, meses y aportación. Si cambias la fecha, Finanzas toma el abono en el
-        mes nuevo y las comisiones se recalculan con ella (lo que ya se pagó no se modifica). Si el monto está mal,
-        anula este recibo y registra uno nuevo.
+        Puedes corregir folio, fecha, nota, tipo, meses, aportación y monto. Si cambias la fecha, Finanzas toma el abono
+        en el mes nuevo y las comisiones se recalculan con ella (lo que ya se pagó no se modifica). Cambiar un monto pide
+        tu contraseña y un motivo, y queda en la bitácora del recibo.
       </p>
 
       <div class="mt-4 space-y-4 overflow-y-auto pr-1">
@@ -126,7 +126,17 @@
           <div class="rounded-xl border border-border bg-surface-2/40 p-3.5">
             <div class="flex items-center justify-between gap-2 text-sm">
               <span class="font-medium text-ink">{{ editLineas().length > 1 ? 'Concepto ' + (i + 1) : 'Concepto' }}</span>
-              <span class="text-ink-muted">${{ money(l.monto) }} (no editable)</span>
+            </div>
+            <div class="mt-2.5">
+              <label [attr.for]="'er-monto-' + l.pagoId" class="mb-1 block text-xs text-ink-muted">Monto *</label>
+              <input
+                [id]="'er-monto-' + l.pagoId" [name]="'monto-' + l.pagoId" type="number" min="0.01" step="0.01"
+                [ngModel]="l.monto" (ngModelChange)="cambiarMontoEdicion(i, $event)"
+                class="block w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/40"
+              />
+              @if (montoCambiado(i)) {
+                <p class="mt-1 text-xs text-amber-700 dark:text-amber-300">Antes: ${{ money(montoOriginal(i)) }}</p>
+              }
             </div>
             <div class="mt-2.5">
               <label [attr.for]="'er-tipo-' + l.pagoId" class="mb-1 block text-xs text-ink-muted">Tipo de abono *</label>
@@ -193,6 +203,21 @@
         }
       </div>
 
+      @if (hayMontoCambiado()) {
+        <div class="mt-3 space-y-2.5 rounded-xl border border-amber-300 bg-amber-50 p-3.5 dark:border-amber-500/40 dark:bg-amber-500/10">
+          <p class="text-xs text-amber-900 dark:text-amber-200">Cambiaste un monto: se recalculan el saldo, los atrasos, las comisiones y Finanzas.</p>
+          <div>
+            <label for="er-motivo" class="mb-1 block text-xs font-medium text-ink-muted">Motivo del cambio *</label>
+            <input id="er-motivo" name="motivoMonto" type="text" maxlength="500" [ngModel]="motivoMonto()" (ngModelChange)="motivoMonto.set($event)"
+              class="block w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/40" />
+          </div>
+          <div>
+            <label for="er-password" class="mb-1 block text-xs font-medium text-ink-muted">Tu contraseña *</label>
+            <input id="er-password" name="passwordMonto" type="password" autocomplete="current-password" [ngModel]="passwordMonto()" (ngModelChange)="passwordMonto.set($event)"
+              class="block w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/40" />
+          </div>
+        </div>
+      }
       @if (errorModal(); as error) {
         <p class="mt-3 text-xs text-red-600 dark:text-red-400" role="alert">{{ error }}</p>
       }

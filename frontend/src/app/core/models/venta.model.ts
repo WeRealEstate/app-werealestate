@@ -248,7 +248,10 @@ export interface ReciboEditarRequest {
   /** aaaa-mm-dd; null = no se toca. */
   fecha: string | null;
   notas: string | null;
-  lineas: { pagoId: number; tipo: TipoAbono; meses?: MesCubierto[]; aportacionId?: number | null; extemporaneo?: boolean }[];
+  lineas: { pagoId: number; tipo: TipoAbono; meses?: MesCubierto[]; aportacionId?: number | null; extemporaneo?: boolean; monto?: number | null }[];
+  /** Solo si cambia algún monto: contraseña de quien lo hace y motivo. */
+  password?: string | null;
+  motivo?: string | null;
 }
 
 export interface LineaReciboRequest {

@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.18.2', fecha: '2026-11-11', cambios: [
+    "Recibos: al editar un recibo ahora también se puede corregir el monto de cada concepto, sin tener que anularlo. Pide tu contraseña y un motivo, no deja que lo abonado pase del precio de la venta y queda en la bitácora del recibo (monto anterior, nuevo y motivo). El saldo, los atrasos, las comisiones y Finanzas se recalculan solos.",
+  ] },
   { version: '11.18.1', fecha: '2026-11-11', cambios: [
     "Tabla de amortización: cada abono ahora aparece en el mes que su recibo dice cubrir (por ejemplo, un pago hecho en julio para la mensualidad de junio cuenta en junio), con su fecha real. El enganche va en el renglón de Enganche y una aportación en su mes. Un abono que cubre varios meses llena la mensualidad de cada uno en orden, y lo que sobra se muestra como excedente que abona a la deuda total, sin bajar la mensualidad de ningún mes. Nuevo estado «Pagado con retraso» para el mes que se terminó de cubrir después de su fecha. También en el PDF.",
   ] },

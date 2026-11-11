@@ -122,6 +122,25 @@ export class RecibosVentaComponent {
   readonly editLineas = signal<LineaEdicion[]>([]);
   readonly guardando = signal(false);
   readonly errorModal = signal<string | null>(null);
+  readonly motivoMonto = signal('');
+  readonly passwordMonto = signal('');
+
+  montoOriginal(i: number): number {
+    const id = this.editLineas()[i]?.pagoId;
+    return this.editando()?.lineas.find((p) => p.id === id)?.monto ?? 0;
+  }
+
+  montoCambiado(i: number): boolean {
+    const l = this.editLineas()[i];
+    return !!l && Math.abs((Number(l.monto) || 0) - this.montoOriginal(i)) > 0.001;
+  }
+
+  readonly hayMontoCambiado = computed(() => this.editLineas().some((_, i) => this.montoCambiado(i)));
+
+  cambiarMontoEdicion(indice: number, valor: number | string | null): void {
+    const monto = valor === null || valor === '' ? 0 : Number(valor);
+    this.editLineas.update((ls) => ls.map((l, i) => (i === indice ? { ...l, monto } : l)));
+  }
 
   /** Los cuatro tipos siempre salen; los que esta venta no puede recibir se muestran deshabilitados
    * con la razón (por ejemplo, una venta de contado no tiene mensualidades). */
@@ -180,6 +199,8 @@ export class RecibosVentaComponent {
       })),
     );
     this.errorModal.set(null);
+    this.motivoMonto.set('');
+    this.passwordMonto.set('');
   }
 
   cerrarEdicion(): void {
@@ -246,7 +267,11 @@ export class RecibosVentaComponent {
       if (l.tipo === 'APORTACION' && l.aportacionId === null) {
         return void this.errorModal.set('Elige qué aportación programada paga.');
       }
+      if (!(Number(l.monto) > 0)) return void this.errorModal.set('El monto de cada concepto debe ser mayor a cero.');
     }
+    const cambiaMonto = this.hayMontoCambiado();
+    if (cambiaMonto && !this.motivoMonto().trim()) return void this.errorModal.set('Escribe el motivo del cambio de monto.');
+    if (cambiaMonto && !this.passwordMonto()) return void this.errorModal.set('Escribe tu contraseña para cambiar el monto.');
 
     this.guardando.set(true);
     this.errorModal.set(null);
@@ -267,7 +292,10 @@ export class RecibosVentaComponent {
                 })
               : undefined,
           aportacionId: l.tipo === 'APORTACION' ? l.aportacionId : null,
+          monto: cambiaMonto ? Number(l.monto) : null,
         })),
+        password: cambiaMonto ? this.passwordMonto() : null,
+        motivo: cambiaMonto ? this.motivoMonto().trim() : null,
       });
       this.editando.set(null);
       this.toast.success('Recibo actualizado.');

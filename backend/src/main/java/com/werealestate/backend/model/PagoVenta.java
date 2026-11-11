@@ -136,7 +136,12 @@ public class PagoVenta {
         this.fecha = nueva;
     }
 
-    /** Edición del concepto (el monto nunca cambia; la fecha solo por {@link #actualizarFecha}). */
+    /** Corrige el monto de la línea (VentaService.editarRecibo: exige contraseña y motivo, queda en la bitácora). */
+    public void corregirMonto(BigDecimal nuevo) {
+        this.monto = nuevo;
+    }
+
+    /** Edición del concepto (el monto solo por {@link #corregirMonto}; la fecha solo por {@link #actualizarFecha}). */
     public void actualizarConcepto(
             TipoAbono tipo, VentaAportacion aportacion, List<MesCubierto> meses, boolean extemporaneo) {
         this.tipo = tipo;

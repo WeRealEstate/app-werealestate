@@ -849,6 +849,8 @@ public class VentaService {
 
         // Se validan todas las líneas antes de guardar nada.
         List<Runnable> aplicar = new ArrayList<>();
+        BigDecimal diferencia = BigDecimal.ZERO;
+        List<String> montosCambiados = new ArrayList<>();
         for (ReciboEditarRequest.Linea linea : request.lineas()) {
             PagoVenta pago = porId.get(linea.pagoId());
             if (pago == null) {
@@ -857,6 +859,27 @@ public class VentaService {
             boolean extemporaneo = Boolean.TRUE.equals(linea.extemporaneo());
             Referencias ref = validarReferencias(venta, linea.tipo(), linea.meses(), linea.aportacionId(), extemporaneo);
             aplicar.add(() -> pago.actualizarConcepto(linea.tipo(), ref.aportacion(), ref.meses(), extemporaneo));
+            if (linea.monto() != null && linea.monto().compareTo(pago.getMonto()) != 0) {
+                BigDecimal nuevo = linea.monto().setScale(2, java.math.RoundingMode.HALF_UP);
+                diferencia = diferencia.add(nuevo.subtract(pago.getMonto()));
+                montosCambiados.add(describirLinea(pago) + ": $" + pago.getMonto() + " → $" + nuevo);
+                aplicar.add(() -> pago.corregirMonto(nuevo));
+            }
+        }
+
+        // Corregir un monto mueve saldo, comisiones y Finanzas: contraseña y motivo, y nunca más que el precio.
+        if (!montosCambiados.isEmpty()) {
+            if (request.password() == null || !passwordEncoder.matches(request.password(), actual.getPassword())) {
+                throw new ForbiddenOperationException("Contraseña incorrecta");
+            }
+            if (request.motivo() == null || request.motivo().isBlank()) {
+                throw new ValidationException("Escribe el motivo del cambio de monto");
+            }
+            BigDecimal saldo = precioVenta(ventaId).subtract(totalAbonado(ventaId));
+            if (diferencia.compareTo(saldo) > 0) {
+                throw new ValidationException("Con el monto nuevo el abonado pasaría del precio: el saldo pendiente es $" + saldo);
+            }
+            cambios.add("Monto " + String.join(", ", montosCambiados) + " · Motivo: " + request.motivo().trim());
         }
 
         recibo.setFolio(folio);
