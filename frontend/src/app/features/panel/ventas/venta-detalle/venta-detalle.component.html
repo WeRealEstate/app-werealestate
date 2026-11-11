@@ -314,10 +314,11 @@
                      focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
             />
           </div>
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-3 rounded-xl border-2 border-we-primary/40 bg-we-primary/5 p-3.5">
             <button
               type="button"
               role="switch"
+              aria-label="El mes de la venta cuenta como primera mensualidad"
               [attr.aria-checked]="edicionPrimeraMensualidadMesVenta()"
               (click)="edicionPrimeraMensualidadMesVenta.set(!edicionPrimeraMensualidadMesVenta())"
               class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200
@@ -331,7 +332,10 @@
                 [class.translate-x-0.5]="!(edicionPrimeraMensualidadMesVenta())"
               ></span>
             </button>
-            <p class="text-sm text-ink">El mes de la venta cuenta como primera mensualidad</p>
+            <div>
+              <p class="text-sm font-semibold text-ink">El mes de la venta cuenta como primera mensualidad</p>
+              <p class="mt-0.5 text-xs text-ink-muted">Actívalo si el cliente pagó la primera mensualidad en el mes de la compra. Cambia las fechas de todo el plan de pagos.</p>
+            </div>
           </div>
           @if (v.fechaProvisional) {
             <label class="flex items-center gap-2.5 text-sm text-ink sm:col-span-2" data-testid="confirmar-fecha">

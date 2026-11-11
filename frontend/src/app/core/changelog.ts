@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.16.1', fecha: '2026-11-11', cambios: [
+    "Ventas: la opción «el cliente paga la primera mensualidad este mismo mes» ahora se ve destacada, con una pregunta clara y su explicación, al registrar una venta y al editarla en el detalle. No cambia ningún valor: por defecto la primera mensualidad sigue siendo al mes siguiente.",
+  ] },
   { version: '11.16.0', fecha: '2026-11-10', cambios: [
     "Número de venta por desarrollo, como el de clientes: SAMAI lleva S-1, S-2… y Aldea Nanuu N-1, N-2…, cada uno consecutivo y sin saltos (las ventas existentes se numeraron por el orden en que se registraron). El nuevo número se ve en toda la app (lista, detalle, comisiones, Finanzas, lotes, tablas de amortización, avisos) y en la dirección de cada venta (/panel/ventas/S-12). Al registrar o modificar una venta, el número manual cuenta dentro del desarrollo del primer lote; al eliminar una venta, las siguientes de su desarrollo bajan un número. El buscador de Ventas acepta «S-12» o «12». Los enlaces antiguos con el número global ya no abren la venta.",
   ] },
