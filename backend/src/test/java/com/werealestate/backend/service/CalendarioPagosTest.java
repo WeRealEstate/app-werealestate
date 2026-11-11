@@ -221,4 +221,40 @@ class CalendarioPagosTest {
         assertThat(c.filas().get(0).estado()).isEqualTo(EstadoPagoPlan.ATRASADO);
         assertThat(c.atrasoMonto()).isEqualByComparingTo("3000");
     }
+
+    @Test
+    void reestructuracionRespetaLoPagadoYRepartaElSaldo() {
+        // Enganche 20 mil y 32 mensualidades de 5 mil; al 3 de noviembre lleva 27 mil (debía 30 mil: octubre a medias).
+        // Se reestructura a 12 meses desde diciembre con una anualidad de 60 mil en junio de 2027.
+        Venta v = venta(LocalDate.of(2026, 8, 15), "5000", 32, "Enganche", "20000", 15, false);
+        com.werealestate.backend.model.VentaReestructuracion r = new com.werealestate.backend.model.VentaReestructuracion(
+                v, HOY, d("27000"), d("153000"), "Cambio a anualidades", null,
+                LocalDate.of(2026, 8, 15), "Prueba", d("5000"), 32, 15, false, "Enganche", d("20000"), "antes", "después");
+        org.springframework.test.util.ReflectionTestUtils.setField(r, "id", 7L);
+        v.agregarReestructuracion(r);
+        v.aplicarPlanReestructurado("Reestructurada", HOY, d("8454.55"), 12, 15, false);
+        VentaAportacion anualidad = new VentaAportacion(v, 2027, 6, d("60000"), 7L);
+        // Una aportación del plan original (ya reemplazado) no cuenta en el plan nuevo.
+        VentaAportacion vieja = new VentaAportacion(v, 2027, 8, d("99999"));
+
+        CalendarioPagos.EstadoDeCuenta c = cuenta(v, "180000", "27000", List.of(anualidad, vieja));
+        List<AmortizacionDto.Fila> f = c.filas();
+
+        // Plan original: solo lo que se pagó con él.
+        assertThat(f.get(0).concepto()).isEqualTo("Enganche");
+        assertThat(f.get(2).monto()).isEqualByComparingTo("2000");
+        assertThat(f.subList(0, 3)).allMatch(x -> x.tramo() == 0 && x.estado() == EstadoPagoPlan.PAGADO);
+        // Plan nuevo: 12 pagos desde diciembre que suman el saldo; junio es la anualidad.
+        List<AmortizacionDto.Fila> nuevo = f.subList(3, f.size());
+        assertThat(nuevo).hasSize(12).allMatch(x -> x.tramo() == 1);
+        assertThat(nuevo.get(0).fecha()).isEqualTo(LocalDate.of(2026, 12, 15));
+        assertThat(nuevo.get(6).concepto()).isEqualTo("Aportación");
+        assertThat(nuevo.get(6).monto()).isEqualByComparingTo("60000");
+        assertThat(nuevo.stream().map(AmortizacionDto.Fila::monto).reduce(BigDecimal.ZERO, BigDecimal::add))
+                .isEqualByComparingTo("153000");
+        assertThat(c.pagosAtrasados()).isZero();
+        assertThat(c.proximaFecha()).isEqualTo(LocalDate.of(2026, 12, 15));
+        assertThat(CalendarioPagos.rangoDeMeses(v)).containsExactly(
+                java.time.YearMonth.of(2026, 9), java.time.YearMonth.of(2029, 4));
+    }
 }

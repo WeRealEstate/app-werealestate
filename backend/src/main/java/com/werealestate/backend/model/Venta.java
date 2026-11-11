@@ -8,10 +8,14 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Registro de una venta cerrada. A propósito no referencia Lead (ver VentaService): cliente es
@@ -106,6 +110,15 @@ public class Venta {
     private Usuario registradaPor;
 
     /** La venta nació de un registro de venta (We Forms) y su fecha es la del día de envío, a confirmar. */
+    /** Desde cuándo corre el plan vigente; null = desde la fecha de venta. Lo pone una reestructuración. */
+    @Column(name = "inicio_plan")
+    private LocalDate inicioPlan;
+
+    /** Cambios del plan de pagos, del más antiguo al más reciente (ver VentaReestructuracion y CalendarioPagos). */
+    @OneToMany(mappedBy = "venta", fetch = FetchType.LAZY, cascade = jakarta.persistence.CascadeType.REMOVE)
+    @OrderBy("id ASC")
+    private List<VentaReestructuracion> reestructuraciones = new ArrayList<>();
+
     @Column(name = "fecha_provisional", nullable = false)
     private boolean fechaProvisional;
 
@@ -272,6 +285,30 @@ public class Venta {
 
     public void setRegistradaPor(Usuario registradaPor) {
         this.registradaPor = registradaPor;
+    }
+
+    public LocalDate getInicioPlan() {
+        return inicioPlan;
+    }
+
+    public List<VentaReestructuracion> getReestructuraciones() {
+        return reestructuraciones;
+    }
+
+    public void agregarReestructuracion(VentaReestructuracion r) {
+        reestructuraciones.add(r);
+    }
+
+    /** Pone el plan nuevo de una reestructuración: corre desde {@code inicio} y reparte solo el saldo. El enganche
+     * capturado de la venta se conserva como dato (pertenece al plan original). */
+    public void aplicarPlanReestructurado(
+            String formaPago, LocalDate inicio, BigDecimal mensualidad, int plazoMeses, int diaPago, boolean primeraEnMesInicio) {
+        this.formaPago = formaPago;
+        this.inicioPlan = inicio;
+        this.mensualidad = mensualidad;
+        this.plazoMeses = plazoMeses;
+        this.diaPago = diaPago;
+        this.primeraMensualidadMesVenta = primeraEnMesInicio;
     }
 
     public Long getId() {

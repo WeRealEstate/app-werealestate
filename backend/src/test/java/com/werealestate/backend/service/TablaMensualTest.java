@@ -117,4 +117,48 @@ class TablaMensualTest {
         assertThat(f.get(3).estado()).isEqualTo(EstadoPagoPlan.ATRASADO);
         assertThat(f.get(6).estado()).isEqualTo(EstadoPagoPlan.ATRASADO);
     }
+
+    private static PagoVenta mensualidad(int mes, int dia, String monto, int... mesesQueCubre) {
+        PagoVenta p = pago(mes, dia, monto);
+        when(p.getTipo()).thenReturn(com.werealestate.backend.model.TipoAbono.MENSUALIDAD);
+        List<com.werealestate.backend.model.MesCubierto> meses = new ArrayList<>();
+        for (int m : mesesQueCubre) meses.add(new com.werealestate.backend.model.MesCubierto(2026, m));
+        when(p.getMeses()).thenReturn(meses);
+        return p;
+    }
+
+    @Test
+    void elAbonoVaAlMesQueDiceCubrirAunqueSePagueDespues() {
+        PagoVenta enganche = pago(5, 2, "10000"); // enganche pagado en mayo: va a su renglón
+        when(enganche.getTipo()).thenReturn(com.werealestate.backend.model.TipoAbono.ENGANCHE);
+        List<PagoVenta> pagos = List.of(
+                enganche,
+                mensualidad(5, 10, "16680.29", 5),   // mayo a tiempo
+                mensualidad(7, 21, "16680.29", 6));  // pagado en julio, cubre junio
+
+        List<Fila> f = TablaMensual.construir(plan(), List.of(), d("126762"), pagos, LocalDate.of(2026, 7, 25));
+
+        assertThat(f.get(0).pagos()).hasSize(1);
+        assertThat(f.get(0).estado()).isEqualTo(EstadoPagoPlan.PAGADO_CON_RETRASO); // enganche del 10/04 pagado el 02/05
+        assertThat(f.get(1).estado()).isEqualTo(EstadoPagoPlan.PAGADO);
+        assertThat(f.get(2).pagos()).extracting(p -> p.fecha()).containsExactly(LocalDate.of(2026, 7, 21));
+        assertThat(f.get(2).estado()).isEqualTo(EstadoPagoPlan.PAGADO_CON_RETRASO);
+        assertThat(f.get(3).pagos()).isEmpty(); // julio: el abono de julio no cae aquí
+        assertThat(f.get(3).monto()).isEqualByComparingTo("16680.29");
+    }
+
+    @Test
+    void unAbonoDeVariosMesesLlenaCadaMensualidadYElExcedenteVaALaDeuda() {
+        List<PagoVenta> pagos = List.of(pago(4, 10, "10000"), mensualidad(5, 10, "40000", 5, 6));
+
+        List<Fila> f = TablaMensual.construir(plan(), List.of(), d("126762"), pagos, LocalDate.of(2026, 5, 20));
+
+        assertThat(f.get(1).abonadoMes()).isEqualByComparingTo("16680.29");
+        assertThat(f.get(1).pagos().get(0).parteDe()).isEqualByComparingTo("40000");
+        assertThat(f.get(2).abonadoMes()).isEqualByComparingTo("23319.71");
+        assertThat(f.get(2).excedente()).isEqualByComparingTo("6639.42");
+        assertThat(f.get(2).estado()).isEqualTo(EstadoPagoPlan.PAGADO);
+        // El excedente no baja la mensualidad de julio.
+        assertThat(f.get(3).monto()).isEqualByComparingTo("16680.29");
+    }
 }

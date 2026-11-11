@@ -38,6 +38,10 @@ public class VentaAportacion {
     @Column(nullable = false, precision = 14, scale = 2)
     private BigDecimal monto;
 
+    /** La reestructuración cuyo plan nuevo trae esta aportación; null = plan original de la venta. */
+    @Column(name = "reestructuracion_id")
+    private Long reestructuracionId;
+
     protected VentaAportacion() {
         // JPA
     }
@@ -47,6 +51,15 @@ public class VentaAportacion {
         this.anio = anio;
         this.mes = mes;
         this.monto = monto;
+    }
+
+    public VentaAportacion(Venta venta, int anio, int mes, BigDecimal monto, Long reestructuracionId) {
+        this(venta, anio, mes, monto);
+        this.reestructuracionId = reestructuracionId;
+    }
+
+    public Long getReestructuracionId() {
+        return reestructuracionId;
     }
 
     public Long getId() {

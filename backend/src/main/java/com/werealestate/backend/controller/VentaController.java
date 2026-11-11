@@ -134,6 +134,13 @@ public class VentaController {
         return ResponseEntity.noContent().build();
     }
 
+    /** Cambia el plan de pagos de la venta: lo pagado se respeta y el plan nuevo reparte el saldo de hoy. */
+    @PostMapping("/{id}/reestructurar")
+    public VentaDto reestructurar(
+            @PathVariable Long id, @Valid @RequestBody com.werealestate.backend.dto.VentaReestructurarRequest request) {
+        return ventaService.reestructurar(id, request);
+    }
+
     /** Número de contrato de la venta (opcional, único). Lo editan admin y administración. */
     @PutMapping("/{id}/numero-contrato")
     public VentaDto numeroContrato(@PathVariable Long id, @Valid @RequestBody NumeroContratoRequest request) {

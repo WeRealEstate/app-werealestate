@@ -41,6 +41,7 @@ import com.werealestate.backend.model.Venta;
 import com.werealestate.backend.model.VentaCopropietario;
 import com.werealestate.backend.repository.VentaCopropietarioRepository;
 import com.werealestate.backend.model.VentaAportacion;
+import com.werealestate.backend.model.VentaReestructuracion;
 import com.werealestate.backend.model.VentaLote;
 import com.werealestate.backend.repository.AsesorExternoRepository;
 import com.werealestate.backend.repository.LoteRepository;
@@ -55,6 +56,7 @@ import com.werealestate.backend.security.CurrentUserProvider;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -743,8 +745,10 @@ public class VentaService {
             if (!traeMeses) {
                 throw new ValidationException("Indica el mes o los meses que cubre la mensualidad");
             }
-            YearMonth primero = YearMonth.from(venta.getFechaVenta()).plusMonths(venta.isPrimeraMensualidadMesVenta() ? 0 : 1);
-            YearMonth ultimo = primero.plusMonths(venta.getPlazoMeses() - 1L);
+            // Con reestructuraciones, el rango va del primer mes del plan original al último del plan vigente.
+            YearMonth[] rango = CalendarioPagos.rangoDeMeses(venta);
+            YearMonth primero = rango[0];
+            YearMonth ultimo = rango[1];
             Set<YearMonth> vistos = new HashSet<>();
             List<MesCubierto> meses = new ArrayList<>();
             for (PagoVentaCreateRequest.Mes m : mesesPedidos) {
@@ -919,6 +923,115 @@ public class VentaService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
+    /** La venta solo muestra (y ofrece para cobrar) las aportaciones de su plan vigente; las de un plan reemplazado
+     * siguen en la base para los recibos que ya las pagaron. */
+    private static boolean delPlanVigente(Venta venta, VentaAportacion a) {
+        List<com.werealestate.backend.model.VentaReestructuracion> rs = venta.getReestructuraciones();
+        Long vigente = rs.isEmpty() ? null : rs.get(rs.size() - 1).getId();
+        return java.util.Objects.equals(vigente, a.getReestructuracionId());
+    }
+
+    /**
+     * Reestructura el plan de pagos de la venta (p. ej. de mensualidades a anualidades). Lo abonado hasta hoy se queda
+     * como estaba y el plan nuevo reparte el saldo de hoy, atrasos incluidos; el precio no cambia (decisiones del
+     * usuario). Los meses con aportación pagan esa aportación y lo demás se reparte en mensualidades iguales. Solo
+     * admin y administración, con su contraseña y un motivo; se puede hacer varias veces y cada una queda registrada.
+     */
+    public VentaDto reestructurar(Long id, com.werealestate.backend.dto.VentaReestructurarRequest request) {
+        Usuario actual = currentUserProvider.getUsuarioActual();
+        if (actual.getRol() != Role.ADMIN && actual.getRol() != Role.LIDER_AREA) {
+            throw new ForbiddenOperationException("Solo un administrador o personal de administración puede reestructurar una venta");
+        }
+        if (!passwordEncoder.matches(request.password(), actual.getPassword())) {
+            throw new ForbiddenOperationException("Contraseña incorrecta");
+        }
+        Venta venta = obtenerEntidad(id);
+        if (venta.getDepositoPendiente() != null) {
+            throw new ConflictException("Primero aplica el depósito pendiente de la venta");
+        }
+        BigDecimal precio = precioVenta(id);
+        BigDecimal abonado = pagoVentaRepository.findVigentesByVentaIdOrderByFechaAscIdAsc(id).stream()
+                .map(PagoVenta::getMonto)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal saldo = precio.subtract(abonado);
+        if (saldo.compareTo(new BigDecimal("0.01")) <= 0) {
+            throw new ConflictException("La venta ya está liquidada: no hay saldo que reestructurar");
+        }
+
+        LocalDate hoy = LocalDate.now();
+        int plazo = request.plazoMeses();
+        YearMonth primero = YearMonth.from(hoy).plusMonths(request.primeraEnMesActual() ? 0 : 1);
+        YearMonth ultimo = primero.plusMonths(plazo - 1L);
+        Map<YearMonth, BigDecimal> aportaciones = new java.util.TreeMap<>();
+        for (var a : request.aportaciones() == null ? List.<com.werealestate.backend.dto.VentaReestructurarRequest.Aportacion>of() : request.aportaciones()) {
+            YearMonth ym = YearMonth.of(a.anio(), a.mes());
+            if (ym.isBefore(primero) || ym.isAfter(ultimo)) {
+                throw new ValidationException("La aportación de " + ym + " está fuera del plazo nuevo (" + primero + " a " + ultimo + ")");
+            }
+            if (aportaciones.put(ym, a.monto()) != null) {
+                throw new ValidationException("Hay dos aportaciones en " + ym);
+            }
+        }
+        BigDecimal aportado = aportaciones.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+        int regulares = plazo - aportaciones.size();
+        BigDecimal resto = saldo.subtract(aportado);
+        BigDecimal mensualidad;
+        if (regulares == 0) {
+            if (resto.abs().compareTo(new BigDecimal("0.01")) > 0) {
+                throw new ValidationException("Todos los meses son aportaciones: deben sumar el saldo ($" + saldo + ")");
+            }
+            mensualidad = BigDecimal.ZERO;
+        } else {
+            if (resto.compareTo(new BigDecimal("0.01")) <= 0) {
+                throw new ValidationException("Las aportaciones cubren todo el saldo ($" + saldo + "): reduce alguna o el plazo");
+            }
+            // Hacia abajo: los centavos que sobran los absorbe la última mensualidad (CalendarioPagos), en lugar de
+            // recortar el último pago del plan.
+            mensualidad = resto.divide(BigDecimal.valueOf(regulares), 2, java.math.RoundingMode.DOWN);
+        }
+
+        CalendarioPagos.Plan anterior = CalendarioPagos.planVigente(venta);
+        String formaPago = aportaciones.isEmpty()
+                ? "Reestructurada · " + plazo + " meses"
+                : "Reestructurada · " + plazo + " meses + aportaciones";
+        String resumenNuevo = describirPlan(formaPago, primero, plazo, mensualidad, aportaciones.size(), aportado);
+        VentaReestructuracion r = new VentaReestructuracion(
+                venta, hoy, abonado, saldo, request.motivo().trim(), actual,
+                anterior.inicio(), venta.getFormaPago(), anterior.mensualidad(), anterior.plazoMeses(), anterior.diaPago(),
+                anterior.primeraEnMesInicio(), anterior.engancheLabel(), anterior.enganche(),
+                describirPlanVigente(venta), resumenNuevo);
+        entityManager.persist(r);
+        venta.agregarReestructuracion(r);
+        venta.aplicarPlanReestructurado(formaPago, hoy, mensualidad, plazo, request.diaPago(), request.primeraEnMesActual());
+        entityManager.flush();
+        aportaciones.forEach((ym, monto) -> ventaAportacionRepository.save(
+                new VentaAportacion(venta, ym.getYear(), ym.getMonthValue(), monto, r.getId())));
+        comisionService.sincronizar(venta);
+        return toDto(venta);
+    }
+
+    private String describirPlanVigente(Venta venta) {
+        CalendarioPagos.Plan p = CalendarioPagos.planVigente(venta);
+        if (!p.conPlazoPublico()) return venta.getFormaPago() + " · contado";
+        List<VentaAportacion> propias = ventaAportacionRepository.findByVentaIdOrderByAnioAscMesAsc(venta.getId()).stream()
+                .filter(a -> delPlanVigente(venta, a))
+                .toList();
+        BigDecimal aportado = propias.stream().map(VentaAportacion::getMonto).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return describirPlan(venta.getFormaPago(), p.primerMes(), p.plazoMeses(), p.mensualidad(), propias.size(), aportado);
+    }
+
+    /** "Reestructurada · 24 meses: mensualidad $5,000.00 desde 2026-12 (+ 2 aportaciones por $40,000.00)". */
+    private static String describirPlan(String formaPago, YearMonth desde, int plazo, BigDecimal mensualidad, int aportaciones, BigDecimal aportado) {
+        java.text.NumberFormat f = java.text.NumberFormat.getCurrencyInstance(java.util.Locale.forLanguageTag("es-MX"));
+        String texto = formaPago + ": " + plazo + " meses desde " + desde + ", mensualidad " + f.format(mensualidad);
+        if (aportaciones > 0) texto += " + " + aportaciones + (aportaciones == 1 ? " aportación" : " aportaciones") + " por " + f.format(aportado);
+        return texto.length() > 300 ? texto.substring(0, 300) : texto;
+    }
+
+    /** Para guardar una reestructuración (inyectado por campo: no cambia el constructor que usan las pruebas). */
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager entityManager;
+
     private BigDecimal precioVenta(Long ventaId) {
         return ventaLoteRepository.findByVentaId(ventaId).stream()
                 .map(VentaLote::getPrecio)
@@ -931,6 +1044,7 @@ public class VentaService {
         List<VentaAportacionDto> aportaciones = ventaAportacionRepository
                 .findByVentaIdOrderByAnioAscMesAsc(venta.getId())
                 .stream()
+                .filter(a -> delPlanVigente(venta, a))
                 .map(VentaAportacionDto::from)
                 .toList();
         List<ClienteResumenDto> copropietarios = copropietarioRepository.findByVentaIdOrderByOrdenAsc(venta.getId()).stream()
@@ -954,6 +1068,7 @@ public class VentaService {
         }
         Map<Long, List<VentaAportacionDto>> aportaciones = new HashMap<>();
         for (VentaAportacion a : ventaAportacionRepository.findByVentaIdInOrderByAnioAscMesAsc(ids)) {
+            if (!delPlanVigente(a.getVenta(), a)) continue;
             aportaciones.computeIfAbsent(a.getVenta().getId(), id -> new ArrayList<>()).add(VentaAportacionDto.from(a));
         }
         Map<Long, List<ClienteResumenDto>> copropietarios = new HashMap<>();

@@ -104,7 +104,7 @@ export class ReciboFormComponent {
     if (!a) return null;
     const faltante = new Map<string, number>();
     for (const f of a.filas) {
-      if (f.numero === null || f.fecha === null || f.concepto !== 'Mensualidad' || f.estado === 'PAGADO') continue;
+      if (f.numero === null || f.fecha === null || f.concepto !== 'Mensualidad' || f.estado === 'PAGADO' || f.estado === 'PAGADO_CON_RETRASO') continue;
       faltante.set(f.fecha.slice(0, 7), Math.max(0, Math.round((f.monto - f.pagado) * 100) / 100));
     }
     return faltante;

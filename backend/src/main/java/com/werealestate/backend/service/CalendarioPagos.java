@@ -4,6 +4,7 @@ import com.werealestate.backend.dto.AmortizacionDto;
 import com.werealestate.backend.model.EstadoPagoPlan;
 import com.werealestate.backend.model.Venta;
 import com.werealestate.backend.model.VentaAportacion;
+import com.werealestate.backend.model.VentaReestructuracion;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -51,10 +52,85 @@ public final class CalendarioPagos {
 
     /** Un pago esperado. numero: su lugar en el plazo (1 = primera mensualidad); null en el enganche, el pago de
      * contado y una aportación fuera del plazo. mensualidad: true en una mensualidad (no en una aportación). */
-    public record Concepto(Integer numero, LocalDate fecha, String concepto, BigDecimal monto, boolean mensualidad) {
-        Concepto conMonto(BigDecimal nuevo) {
-            return new Concepto(numero, fecha, concepto, nuevo, mensualidad);
+    public record Concepto(
+            Integer numero, LocalDate fecha, String concepto, BigDecimal monto, boolean mensualidad, int tramo, Integer plazo) {
+
+        /** Pago del plan original (tramo 0). */
+        public Concepto(Integer numero, LocalDate fecha, String concepto, BigDecimal monto, boolean mensualidad) {
+            this(numero, fecha, concepto, monto, mensualidad, 0, null);
         }
+
+        Concepto conMonto(BigDecimal nuevo) {
+            return new Concepto(numero, fecha, concepto, nuevo, mensualidad, tramo, plazo);
+        }
+    }
+
+    /**
+     * Un plan de pagos: desde {@code inicio} (fecha de venta o de corte), con su pago inicial (solo el plan original),
+     * mensualidad, plazo y día de pago. Sin mensualidad o plazo es de contado.
+     */
+    public record Plan(
+            LocalDate inicio,
+            BigDecimal mensualidad,
+            Integer plazoMeses,
+            int diaPago,
+            boolean primeraEnMesInicio,
+            String engancheLabel,
+            BigDecimal enganche) {
+
+        boolean conPlazo() {
+            return mensualidad != null && plazoMeses != null;
+        }
+
+        public boolean conPlazoPublico() {
+            return conPlazo();
+        }
+
+        boolean conPagoInicial() {
+            return enganche != null && engancheLabel != null && ETIQUETAS_PAGO_INICIAL.contains(engancheLabel);
+        }
+
+        public YearMonth primerMes() {
+            YearMonth ym = YearMonth.from(inicio);
+            return primeraEnMesInicio ? ym : ym.plusMonths(1);
+        }
+    }
+
+    /** El plan vigente de la venta (el último, si se reestructuró: ese ya no lleva el pago inicial). */
+    public static Plan planVigente(Venta venta) {
+        boolean reestructurada = !venta.getReestructuraciones().isEmpty();
+        return new Plan(
+                venta.getInicioPlan() != null ? venta.getInicioPlan() : venta.getFechaVenta(),
+                venta.getMensualidad(),
+                venta.getPlazoMeses(),
+                venta.getDiaPago(),
+                venta.isPrimeraMensualidadMesVenta(),
+                reestructurada ? null : venta.getEngancheLabel(),
+                reestructurada ? null : venta.getEnganche());
+    }
+
+    /** El plan que reemplazó una reestructuración. */
+    public static Plan planAnterior(VentaReestructuracion r) {
+        return new Plan(r.getAntFechaInicio(), r.getAntMensualidad(), r.getAntPlazoMeses(), r.getAntDiaPago(),
+                r.isAntPrimeraMesInicio(), r.getAntEngancheLabel(), r.getAntEnganche());
+    }
+
+    /** Primer y último mes en que una mensualidad puede caer, sumando todos los planes de la venta; null si ningún
+     * plan tiene mensualidades. Lo usa la validación de los meses de un recibo. */
+    public static YearMonth[] rangoDeMeses(Venta venta) {
+        List<Plan> planes = new ArrayList<>();
+        venta.getReestructuraciones().forEach(r -> planes.add(planAnterior(r)));
+        planes.add(planVigente(venta));
+        YearMonth primero = null;
+        YearMonth ultimo = null;
+        for (Plan p : planes) {
+            if (!p.conPlazo() || p.plazoMeses() < 1) continue;
+            YearMonth a = p.primerMes();
+            YearMonth b = a.plusMonths(p.plazoMeses() - 1L);
+            if (primero == null || a.isBefore(primero)) primero = a;
+            if (ultimo == null || b.isAfter(ultimo)) ultimo = b;
+        }
+        return primero == null ? null : new YearMonth[] {primero, ultimo};
     }
 
     /**
@@ -87,40 +163,75 @@ public final class CalendarioPagos {
                 && ETIQUETAS_PAGO_INICIAL.contains(venta.getEngancheLabel());
     }
 
-    /** Lo que se espera cobrar de la venta, en orden de fecha, sin pasar nunca de su precio. */
+    /**
+     * Lo que se espera cobrar de la venta, sin pasar nunca de su precio. Sin reestructuraciones es su plan, en orden de
+     * fecha. Con reestructuraciones va por tramos: de cada plan reemplazado solo quedan sus pagos más antiguos hasta
+     * sumar lo que se abonó mientras estuvo vigente (lo que se pagó con él), y el plan siguiente reparte lo que faltaba
+     * del precio en ese corte. Así lo pagado antes del cambio sale igual y el total sigue siendo el precio.
+     */
     public static List<Concepto> conceptos(Venta venta, BigDecimal precio, Collection<VentaAportacion> aportacionesDeLaVenta) {
+        List<VentaReestructuracion> rs = venta.getReestructuraciones();
+        if (rs.isEmpty()) return conceptosDePlan(planVigente(venta), precio, aportacionesDeLaVenta, 0);
+
+        List<Concepto> resultado = new ArrayList<>();
+        BigDecimal abonadoAntes = BigDecimal.ZERO;
+        for (int i = 0; i <= rs.size(); i++) {
+            Long etiqueta = i == 0 ? null : rs.get(i - 1).getId();
+            List<VentaAportacion> propias = aportacionesDeLaVenta.stream()
+                    .filter(a -> java.util.Objects.equals(a.getReestructuracionId(), etiqueta))
+                    .toList();
+            BigDecimal base = precio.subtract(abonadoAntes).max(BigDecimal.ZERO);
+            if (i == rs.size()) {
+                resultado.addAll(conceptosDePlan(planVigente(venta), base, propias, i));
+                break;
+            }
+            VentaReestructuracion r = rs.get(i);
+            BigDecimal cubierto = r.getAbonadoAlCorte().subtract(abonadoAntes).max(BigDecimal.ZERO);
+            for (Concepto c : conceptosDePlan(planAnterior(r), base, propias, i)) {
+                if (cubierto.signum() <= 0) break;
+                BigDecimal monto = c.monto().min(cubierto);
+                resultado.add(c.conMonto(monto));
+                cubierto = cubierto.subtract(monto);
+            }
+            abonadoAntes = abonadoAntes.max(r.getAbonadoAlCorte());
+        }
+        return resultado;
+    }
+
+    /** Los pagos de un plan, en orden de fecha, sin pasar de {@code precio} (lo que ese plan reparte). */
+    static List<Concepto> conceptosDePlan(Plan plan, BigDecimal precio, Collection<VentaAportacion> aportacionesDelPlan, int tramo) {
         List<Concepto> brutos = new ArrayList<>();
-        boolean pagoInicial = tienePagoInicial(venta);
+        boolean pagoInicial = plan.conPagoInicial();
+        Integer plazo = plan.conPlazo() ? plan.plazoMeses() : null;
         if (pagoInicial) {
-            brutos.add(new Concepto(null, venta.getFechaVenta(), venta.getEngancheLabel(), venta.getEnganche(), false));
+            brutos.add(new Concepto(null, plan.inicio(), plan.engancheLabel(), plan.enganche(), false, tramo, plazo));
         }
 
-        boolean conPlazo = venta.getMensualidad() != null && venta.getPlazoMeses() != null;
+        boolean conPlazo = plan.conPlazo();
         if (!conPlazo) {
             // Contado: todo el precio (menos el pago inicial, si lo hubo) el día de la venta.
-            BigDecimal resto = precio.subtract(pagoInicial ? venta.getEnganche() : BigDecimal.ZERO);
-            if (resto.signum() > 0) brutos.add(new Concepto(null, venta.getFechaVenta(), "Pago de contado", resto, false));
+            BigDecimal resto = precio.subtract(pagoInicial ? plan.enganche() : BigDecimal.ZERO);
+            if (resto.signum() > 0) brutos.add(new Concepto(null, plan.inicio(), "Pago de contado", resto, false, tramo, null));
         } else {
             Map<YearMonth, BigDecimal> aportaciones = new TreeMap<>();
-            for (VentaAportacion a : aportacionesDeLaVenta) {
+            for (VentaAportacion a : aportacionesDelPlan) {
                 aportaciones.put(YearMonth.of(a.getAnio(), a.getMes()), a.getMonto());
             }
-            YearMonth primero = YearMonth.from(venta.getFechaVenta());
-            if (!venta.isPrimeraMensualidadMesVenta()) primero = primero.plusMonths(1);
+            YearMonth primero = plan.primerMes();
 
             Set<YearMonth> cubiertos = new HashSet<>();
-            for (int k = 0; k < venta.getPlazoMeses(); k++) {
+            for (int k = 0; k < plan.plazoMeses(); k++) {
                 YearMonth ym = primero.plusMonths(k);
                 cubiertos.add(ym);
                 BigDecimal aportacion = aportaciones.get(ym);
-                LocalDate fecha = diaDePago(ym, venta.getDiaPago());
+                LocalDate fecha = diaDePago(ym, plan.diaPago());
                 brutos.add(aportacion != null
-                        ? new Concepto(k + 1, fecha, "Aportación", aportacion, false)
-                        : new Concepto(k + 1, fecha, "Mensualidad", venta.getMensualidad(), true));
+                        ? new Concepto(k + 1, fecha, "Aportación", aportacion, false, tramo, plazo)
+                        : new Concepto(k + 1, fecha, "Mensualidad", plan.mensualidad(), true, tramo, plazo));
             }
             aportaciones.forEach((ym, monto) -> {
                 if (!cubiertos.contains(ym)) {
-                    brutos.add(new Concepto(null, diaDePago(ym, venta.getDiaPago()), "Aportación", monto, false));
+                    brutos.add(new Concepto(null, diaDePago(ym, plan.diaPago()), "Aportación", monto, false, tramo, plazo));
                 }
             });
         }
@@ -196,7 +307,7 @@ public final class CalendarioPagos {
             }
             programado = programado.add(monto);
             filas.add(new AmortizacionDto.Fila(c.numero(), c.fecha(), c.concepto(), monto, pagado,
-                    precio.subtract(programado).max(BigDecimal.ZERO), estado, ajuste));
+                    precio.subtract(programado).max(BigDecimal.ZERO), estado, ajuste, BigDecimal.ZERO, List.of(), c.tramo()));
         }
 
         // Lo del precio que el plan no fecha (anualidades viejas): un renglón final que nunca vence; lo abonado de más

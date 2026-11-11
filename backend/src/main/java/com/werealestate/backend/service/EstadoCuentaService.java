@@ -148,7 +148,20 @@ public class EstadoCuentaService {
                 cuenta.proximaFecha(),
                 cuenta.proximoMonto(),
                 cuenta.filas(),
-                TablaMensual.construir(conceptos, cuenta.filas(), precio, pagos, hoy));
+                TablaMensual.construir(conceptos, cuenta.filas(), precio, pagos, hoy),
+                reestructuraciones(venta));
+    }
+
+    private static List<AmortizacionDto.Reestructuracion> reestructuraciones(Venta venta) {
+        List<AmortizacionDto.Reestructuracion> lista = new ArrayList<>();
+        List<com.werealestate.backend.model.VentaReestructuracion> rs = venta.getReestructuraciones();
+        for (int i = 0; i < rs.size(); i++) {
+            var r = rs.get(i);
+            lista.add(new AmortizacionDto.Reestructuracion(i + 1, r.getFechaCorte(), r.getMotivo(),
+                    r.getUsuario() != null ? r.getUsuario().getNombre() : null,
+                    r.getAbonadoAlCorte(), r.getSaldoAlCorte(), r.getResumenAnterior(), r.getResumenNuevo()));
+        }
+        return lista;
     }
 
     private Usuario exigirAdminOLider() {

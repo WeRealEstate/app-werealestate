@@ -336,7 +336,7 @@ public class FinanzasService {
 
     /** Cómo se lee el pago en el detalle de Ingresos: "Mensualidad 3/24", "Aportación", "Enganche"… */
     private static String descripcion(CalendarioPagos.Concepto c, Venta venta) {
-        return c.mensualidad() ? "Mensualidad " + c.numero() + "/" + venta.getPlazoMeses() : c.concepto();
+        return c.mensualidad() ? "Mensualidad " + c.numero() + "/" + (c.plazo() != null ? c.plazo() : venta.getPlazoMeses()) : c.concepto();
     }
 
     private static YearMonth parsear(String mes) {

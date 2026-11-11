@@ -11,5 +11,7 @@ public enum EstadoPagoPlan {
     ATRASADO,
     LE_TOCA,
     PENDIENTE,
-    ABONADO
+    ABONADO,
+    /** Solo en la tabla mes con mes: cubrió su mensualidad, pero se terminó de pagar después de su fecha. */
+    PAGADO_CON_RETRASO
 }

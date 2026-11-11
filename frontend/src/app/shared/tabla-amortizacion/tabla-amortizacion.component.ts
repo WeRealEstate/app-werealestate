@@ -8,6 +8,7 @@ import {
   EstadoPagoPlan,
   cuentaAtraso,
   fechaCorta,
+  ReestructuracionPlan,
 } from '../../core/models/amortizacion.model';
 import { PdfAmortizacionService } from '../../core/services/pdf-amortizacion.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -52,6 +53,14 @@ export class TablaAmortizacionComponent {
 
   readonly cuentaAtrasados = computed(() => cuentaAtraso(this.amortizacion().pagosAtrasados, this.amortizacion().mensualidadesAtrasadas));
   readonly liquidada = computed(() => this.amortizacion().saldo <= 0.005);
+  /** La reestructuración que empieza en el renglón {@code i} (el primero de su tramo), para poner el separador. */
+  reestructuracionAntesDe(i: number): ReestructuracionPlan | null {
+    const filas = this.amortizacion().detalleMensual;
+    const tramo = filas[i]?.tramo ?? 0;
+    if (tramo === 0 || (i > 0 && filas[i - 1].tramo === tramo)) return null;
+    return this.amortizacion().reestructuraciones?.find((r) => r.tramo === tramo) ?? null;
+  }
+
   readonly conSinFecha = computed(() => this.amortizacion().detalleMensual.some((f) => f.concepto === CONCEPTO_SIN_FECHA));
   readonly totalAbonadoMes = computed(() => redondear(this.amortizacion().detalleMensual.reduce((s, f) => s + f.abonadoMes, 0)));
   readonly idTabla = computed(() => `tabla-amortizacion-${this.amortizacion().ventaId}`);
@@ -102,7 +111,7 @@ export class TablaAmortizacionComponent {
   }
 
   /** Índice del primer renglón que todavía no está pagado (el que se marca como actual). */
-  readonly indiceActual = computed(() => this.amortizacion().detalleMensual.findIndex((f) => f.estado !== 'PAGADO'));
+  readonly indiceActual = computed(() => this.amortizacion().detalleMensual.findIndex((f) => f.estado !== 'PAGADO' && f.estado !== 'PAGADO_CON_RETRASO'));
 
   /** Fondo del renglón: rojo tenue si está atrasado, ámbar tenue si es el que le toca. */
   claseFila(estado: EstadoPagoPlan): string {

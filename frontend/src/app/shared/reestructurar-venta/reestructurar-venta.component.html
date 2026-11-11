@@ -1,0 +1,117 @@
+<button
+  type="button"
+  (click)="abrir()"
+  class="boton-secundario inline-flex min-h-[40px] items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-ink active:scale-[0.97] transition duration-150"
+  data-testid="abrir-reestructurar"
+>
+  <svg lucideRefreshCw [size]="15" aria-hidden="true"></svg>
+  Reestructurar plan de pagos
+</button>
+
+@if (abierto()) {
+  <button type="button" (click)="cerrar()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/50"></button>
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="reestructurar-titulo">
+    <form
+      (submit)="$event.preventDefault(); guardar()"
+      class="modal-panel-enter max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-surface p-5 shadow-xl"
+    >
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <h2 id="reestructurar-titulo" class="font-heading text-lg font-semibold text-ink">Reestructurar plan de pagos</h2>
+          <p class="mt-0.5 text-sm text-ink-muted">Venta {{ venta().etiqueta }} · {{ venta().cliente }}</p>
+        </div>
+        <button type="button" (click)="cerrar()" aria-label="Cerrar" class="rounded-lg p-1.5 text-ink-muted hover:text-ink">
+          <svg lucideX [size]="18" aria-hidden="true"></svg>
+        </button>
+      </div>
+
+      <div class="mt-4 rounded-lg bg-surface-2 px-3.5 py-3 text-sm text-ink">
+        <p>Saldo a repartir: <strong>${{ money(saldo()) }}</strong></p>
+        <p class="mt-1 text-xs text-ink-muted">
+          Lo pagado hasta hoy se queda como está. El plan nuevo reparte el saldo, incluidos los pagos atrasados; el precio de la venta no cambia.
+        </p>
+      </div>
+
+      <div class="mt-4 grid grid-cols-2 gap-3">
+        <label class="block text-sm font-medium text-ink">
+          Plazo (meses)
+          <input type="number" min="1" max="600" [value]="plazo()" (input)="plazo.set(numero($any($event.target).value) ?? 0)"
+            class="mt-1.5 block w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/40" />
+        </label>
+        <label class="block text-sm font-medium text-ink">
+          Día de pago
+          <input type="number" min="1" max="31" [value]="diaPago()" (input)="diaPago.set(numero($any($event.target).value) ?? 0)"
+            class="mt-1.5 block w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/40" />
+        </label>
+      </div>
+
+      <label class="mt-3 flex items-start gap-2.5 text-sm text-ink">
+        <input type="checkbox" class="mt-0.5 h-4 w-4" [checked]="primeraEnMesActual()" (change)="primeraEnMesActual.set($any($event.target).checked)" />
+        <span>El primer pago del plan nuevo es este mes <span class="block text-xs text-ink-muted">Si no, empieza el mes siguiente.</span></span>
+      </label>
+      @if (meses().length > 0) {
+        <p class="mt-2 text-xs text-ink-muted">Plan nuevo: de {{ etiquetaMes(meses()[0]) }} a {{ etiquetaMes(meses()[meses().length - 1]) }}.</p>
+      }
+
+      <div class="mt-4">
+        <div class="flex items-center justify-between">
+          <p class="text-sm font-medium text-ink">Aportaciones / anualidades</p>
+          <button type="button" (click)="agregarAportacion()" class="inline-flex items-center gap-1 text-sm font-semibold text-we-primary dark:text-we-blue-light">
+            <svg lucidePlus [size]="15" aria-hidden="true"></svg> Agregar
+          </button>
+        </div>
+        <p class="mt-0.5 text-xs text-ink-muted">Ese mes el cliente paga la aportación en lugar de la mensualidad. Sin aportaciones, todo va en mensualidades iguales.</p>
+        @for (a of aportaciones(); track $index; let i = $index) {
+          <div class="mt-2 flex items-center gap-2">
+            <select [value]="a.mes" (change)="cambiarAportacion(i, { mes: $any($event.target).value })"
+              class="min-w-0 flex-1 rounded-lg border border-border bg-surface px-2.5 py-2 text-sm text-ink" aria-label="Mes de la aportación">
+              @for (m of meses(); track m) {
+                <option [value]="m" [selected]="m === a.mes">{{ etiquetaMes(m) }}</option>
+              }
+            </select>
+            <input type="number" min="0" step="0.01" placeholder="Monto" [value]="a.monto ?? ''"
+              (input)="cambiarAportacion(i, { monto: numero($any($event.target).value) })"
+              class="w-36 rounded-lg border border-border bg-surface px-2.5 py-2 text-sm text-ink" aria-label="Monto de la aportación" />
+            <button type="button" (click)="quitarAportacion(i)" aria-label="Quitar aportación" class="rounded-lg p-1.5 text-ink-muted hover:text-red-600">
+              <svg lucideX [size]="16" aria-hidden="true"></svg>
+            </button>
+          </div>
+        }
+      </div>
+
+      <div class="mt-4 rounded-lg border border-we-primary/30 bg-we-primary/5 px-3.5 py-3 text-sm text-ink">
+        @if (problema(); as p) {
+          <p class="text-red-600 dark:text-red-400">{{ p }}</p>
+        } @else {
+          <p>Mensualidad: <strong>${{ money(mensualidad() ?? 0) }}</strong>
+            @if (aportaciones().length > 0) { · Aportaciones: <strong>${{ money(sumaAportaciones()) }}</strong> }
+          </p>
+          <p class="mt-0.5 text-xs text-ink-muted">Se calcula con el saldo de hoy; el sistema ajusta los centavos en el último pago.</p>
+        }
+      </div>
+
+      <label class="mt-4 block text-sm font-medium text-ink">
+        Motivo
+        <textarea rows="2" maxlength="500" [value]="motivo()" (input)="motivo.set($any($event.target).value)"
+          placeholder="Ej. El cliente pidió pasar a anualidades"
+          class="mt-1.5 block w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/40"></textarea>
+      </label>
+      <label class="mt-3 block text-sm font-medium text-ink">
+        Tu contraseña
+        <input type="password" autocomplete="current-password" [value]="password()" (input)="password.set($any($event.target).value); error.set(null)"
+          class="mt-1.5 block w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/40" />
+      </label>
+      @if (error(); as e) {
+        <p class="mt-2 text-xs text-red-600 dark:text-red-400" role="alert">{{ e }}</p>
+      }
+
+      <div class="mt-5 flex items-center justify-end gap-2.5">
+        <button type="button" (click)="cerrar()" [disabled]="guardando()" class="boton-secundario rounded-lg px-4 py-2.5 text-sm font-medium text-ink-muted disabled:opacity-60">Cancelar</button>
+        <button type="submit" [disabled]="!puedeGuardar()"
+          class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white enabled:active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50">
+          {{ guardando() ? 'Guardando…' : 'Reestructurar' }}
+        </button>
+      </div>
+    </form>
+  </div>
+}

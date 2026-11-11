@@ -1,7 +1,7 @@
 /** Cómo va un pago de la tabla de amortización (ver backend service/CalendarioPagos y TablaMensual): cubierto,
  * vencido sin ningún pago (desde el día siguiente a su fecha), el siguiente que toca, uno de los que siguen o, solo en
  * la tabla mes con mes, ABONADO (recibió algún pago pero no toda la mensualidad). */
-export type EstadoPagoPlan = 'PAGADO' | 'ATRASADO' | 'LE_TOCA' | 'PENDIENTE' | 'ABONADO';
+export type EstadoPagoPlan = 'PAGADO' | 'ATRASADO' | 'LE_TOCA' | 'PENDIENTE' | 'ABONADO' | 'PAGADO_CON_RETRASO';
 
 export const ESTADO_PAGO_PLAN_LABELS: Record<EstadoPagoPlan, string> = {
   PAGADO: 'Pagado',
@@ -9,6 +9,7 @@ export const ESTADO_PAGO_PLAN_LABELS: Record<EstadoPagoPlan, string> = {
   LE_TOCA: 'Paga este mes',
   PENDIENTE: 'Pendiente',
   ABONADO: 'Abonado',
+  PAGADO_CON_RETRASO: 'Pagado con retraso',
 };
 
 /** Etiqueta del estado de una fila. «Paga este mes» solo si el pago es del mes en curso (el del día del estado de
@@ -24,6 +25,7 @@ export const ESTADO_PAGO_PLAN_CLASES: Record<EstadoPagoPlan, string> = {
   LE_TOCA: 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300',
   PENDIENTE: 'bg-surface-2 text-ink-muted',
   ABONADO: 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300',
+  PAGADO_CON_RETRASO: 'bg-teal-100 text-teal-800 dark:bg-teal-500/15 dark:text-teal-300',
 };
 
 /** Un pago del plan. numero: su lugar en el plazo (null en enganche, contado, aportación fuera del plazo y lo que
@@ -44,6 +46,22 @@ export interface FilaAmortizacion {
   abonadoMes: number;
   /** Cada abono vigente de ese mes con su fecha (solo en detalleMensual). */
   pagos: PagoMes[];
+  /** 0 = plan original; N = el plan que creó la N-ésima reestructuración. */
+  tramo: number;
+  /** Solo en detalleMensual: lo pagado ese mes por encima de lo que le tocaba (abona a la deuda total). */
+  excedente: number;
+}
+
+/** Un cambio del plan de pagos: desde las filas con este {@code tramo} corre el plan nuevo. */
+export interface ReestructuracionPlan {
+  tramo: number;
+  fechaCorte: string;
+  motivo: string;
+  usuario: string | null;
+  abonadoAlCorte: number;
+  saldoAlCorte: number;
+  resumenAnterior: string;
+  resumenNuevo: string;
 }
 
 /** Un abono con su fecha. */
@@ -54,6 +72,8 @@ export interface PagoMes {
   aCuentaComision: boolean;
   /** Folio del recibo (null en abonos muy viejos sin folio). */
   folio: string | null;
+  /** Monto completo del abono cuando aquí solo va una parte (un abono que cubre varios meses); null si va completo. */
+  parteDe: number | null;
 }
 
 /** Respuesta de GET /api/ventas/{id}/amortizacion y de cada elemento de GET /api/clientes/{id}/amortizaciones. */
@@ -94,6 +114,8 @@ export interface Amortizacion {
   filas: FilaAmortizacion[];
   /** La tabla mes con mes (la que se muestra y va al PDF): mensualidad esperada más lo atrasado, y los abonos de cada mes. */
   detalleMensual: FilaAmortizacion[];
+  /** Cambios del plan de pagos, del más antiguo al más reciente. */
+  reestructuraciones: ReestructuracionPlan[];
 }
 
 /** Concepto del renglón que junta la parte del precio sin fecha en el plan (anualidades de ventas anteriores). */

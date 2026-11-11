@@ -430,6 +430,11 @@
       <div class="mt-4">
         <app-tabla-amortizacion [amortizacion]="a" titulo="Tabla de amortización" [(abierta)]="amortizacionAbierta" />
       </div>
+      @if (puedeEliminar() && a.saldo > 0.01 && !v.depositoPendiente) {
+        <div class="mt-2 flex justify-end">
+          <app-reestructurar-venta [venta]="v" [saldo]="a.saldo" (guardado)="cargar()" />
+        </div>
+      }
     }
 
     <!-- CONTRATO -->

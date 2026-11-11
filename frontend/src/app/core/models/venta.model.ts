@@ -28,6 +28,18 @@ export interface VentaAportacion {
   anio: number;
   mes: number;
   monto: number;
+  /** Reestructuración cuyo plan trae esta aportación (null = plan original). */
+  reestructuracionId?: number | null;
+}
+
+/** POST /api/ventas/{id}/reestructurar: el plan nuevo reparte el saldo de hoy; la mensualidad la calcula el servidor. */
+export interface VentaReestructurarRequest {
+  password: string;
+  motivo: string;
+  plazoMeses: number;
+  diaPago: number;
+  primeraEnMesActual: boolean;
+  aportaciones: { anio: number; mes: number; monto: number }[];
 }
 
 /** Cómo se firmó el contrato: en físico, por DocuSign o de ambas formas. */

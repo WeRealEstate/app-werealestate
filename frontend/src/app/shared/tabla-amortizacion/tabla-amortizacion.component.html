@@ -109,6 +109,16 @@
           </thead>
           <tbody class="divide-y divide-border">
             @for (f of a.detalleMensual; track $index; let i = $index) {
+              @if (reestructuracionAntesDe(i); as r) {
+                <tr class="bg-amber-50 dark:bg-amber-500/10" data-testid="separador-reestructuracion">
+                  <td colspan="7" class="px-3 py-2.5 text-xs text-amber-900 dark:text-amber-200">
+                    <span class="font-semibold">Plan reestructurado el {{ fecha(r.fechaCorte) }}</span>
+                    @if (r.usuario) { por {{ r.usuario }} }
+                    · Pagado al corte ${{ money(r.abonadoAlCorte) }}; el plan nuevo reparte ${{ money(r.saldoAlCorte) }}.
+                    <span class="block text-amber-800/80 dark:text-amber-200/80">Motivo: {{ r.motivo }}</span>
+                  </td>
+                </tr>
+              }
               <tr
                 [class]="claseFila(f.estado)"
                 [attr.data-actual]="i === indiceActual() ? '' : null"
@@ -132,10 +142,16 @@
                     @for (p of f.pagos; track $index) {
                       <span class="block text-ink">
                         <span class="block text-[11px] leading-tight text-ink-muted">{{ fecha(p.fecha) }}</span>${{ money(p.monto) }}
+                        @if (p.parteDe) {
+                          <span class="block text-[10px] leading-tight text-ink-muted">parte de ${{ money(p.parteDe) }}</span>
+                        }
                         @if (p.aCuentaComision) {
                           <span class="mt-0.5 block text-[10px] font-medium leading-tight text-purple-600 dark:text-purple-300">A cuenta de comisión</span>
                         }
                       </span>
+                    }
+                    @if (f.excedente > 0.005) {
+                      <span class="mt-1 block text-[10px] leading-tight text-ink-muted">Excedente ${{ money(f.excedente) }}: abona a la deuda total</span>
                     }
                   }
                 </td>
@@ -187,7 +203,7 @@
         }
       </div>
       <p class="mt-2 text-xs text-ink-muted">
-        Mensualidad: lo que toca pagar ese mes más lo que quedó pendiente de los meses anteriores. Monto pagado: cada abono del mes con su fecha; lo que se paga de más no adelanta la mensualidad siguiente. Estado del mes: Pagado si cubrió su mensualidad; Abonado si recibió algún pago pero no toda; Atrasado si su fecha ya pasó sin ningún pago (cuenta desde el día siguiente). «A cuenta de comisión» marca los abonos que se cubren con la comisión del asesor. Saldo: lo que falta del precio después de cada pago, según el plan.
+        Mensualidad: lo que toca pagar ese mes más lo que quedó pendiente de los meses anteriores. Monto pagado: cada abono en el mes que cubre (el que marca su recibo), con su fecha real; lo que se paga de más es un excedente que abona a la deuda total y no adelanta la mensualidad siguiente. Estado del mes: Pagado si cubrió su mensualidad; Abonado si recibió algún pago pero no toda; Atrasado si su fecha ya pasó sin ningún pago (cuenta desde el día siguiente). «A cuenta de comisión» marca los abonos que se cubren con la comisión del asesor. Saldo: lo que falta del precio después de cada pago, según el plan.
         @if (conSinFecha()) {
           «{{ sinFecha }}» es la parte del precio a la que la venta no le asigna fecha (por ejemplo, anualidades de ventas anteriores): no cuenta como atraso.
         }

@@ -15,6 +15,7 @@ import {
   Venta,
   VentaCreateRequest,
   VentaUpdateRequest,
+  VentaReestructurarRequest,
 } from '../models/venta.model';
 
 export interface BuscarVentasParams {
@@ -101,6 +102,12 @@ export class VentasService {
    * la comisión de la venta se queda en el historial de Finanzas. */
   eliminar(id: number, password: string): Promise<void> {
     return firstValueFrom(this.http.post<void>(`${this.baseUrl}/${id}/eliminar`, { password }));
+  }
+
+  /** Cambia el plan de pagos de la venta (admin y administración, con contraseña y motivo): lo pagado se respeta y
+   * el plan nuevo reparte el saldo de hoy. */
+  reestructurar(id: number, request: VentaReestructurarRequest): Promise<Venta> {
+    return firstValueFrom(this.http.post<Venta>(`${this.baseUrl}/${id}/reestructurar`, request));
   }
 
   /** Pone, cambia o quita (null) el número de contrato de la venta; no puede repetirse en otra venta. */

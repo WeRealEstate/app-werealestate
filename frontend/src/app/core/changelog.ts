@@ -15,6 +15,12 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.18.1', fecha: '2026-11-11', cambios: [
+    "Tabla de amortización: cada abono ahora aparece en el mes que su recibo dice cubrir (por ejemplo, un pago hecho en julio para la mensualidad de junio cuenta en junio), con su fecha real. El enganche va en el renglón de Enganche y una aportación en su mes. Un abono que cubre varios meses llena la mensualidad de cada uno en orden, y lo que sobra se muestra como excedente que abona a la deuda total, sin bajar la mensualidad de ningún mes. Nuevo estado «Pagado con retraso» para el mes que se terminó de cubrir después de su fecha. También en el PDF.",
+  ] },
+  { version: '11.18.0', fecha: '2026-11-11', cambios: [
+    "Ventas: nuevo botón «Reestructurar plan de pagos» en el detalle de la venta (Admin y Administración, con contraseña y motivo). Sirve, por ejemplo, para pasar a un cliente de mensualidades a anualidades: lo pagado hasta hoy se queda tal cual y el plan nuevo reparte el saldo (incluidos los pagos atrasados) en el plazo, día de pago y aportaciones que elijas; el precio no cambia. La tabla de amortización marca dónde empieza el plan nuevo, con su fecha, quién lo hizo y el motivo. Se puede reestructurar las veces que haga falta.",
+  ] },
   { version: '11.17.1', fecha: '2026-11-11', cambios: [
     "Clientes: en la ficha del cliente, junto a cada teléfono hay un botón «Llamar ahora» que abre la app de llamadas del dispositivo con el número ya marcado.",
   ] },
