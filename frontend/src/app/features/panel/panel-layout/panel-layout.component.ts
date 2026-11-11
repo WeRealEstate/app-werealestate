@@ -63,91 +63,74 @@ interface NavSection {
   items: NavItem[];
 }
 
+const INICIO = (route: string): NavSection => ({ label: null, items: [{ label: 'Inicio', route, icon: 'home' }] });
+const LEADS_ITEM: NavItem = { label: 'Leads', route: '/panel/leads', modulo: 'LEADS', icon: 'leads' };
+const PIPELINE_ITEM: NavItem = { label: 'Pipeline', route: '/panel/pipeline', modulo: 'PIPELINE', icon: 'pipeline' };
+const COTIZADOR_ITEM: NavItem = { label: 'Cotizador', route: '/panel/cotizador', modulo: 'COTIZADOR', icon: 'cotizador' };
+const SCORE_ITEM: NavItem = { label: 'Score de ventas', route: '/panel/score', modulo: 'SCORE', icon: 'score' };
+const VENTAS_ITEM: NavItem = { label: 'Ventas', route: '/panel/ventas', modulo: 'VENTAS', icon: 'ventas' };
+const CLIENTES_ITEM: NavItem = { label: 'Clientes', route: '/panel/clientes', modulo: 'CLIENTES', icon: 'clientes' };
+const LOTES_ITEM: NavItem = { label: 'Lotes', route: '/panel/lotes', modulo: 'LOTES', icon: 'lotes' };
+const PLANO_ITEM: NavItem = { label: 'Plano', route: '/panel/plano', modulo: 'PLANO', icon: 'plano' };
+const FINANZAS_ITEM: NavItem = { label: 'Finanzas', route: '/panel/finanzas', modulo: 'FINANZAS', tambienConModulo: 'GASTOS', icon: 'finanzas' };
+const CALENDARIO_ITEM: NavItem = { label: 'Calendario', route: '/panel/calendario', modulo: 'CALENDARIO', icon: 'calendario' };
+
+/** Dos grupos desplegables (Ventas e Inventario); lo demás va suelto, sin encabezado, debajo de ellos. */
+const GRUPO_VENTAS_ASESOR: NavSection = { label: 'Ventas', items: [LEADS_ITEM, PIPELINE_ITEM, COTIZADOR_ITEM] };
+const GRUPO_VENTAS_ADMIN: NavSection = {
+  label: 'Ventas',
+  items: [LEADS_ITEM, PIPELINE_ITEM, COTIZADOR_ITEM, SCORE_ITEM, VENTAS_ITEM, CLIENTES_ITEM],
+};
+const GRUPO_INVENTARIO: NavSection = { label: 'Inventario', items: [LOTES_ITEM, PLANO_ITEM] };
+
 const NAV_BY_ROLE: Record<Role, NavSection[]> = {
   ASESOR: [
-    { label: null, items: [{ label: 'Inicio', route: '/panel/asesor', icon: 'home' }] },
-    {
-      label: 'Desarrollos',
-      items: [
-        { label: 'Leads', route: '/panel/leads', modulo: 'LEADS', icon: 'leads' },
-        { label: 'Pipeline', route: '/panel/pipeline', modulo: 'PIPELINE', icon: 'pipeline' },
-        { label: 'Cotizador', route: '/panel/cotizador', modulo: 'COTIZADOR', icon: 'cotizador' },
-      ],
-    },
-    {
-      label: 'Inventario',
-      items: [
-        { label: 'Lotes', route: '/panel/lotes', modulo: 'LOTES', icon: 'lotes' },
-        { label: 'Plano', route: '/panel/plano', modulo: 'PLANO', icon: 'plano' },
-      ],
-    },
-    { label: 'Administración', items: [{ label: 'Calendario', route: '/panel/calendario', modulo: 'CALENDARIO', icon: 'calendario' }] },
+    INICIO('/panel/asesor'),
+    GRUPO_VENTAS_ASESOR,
+    GRUPO_INVENTARIO,
+    { label: null, items: [CALENDARIO_ITEM] },
   ],
   LIDER_AREA: [
-    { label: null, items: [{ label: 'Inicio', route: '/panel/equipo', icon: 'home' }] },
-    { label: 'Desarrollos', items: [{ label: 'Leads', route: '/panel/leads', modulo: 'LEADS', icon: 'leads' }] },
+    INICIO('/panel/equipo'),
+    // Administración no ve Pipeline ni Cotizador en el menú (como antes).
+    { label: 'Ventas', items: [LEADS_ITEM, SCORE_ITEM, VENTAS_ITEM, CLIENTES_ITEM] },
+    GRUPO_INVENTARIO,
     {
-      label: 'Inventario',
-      items: [
-        { label: 'Lotes', route: '/panel/lotes', modulo: 'LOTES', icon: 'lotes' },
-        { label: 'Plano', route: '/panel/plano', modulo: 'PLANO', icon: 'plano' },
-        { label: 'Ventas', route: '/panel/ventas', modulo: 'VENTAS', icon: 'ventas' },
-        { label: 'Score de ventas', route: '/panel/score', modulo: 'SCORE', icon: 'score' },
-        { label: 'Clientes', route: '/panel/clientes', modulo: 'CLIENTES', icon: 'clientes' },
-        { label: 'Finanzas', route: '/panel/finanzas', modulo: 'FINANZAS', tambienConModulo: 'GASTOS', icon: 'finanzas' },
-      ],
-    },
-    {
-      label: 'Administración',
-      items: [
-        ASESORES_EXTERNOS_NAV_ITEM,
-        COMERCIALIZADORAS_NAV_ITEM,
-        TEAMS_NAV_ITEM,
-        WE_FORMS_NAV_ITEM,
-        MATERIAL_NAV_ITEM,
-        { label: 'Calendario', route: '/panel/calendario', modulo: 'CALENDARIO', icon: 'calendario' },
-      ],
+      label: null,
+      items: [FINANZAS_ITEM, ASESORES_EXTERNOS_NAV_ITEM, COMERCIALIZADORAS_NAV_ITEM, TEAMS_NAV_ITEM, WE_FORMS_NAV_ITEM, MATERIAL_NAV_ITEM, CALENDARIO_ITEM],
     },
   ],
-  EQUIPO_INTERNO: [
-    { label: null, items: [{ label: 'Inicio', route: '/panel/equipo', icon: 'home' }] },
-    { label: 'Administración', items: [{ label: 'Calendario', route: '/panel/calendario', modulo: 'CALENDARIO', icon: 'calendario' }] },
-  ],
+  EQUIPO_INTERNO: [INICIO('/panel/equipo'), { label: null, items: [CALENDARIO_ITEM] }],
   ADMIN: [
-    { label: null, items: [{ label: 'Inicio', route: '/panel/admin', icon: 'home' }] },
+    INICIO('/panel/admin'),
+    GRUPO_VENTAS_ADMIN,
+    GRUPO_INVENTARIO,
     {
-      label: 'Desarrollos',
+      label: null,
       items: [
-        { label: 'Leads', route: '/panel/leads', modulo: 'LEADS', icon: 'leads' },
-        { label: 'Pipeline', route: '/panel/pipeline', modulo: 'PIPELINE', icon: 'pipeline' },
-        { label: 'Cotizador', route: '/panel/cotizador', modulo: 'COTIZADOR', icon: 'cotizador' },
-      ],
-    },
-    {
-      label: 'Inventario',
-      items: [
-        { label: 'Lotes', route: '/panel/lotes', modulo: 'LOTES', icon: 'lotes' },
-        { label: 'Plano', route: '/panel/plano', modulo: 'PLANO', icon: 'plano' },
-        { label: 'Ventas', route: '/panel/ventas', modulo: 'VENTAS', icon: 'ventas' },
-        { label: 'Score de ventas', route: '/panel/score', modulo: 'SCORE', icon: 'score' },
-        { label: 'Clientes', route: '/panel/clientes', modulo: 'CLIENTES', icon: 'clientes' },
-        { label: 'Finanzas', route: '/panel/finanzas', modulo: 'FINANZAS', tambienConModulo: 'GASTOS', icon: 'finanzas' },
-      ],
-    },
-    {
-      label: 'Administración',
-      items: [
+        FINANZAS_ITEM,
         { label: 'Usuarios', route: '/panel/usuarios', icon: 'usuarios' },
         ASESORES_EXTERNOS_NAV_ITEM,
         COMERCIALIZADORAS_NAV_ITEM,
         TEAMS_NAV_ITEM,
         WE_FORMS_NAV_ITEM,
         MATERIAL_NAV_ITEM,
-        { label: 'Calendario', route: '/panel/calendario', modulo: 'CALENDARIO', icon: 'calendario' },
+        CALENDARIO_ITEM,
       ],
     },
   ],
 };
+
+const CLAVE_SECCIONES_PLEGADAS = 'we_nav_secciones_plegadas';
+
+function leerSeccionesPlegadas(): ReadonlySet<string> {
+  try {
+    const guardado: unknown = JSON.parse(localStorage.getItem(CLAVE_SECCIONES_PLEGADAS) ?? '[]');
+    return new Set(Array.isArray(guardado) ? guardado.filter((x): x is string => typeof x === 'string') : []);
+  } catch {
+    return new Set();
+  }
+}
 
 @Component({
   selector: 'app-panel-layout',
@@ -211,6 +194,10 @@ export class PanelLayoutComponent {
       .filter((seccion) => seccion.items.length > 0);
   });
 
+  /** Secciones del menú que el usuario plegó (varias pueden estar abiertas a la vez; por defecto todas lo están).
+   * Se recuerdan en este navegador para que sigan igual al recargar. */
+  private readonly seccionesPlegadas = signal<ReadonlySet<string>>(leerSeccionesPlegadas());
+
   readonly sidebarOpen = signal(false);
   /** Versión de la app (la más alta del historial, core/changelog.ts) y fecha en que se compiló. */
   readonly versionApp =`v${VERSION_ACTUAL} · ${FECHA_COMPILACION.split('-').reverse().join('/')}`;
@@ -227,6 +214,21 @@ export class PanelLayoutComponent {
     if (typeof window !== 'undefined') {
       const consulta = window.matchMedia('(min-width: 1024px)');
       consulta.addEventListener('change', (e) => this.esEscritorio.set(e.matches));
+    }
+  }
+
+  seccionAbierta(etiqueta: string): boolean {
+    return !this.seccionesPlegadas().has(etiqueta);
+  }
+
+  alternarSeccion(etiqueta: string): void {
+    const nuevas = new Set(this.seccionesPlegadas());
+    if (!nuevas.delete(etiqueta)) nuevas.add(etiqueta);
+    this.seccionesPlegadas.set(nuevas);
+    try {
+      localStorage.setItem(CLAVE_SECCIONES_PLEGADAS, JSON.stringify([...nuevas]));
+    } catch {
+      // Sin almacenamiento (ventana privada o bloqueado): el menú funciona igual, solo no recuerda el estado.
     }
   }
 

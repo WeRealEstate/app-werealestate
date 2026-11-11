@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.17.0', fecha: '2026-11-11', cambios: [
+    "Menú lateral reorganizado con grupos desplegables: Ventas (Leads, Pipeline, Cotizador, Score de ventas, Ventas y Clientes) e Inventario (Lotes y Plano). El resto de las secciones quedan sueltas debajo. Cada grupo se pliega con su flechita y el menú recuerda cuáles dejaste plegados.",
+  ] },
   { version: '11.16.1', fecha: '2026-11-11', cambios: [
     "Ventas: la opción «el cliente paga la primera mensualidad este mismo mes» ahora se ve destacada, con una pregunta clara y su explicación, al registrar una venta y al editarla en el detalle. No cambia ningún valor: por defecto la primera mensualidad sigue siendo al mes siguiente.",
   ] },
