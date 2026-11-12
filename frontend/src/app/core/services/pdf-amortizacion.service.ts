@@ -47,7 +47,7 @@ export class PdfAmortizacionService {
     await this.cargarFuentes(doc);
     const ancho = doc.internal.pageSize.getWidth();
 
-    this.encabezado(doc, a, ancho, true);
+    this.encabezado(doc, a, ancho, true, 'ESTADO DE CUENTA');
     let y = 32;
     doc.setTextColor(...MUTED);
     doc.setFont(FUENTE, 'bold');
@@ -103,10 +103,13 @@ export class PdfAmortizacionService {
     }
     y = this.seccion(doc, 'RESUMEN A LA FECHA', resumen, y, ancho);
 
-    // TABLA
+    // TABLA: siempre empieza en una hoja nueva, con el encabezado completo y su título.
     const filas = a.detalleMensual;
+    doc.addPage('letter', 'portrait');
+    const primeraHojaTabla = doc.getNumberOfPages();
+    this.encabezado(doc, a, ancho, true, 'TABLA DE AMORTIZACIÓN');
     autoTable(doc, {
-      startY: y,
+      startY: 30,
       head: [['N.º', 'FECHA', 'CONCEPTO', 'MENSUALIDAD', 'MONTO PAGADO', 'SALDO', 'ESTADO']],
       body: filas.map((f) => [
         f.numero ?? '—',
@@ -155,9 +158,9 @@ export class PdfAmortizacionService {
           doc.circle(x + 2.6, yc + height / 2, 0.8, 'F');
         }
       },
-      // En las hojas que siguen, el encabezado igual que en la primera.
+      // En las hojas que siguen a la de inicio de la tabla, solo la línea con el dato (sin título).
       didDrawPage: (hook) => {
-        if (hook.pageNumber > 1) this.encabezado(doc, a, ancho, false);
+        if (hook.pageNumber > primeraHojaTabla) this.encabezado(doc, a, ancho, false);
       },
     });
 
@@ -181,16 +184,16 @@ export class PdfAmortizacionService {
     doc.save(`Amortizacion-Venta-${a.ventaNumero}-${slug(a.cliente)}.pdf`);
   }
 
-  /** Encabezado sin banda. La hoja 1 lleva el título; las que siguen solo la línea azul con el dato gris, sin
-   * repetir el título. */
-  private encabezado(doc: jsPDF, a: Amortizacion, ancho: number, primera: boolean): void {
+  /** Encabezado sin banda. La primera hoja de cada parte (estado de cuenta y tabla) lleva su título; las que siguen
+   * solo la línea azul con el dato gris, sin repetir el título. */
+  private encabezado(doc: jsPDF, a: Amortizacion, ancho: number, primera: boolean, titulo = ''): void {
     const dato = `${(a.desarrollos.join(' · ') || 'WE REAL ESTATE').toUpperCase()} · VENTA NO. ${a.ventaNumero}`;
     const yLinea = primera ? 22 : 18;
     if (primera) {
       doc.setTextColor(...TEXT);
       doc.setFont(FUENTE, 'bold');
       doc.setFontSize(15);
-      doc.text('TABLA DE AMORTIZACIÓN', MARGEN, 18);
+      doc.text(titulo, MARGEN, 18);
     }
     doc.setTextColor(...MUTED);
     doc.setFont(FUENTE, 'normal');

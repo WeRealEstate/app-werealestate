@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.18.14', fecha: '2026-11-12', cambios: [
+    "PDF de amortización: la tabla de amortización siempre empieza en una hoja nueva. La primera hoja se titula «Estado de cuenta» (datos del cliente, de la venta y resumen a la fecha); la hoja de la tabla lleva el título «Tabla de amortización» con su encabezado completo, y las que siguen solo continúan la tabla con sus encabezados de columna.",
+  ] },
   { version: '11.18.13', fecha: '2026-11-12', cambios: [
     "PDF de cotización y tabla de amortización: ahora todo el texto va en negro y gris (sin azul, verde, rojo ni ámbar) para gastar menos tinta; solo la línea delgada del encabezado queda en azul. El estado de cada pago lleva un puntito gris y la palabra con el mismo estilo del resto de la tabla.",
     "PDF de amortización: el título «Tabla de amortización» aparece una sola vez (en la primera hoja); las hojas siguientes solo continúan la tabla con sus encabezados de columna. Tipografía unificada (mismos tamaños de título, etiqueta, valor y tabla en todas las secciones) y las cifras del resumen y la mensualidad de la cotización ya no van en tamaño grande.",
