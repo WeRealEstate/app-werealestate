@@ -99,24 +99,22 @@ export class PdfService {
 
   private readonly FONT = 'Montserrat';
 
+  /** Único color del PDF: la línea delgada del encabezado. Todo lo demás va en negro y gris. */
   private readonly WE_BLUE: [number, number, number] =
     [36, 63, 184];
 
-  private readonly WE_DARK: [number, number, number] =
-    [11, 47, 104];
-
   private readonly TEXT: [number, number, number] =
-    [23, 35, 60];
+    [26, 26, 26];
 
   private readonly MUTED: [number, number, number] =
-    [102, 112, 133];
+    [115, 115, 115];
 
   private readonly BORDER: [number, number, number] =
-    [217, 224, 234];
+    [200, 200, 200];
 
   /** Línea fina entre renglones de listas y tablas. */
   private readonly LINEA_FILA: [number, number, number] =
-    [226, 231, 239];
+    [225, 225, 225];
 
 
   // ==============================
@@ -149,13 +147,12 @@ export class PdfService {
     // ENCABEZADO (sin banda: título azul, fecha y vigencia, línea azul)
     // ==============================
 
-    doc.setTextColor(...this.WE_BLUE);
+    doc.setTextColor(...this.TEXT);
     doc.setFont(this.FONT, 'bold');
     doc.setFontSize(15);
-    doc.text('PROPUESTA DE INVERSIÓN', MARGEN, 18, { charSpace: 0.2 });
+    doc.text('PROPUESTA DE INVERSIÓN', MARGEN, 18);
 
-    doc.setTextColor(...this.TEXT);
-    doc.setFontSize(8);
+    doc.setFontSize(7);
     doc.text(`Fecha: ${data.date}`, pageWidth - MARGEN, 17, { align: 'right' });
 
     doc.setTextColor(...this.MUTED);
@@ -170,13 +167,13 @@ export class PdfService {
     // NOMBRE DEL PROYECTO Y UBICACIÓN
     doc.setTextColor(...this.TEXT);
     doc.setFont(this.FONT, 'bold');
-    doc.setFontSize(18);
+    doc.setFontSize(12);
     doc.text(data.project, MARGEN, 36);
 
     doc.setTextColor(...this.MUTED);
     doc.setFont(this.FONT, 'normal');
     doc.setFontSize(8);
-    doc.text(data.location, MARGEN, 42);
+    doc.text(data.location, MARGEN, 41.5);
 
     // ==============================
     // DATOS DE LA COTIZACIÓN
@@ -186,9 +183,9 @@ export class PdfService {
 
     const campos: [string, string, number, number][] = [
       ['Nombre del asesor', data.advisorName || 'No especificado', MARGEN, 0],
-      ['Nombre del cliente', data.clientName || 'No especificado', 112, 0],
+      ['Nombre del cliente', data.clientName || 'No especificado', 105, 0],
       ['Manzana', data.blockNumber || 'No especificado', MARGEN, 11],
-      ['Lote', data.lotNumber || 'No especificado', 112, 11],
+      ['Lote', data.lotNumber || 'No especificado', 105, 11],
     ];
     for (const [etiqueta, valor, x, dy] of campos) {
       doc.setTextColor(...this.MUTED);
@@ -268,34 +265,32 @@ export class PdfService {
     // ==============================
 
     y += 7;
-    this.linea(doc, MARGEN, y, pageWidth - MARGEN, y, 0.25, this.WE_BLUE);
-    this.linea(doc, MARGEN, y + 24, pageWidth - MARGEN, y + 24, 0.25, this.WE_BLUE);
-
-    doc.setTextColor(...this.WE_BLUE);
-    doc.setFont(this.FONT, 'bold');
-    doc.setFontSize(7);
-    doc.text('MENSUALIDAD ESTIMADA', MARGEN, y + 7, { charSpace: 0.4 });
-
-    doc.setFontSize(22);
-    doc.text(this.money(data.monthlyPayment), MARGEN, y + 18);
+    this.linea(doc, MARGEN, y, pageWidth - MARGEN, y, 0.25, this.MUTED);
+    this.linea(doc, MARGEN, y + 15, pageWidth - MARGEN, y + 15, 0.25, this.MUTED);
 
     doc.setTextColor(...this.MUTED);
     doc.setFont(this.FONT, 'normal');
-    doc.setFontSize(8);
-    doc.text(`${data.months} meses`, pageWidth - MARGEN, y + 17, { align: 'right' });
+    doc.setFontSize(6.5);
+    doc.text('Mensualidad estimada', MARGEN, y + 5.5);
+
+    doc.setTextColor(...this.TEXT);
+    doc.setFont(this.FONT, 'bold');
+    doc.setFontSize(8.5);
+    doc.text(this.money(data.monthlyPayment), MARGEN, y + 10.5);
+
+    doc.setTextColor(...this.MUTED);
+    doc.setFont(this.FONT, 'normal');
+    doc.text(`${data.months} meses`, pageWidth - MARGEN, y + 10.5, { align: 'right' });
 
     // ==============================
     // TOTAL DE INVERSIÓN (sin caja)
     // ==============================
 
-    y += 24 + 9;
+    y += 15 + 8;
     doc.setTextColor(...this.TEXT);
     doc.setFont(this.FONT, 'bold');
-    doc.setFontSize(9);
-    doc.text('TOTAL DE INVERSIÓN', MARGEN, y);
-
-    doc.setTextColor(...this.WE_BLUE);
-    doc.setFontSize(14);
+    doc.setFontSize(8.5);
+    doc.text('Total de inversión', MARGEN, y);
     doc.text(this.money(data.totalInvestment), pageWidth - MARGEN, y, { align: 'right' });
 
     // ==============================
@@ -342,8 +337,8 @@ export class PdfService {
 
     // Hoja donde empieza la tabla: las que siguen repiten el encabezado.
     const primeraHoja = doc.getNumberOfPages();
-    const encabezadoHoja = () => this.encabezado(doc, 'TABLA DE AMORTIZACIÓN', data.project.toUpperCase(), pageWidth);
-    encabezadoHoja();
+    const encabezadoHoja = (primera: boolean) => this.encabezado(doc, 'TABLA DE AMORTIZACIÓN', data.project.toUpperCase(), pageWidth, primera);
+    encabezadoHoja(true);
 
     // RESUMEN SUPERIOR
     let yTable = 34;
@@ -357,7 +352,7 @@ export class PdfService {
         );
     }
 
-    yTable = this.tituloSeccion(doc, 'RESUMEN DEL FINANCIAMIENTO', yTable, pageWidth) + 5.5;
+    yTable = this.tituloSeccion(doc, 'RESUMEN DEL FINANCIAMIENTO', yTable, pageWidth) + 4.5;
 
     const resumen: [string, string, boolean][] = [
       ['Monto financiado', this.money(data.financedAmount), false],
@@ -371,10 +366,10 @@ export class PdfService {
       doc.setFont(this.FONT, 'normal');
       doc.setFontSize(6.5);
       doc.text(etiqueta, x, yTable);
-      doc.setTextColor(...(azul ? this.WE_BLUE : this.TEXT));
+      doc.setTextColor(...this.TEXT);
       doc.setFont(this.FONT, 'bold');
-      doc.setFontSize(11);
-      doc.text(valor, x, yTable + 5.5);
+      doc.setFontSize(8.5);
+      doc.text(valor, x, yTable + 4.2);
     });
 
     // ==============================
@@ -394,7 +389,7 @@ export class PdfService {
         );
 
     autoTable(doc, {
-        startY: yTable + 12,
+        startY: yTable + 14,
         head: [[
         '# PAGO',
         'MES',
@@ -407,7 +402,7 @@ export class PdfService {
         margin: {
         left: 20,
         right: 20,
-        top: 28,
+        top: 26,
         bottom: 18
         },
         ...this.estiloTabla(7.5),
@@ -443,7 +438,6 @@ export class PdfService {
             hook.section === 'body' &&
             data.amortizationTable[hook.row.index]?.esAportacion
           ) {
-            hook.cell.styles.textColor = this.WE_BLUE;
             hook.cell.styles.fontStyle = 'bold';
           }
         },
@@ -452,7 +446,7 @@ export class PdfService {
             doc.getCurrentPageInfo()
             .pageNumber;
 
-        if (currentPage > primeraHoja) encabezadoHoja();
+        if (currentPage > primeraHoja) encabezadoHoja(false);
 
         // FOOTER
         this.pie(doc, 'WE Real Estate · Tabla de amortización', `Página ${currentPage}`, pageWidth, pageHeight);
@@ -484,13 +478,13 @@ export class PdfService {
   ): void {
     const ultimaTabla = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable;
     let y = (ultimaTabla?.finalY ?? 40) + 12;
-    const encabezadoHoja = () => this.encabezado(doc, 'TABLA DE AMORTIZACIÓN', data.project.toUpperCase(), pageWidth);
+    const encabezadoHoja = () => this.encabezado(doc, 'TABLA DE AMORTIZACIÓN', data.project.toUpperCase(), pageWidth, false);
 
     // Título + encabezado + un par de filas deben caber; si no, página nueva.
     if (y > pageHeight - 50) {
       doc.addPage('letter', 'portrait');
       encabezadoHoja();
-      y = 34;
+      y = 30;
     }
     const primeraHoja = doc.getNumberOfPages();
 
@@ -503,7 +497,7 @@ export class PdfService {
       head: [['#', 'MES', 'AÑO', 'APORTACIÓN']],
       body: aportaciones.map((a, i) => [i + 1, a.mes, a.anio, this.money(a.monto)]),
       foot: [['', '', 'TOTAL', this.money(total)]],
-      margin: { left: 20, right: 20, top: 28, bottom: 18 },
+      margin: { left: 20, right: 20, top: 26, bottom: 18 },
       ...this.estiloTabla(7.5),
       columnStyles: {
         0: { halign: 'center', cellWidth: 17 },
@@ -533,24 +527,27 @@ export class PdfService {
     doc.line(x1, y1, x2, y2);
   }
 
-  /** Encabezado de las hojas que no son la primera: título azul, dato gris a la derecha y línea azul. */
-  private encabezado(doc: jsPDF, titulo: string, derecha: string, pageWidth: number): void {
-    doc.setTextColor(...this.WE_BLUE);
-    doc.setFont(this.FONT, 'bold');
-    doc.setFontSize(15);
-    doc.text(titulo, 20, 18);
-
+  /** Encabezado de las hojas de amortización: la primera lleva el título; las que siguen solo la línea azul con el
+   * dato gris, sin repetir el título. */
+  private encabezado(doc: jsPDF, titulo: string, derecha: string, pageWidth: number, primera: boolean): void {
+    if (primera) {
+      doc.setTextColor(...this.TEXT);
+      doc.setFont(this.FONT, 'bold');
+      doc.setFontSize(15);
+      doc.text(titulo, 20, 18);
+    }
     doc.setTextColor(...this.MUTED);
     doc.setFont(this.FONT, 'normal');
     doc.setFontSize(7);
-    doc.text(derecha, pageWidth - 20, 18, { align: 'right' });
+    doc.text(derecha, pageWidth - 20, primera ? 18 : 14.5, { align: 'right' });
 
-    this.linea(doc, 20, 22, pageWidth - 20, 22, 0.5, this.WE_BLUE);
+    const yLinea = primera ? 22 : 18;
+    this.linea(doc, 20, yLinea, pageWidth - 20, yLinea, 0.5, this.WE_BLUE);
   }
 
   /** Título de sección en mayúsculas chicas con una línea gris fina debajo. Devuelve la y de la línea. */
   private tituloSeccion(doc: jsPDF, titulo: string, y: number, pageWidth: number): number {
-    doc.setTextColor(...this.WE_DARK);
+    doc.setTextColor(...this.TEXT);
     doc.setFont(this.FONT, 'bold');
     doc.setFontSize(7.5);
     doc.text(titulo, 20, y, { charSpace: 0.5 });
@@ -580,14 +577,14 @@ export class PdfService {
         lineWidth: 0,
         valign: 'middle' as const,
       },
-      headStyles: { font: this.FONT, fontStyle: 'bold' as const, fillColor: false as const, textColor: this.WE_BLUE, fontSize: 6.5 },
+      headStyles: { font: this.FONT, fontStyle: 'bold' as const, fillColor: false as const, textColor: this.TEXT, fontSize: 6.5 },
       footStyles: { font: this.FONT, fontStyle: 'bold' as const, fillColor: false as const, textColor: this.TEXT },
       // El encabezado se alinea como su columna (autoTable no lo hereda del columnStyles).
       didParseCell: (hook: CellHookData) => this.alinearEncabezado(hook),
       didDrawCell: (hook: CellHookData) => {
         const { x, y, width, height } = hook.cell;
         if (hook.section === 'foot') this.linea(hook.doc, x, y, x + width, y, 0.4, this.TEXT);
-        else if (hook.section === 'head') this.linea(hook.doc, x, y + height, x + width, y + height, 0.4, this.WE_BLUE);
+        else if (hook.section === 'head') this.linea(hook.doc, x, y + height, x + width, y + height, 0.4, this.MUTED);
         else this.linea(hook.doc, x, y + height, x + width, y + height, 0.15, this.LINEA_FILA);
       },
     };
@@ -601,10 +598,10 @@ export class PdfService {
 
   /** Subtítulo de una tabla (p. ej. «CON ENGANCHE»): texto azul chico, sin barra de color. */
   private subtituloTabla(doc: jsPDF, texto: string, y: number): void {
-    doc.setTextColor(...this.WE_BLUE);
+    doc.setTextColor(...this.MUTED);
     doc.setFont(this.FONT, 'bold');
     doc.setFontSize(7.5);
-    doc.text(texto, 20, y, { charSpace: 0.4 });
+    doc.text(texto, 20, y, { charSpace: 0.5 });
   }
 
   private addNanuuFinancingTable(
@@ -956,7 +953,7 @@ export class PdfService {
     await this.loadFonts(doc);
 
     // ENCABEZADO sobre fondo blanco: título azul, fecha gris a la derecha y línea azul bajo la franja
-    doc.setTextColor(...this.WE_BLUE);
+    doc.setTextColor(...this.TEXT);
     doc.setFont(this.FONT, 'bold');
     doc.setFontSize(11 * k);
     doc.text(`Plano interactivo · ${data.desarrolloNombre}`, margen, headerHeight / 2 + 1.5 * k);
