@@ -116,7 +116,14 @@ export class ReciboFormComponent {
    * disponible, los que ningún recibo ha marcado como cubiertos. */
   readonly mesesPendientes = computed(() => {
     const faltante = this.faltantePorMes();
-    if (faltante) return this.mesesDelPlan().filter((m) => faltante.has(m.clave));
+    // Con la tabla, sus meses tal cual: si hubo una pausa de mensualidades ya vienen recorridos (el plan calculado aquí
+    // con los datos de la venta no la conoce).
+    if (faltante) {
+      return [...faltante.keys()].sort().map((k) => {
+        const [anio, mes] = k.split('-').map(Number);
+        return { clave: k, anio, mes, etiqueta: etiquetaMes(anio, mes) } satisfies MesPlan;
+      });
+    }
     return this.mesesDelPlan().filter((m) => !this.mesesCubiertos().has(m.clave));
   });
 

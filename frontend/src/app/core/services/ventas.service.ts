@@ -110,6 +110,16 @@ export class VentasService {
     return firstValueFrom(this.http.post<Venta>(`${this.baseUrl}/${id}/reestructurar`, request));
   }
 
+  /** Pausa de mensualidades: la mensualidad `numero` pasa a `fecha` (posterior) y las siguientes se recorren. */
+  pausar(id: number, request: { password: string; motivo: string; numero: number; fecha: string }): Promise<void> {
+    return firstValueFrom(this.http.post<void>(`${this.baseUrl}/${id}/pausas`, request));
+  }
+
+  /** Deshace la pausa de mensualidades más reciente de la venta. */
+  deshacerPausa(id: number, request: { password: string; motivo: string }): Promise<void> {
+    return firstValueFrom(this.http.post<void>(`${this.baseUrl}/${id}/pausas/deshacer`, request));
+  }
+
   /** Pone, cambia o quita (null) el número de contrato de la venta; no puede repetirse en otra venta. */
   /** password: solo al cambiar o quitar un número que la venta ya tiene. */
   guardarNumeroContrato(ventaId: number, numeroContrato: string | null, password: string | null = null): Promise<Venta> {

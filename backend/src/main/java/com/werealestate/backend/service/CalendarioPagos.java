@@ -75,7 +75,42 @@ public final class CalendarioPagos {
             int diaPago,
             boolean primeraEnMesInicio,
             String engancheLabel,
-            BigDecimal enganche) {
+            BigDecimal enganche,
+            List<Pausa> pausas) {
+
+        public Plan(LocalDate inicio, BigDecimal mensualidad, Integer plazoMeses, int diaPago, boolean primeraEnMesInicio,
+                String engancheLabel, BigDecimal enganche) {
+            this(inicio, mensualidad, plazoMeses, diaPago, primeraEnMesInicio, engancheLabel, enganche, List.of());
+        }
+
+        Plan conPausas(List<Pausa> nuevas) {
+            return new Plan(inicio, mensualidad, plazoMeses, diaPago, primeraEnMesInicio, engancheLabel, enganche, nuevas);
+        }
+
+        /** Fecha de la mensualidad número {@code k} (1 = la primera): la de su mes en el plan o, si una pausa la movió,
+         * la que le toca desde la pausa más reciente que empieza en ella o antes (mes a mes, con el día de la pausa). */
+        public LocalDate fechaDe(int k) {
+            Pausa p = pausaDe(k);
+            if (p == null) return diaDePago(primerMes().plusMonths(k - 1L), diaPago);
+            return diaDePago(YearMonth.from(p.fecha()).plusMonths(k - (long) p.desde()), p.fecha().getDayOfMonth());
+        }
+
+        /** Día de pago de un mes del calendario: el de la pausa más reciente que ya corre en ese mes, o el del plan. */
+        int diaDelMes(YearMonth ym) {
+            int dia = diaPago;
+            for (Pausa p : pausas) {
+                if (!YearMonth.from(p.fecha()).isAfter(ym)) dia = p.fecha().getDayOfMonth();
+            }
+            return dia;
+        }
+
+        private Pausa pausaDe(int k) {
+            Pausa elegida = null;
+            for (Pausa p : pausas) {
+                if (p.desde() <= k) elegida = p;
+            }
+            return elegida;
+        }
 
         boolean conPlazo() {
             return mensualidad != null && plazoMeses != null;
@@ -99,6 +134,13 @@ public final class CalendarioPagos {
         }
     }
 
+    /**
+     * Una pausa de mensualidades vigente (ver VentaPausa): la mensualidad {@code desde} cae en {@code fecha} y las
+     * siguientes mes a mes desde ahí.
+     */
+    public record Pausa(int desde, LocalDate fecha) {
+    }
+
     /** El plan vigente de la venta (el último, si se reestructuró: ese ya no lleva el pago inicial). */
     public static Plan planVigente(Venta venta) {
         // Con una reestructuración por saldo el plan vigente ya no lleva el pago inicial; con una completa sí (rehace
@@ -112,7 +154,23 @@ public final class CalendarioPagos {
                 venta.getDiaPago(),
                 venta.isPrimeraMensualidadMesVenta(),
                 reestructurada ? null : venta.getEngancheLabel(),
-                reestructurada ? null : venta.getEnganche());
+                reestructurada ? null : venta.getEnganche(),
+                pausasDelPlan(venta, idDelPlanVigente(venta)));
+    }
+
+    /** Con qué id se etiquetan las aportaciones y pausas del plan vigente: la última reestructuración (null = el
+     * plan original de la venta). */
+    public static Long idDelPlanVigente(Venta venta) {
+        List<VentaReestructuracion> rs = venta.getReestructuraciones();
+        return rs.isEmpty() ? null : rs.get(rs.size() - 1).getId();
+    }
+
+    /** Las pausas vigentes de un plan de la venta, de la más antigua a la más reciente. */
+    public static List<Pausa> pausasDelPlan(Venta venta, Long planId) {
+        return venta.getPausas().stream()
+                .filter(p -> p.isVigente() && java.util.Objects.equals(p.getReestructuracionId(), planId))
+                .map(p -> new Pausa(p.getDesdeNumero(), p.getFechaNueva()))
+                .toList();
     }
 
     /** El plan con que se registró la venta (antes de cualquier reestructuración): la primera guarda una copia. */
@@ -131,14 +189,17 @@ public final class CalendarioPagos {
      * plan tiene mensualidades. Lo usa la validación de los meses de un recibo. */
     public static YearMonth[] rangoDeMeses(Venta venta) {
         List<Plan> planes = new ArrayList<>();
-        venta.getReestructuraciones().forEach(r -> planes.add(planAnterior(r)));
+        List<VentaReestructuracion> rs = venta.getReestructuraciones();
+        for (int i = 0; i < rs.size(); i++) {
+            planes.add(planAnterior(rs.get(i)).conPausas(pausasDelPlan(venta, i == 0 ? null : rs.get(i - 1).getId())));
+        }
         planes.add(planVigente(venta));
         YearMonth primero = null;
         YearMonth ultimo = null;
         for (Plan p : planes) {
             if (!p.conPlazo() || p.plazoMeses() < 1) continue;
             YearMonth a = p.primerMes();
-            YearMonth b = a.plusMonths(p.plazoMeses() - 1L);
+            YearMonth b = YearMonth.from(p.fechaDe(p.plazoMeses()));
             if (primero == null || a.isBefore(primero)) primero = a;
             if (ultimo == null || b.isAfter(ultimo)) ultimo = b;
         }
@@ -209,7 +270,7 @@ public final class CalendarioPagos {
             }
             VentaReestructuracion r = rs.get(i);
             BigDecimal cubierto = r.getAbonadoAlCorte().subtract(abonadoAntes).max(BigDecimal.ZERO);
-            for (Concepto c : conceptosDePlan(planAnterior(r), base, propias, i)) {
+            for (Concepto c : conceptosDePlan(planAnterior(r).conPausas(pausasDelPlan(venta, etiqueta)), base, propias, i)) {
                 if (cubierto.signum() <= 0) break;
                 BigDecimal monto = c.monto().min(cubierto);
                 resultado.add(c.conMonto(monto));
@@ -239,21 +300,21 @@ public final class CalendarioPagos {
             for (VentaAportacion a : aportacionesDelPlan) {
                 aportaciones.put(YearMonth.of(a.getAnio(), a.getMes()), a.getMonto());
             }
-            YearMonth primero = plan.primerMes();
-
+            // Cada mensualidad en su mes (recorrida si una pausa la movió: ver Plan.fechaDe); las aportaciones ya se
+            // guardan en el mes recorrido, así que la del mes de la mensualidad k la reemplaza igual que sin pausa.
             Set<YearMonth> cubiertos = new HashSet<>();
             for (int k = 0; k < plan.plazoMeses(); k++) {
-                YearMonth ym = primero.plusMonths(k);
+                LocalDate fecha = plan.fechaDe(k + 1);
+                YearMonth ym = YearMonth.from(fecha);
                 cubiertos.add(ym);
                 BigDecimal aportacion = aportaciones.get(ym);
-                LocalDate fecha = diaDePago(ym, plan.diaPago());
                 brutos.add(aportacion != null
                         ? new Concepto(k + 1, fecha, "Aportación", aportacion, false, tramo, plazo)
                         : new Concepto(k + 1, fecha, "Mensualidad", plan.mensualidad(), true, tramo, plazo));
             }
             aportaciones.forEach((ym, monto) -> {
                 if (!cubiertos.contains(ym)) {
-                    brutos.add(new Concepto(null, diaDePago(ym, plan.diaPago()), "Aportación", monto, false, tramo, plazo));
+                    brutos.add(new Concepto(null, diaDePago(ym, plan.diaDelMes(ym)), "Aportación", monto, false, tramo, plazo));
                 }
             });
         }

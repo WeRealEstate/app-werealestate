@@ -152,7 +152,8 @@ public class EstadoCuentaService {
                 cuenta.mensual(),
                 reestructuraciones(venta),
                 original.primerMes().toString(),
-                precio.subtract(original.conPagoInicialPublico() ? original.enganche() : BigDecimal.ZERO));
+                precio.subtract(original.conPagoInicialPublico() ? original.enganche() : BigDecimal.ZERO),
+                PausaMensualidadService.pausasVigentes(venta));
     }
 
     private static List<AmortizacionDto.Reestructuracion> reestructuraciones(Venta venta) {

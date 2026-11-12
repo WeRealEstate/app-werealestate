@@ -120,6 +120,19 @@ export interface Amortizacion {
   primerMesPlan: string | null;
   /** Lo que reparte un plan rehecho: precio menos el enganche capturado. */
   montoAReestructurar: number;
+  /** Pausas de mensualidades vigentes del plan vigente, de la más antigua a la más reciente (la última se puede deshacer). */
+  pausas: PausaPlan[];
+}
+
+/** Pausa de mensualidades (ver backend VentaPausa): la mensualidad `numero` pasó de `fechaAnterior` a `fechaNueva` y
+ * lo que sigue se recorrió desde ahí; los meses de en medio no tienen renglón. */
+export interface PausaPlan {
+  numero: number;
+  fechaAnterior: string;
+  fechaNueva: string;
+  motivo: string;
+  usuario: string | null;
+  fechaRegistro: string;
 }
 
 /** Concepto del renglón que junta la parte del precio sin fecha en el plan (anualidades de ventas anteriores). */

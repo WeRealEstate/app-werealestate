@@ -56,6 +56,11 @@ export class ClienteDetalleComponent {
     });
   }
 
+  /** Tras mover o deshacer una pausa de mensualidades en una de las tablas. */
+  recargarAmortizaciones(): void {
+    void this.cargarAmortizaciones();
+  }
+
   private async cargarAmortizaciones(): Promise<void> {
     this.errorAmortizaciones.set(null);
     try {

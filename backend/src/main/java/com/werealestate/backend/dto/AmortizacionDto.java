@@ -58,7 +58,21 @@ public record AmortizacionDto(
         // Para reestructurar: primer mes del plan original ("2026-06"; null en contado) y lo que se reparte en
         // mensualidades y aportaciones (precio menos enganche).
         String primerMesPlan,
-        BigDecimal montoAReestructurar) {
+        BigDecimal montoAReestructurar,
+        // Pausas de mensualidades vigentes del plan vigente, de la más antigua a la más reciente (la última es la que
+        // se puede deshacer). Ver VentaPausa.
+        List<Pausa> pausas) {
+
+    /** Una pausa: la mensualidad {@code numero} pasó de {@code fechaAnterior} a {@code fechaNueva} y lo que sigue se
+     * recorrió desde ahí. */
+    public record Pausa(
+            int numero,
+            LocalDate fechaAnterior,
+            LocalDate fechaNueva,
+            String motivo,
+            String usuario,
+            java.time.LocalDateTime fechaRegistro) {
+    }
 
     /** Una reestructuración del plan: a partir de las filas con este {@code tramo} corre el plan nuevo. */
     public record Reestructuracion(

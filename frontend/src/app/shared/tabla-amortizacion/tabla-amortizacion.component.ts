@@ -1,5 +1,6 @@
-import { Component, ElementRef, computed, effect, inject, input, model, signal, viewChild } from '@angular/core';
-import { LucideChevronDown, LucideChevronRight, LucideChevronUp, LucideDownload } from '@lucide/angular';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, ElementRef, computed, effect, inject, input, model, output, signal, viewChild } from '@angular/core';
+import { LucideChevronDown, LucideChevronRight, LucideChevronUp, LucideDownload, LucidePencil } from '@lucide/angular';
 import {
   Amortizacion,
   CONCEPTO_SIN_FECHA,
@@ -8,8 +9,12 @@ import {
   EstadoPagoPlan,
   cuentaAtraso,
   fechaCorta,
+  FilaAmortizacion,
   ReestructuracionPlan,
 } from '../../core/models/amortizacion.model';
+import { AuthService } from '../../core/services/auth.service';
+import { VentasService } from '../../core/services/ventas.service';
+import { ConfirmacionPausa, PausaMensualidadesComponent } from '../pausa-mensualidades/pausa-mensualidades.component';
 import { PdfAmortizacionService } from '../../core/services/pdf-amortizacion.service';
 import { ToastService } from '../../core/services/toast.service';
 
@@ -20,17 +25,21 @@ import { ToastService } from '../../core/services/toast.service';
  */
 @Component({
   selector: 'app-tabla-amortizacion',
-  imports: [LucideChevronDown, LucideChevronRight, LucideChevronUp, LucideDownload],
+  imports: [LucideChevronDown, LucideChevronRight, LucideChevronUp, LucideDownload, LucidePencil, PausaMensualidadesComponent],
   templateUrl: './tabla-amortizacion.component.html',
 })
 export class TablaAmortizacionComponent {
   private readonly pdf = inject(PdfAmortizacionService);
   private readonly toast = inject(ToastService);
+  private readonly ventas = inject(VentasService);
+  private readonly auth = inject(AuthService);
 
   readonly amortizacion = input.required<Amortizacion>();
   /** Encabezado del bloque; sin él: "Venta S-13 · SAMAI Campestre · Mz 3 / Lote 1". */
   readonly titulo = input<string | null>(null);
   readonly abierta = model(false);
+  /** Se movió o se deshizo una pausa de mensualidades: el padre vuelve a pedir la tabla. */
+  readonly actualizada = output<void>();
 
   private readonly caja = viewChild<ElementRef<HTMLElement>>('caja');
   readonly generando = signal(false);
@@ -119,6 +128,82 @@ export class TablaAmortizacionComponent {
     if (estado === 'LE_TOCA') return 'bg-amber-50 dark:bg-amber-500/[0.07]';
     if (estado === 'ABONADO') return 'bg-sky-50 dark:bg-sky-500/[0.06]';
     return '';
+  }
+
+  // ---- Pausa de mensualidades (ver backend PausaMensualidadService) ----
+
+  /** Mover fechas usa la API de Ventas: en la ficha del cliente solo si también tiene ese módulo. */
+  readonly puedeMoverFechas = computed(() => this.auth.tieneModulo('VENTAS'));
+  private readonly ultimoTramo = computed(() => Math.max(0, ...this.amortizacion().detalleMensual.map((f) => f.tramo)));
+  /** Desde qué renglón se puede mover: después del último con pagos (los recibos guardan el mes que cubren) y no antes
+   * de donde empieza la pausa más reciente. */
+  private readonly primerMovible = computed(() => {
+    const filas = this.amortizacion().detalleMensual;
+    let desde = 0;
+    filas.forEach((f, i) => {
+      if (f.pagos.length > 0) desde = i + 1;
+    });
+    return desde;
+  });
+  private readonly numeroMinimo = computed(() => this.amortizacion().pausas?.at(-1)?.numero ?? 1);
+  readonly ultimoNumero = computed(() =>
+    Math.max(0, ...this.amortizacion().detalleMensual.filter((f) => f.tramo === this.ultimoTramo()).map((f) => f.numero ?? 0)),
+  );
+
+  movible(f: FilaAmortizacion, i: number): boolean {
+    return (
+      this.puedeMoverFechas() &&
+      f.numero !== null &&
+      !!f.fecha &&
+      f.tramo === this.ultimoTramo() &&
+      i >= this.primerMovible() &&
+      f.numero >= this.numeroMinimo()
+    );
+  }
+
+  /** La ventana abierta: mover la fecha de una mensualidad o deshacer la última pausa. */
+  readonly pausa = signal<{ modo: 'mover' | 'deshacer'; numero: number; fecha: string } | null>(null);
+  readonly guardandoPausa = signal(false);
+  readonly errorPausa = signal<string | null>(null);
+
+  abrirMover(f: FilaAmortizacion): void {
+    if (f.numero === null || !f.fecha) return;
+    this.errorPausa.set(null);
+    this.pausa.set({ modo: 'mover', numero: f.numero, fecha: f.fecha });
+  }
+
+  abrirDeshacer(): void {
+    const ultima = this.amortizacion().pausas?.at(-1);
+    if (!ultima) return;
+    this.errorPausa.set(null);
+    this.pausa.set({ modo: 'deshacer', numero: ultima.numero, fecha: ultima.fechaAnterior });
+  }
+
+  async confirmarPausa(c: ConfirmacionPausa): Promise<void> {
+    const p = this.pausa();
+    if (!p || this.guardandoPausa()) return;
+    this.guardandoPausa.set(true);
+    this.errorPausa.set(null);
+    try {
+      const ventaId = this.amortizacion().ventaId;
+      if (p.modo === 'mover' && c.fecha) {
+        await this.ventas.pausar(ventaId, { password: c.password, motivo: c.motivo, numero: p.numero, fecha: c.fecha });
+        this.toast.success(`La mensualidad N.º ${p.numero} y las siguientes se recorrieron.`);
+      } else {
+        await this.ventas.deshacerPausa(ventaId, { password: c.password, motivo: c.motivo });
+        this.toast.success('Se deshizo la pausa.');
+      }
+      this.pausa.set(null);
+      this.actualizada.emit();
+    } catch (error) {
+      this.errorPausa.set(
+        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+          ? error.error.message
+          : 'No se pudo guardar. Intenta de nuevo.',
+      );
+    } finally {
+      this.guardandoPausa.set(false);
+    }
   }
 
   async descargarPdf(): Promise<void> {

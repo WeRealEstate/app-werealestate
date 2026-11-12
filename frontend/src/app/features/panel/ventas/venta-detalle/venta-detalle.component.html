@@ -192,6 +192,9 @@
           <div>
             <p class="text-xs text-ink-muted">Día de pago</p>
             <p class="mt-1 text-sm font-medium text-ink">Día {{ v.diaPago }} de cada mes</p>
+            @if (ultimoPagoTrasPausa(); as p) {
+              <p class="text-xs text-ink-muted">Por una pausa, desde la mensualidad N.º {{ p.numero }} es el día {{ p.dia }}</p>
+            }
             <p class="text-xs text-ink-muted">
               {{ v.primeraMensualidadMesVenta ? 'La primera mensualidad cuenta en el mes de la venta' : 'La primera mensualidad es el mes siguiente' }}
             </p>
@@ -428,7 +431,7 @@
         </div>
       }
       <div class="mt-4">
-        <app-tabla-amortizacion [amortizacion]="a" titulo="Tabla de amortización" [(abierta)]="amortizacionAbierta" />
+        <app-tabla-amortizacion [amortizacion]="a" titulo="Tabla de amortización" [(abierta)]="amortizacionAbierta" (actualizada)="cargar()" />
       </div>
       @if (puedeEliminar() && a.saldo > 0.01 && a.primerMesPlan && !v.depositoPendiente) {
         <div class="mt-2 flex justify-end">
@@ -448,7 +451,7 @@
     <!-- HISTORIAL DE ABONOS -->
     <div class="mt-6">
       <h2 class="font-heading text-base font-semibold text-ink">Historial de abonos</h2>
-      <app-recibos-venta [venta]="v" [pagos]="pagos()" [historial]="historialRecibos()" (cambio)="cargar()" />
+      <app-recibos-venta [venta]="v" [pagos]="pagos()" [historial]="historialRecibos()" [amortizacion]="amortizacion()" (cambio)="cargar()" />
     </div>
   }
 </div>

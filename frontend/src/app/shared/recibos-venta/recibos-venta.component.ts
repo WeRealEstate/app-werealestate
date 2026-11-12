@@ -3,6 +3,7 @@ import { Component, computed, inject, input, output, signal } from '@angular/cor
 import { FormsModule } from '@angular/forms';
 import { PagoVenta, ReciboHistorial, TIPO_ABONO_LABELS, TipoAbono, Venta, esTipoMensual } from '../../core/models/venta.model';
 import { MesPlan, claveMes, etiquetaMes, mesesDelPlan } from '../../core/utils/plan-mensualidades';
+import { Amortizacion } from '../../core/models/amortizacion.model';
 import { ToastService } from '../../core/services/toast.service';
 import { VentasService } from '../../core/services/ventas.service';
 
@@ -48,6 +49,8 @@ export class RecibosVentaComponent {
   readonly venta = input.required<Venta>();
   readonly pagos = input.required<PagoVenta[]>();
   readonly historial = input<ReciboHistorial[]>([]);
+  /** La tabla de amortización de la venta (opcional): de ella salen los meses del plan al editar un recibo. */
+  readonly amortizacion = input<Amortizacion | null>(null);
   /** Se emite tras editar o anular para que el padre vuelva a cargar la venta, los pagos y la bitácora. */
   readonly cambio = output<void>();
 
@@ -164,7 +167,17 @@ export class RecibosVentaComponent {
     ];
   });
 
-  private readonly planCompleto = computed<MesPlan[]>(() => mesesDelPlan(this.venta()));
+  /** Meses del plan: con la tabla de amortización, los de sus renglones (si hubo una pausa de mensualidades ya vienen
+   * recorridos); sin ella, los que se calculan con los datos de la venta. */
+  private readonly planCompleto = computed<MesPlan[]>(() => {
+    const a = this.amortizacion();
+    if (!a) return mesesDelPlan(this.venta());
+    const claves = new Set(a.filas.filter((f) => f.numero !== null && f.fecha).map((f) => f.fecha!.slice(0, 7)));
+    return [...claves].sort().map((k) => {
+      const [anio, mes] = k.split('-').map(Number);
+      return { clave: claveMes(anio, mes), anio, mes, etiqueta: etiquetaMes(anio, mes) };
+    });
+  });
 
   /** Meses que se pueden elegir al editar: los no cubiertos por OTROS recibos vigentes. */
   mesesElegibles(): MesPlan[] {

@@ -62,6 +62,12 @@ public class VentaAportacion {
         return reestructuracionId;
     }
 
+    /** La recorre de mes con una pausa de mensualidades (o la regresa al deshacerla); ver VentaPausa. */
+    public void moverAMes(java.time.YearMonth ym) {
+        this.anio = ym.getYear();
+        this.mes = ym.getMonthValue();
+    }
+
     public Long getId() {
         return id;
     }

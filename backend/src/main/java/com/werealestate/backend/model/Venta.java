@@ -119,6 +119,11 @@ public class Venta {
     @OrderBy("id ASC")
     private List<VentaReestructuracion> reestructuraciones = new ArrayList<>();
 
+    /** Pausas de mensualidades (vigentes y deshechas), de la más antigua a la más reciente (ver VentaPausa). */
+    @OneToMany(mappedBy = "venta", fetch = FetchType.LAZY, cascade = jakarta.persistence.CascadeType.REMOVE)
+    @OrderBy("id ASC")
+    private List<VentaPausa> pausas = new ArrayList<>();
+
     @Column(name = "fecha_provisional", nullable = false)
     private boolean fechaProvisional;
 
@@ -297,6 +302,14 @@ public class Venta {
 
     public void agregarReestructuracion(VentaReestructuracion r) {
         reestructuraciones.add(r);
+    }
+
+    public List<VentaPausa> getPausas() {
+        return pausas;
+    }
+
+    public void agregarPausa(VentaPausa p) {
+        pausas.add(p);
     }
 
     /** Agrega el enganche o pago inicial que la venta no tenía (reestructuración con enganche). */

@@ -35,10 +35,13 @@ public class VentaController {
 
     private final VentaService ventaService;
     private final EstadoCuentaService estadoCuentaService;
+    private final com.werealestate.backend.service.PausaMensualidadService pausaService;
 
-    public VentaController(VentaService ventaService, EstadoCuentaService estadoCuentaService) {
+    public VentaController(VentaService ventaService, EstadoCuentaService estadoCuentaService,
+            com.werealestate.backend.service.PausaMensualidadService pausaService) {
         this.ventaService = ventaService;
         this.estadoCuentaService = estadoCuentaService;
+        this.pausaService = pausaService;
     }
 
     @PostMapping
@@ -139,6 +142,23 @@ public class VentaController {
     public VentaDto reestructurar(
             @PathVariable Long id, @Valid @RequestBody com.werealestate.backend.dto.VentaReestructurarRequest request) {
         return ventaService.reestructurar(id, request);
+    }
+
+    /** Pausa de mensualidades: mueve la fecha de una mensualidad y recorre las siguientes (admin y administración,
+     * con su contraseña y un motivo). */
+    @PostMapping("/{id}/pausas")
+    public ResponseEntity<Void> pausar(
+            @PathVariable Long id, @Valid @RequestBody com.werealestate.backend.dto.VentaPausaRequest request) {
+        pausaService.pausar(id, request);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Deshace la pausa de mensualidades más reciente de la venta. */
+    @PostMapping("/{id}/pausas/deshacer")
+    public ResponseEntity<Void> deshacerPausa(
+            @PathVariable Long id, @Valid @RequestBody com.werealestate.backend.dto.VentaDeshacerPausaRequest request) {
+        pausaService.deshacer(id, request);
+        return ResponseEntity.noContent().build();
     }
 
     /** Número de contrato de la venta (opcional, único). Lo editan admin y administración. */

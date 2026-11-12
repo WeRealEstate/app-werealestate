@@ -147,7 +147,7 @@
         } @else if (amortizaciones(); as lista) {
           <div class="mt-3 space-y-3">
             @for (a of lista; track a.ventaId) {
-              <app-tabla-amortizacion [amortizacion]="a" [abierta]="estaAbierta(a.ventaId)" (abiertaChange)="alCambiarAbierta(a.ventaId, $event)" />
+              <app-tabla-amortizacion [amortizacion]="a" [abierta]="estaAbierta(a.ventaId)" (abiertaChange)="alCambiarAbierta(a.ventaId, $event)" (actualizada)="recargarAmortizaciones()" />
             }
           </div>
         } @else {

@@ -217,11 +217,28 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
     return porcentajeDe(v.enganche, v.precioVenta);
   }
 
-  /** Fecha de la última mensualidad según plazo, día de pago y mes de la primera. */
+  /** Fecha de la última mensualidad según plazo, día de pago y mes de la primera. Si hubo una pausa de mensualidades,
+   * la del último renglón numerado de la tabla (ya recorrida). */
   terminaEn(v: Venta): string | null {
+    const ultima = this.ultimoPagoTrasPausa();
+    if (ultima) return fechaLarga(ultima.fecha);
     const f = ultimaMensualidad(v.fechaVenta, v.plazoMeses, v.diaPago, v.primeraMensualidadMesVenta);
     return f ? fechaLarga(f) : null;
   }
+
+  /** Con una pausa de mensualidades vigente: la pausa más reciente (desde qué número y su día de pago) y la fecha del
+   * último pago numerado del plan vigente. null sin pausas. */
+  readonly ultimoPagoTrasPausa = computed(() => {
+    const a = this.amortizacion();
+    const pausa = a?.pausas?.at(-1);
+    if (!a || !pausa) return null;
+    const tramo = Math.max(0, ...a.detalleMensual.map((f) => f.tramo));
+    const filas = a.detalleMensual.filter((f) => f.tramo === tramo && f.numero !== null && f.fecha);
+    const ultima = filas.at(-1);
+    if (!ultima?.fecha) return null;
+    const [y, m, d] = ultima.fecha.split('-').map(Number);
+    return { fecha: new Date(y, m - 1, d), numero: pausa.numero, dia: Number(pausa.fechaNueva.slice(8, 10)) };
+  });
 
   money(valor: number): string {
     return valor.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

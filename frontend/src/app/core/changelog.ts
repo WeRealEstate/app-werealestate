@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.19.0', fecha: '2026-11-12', cambios: [
+    "Pausa de mensualidades: en la tabla de amortización (detalle de la venta y ficha del cliente), Administración y Admin pueden presionar la fecha de una mensualidad y moverla a una fecha posterior (con motivo y su contraseña). Las mensualidades y aportaciones siguientes se recorren mes a mes desde la nueva fecha, con su día como día de pago, y el plazo se respeta completo; los meses de la pausa no aparecen ni cuentan como atraso. Solo se mueve una mensualidad sin pagos y sin pagos después. Puede haber varias pausas y la más reciente se puede deshacer.",
+  ] },
   { version: '11.18.15', fecha: '2026-11-12', cambios: [
     "El PDF de la tabla de amortización marca el mes actual: rojo si está atrasado, verde si está pagado y azul si va abonando. La marca es una barra a la izquierda del renglón y el estado de ese mes en el mismo color; los meses que siguen (le toca, pendiente) no llevan marca.",
   ] },
