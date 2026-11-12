@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.18.12', fecha: '2026-11-12', cambios: [
+    "PDF de la cotización y de la tabla de amortización con diseño nuevo, más limpio y con menos tinta: encabezado con título en azul y línea (sin banda de color), datos en columnas sin cajas, tablas solo con líneas finas y el estado de cada pago en color de texto con un punto (sin rellenos). Aplica a todas las hojas: amortización, aportaciones, planes de Nanuu y plano. Márgenes más amplios.",
+  ] },
   { version: '11.18.11', fecha: '2026-11-11', cambios: [
     "Tabla de amortización: lo que le falta a una mensualidad vencida (aunque sea poco) ahora se suma a la mensualidad siguiente, que muestra «Incluye $X de meses anteriores». El mes sigue marcado como Abonado (o Atrasado si no recibió nada). Lo pagado de más sigue descontándose de la última mensualidad.",
   ] },

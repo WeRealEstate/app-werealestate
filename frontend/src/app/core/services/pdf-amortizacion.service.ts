@@ -14,21 +14,17 @@ type Rgb = [number, number, number];
 // Mismos colores, letra y medidas que el PDF de la cotización (ver PdfCotizacionService).
 const WE_BLUE: Rgb = [36, 63, 184];
 const WE_DARK: Rgb = [11, 47, 104];
-const WE_LIGHT: Rgb = [238, 243, 255];
 const TEXT: Rgb = [23, 35, 60];
 const MUTED: Rgb = [102, 112, 133];
 const BORDER: Rgb = [217, 224, 234];
-const CAJA: Rgb = [247, 249, 252];
 const ROJO: Rgb = [185, 28, 28];
 const VERDE: Rgb = [21, 128, 61];
 const AMBAR: Rgb = [146, 64, 14];
-const FONDO_ATRASADO: Rgb = [253, 236, 236];
-const FONDO_LE_TOCA: Rgb = [255, 247, 230];
+const LINEA_FILA: Rgb = [226, 231, 239];
 const AZUL_ABONADO: Rgb = [3, 105, 161];
-const FONDO_ABONADO: Rgb = [235, 246, 253];
 
 const FUENTE = 'Montserrat';
-const MARGEN = 18;
+const MARGEN = 20;
 const ALTO_PIE = 18;
 
 /** Un dato de las cajas de datos: etiqueta chica arriba y valor en negritas abajo. */
@@ -57,19 +53,19 @@ export class PdfAmortizacionService {
     const ancho = doc.internal.pageSize.getWidth();
 
     this.encabezado(doc, a, ancho);
-    let y = 34;
+    let y = 32;
     doc.setTextColor(...WE_BLUE);
     doc.setFont(FUENTE, 'bold');
-    doc.setFontSize(9);
-    doc.text(`ESTADO DE CUENTA AL ${fechaCorta(a.corte)}`, MARGEN, y);
+    doc.setFontSize(7.5);
+    doc.text(`ESTADO DE CUENTA AL ${fechaCorta(a.corte)}`, MARGEN, y, { charSpace: 0.4 });
     doc.setTextColor(...TEXT);
     doc.setFontSize(18);
-    doc.text(recortar(doc, a.cliente, ancho - 2 * MARGEN), MARGEN, y + 10);
+    doc.text(recortar(doc, a.cliente, ancho - 2 * MARGEN), MARGEN, y + 9);
     doc.setTextColor(...MUTED);
     doc.setFont(FUENTE, 'normal');
     doc.setFontSize(8);
-    doc.text(recortar(doc, `${a.desarrollos.join(' · ')} · ${a.lotes.join(', ')}`, ancho - 2 * MARGEN), MARGEN, y + 16);
-    y += 26;
+    doc.text(recortar(doc, `${a.desarrollos.join(' · ')} · ${a.lotes.join(', ')}`, ancho - 2 * MARGEN), MARGEN, y + 15);
+    y += 28;
 
     // DATOS DEL CLIENTE
     const cliente: Campo[] = [
@@ -80,7 +76,7 @@ export class PdfAmortizacionService {
     if (a.copropietarios.length > 0) {
       cliente.push({ etiqueta: a.copropietarios.length === 1 ? 'Copropietario' : 'Copropietarios', valor: a.copropietarios.join(', '), columnas: 4 });
     }
-    y = this.seccion(doc, 'DATOS DEL CLIENTE', cliente, y, ancho, CAJA);
+    y = this.seccion(doc, 'DATOS DEL CLIENTE', cliente, y, ancho);
 
     // DATOS DE LA VENTA
     const venta: Campo[] = [
@@ -96,7 +92,7 @@ export class PdfAmortizacionService {
     if (a.mensualidad) venta.push({ etiqueta: 'Mensualidad', valor: dinero(a.mensualidad) });
     if (a.diaPago > 0) venta.push({ etiqueta: 'Día de pago', valor: `Día ${a.diaPago} de cada mes` });
     if (a.numeroContrato) venta.push({ etiqueta: 'N.º de contrato', valor: a.numeroContrato });
-    y = this.seccion(doc, 'DATOS DE LA VENTA', venta, y, ancho, CAJA);
+    y = this.seccion(doc, 'DATOS DE LA VENTA', venta, y, ancho);
 
     // RESUMEN A LA FECHA
     const atraso = a.pagosAtrasados > 0
@@ -110,16 +106,15 @@ export class PdfAmortizacionService {
     if (a.proximaFecha && a.proximoMonto) {
       resumen.push({ etiqueta: 'Próximo pago', valor: `${fechaCorta(a.proximaFecha)} · ${dinero(a.proximoMonto)}`, columnas: 2 });
     }
-    y = this.seccion(doc, 'RESUMEN A LA FECHA', resumen, y, ancho, WE_LIGHT);
+    y = this.seccion(doc, 'RESUMEN A LA FECHA', resumen, y, ancho, true);
 
     // TABLA
-    doc.setTextColor(...WE_DARK);
-    doc.setFont(FUENTE, 'bold');
-    doc.setFontSize(10);
-    doc.text('TABLA DE AMORTIZACIÓN', MARGEN, y);
+    y = this.tituloSeccion(doc, 'TABLA DE AMORTIZACIÓN', y, ancho);
     const filas = a.detalleMensual;
+    const colorEstado = (estado: EstadoPagoPlan | undefined): Rgb =>
+      estado === 'PAGADO' || estado === 'PAGADO_CON_RETRASO' ? VERDE : estado === 'ATRASADO' ? ROJO : estado === 'LE_TOCA' ? AMBAR : estado === 'ABONADO' ? AZUL_ABONADO : MUTED;
     autoTable(doc, {
-      startY: y + 3,
+      startY: y + 2,
       head: [['N.º', 'FECHA', 'CONCEPTO', 'MENSUALIDAD', 'MONTO PAGADO', 'SALDO', 'ESTADO']],
       body: filas.map((f) => [
         f.numero ?? '—',
@@ -132,34 +127,49 @@ export class PdfAmortizacionService {
       ]),
       foot: [['', '', 'Total pagado', '', dinero(sumar(filas.map((f) => f.abonadoMes))), '', '']],
       showFoot: 'lastPage',
-      margin: { left: MARGEN, right: MARGEN, top: 30, bottom: ALTO_PIE + 4 },
-      theme: 'grid',
-      styles: { font: FUENTE, fontSize: 7, cellPadding: 2, textColor: TEXT, lineColor: BORDER, lineWidth: 0.15, valign: 'middle' },
-      headStyles: { font: FUENTE, fontStyle: 'bold', fillColor: WE_BLUE, textColor: [255, 255, 255], halign: 'center' },
-      footStyles: { font: FUENTE, fontStyle: 'bold', fillColor: WE_LIGHT, textColor: TEXT },
-      alternateRowStyles: { fillColor: [248, 250, 253] },
+      margin: { left: MARGEN, right: MARGEN, top: 24, bottom: ALTO_PIE + 4 },
+      theme: 'plain',
+      styles: { font: FUENTE, fontSize: 7.5, cellPadding: { top: 2.3, bottom: 2.3, left: 1.5, right: 1.5 }, textColor: TEXT, lineWidth: 0, valign: 'middle' },
+      headStyles: { font: FUENTE, fontStyle: 'bold', fillColor: false, textColor: WE_BLUE, fontSize: 6.5 },
+      footStyles: { font: FUENTE, fontStyle: 'bold', fillColor: false, textColor: TEXT },
       columnStyles: {
-        0: { halign: 'center', cellWidth: 12 },
-        1: { halign: 'center', cellWidth: 22 },
+        0: { halign: 'center', cellWidth: 11 },
+        1: { halign: 'left', cellWidth: 22 },
         2: { cellWidth: 'auto' },
-        3: { halign: 'right', cellWidth: 26 },
-        4: { halign: 'right', cellWidth: 38 },
-        5: { halign: 'right', cellWidth: 28 },
-        6: { halign: 'center', cellWidth: 21 },
+        3: { halign: 'right', cellWidth: 25 },
+        4: { halign: 'right', cellWidth: 34 },
+        5: { halign: 'right', cellWidth: 26 },
+        6: { halign: 'left', cellWidth: 28, cellPadding: { top: 2.3, bottom: 2.3, left: 5, right: 1.5 } },
       },
       didParseCell: (hook) => {
         if (hook.section === 'foot' && hook.column.index >= 3) hook.cell.styles.halign = 'right';
+        // El encabezado se alinea como su columna (autoTable no lo hereda del columnStyles).
+        if (hook.section === 'head') hook.cell.styles.halign = hook.table.styles.columnStyles?.[hook.column.index]?.halign ?? 'left';
         if (hook.section !== 'body') return;
         const estado: EstadoPagoPlan | undefined = filas[hook.row.index]?.estado;
-        if (estado === 'ATRASADO') hook.cell.styles.fillColor = FONDO_ATRASADO;
-        if (estado === 'LE_TOCA') hook.cell.styles.fillColor = FONDO_LE_TOCA;
-        if (estado === 'ABONADO') hook.cell.styles.fillColor = FONDO_ABONADO;
+        if (hook.column.index === 3 && estado === 'ATRASADO') hook.cell.styles.textColor = ROJO;
         if (hook.column.index === 6) {
           hook.cell.styles.fontStyle = 'bold';
-          hook.cell.styles.textColor = estado === 'PAGADO' || estado === 'PAGADO_CON_RETRASO' ? VERDE : estado === 'ATRASADO' ? ROJO : estado === 'LE_TOCA' ? AMBAR : estado === 'ABONADO' ? AZUL_ABONADO : MUTED;
+          hook.cell.styles.textColor = colorEstado(estado);
         }
       },
-      // En las hojas que siguen, la banda de arriba igual que en la primera.
+      didDrawCell: (hook) => {
+        const { x, y: yc, width, height } = hook.cell;
+        if (hook.section === 'foot') {
+          doc.setLineWidth(0.4);
+          doc.setDrawColor(...TEXT);
+          doc.line(x, yc, x + width, yc);
+          return;
+        }
+        doc.setLineWidth(hook.section === 'head' ? 0.4 : 0.15);
+        doc.setDrawColor(...(hook.section === 'head' ? WE_BLUE : LINEA_FILA));
+        doc.line(x, yc + height, x + width, yc + height);
+        if (hook.section === 'body' && hook.column.index === 6) {
+          doc.setFillColor(...colorEstado(filas[hook.row.index]?.estado));
+          doc.circle(x + 2.6, yc + height / 2, 0.8, 'F');
+        }
+      },
+      // En las hojas que siguen, el encabezado igual que en la primera.
       didDrawPage: (hook) => {
         if (hook.pageNumber > 1) this.encabezado(doc, a, ancho);
       },
@@ -185,31 +195,44 @@ export class PdfAmortizacionService {
     doc.save(`Amortizacion-Venta-${a.ventaNumero}-${slug(a.cliente)}.pdf`);
   }
 
-  /** Banda azul oscuro de arriba, como en la hoja de amortización de la cotización. */
+  /** Encabezado sin banda: título en azul, dato a la derecha y una línea azul debajo. */
   private encabezado(doc: jsPDF, a: Amortizacion, ancho: number): void {
-    doc.setFillColor(...WE_DARK);
-    doc.rect(0, 0, ancho, 24, 'F');
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(...WE_BLUE);
     doc.setFont(FUENTE, 'bold');
-    doc.setFontSize(12);
-    doc.text('TABLA DE AMORTIZACIÓN', MARGEN, 14);
+    doc.setFontSize(15);
+    doc.text('TABLA DE AMORTIZACIÓN', MARGEN, 18);
+    doc.setTextColor(...MUTED);
     doc.setFont(FUENTE, 'normal');
     doc.setFontSize(7);
-    doc.text(`${(a.desarrollos.join(' · ') || 'WE REAL ESTATE').toUpperCase()} · VENTA NO. ${a.ventaNumero}`, ancho - MARGEN, 14, { align: 'right' });
+    doc.text(`${(a.desarrollos.join(' · ') || 'WE REAL ESTATE').toUpperCase()} · VENTA NO. ${a.ventaNumero}`, ancho - MARGEN, 18, { align: 'right' });
+    doc.setDrawColor(...WE_BLUE);
+    doc.setLineWidth(0.5);
+    doc.line(MARGEN, 22, ancho - MARGEN, 22);
   }
 
-  /** Título y caja redondeada con los campos en 4 columnas; crece a lo alto si un valor no cabe en una línea.
+  /** Título pequeño en mayúsculas con una línea gris fina debajo. Devuelve la y de la línea. */
+  private tituloSeccion(doc: jsPDF, titulo: string, y: number, ancho: number): number {
+    doc.setTextColor(...WE_DARK);
+    doc.setFont(FUENTE, 'bold');
+    doc.setFontSize(7.5);
+    doc.text(titulo, MARGEN, y, { charSpace: 0.5 });
+    doc.setDrawColor(...BORDER);
+    doc.setLineWidth(0.25);
+    doc.line(MARGEN, y + 1.6, ancho - MARGEN, y + 1.6);
+    return y + 1.6;
+  }
+
+  /** Título con línea y los campos en 4 columnas, sin cajas; un renglón crece si un valor no cabe en una línea.
    * Devuelve dónde sigue el contenido. */
-  private seccion(doc: jsPDF, titulo: string, campos: Campo[], y: number, ancho: number, fondo: Rgb): number {
+  private seccion(doc: jsPDF, titulo: string, campos: Campo[], y: number, ancho: number, grande = false): number {
     const columnas = 4;
-    const interior = ancho - 2 * MARGEN - 10;
-    const anchoColumna = interior / columnas;
+    const anchoColumna = (ancho - 2 * MARGEN) / columnas;
+    const tamano = grande ? 11 : 8.5;
     // Acomodo: cada campo ocupa N columnas; si no cabe en el renglón, baja al siguiente.
-    const renglones: { campo: Campo; columna: number; lineas: string[] }[][] = [];
-    let actual: { campo: Campo; columna: number; lineas: string[] }[] = [];
+    const renglones: { campo: Campo; columna: number; lineas: string[]; tamano: number }[][] = [];
+    let actual: { campo: Campo; columna: number; lineas: string[]; tamano: number }[] = [];
     let ocupadas = 0;
     doc.setFont(FUENTE, 'bold');
-    doc.setFontSize(8);
     for (const campo of campos) {
       const n = Math.min(campo.columnas ?? 1, columnas);
       if (ocupadas + n > columnas) {
@@ -217,41 +240,37 @@ export class PdfAmortizacionService {
         actual = [];
         ocupadas = 0;
       }
-      const lineas = doc.splitTextToSize(campo.valor, anchoColumna * n - 4) as string[];
-      actual.push({ campo: { ...campo, columnas: n }, columna: ocupadas, lineas: lineas.slice(0, 3) });
+      const anchoCampo = anchoColumna * n - 4;
+      // En el resumen la cifra va grande; si no cabe en una línea se achica hasta 8.5 pt antes de partirla.
+      let t = tamano;
+      doc.setFontSize(t);
+      while (t > 8.5 && doc.getTextWidth(campo.valor) > anchoCampo) {
+        t -= 0.5;
+        doc.setFontSize(t);
+      }
+      const lineas = doc.splitTextToSize(campo.valor, anchoCampo) as string[];
+      actual.push({ campo: { ...campo, columnas: n }, columna: ocupadas, lineas: lineas.slice(0, 3), tamano: t });
       ocupadas += n;
     }
     if (actual.length) renglones.push(actual);
 
-    const altoLinea = 3.6;
-    const altos = renglones.map((r) => 8 + Math.max(...r.map((c) => c.lineas.length)) * altoLinea);
-    const altoCaja = altos.reduce((s, h) => s + h, 0) + 3;
-
-    doc.setTextColor(...WE_DARK);
-    doc.setFont(FUENTE, 'bold');
-    doc.setFontSize(10);
-    doc.text(titulo, MARGEN, y);
-    const yCaja = y + 4;
-    doc.setFillColor(...fondo);
-    doc.setDrawColor(...BORDER);
-    doc.roundedRect(MARGEN, yCaja, ancho - 2 * MARGEN, altoCaja, 3, 3, 'FD');
-
-    let yRenglon = yCaja + 3;
-    renglones.forEach((renglon, i) => {
-      for (const { campo, columna, lineas } of renglon) {
-        const x = MARGEN + 5 + columna * anchoColumna;
+    let yRenglon = this.tituloSeccion(doc, titulo, y, ancho) + 4.5;
+    for (const renglon of renglones) {
+      const lineasMax = Math.max(...renglon.map((c) => c.lineas.length));
+      for (const { campo, columna, lineas, tamano: t } of renglon) {
+        const x = MARGEN + columna * anchoColumna;
         doc.setTextColor(...MUTED);
         doc.setFont(FUENTE, 'normal');
-        doc.setFontSize(7);
-        doc.text(recortar(doc, campo.etiqueta, anchoColumna * (campo.columnas ?? 1) - 4), x, yRenglon + 4);
+        doc.setFontSize(6.5);
+        doc.text(recortar(doc, campo.etiqueta, anchoColumna * (campo.columnas ?? 1) - 4), x, yRenglon);
         doc.setTextColor(...(campo.color ?? TEXT));
         doc.setFont(FUENTE, 'bold');
-        doc.setFontSize(8);
-        doc.text(lineas, x, yRenglon + 8.5);
+        doc.setFontSize(t);
+        doc.text(lineas, x, yRenglon + 4.2 + (grande ? 0.8 : 0));
       }
-      yRenglon += altos[i];
-    });
-    return yCaja + altoCaja + 9;
+      yRenglon += 11 + (lineasMax - 1) * 3.6 + (grande ? 1 : 0);
+    }
+    return yRenglon + 3;
   }
 
   private notas(doc: jsPDF, a: Amortizacion, notas: string[], y: number, ancho: number): void {
@@ -263,7 +282,7 @@ export class PdfAmortizacionService {
       if (y + lineas.length * 3 > alto - ALTO_PIE) {
         doc.addPage('letter', 'portrait');
         this.encabezado(doc, a, ancho);
-        y = 34;
+        y = 30;
         doc.setFont(FUENTE, 'normal');
         doc.setFontSize(6.5);
       }
@@ -277,7 +296,7 @@ export class PdfAmortizacionService {
   private pie(doc: jsPDF, pagina: number, paginas: number, ancho: number): void {
     const alto = doc.internal.pageSize.getHeight();
     doc.setDrawColor(...BORDER);
-    doc.setLineWidth(0.2);
+    doc.setLineWidth(0.25);
     doc.line(MARGEN, alto - 12, ancho - MARGEN, alto - 12);
     doc.setTextColor(...MUTED);
     doc.setFont(FUENTE, 'normal');

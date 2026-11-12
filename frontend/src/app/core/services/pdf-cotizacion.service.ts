@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import type { jsPDF } from 'jspdf';
 import type autoTableTipo from 'jspdf-autotable';
+import type { CellHookData } from 'jspdf-autotable';
 
 /** jspdf y jspdf-autotable pesan ~400 KB: se descargan la primera vez que se genera un PDF (cotización o plano), no
  * al abrir el Cotizador o el Plano. Aquí solo se importan sus tipos, que no llegan al navegador; las funciones de
@@ -104,9 +105,6 @@ export class PdfService {
   private readonly WE_DARK: [number, number, number] =
     [11, 47, 104];
 
-  private readonly WE_LIGHT: [number, number, number] =
-    [238, 243, 255];
-
   private readonly TEXT: [number, number, number] =
     [23, 35, 60];
 
@@ -115,6 +113,10 @@ export class PdfService {
 
   private readonly BORDER: [number, number, number] =
     [217, 224, 234];
+
+  /** Línea fina entre renglones de listas y tablas. */
+  private readonly LINEA_FILA: [number, number, number] =
+    [226, 231, 239];
 
 
   // ==============================
@@ -140,270 +142,71 @@ export class PdfService {
       doc.internal.pageSize.getHeight();
 
     let y = 0;
-
-
-    // ==============================
-    // HEADER
-    // ==============================
-
-    doc.setFillColor(...this.WE_DARK);
-
-    doc.rect(
-      0,
-      0,
-      pageWidth,
-      25,
-      'F'
-    );
+    const MARGEN = 20;
+    const ancho = pageWidth - 2 * MARGEN;
 
     // ==============================
-    // PROPUESTA
+    // ENCABEZADO (sin banda: título azul, fecha y vigencia, línea azul)
     // ==============================
 
-    y = 35;
+    doc.setTextColor(...this.WE_BLUE);
+    doc.setFont(this.FONT, 'bold');
+    doc.setFontSize(15);
+    doc.text('PROPUESTA DE INVERSIÓN', MARGEN, 18, { charSpace: 0.2 });
 
-    doc.setTextColor(
-      ...this.WE_BLUE
-    );
-
-    doc.setFont(
-      this.FONT,
-      'bold'
-    );
-
-    doc.setFontSize(9);
-
-    doc.text(
-      'PROPUESTA DE INVERSIÓN',
-      18,
-      y
-    );
-
-
-    // NOMBRE DEL PROYECTO
-
-    doc.setTextColor(
-      ...this.TEXT
-    );
-
-    doc.setFontSize(18);
-
-    doc.text(
-      data.project,
-      18,
-      y + 10
-    );
-
-
-    // UBICACIÓN
-
-    doc.setTextColor(
-      ...this.MUTED
-    );
-
-    doc.setFont(
-      this.FONT,
-      'normal'
-    );
-
+    doc.setTextColor(...this.TEXT);
     doc.setFontSize(8);
+    doc.text(`Fecha: ${data.date}`, pageWidth - MARGEN, 17, { align: 'right' });
 
-    doc.text(
-      data.location,
-      18,
-      y + 16
-    );
-
-
-    // FECHA
-
-    doc.setTextColor(
-      ...this.TEXT
-    );
-
-    doc.setFont(
-      this.FONT,
-      'bold'
-    );
-
-    doc.setFontSize(8);
-
-    doc.text(
-      `Fecha: ${data.date}`,
-      pageWidth - 18,
-      y + 4,
-      {
-        align: 'right'
-      }
-    );
-
-
-    // VIGENCIA
-
-    doc.setTextColor(
-      ...this.MUTED
-    );
-
-    doc.setFont(
-      this.FONT,
-      'normal'
-    );
-
+    doc.setTextColor(...this.MUTED);
+    doc.setFont(this.FONT, 'normal');
     doc.setFontSize(7);
+    doc.text('Vigencia de la cotización: 20 días', pageWidth - MARGEN, 21.5, { align: 'right' });
 
-    doc.text(
-      'Vigencia de la cotización: 20 días',
-      pageWidth - 18,
-      y + 10,
-      {
-        align: 'right'
-      }
-    );
+    doc.setDrawColor(...this.WE_BLUE);
+    doc.setLineWidth(0.5);
+    doc.line(MARGEN, 24, pageWidth - MARGEN, 24);
+
+    // NOMBRE DEL PROYECTO Y UBICACIÓN
+    doc.setTextColor(...this.TEXT);
+    doc.setFont(this.FONT, 'bold');
+    doc.setFontSize(18);
+    doc.text(data.project, MARGEN, 36);
+
+    doc.setTextColor(...this.MUTED);
+    doc.setFont(this.FONT, 'normal');
+    doc.setFontSize(8);
+    doc.text(data.location, MARGEN, 42);
 
     // ==============================
     // DATOS DE LA COTIZACIÓN
     // ==============================
 
-    y += 28;
+    y = this.tituloSeccion(doc, 'DATOS DE LA COTIZACIÓN', 55, pageWidth) + 4.5;
 
-    doc.setTextColor(...this.WE_DARK);
-    doc.setFont(this.FONT, 'bold');
-    doc.setFontSize(10);
-
-    doc.text(
-    'DATOS DE LA COTIZACIÓN',
-    18,
-    y
-    );
-
-    y += 4;
-
-    doc.setFillColor(247, 249, 252);
-    doc.setDrawColor(...this.BORDER);
-
-    doc.roundedRect(
-    18,
-    y,
-    pageWidth - 36,
-    30,
-    3,
-    3,
-    'FD'
-    );
-
-    // ASESOR
-    doc.setTextColor(...this.MUTED);
-    doc.setFont(this.FONT, 'normal');
-    doc.setFontSize(7);
-
-    doc.text(
-    'Nombre del asesor',
-    23,
-    y + 7
-    );
-
-    doc.setTextColor(...this.TEXT);
-    doc.setFont(this.FONT, 'bold');
-    doc.setFontSize(8);
-
-    doc.text(
-    data.advisorName || 'No especificado',
-    23,
-    y + 13
-    );
-
-    // CLIENTE
-    doc.setTextColor(...this.MUTED);
-    doc.setFont(this.FONT, 'normal');
-    doc.setFontSize(7);
-
-    doc.text(
-    'Nombre del cliente',
-    112,
-    y + 7
-    );
-
-    doc.setTextColor(...this.TEXT);
-    doc.setFont(this.FONT, 'bold');
-    doc.setFontSize(8);
-
-    doc.text(
-    data.clientName || 'No especificado',
-    112,
-    y + 13
-    );
-
-    // MANZANA
-    doc.setTextColor(...this.MUTED);
-    doc.setFont(this.FONT, 'normal');
-    doc.setFontSize(7);
-
-    doc.text(
-    'Manzana',
-    23,
-    y + 20
-    );
-
-    doc.setTextColor(...this.TEXT);
-    doc.setFont(this.FONT, 'bold');
-    doc.setFontSize(8);
-
-    doc.text(
-    data.blockNumber || 'No especificado',
-    23,
-    y + 26
-    );
-
-    // LOTE
-    doc.setTextColor(...this.MUTED);
-    doc.setFont(this.FONT, 'normal');
-    doc.setFontSize(7);
-
-    doc.text(
-    'Lote',
-    112,
-    y + 20
-    );
-
-    doc.setTextColor(...this.TEXT);
-    doc.setFont(this.FONT, 'bold');
-    doc.setFontSize(8);
-
-    doc.text(
-    data.lotNumber || 'No especificado',
-    112,
-    y + 26
-    );
-
-    // dejamos espacio antes del siguiente bloque
-    y += 10;
-
+    const campos: [string, string, number, number][] = [
+      ['Nombre del asesor', data.advisorName || 'No especificado', MARGEN, 0],
+      ['Nombre del cliente', data.clientName || 'No especificado', 112, 0],
+      ['Manzana', data.blockNumber || 'No especificado', MARGEN, 11],
+      ['Lote', data.lotNumber || 'No especificado', 112, 11],
+    ];
+    for (const [etiqueta, valor, x, dy] of campos) {
+      doc.setTextColor(...this.MUTED);
+      doc.setFont(this.FONT, 'normal');
+      doc.setFontSize(6.5);
+      doc.text(etiqueta, x, y + dy);
+      doc.setTextColor(...this.TEXT);
+      doc.setFont(this.FONT, 'bold');
+      doc.setFontSize(8.5);
+      doc.text(valor, x, y + dy + 4.2);
+    }
+    y += 22 + 10;
 
     // ==============================
-    // DETALLE DE INVERSIÓN
+    // DETALLE DE LA INVERSIÓN
     // ==============================
 
-    y += 28;
-
-    doc.setTextColor(
-      ...this.WE_DARK
-    );
-
-    doc.setFont(
-      this.FONT,
-      'bold'
-    );
-
-    doc.setFontSize(10);
-
-    doc.text(
-      'DETALLE DE LA INVERSIÓN',
-      18,
-      y
-    );
-
-    y += 5;
-
+    y = this.tituloSeccion(doc, 'DETALLE DE LA INVERSIÓN', y, pageWidth);
 
     // Con un solo lote, una fila de Superficie y una de Precio por m² (como siempre). Con varios
     // lotes juntos, una fila por lote (cada uno con su propia superficie y precio) en vez de un
@@ -420,7 +223,6 @@ export class PdfService {
               data.descuentoContado ?? data.paymentMethod === 'Contado'
                 ? 'Modalidad de precio'
                 : 'Precio por m²',
-
               data.descuentoContado ?? data.paymentMethod === 'Contado'
                 ? 'Precio especial de contado'
                 : this.money(data.pricePerM2)
@@ -428,282 +230,73 @@ export class PdfService {
           ];
 
     const rows: [string, string][] = [
-
-      [
-        'Proyecto',
-        data.project
-      ],
-
+      ['Proyecto', data.project],
       ...filasLotes,
-
-      [
-        'Monto de inversión',
-        this.money(data.totalPrice)
-      ],
-
-      [
-        'Forma de pago',
-        data.paymentMethod
-      ],
-
+      ['Monto de inversión', this.money(data.totalPrice)],
+      ['Forma de pago', data.paymentMethod],
       ...(data.downPayment > 0 || !data.pagoExtra
         ? [[data.downPaymentLabel, this.money(data.downPayment)] as [string, string]]
         : []),
-
       ...(data.pagoExtra
         ? [[data.pagoExtra.label, this.money(data.pagoExtra.monto)] as [string, string]]
         : []),
-
-      [
-        'Saldo',
-        this.money(data.financedAmount)
-      ],
-      [
-        'Intereses',
-        this.money(data.interestAmount)
-      ],
-
+      ['Saldo', this.money(data.financedAmount)],
+      ['Intereses', this.money(data.interestAmount)],
     ];
-
 
     // 9 mm por renglón con los 8 de siempre; con más (anualidades o aportaciones junto al enganche, varios
     // lotes) bajan a 8 mm para que el aviso de abajo no se encime con el pie de página.
     const rowHeight = rows.length > 8 ? 8 : 9;
     const rowTextY = rowHeight - 3;
 
+    for (const [label, value] of rows) {
+      doc.setFont(this.FONT, 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(...this.MUTED);
+      doc.text(label, MARGEN, y + rowTextY);
 
-    rows.forEach(
-      ([label, value], index) => {
+      doc.setFont(this.FONT, 'bold');
+      doc.setTextColor(...this.TEXT);
+      doc.text(value, pageWidth - MARGEN, y + rowTextY, { align: 'right' });
 
-        if (index === 0) {
-
-          doc.setFillColor(
-            ...this.WE_LIGHT
-          );
-
-        } else {
-
-          doc.setFillColor(
-            255,
-            255,
-            255
-          );
-
-        }
-
-
-        doc.setDrawColor(
-          ...this.BORDER
-        );
-
-
-        doc.rect(
-          18,
-          y,
-          pageWidth - 36,
-          rowHeight,
-          'FD'
-        );
-
-
-        // Label
-
-        doc.setTextColor(
-          ...this.MUTED
-        );
-
-        doc.setFont(
-          this.FONT,
-          'normal'
-        );
-
-        doc.setFontSize(8);
-
-        doc.text(
-          label,
-          22,
-          y + rowTextY
-        );
-
-
-        // Valor
-
-        doc.setTextColor(
-          ...this.TEXT
-        );
-
-        doc.setFont(
-          this.FONT,
-          'bold'
-        );
-
-        doc.text(
-          value,
-          pageWidth - 22,
-          y + rowTextY,
-          {
-            align: 'right'
-          }
-        );
-
-
-        y += rowHeight;
-
-      }
-    );
-
+      this.linea(doc, MARGEN, y + rowHeight, pageWidth - MARGEN, y + rowHeight, 0.15, this.LINEA_FILA);
+      y += rowHeight;
+    }
 
     // ==============================
-    // MENSUALIDAD
+    // MENSUALIDAD (entre dos líneas azules, sin caja)
     // ==============================
 
-    y += 8;
+    y += 7;
+    this.linea(doc, MARGEN, y, pageWidth - MARGEN, y, 0.25, this.WE_BLUE);
+    this.linea(doc, MARGEN, y + 24, pageWidth - MARGEN, y + 24, 0.25, this.WE_BLUE);
 
+    doc.setTextColor(...this.WE_BLUE);
+    doc.setFont(this.FONT, 'bold');
+    doc.setFontSize(7);
+    doc.text('MENSUALIDAD ESTIMADA', MARGEN, y + 7, { charSpace: 0.4 });
 
-    doc.setFillColor(
-      ...this.WE_LIGHT
-    );
+    doc.setFontSize(22);
+    doc.text(this.money(data.monthlyPayment), MARGEN, y + 18);
 
-    doc.setDrawColor(
-      205,
-      218,
-      255
-    );
-
-
-    doc.roundedRect(
-      18,
-      y,
-      pageWidth - 36,
-      30,
-      4,
-      4,
-      'FD'
-    );
-
-
-    // Título
-
-    doc.setTextColor(
-      ...this.TEXT
-    );
-
-    doc.setFont(
-      this.FONT,
-      'bold'
-    );
-
+    doc.setTextColor(...this.MUTED);
+    doc.setFont(this.FONT, 'normal');
     doc.setFontSize(8);
-
-    doc.text(
-      'MENSUALIDAD ESTIMADA',
-      24,
-      y + 9
-    );
-
-
-    // Cantidad
-
-    doc.setTextColor(
-      ...this.WE_BLUE
-    );
-
-    doc.setFontSize(20);
-
-    doc.text(
-      this.money(
-        data.monthlyPayment
-      ),
-      24,
-      y + 20
-    );
-
-
-    // Meses
-
-    doc.setTextColor(
-      ...this.MUTED
-    );
-
-    doc.setFont(
-      this.FONT,
-      'normal'
-    );
-
-    doc.setFontSize(8);
-
-    doc.text(
-      `${data.months} meses`,
-      pageWidth - 24,
-      y + 18,
-      {
-        align: 'right'
-      }
-    );
-
+    doc.text(`${data.months} meses`, pageWidth - MARGEN, y + 17, { align: 'right' });
 
     // ==============================
-    // TOTAL DE INVERSIÓN
+    // TOTAL DE INVERSIÓN (sin caja)
     // ==============================
 
-    y += 35;
-
-
-    doc.setFillColor(
-      247,
-      249,
-      252
-    );
-
-
-    doc.roundedRect(
-      18,
-      y,
-      pageWidth - 36,
-      16,
-      3,
-      3,
-      'F'
-    );
-
-
-    doc.setTextColor(
-      ...this.TEXT
-    );
-
-    doc.setFont(
-      this.FONT,
-      'bold'
-    );
-
+    y += 24 + 9;
+    doc.setTextColor(...this.TEXT);
+    doc.setFont(this.FONT, 'bold');
     doc.setFontSize(9);
+    doc.text('TOTAL DE INVERSIÓN', MARGEN, y);
 
-
-    doc.text(
-      'TOTAL DE INVERSIÓN',
-      23,
-      y + 10
-    );
-
-
-    doc.setTextColor(
-      ...this.WE_BLUE
-    );
-
+    doc.setTextColor(...this.WE_BLUE);
     doc.setFontSize(14);
-
-
-    doc.text(
-      this.money(
-        data.totalInvestment
-      ),
-      pageWidth - 23,
-      y + 10,
-      {
-        align: 'right'
-      }
-    );
-
+    doc.text(this.money(data.totalInvestment), pageWidth - MARGEN, y, { align: 'right' });
 
     // ==============================
     // INFORMACIÓN IMPORTANTE
@@ -715,101 +308,20 @@ export class PdfService {
     // Medido con la letra con que se escribe (7 pt) para saber cuántos renglones ocupa.
     doc.setFont(this.FONT, 'normal');
     doc.setFontSize(7);
-    const noticeLines =
-      doc.splitTextToSize(
-        notice,
-        pageWidth - 36
-      );
+    const noticeLines = doc.splitTextToSize(notice, ancho);
 
-    y += 27;
+    y = this.tituloSeccion(doc, 'INFORMACIÓN IMPORTANTE', y + 10, pageWidth) + 5;
 
-
-    doc.setTextColor(
-      ...this.WE_DARK
-    );
-
-    doc.setFont(
-      this.FONT,
-      'bold'
-    );
-
-    doc.setFontSize(8);
-
-
-    doc.text(
-      'INFORMACIÓN IMPORTANTE',
-      18,
-      y
-    );
-
-
-    doc.setTextColor(
-      ...this.MUTED
-    );
-
-    doc.setFont(
-      this.FONT,
-      'normal'
-    );
-
+    doc.setTextColor(...this.MUTED);
+    doc.setFont(this.FONT, 'normal');
     doc.setFontSize(7);
-
-
-    doc.text(
-      noticeLines,
-      18,
-      y + 6
-    );
-
+    doc.text(noticeLines, MARGEN, y, { lineHeightFactor: 1.5 });
 
     // ==============================
     // FOOTER
     // ==============================
 
-    const footerY =
-      pageHeight - 12;
-
-
-    doc.setDrawColor(
-      ...this.BORDER
-    );
-
-
-    doc.line(
-      18,
-      footerY - 5,
-      pageWidth - 18,
-      footerY - 5
-    );
-
-
-    doc.setTextColor(
-      ...this.MUTED
-    );
-
-    doc.setFont(
-      this.FONT,
-      'normal'
-    );
-
-    doc.setFontSize(6.5);
-
-
-    doc.text(
-      'WE Real Estate · Cotización informativa',
-      18,
-      footerY
-    );
-
-
-    doc.text(
-      'Página 1',
-      pageWidth - 18,
-      footerY,
-      {
-        align: 'right'
-      }
-    );
+    this.pie(doc, 'WE Real Estate · Cotización informativa', 'Página 1', pageWidth, pageHeight);
 
     // ==============================
     // TABLA DE AMORTIZACIÓN
@@ -828,172 +340,43 @@ export class PdfService {
     const pageHeight =
         doc.internal.pageSize.getHeight();
 
-    // HEADER DE LA PÁGINA
-    doc.setFillColor(...this.WE_DARK);
-
-    doc.rect(
-        0,
-        0,
-        pageWidth,
-        24,
-        'F'
-    );
-
-    doc.setTextColor(255, 255, 255);
-    doc.setFont(this.FONT, 'bold');
-    doc.setFontSize(12);
-
-    doc.text(
-        'TABLA DE AMORTIZACIÓN',
-        18,
-        14
-    );
-
-    doc.setFont(this.FONT, 'normal');
-    doc.setFontSize(7);
-
-    doc.text(
-        data.project.toUpperCase(),
-        pageWidth - 18,
-        14,
-        {
-        align: 'right'
-        }
-    );
-
+    // Hoja donde empieza la tabla: las que siguen repiten el encabezado.
+    const primeraHoja = doc.getNumberOfPages();
+    const encabezadoHoja = () => this.encabezado(doc, 'TABLA DE AMORTIZACIÓN', data.project.toUpperCase(), pageWidth);
+    encabezadoHoja();
 
     // RESUMEN SUPERIOR
     let yTable = 34;
 
     if (data.project === 'Aldea Nanuu') {
-
       yTable =
         this.addNanuuFinancingTable(
           doc,
           data,
           yTable
         );
-
     }
 
-    doc.setTextColor(...this.WE_DARK);
-    doc.setFont(this.FONT, 'bold');
-    doc.setFontSize(9);
+    yTable = this.tituloSeccion(doc, 'RESUMEN DEL FINANCIAMIENTO', yTable, pageWidth) + 5.5;
 
-    doc.text(
-        'RESUMEN DEL FINANCIAMIENTO',
-        18,
-        yTable
-    );
+    const resumen: [string, string, boolean][] = [
+      ['Monto financiado', this.money(data.financedAmount), false],
+      ['Plazo', `${data.months} meses`, false],
+      ['Mensualidad', this.money(data.monthlyPayment), true],
+      ['Intereses', this.money(data.interestAmount), false],
+    ];
+    resumen.forEach(([etiqueta, valor, azul], i) => {
+      const x = 20 + i * ((pageWidth - 40) / 4);
+      doc.setTextColor(...this.MUTED);
+      doc.setFont(this.FONT, 'normal');
+      doc.setFontSize(6.5);
+      doc.text(etiqueta, x, yTable);
+      doc.setTextColor(...(azul ? this.WE_BLUE : this.TEXT));
+      doc.setFont(this.FONT, 'bold');
+      doc.setFontSize(11);
+      doc.text(valor, x, yTable + 5.5);
+    });
 
-    yTable += 7;
-
-    doc.setFillColor(...this.WE_LIGHT);
-    doc.setDrawColor(...this.BORDER);
-
-    doc.roundedRect(
-        18,
-        yTable,
-        pageWidth - 36,
-        26,
-        3,
-        3,
-        'FD'
-    );
-
-
-    // MONTO FINANCIADO
-    doc.setTextColor(...this.MUTED);
-    doc.setFont(this.FONT, 'normal');
-    doc.setFontSize(7);
-
-    doc.text(
-        'Monto financiado',
-        23,
-        yTable + 8
-    );
-
-    doc.setTextColor(...this.TEXT);
-    doc.setFont(this.FONT, 'bold');
-    doc.setFontSize(9);
-
-    doc.text(
-        this.money(data.financedAmount),
-        23,
-        yTable + 15
-    );
-
-
-    // PLAZO
-    doc.setTextColor(...this.MUTED);
-    doc.setFont(this.FONT, 'normal');
-    doc.setFontSize(7);
-
-    doc.text(
-        'Plazo',
-        80,
-        yTable + 8
-    );
-
-    doc.setTextColor(...this.TEXT);
-    doc.setFont(this.FONT, 'bold');
-    doc.setFontSize(9);
-
-    doc.text(
-        `${data.months} meses`,
-        80,
-        yTable + 15
-    );
-
-
-    // MENSUALIDAD
-    doc.setTextColor(...this.MUTED);
-    doc.setFont(this.FONT, 'normal');
-    doc.setFontSize(7);
-
-    doc.text(
-        'Mensualidad',
-        123,
-        yTable + 8
-    );
-
-    doc.setTextColor(...this.WE_BLUE);
-    doc.setFont(this.FONT, 'bold');
-    doc.setFontSize(9);
-
-    doc.text(
-        this.money(data.monthlyPayment),
-        123,
-        yTable + 15
-    );
-
-
-    // INTERESES
-    doc.setTextColor(...this.MUTED);
-    doc.setFont(this.FONT, 'normal');
-    doc.setFontSize(7);
-
-    doc.text(
-        'Intereses',
-        168,
-        yTable + 8
-    );
-
-    doc.setTextColor(...this.TEXT);
-    doc.setFont(this.FONT, 'bold');
-    doc.setFontSize(9);
-
-    doc.text(
-        this.money(data.interestAmount),
-        168,
-        yTable + 15
-    );
-
-
-
-  
-
-    
     // ==============================
     // AUTOTABLE
     // ==============================
@@ -1011,9 +394,7 @@ export class PdfService {
         );
 
     autoTable(doc, {
-
-        startY: yTable + 34,
-
+        startY: yTable + 12,
         head: [[
         '# PAGO',
         'MES',
@@ -1022,129 +403,69 @@ export class PdfService {
         'SALDO',
         'ABONO ACUMULADO'
         ]],
-
         body: tableBody,
-
         margin: {
-        left: 18,
-        right: 18,
+        left: 20,
+        right: 20,
+        top: 28,
         bottom: 18
         },
-
-        theme: 'grid',
-
-        styles: {
-        font: this.FONT,
-        fontSize: 7,
-        cellPadding: 2.2,
-        textColor: this.TEXT,
-        lineColor: this.BORDER,
-        lineWidth: 0.15,
-        valign: 'middle'
-        },
-
-        headStyles: {
-        font: this.FONT,
-        fontStyle: 'bold',
-        fillColor: this.WE_BLUE,
-        textColor: [255, 255, 255],
-        halign: 'center'
-        },
-
-        alternateRowStyles: {
-        fillColor: [248, 250, 253]
-        },
-
+        ...this.estiloTabla(7.5),
         columnStyles: {
-
         0: {
             halign: 'center',
             cellWidth: 17
         },
-
         1: {
-            halign: 'center',
+            halign: 'left',
             cellWidth: 33
         },
-
         2: {
             halign: 'center',
             cellWidth: 20
         },
-
         3: {
             halign: 'right',
             cellWidth: 34
         },
-
         4: {
             halign: 'right',
             cellWidth: 34
         },
-
         5: {
             halign: 'right'
         }
-
         },
-
-        // Los meses que llevan una aportación se resaltan en azul claro y negritas.
+        // Los meses que llevan una aportación se resaltan en azul y negritas (sin relleno).
         didParseCell: (hook) => {
+          this.alinearEncabezado(hook);
           if (
             hook.section === 'body' &&
             data.amortizationTable[hook.row.index]?.esAportacion
           ) {
-            hook.cell.styles.fillColor = [226, 234, 255];
+            hook.cell.styles.textColor = this.WE_BLUE;
             hook.cell.styles.fontStyle = 'bold';
           }
         },
-
         didDrawPage: () => {
-
         const currentPage =
             doc.getCurrentPageInfo()
             .pageNumber;
 
+        if (currentPage > primeraHoja) encabezadoHoja();
+
         // FOOTER
-        doc.setDrawColor(...this.BORDER);
-
-        doc.line(
-            18,
-            pageHeight - 12,
-            pageWidth - 18,
-            pageHeight - 12
-        );
-
-        doc.setTextColor(...this.MUTED);
-        doc.setFont(this.FONT, 'normal');
-        doc.setFontSize(6.5);
-
-        doc.text(
-            'WE Real Estate · Tabla de amortización',
-            18,
-            pageHeight - 7
-        );
-
-        doc.text(
-            `Página ${currentPage}`,
-            pageWidth - 18,
-            pageHeight - 7,
-            {
-            align: 'right'
-            }
-        );
-
+        this.pie(doc, 'WE Real Estate · Tabla de amortización', `Página ${currentPage}`, pageWidth, pageHeight);
         }
-
     });
 
     if (data.aportaciones && data.aportaciones.length > 0) {
-      this.addResumenAportaciones(doc, data.aportaciones, pageWidth, pageHeight);
+      this.addResumenAportaciones(doc, data, data.aportaciones, pageWidth, pageHeight);
     }
 
     }
 
-    // ==============================
+  // ==============================
     // DESCARGAR
     // ==============================
 
@@ -1156,75 +477,137 @@ export class PdfService {
    * Si no cabe en la página donde terminó la tabla, pasa a una nueva. */
   private addResumenAportaciones(
     doc: jsPDF,
+    data: QuotePdfData,
     aportaciones: { mes: string; anio: number; monto: number }[],
     pageWidth: number,
     pageHeight: number
   ): void {
     const ultimaTabla = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable;
     let y = (ultimaTabla?.finalY ?? 40) + 12;
+    const encabezadoHoja = () => this.encabezado(doc, 'TABLA DE AMORTIZACIÓN', data.project.toUpperCase(), pageWidth);
 
     // Título + encabezado + un par de filas deben caber; si no, página nueva.
     if (y > pageHeight - 50) {
       doc.addPage('letter', 'portrait');
-      y = 24;
+      encabezadoHoja();
+      y = 34;
     }
+    const primeraHoja = doc.getNumberOfPages();
 
-    doc.setTextColor(...this.WE_DARK);
-    doc.setFont(this.FONT, 'bold');
-    doc.setFontSize(10);
-    doc.text('APORTACIONES PROGRAMADAS', 18, y);
+    y = this.tituloSeccion(doc, 'APORTACIONES PROGRAMADAS', y, pageWidth);
 
     const total = aportaciones.reduce((suma, a) => suma + a.monto, 0);
 
     autoTable(doc, {
-      startY: y + 4,
+      startY: y + 3,
       head: [['#', 'MES', 'AÑO', 'APORTACIÓN']],
       body: aportaciones.map((a, i) => [i + 1, a.mes, a.anio, this.money(a.monto)]),
       foot: [['', '', 'TOTAL', this.money(total)]],
-      margin: { left: 18, right: 18, bottom: 18 },
-      theme: 'grid',
-      styles: {
-        font: this.FONT,
-        fontSize: 7,
-        cellPadding: 2.2,
-        textColor: this.TEXT,
-        lineColor: this.BORDER,
-        lineWidth: 0.15,
-        valign: 'middle',
-      },
-      headStyles: {
-        font: this.FONT,
-        fontStyle: 'bold',
-        fillColor: this.WE_BLUE,
-        textColor: [255, 255, 255],
-        halign: 'center',
-      },
-      footStyles: {
-        font: this.FONT,
-        fontStyle: 'bold',
-        fillColor: [226, 234, 255],
-        textColor: this.TEXT,
-      },
-      alternateRowStyles: { fillColor: [248, 250, 253] },
+      margin: { left: 20, right: 20, top: 28, bottom: 18 },
+      ...this.estiloTabla(7.5),
       columnStyles: {
         0: { halign: 'center', cellWidth: 17 },
-        1: { halign: 'center' },
+        1: { halign: 'left' },
         2: { halign: 'center', cellWidth: 25 },
         3: { halign: 'right', cellWidth: 45 },
       },
+      didParseCell: (hook) => {
+        this.alinearEncabezado(hook);
+        if (hook.section === 'foot' && hook.column.index >= 2) hook.cell.styles.halign = hook.column.index === 2 ? 'center' : 'right';
+      },
       didDrawPage: () => {
-        doc.setDrawColor(...this.BORDER);
-        doc.line(18, pageHeight - 12, pageWidth - 18, pageHeight - 12);
-        doc.setTextColor(...this.MUTED);
-        doc.setFont(this.FONT, 'normal');
-        doc.setFontSize(6.5);
-        doc.text('WE Real Estate · Tabla de amortización', 18, pageHeight - 7);
-        doc.text(`Página ${doc.getCurrentPageInfo().pageNumber}`, pageWidth - 18, pageHeight - 7, { align: 'right' });
+        const pagina = doc.getCurrentPageInfo().pageNumber;
+        if (pagina > primeraHoja) encabezadoHoja();
+        this.pie(doc, 'WE Real Estate · Tabla de amortización', `Página ${pagina}`, pageWidth, pageHeight);
       },
     });
   }
 
-private addNanuuFinancingTable(
+  // ==============================
+  // ESTILO COMÚN (sin cajas ni rellenos)
+  // ==============================
+
+  private linea(doc: jsPDF, x1: number, y1: number, x2: number, y2: number, grosor: number, color: [number, number, number]): void {
+    doc.setDrawColor(...color);
+    doc.setLineWidth(grosor);
+    doc.line(x1, y1, x2, y2);
+  }
+
+  /** Encabezado de las hojas que no son la primera: título azul, dato gris a la derecha y línea azul. */
+  private encabezado(doc: jsPDF, titulo: string, derecha: string, pageWidth: number): void {
+    doc.setTextColor(...this.WE_BLUE);
+    doc.setFont(this.FONT, 'bold');
+    doc.setFontSize(15);
+    doc.text(titulo, 20, 18);
+
+    doc.setTextColor(...this.MUTED);
+    doc.setFont(this.FONT, 'normal');
+    doc.setFontSize(7);
+    doc.text(derecha, pageWidth - 20, 18, { align: 'right' });
+
+    this.linea(doc, 20, 22, pageWidth - 20, 22, 0.5, this.WE_BLUE);
+  }
+
+  /** Título de sección en mayúsculas chicas con una línea gris fina debajo. Devuelve la y de la línea. */
+  private tituloSeccion(doc: jsPDF, titulo: string, y: number, pageWidth: number): number {
+    doc.setTextColor(...this.WE_DARK);
+    doc.setFont(this.FONT, 'bold');
+    doc.setFontSize(7.5);
+    doc.text(titulo, 20, y, { charSpace: 0.5 });
+    this.linea(doc, 20, y + 1.6, pageWidth - 20, y + 1.6, 0.25, this.BORDER);
+    return y + 1.6;
+  }
+
+  private pie(doc: jsPDF, izquierda: string, derecha: string, pageWidth: number, pageHeight: number): void {
+    this.linea(doc, 20, pageHeight - 12, pageWidth - 20, pageHeight - 12, 0.15, this.BORDER);
+    doc.setTextColor(...this.MUTED);
+    doc.setFont(this.FONT, 'normal');
+    doc.setFontSize(6.5);
+    doc.text(izquierda, 20, pageHeight - 7);
+    doc.text(derecha, pageWidth - 20, pageHeight - 7, { align: 'right' });
+  }
+
+  /** Tabla solo con líneas horizontales: encabezado en texto azul con línea azul, renglones con línea gris
+   * fina, sin rellenos. El que llama pone columnas, márgenes y datos. */
+  private estiloTabla(fontSize: number) {
+    return {
+      theme: 'plain' as const,
+      styles: {
+        font: this.FONT,
+        fontSize,
+        cellPadding: { top: 2.3, bottom: 2.3, left: 1.5, right: 1.5 },
+        textColor: this.TEXT,
+        lineWidth: 0,
+        valign: 'middle' as const,
+      },
+      headStyles: { font: this.FONT, fontStyle: 'bold' as const, fillColor: false as const, textColor: this.WE_BLUE, fontSize: 6.5 },
+      footStyles: { font: this.FONT, fontStyle: 'bold' as const, fillColor: false as const, textColor: this.TEXT },
+      // El encabezado se alinea como su columna (autoTable no lo hereda del columnStyles).
+      didParseCell: (hook: CellHookData) => this.alinearEncabezado(hook),
+      didDrawCell: (hook: CellHookData) => {
+        const { x, y, width, height } = hook.cell;
+        if (hook.section === 'foot') this.linea(hook.doc, x, y, x + width, y, 0.4, this.TEXT);
+        else if (hook.section === 'head') this.linea(hook.doc, x, y + height, x + width, y + height, 0.4, this.WE_BLUE);
+        else this.linea(hook.doc, x, y + height, x + width, y + height, 0.15, this.LINEA_FILA);
+      },
+    };
+  }
+
+  private alinearEncabezado(hook: CellHookData): void {
+    if (hook.section !== 'head') return;
+    const columnas = hook.table.styles.columnStyles as Record<number, { halign?: 'left' | 'center' | 'right' }>;
+    hook.cell.styles.halign = columnas?.[hook.column.index]?.halign ?? 'left';
+  }
+
+  /** Subtítulo de una tabla (p. ej. «CON ENGANCHE»): texto azul chico, sin barra de color. */
+  private subtituloTabla(doc: jsPDF, texto: string, y: number): void {
+    doc.setTextColor(...this.WE_BLUE);
+    doc.setFont(this.FONT, 'bold');
+    doc.setFontSize(7.5);
+    doc.text(texto, 20, y, { charSpace: 0.4 });
+  }
+
+  private addNanuuFinancingTable(
   doc: jsPDF,
   data: QuotePdfData,
   startY: number
@@ -1327,267 +710,55 @@ private addNanuuFinancingTable(
   // TÍTULO GENERAL
   // ==============================
 
-  doc.setTextColor(...this.WE_DARK);
-  doc.setFont(this.FONT, 'bold');
-  doc.setFontSize(10);
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const yTitulo = this.tituloSeccion(doc, 'PLANES DE FINANCIAMIENTO', startY, pageWidth);
 
-  doc.text(
-    'PLANES DE FINANCIAMIENTO',
-    18,
-    startY
-  );
-
+  const cabecera = ['Plazo', 'Interés por plazo', 'Interés', 'Total a pagar', 'Mensualidades'];
+  const columnas = {
+    0: { halign: 'center' as const, cellWidth: 29 },
+    1: { halign: 'center' as const, cellWidth: 34 },
+    2: { halign: 'right' as const, cellWidth: 34 },
+    3: { halign: 'right' as const, cellWidth: 38 },
+    4: { halign: 'right' as const },
+  };
 
   // ==============================
   // TABLA CON ENGANCHE
   // ==============================
 
-  autoTable(doc, {
-
-    startY: startY + 6,
-
-    head: [[
-      'CON ENGANCHE',
-      '',
-      '',
-      '',
-      ''
-    ]],
-
-    body: [],
-
-    margin: {
-      left: 18,
-      right: 18
-    },
-
-    theme: 'grid',
-
-    styles: {
-      font: this.FONT,
-      fontSize: 7.5,
-      cellPadding: 2,
-      halign: 'center'
-    },
-
-    headStyles: {
-      font: this.FONT,
-      fontStyle: 'bold',
-      fillColor: this.WE_DARK,
-      textColor: [255, 255, 255]
-    },
-
-    didParseCell: dataCell => {
-      if (dataCell.section === 'head') {
-        dataCell.cell.colSpan = 5;
-      }
-    }
-
-  });
-
-
-  let y =
-    (doc as any).lastAutoTable.finalY + 1;
-
+  this.subtituloTabla(doc, 'CON ENGANCHE', yTitulo + 6);
 
   autoTable(doc, {
-
-    startY: y,
-
-    head: [[
-      'Plazo',
-      'Interés por plazo',
-      'Interés',
-      'Total a pagar',
-      'Mensualidades'
-    ]],
-
+    startY: yTitulo + 8,
+    head: [cabecera],
     body: withDownPaymentBody,
-
-    margin: {
-      left: 18,
-      right: 18
-    },
-
-    theme: 'grid',
-
-    styles: {
-      font: this.FONT,
-      fontSize: 7.2,
-      cellPadding: 2.2,
-      textColor: this.TEXT,
-      lineColor: this.BORDER,
-      lineWidth: 0.15,
-      valign: 'middle'
-    },
-
-    headStyles: {
-      font: this.FONT,
-      fontStyle: 'bold',
-      fillColor: this.WE_BLUE,
-      textColor: [255, 255, 255],
-      halign: 'center'
-    },
-
-    alternateRowStyles: {
-      fillColor: [248, 250, 253]
-    },
-
-    columnStyles: {
-      0: {
-        halign: 'center',
-        cellWidth: 29
-      },
-      1: {
-        halign: 'center',
-        cellWidth: 34
-      },
-      2: {
-        halign: 'right',
-        cellWidth: 34
-      },
-      3: {
-        halign: 'right',
-        cellWidth: 38
-      },
-      4: {
-        halign: 'right'
-      }
-    }
-
+    margin: { left: 20, right: 20 },
+    ...this.estiloTabla(7.5),
+    columnStyles: columnas,
   });
 
-
-  y =
-    (doc as any).lastAutoTable.finalY + 8;
-
+  const yDespues = (doc as any).lastAutoTable.finalY + 9;
 
   // ==============================
   // TABLA SIN ENGANCHE
   // ==============================
 
-  autoTable(doc, {
-
-    startY: y,
-
-    head: [[
-      'SIN ENGANCHE',
-      '',
-      '',
-      '',
-      ''
-    ]],
-
-    body: [],
-
-    margin: {
-      left: 18,
-      right: 18
-    },
-
-    theme: 'grid',
-
-    styles: {
-      font: this.FONT,
-      fontSize: 7.5,
-      cellPadding: 2,
-      halign: 'center'
-    },
-
-    headStyles: {
-      font: this.FONT,
-      fontStyle: 'bold',
-      fillColor: this.WE_DARK,
-      textColor: [255, 255, 255]
-    },
-
-    didParseCell: dataCell => {
-      if (dataCell.section === 'head') {
-        dataCell.cell.colSpan = 5;
-      }
-    }
-
-  });
-
-
-  y =
-    (doc as any).lastAutoTable.finalY + 1;
-
+  this.subtituloTabla(doc, 'SIN ENGANCHE', yDespues);
 
   autoTable(doc, {
-
-    startY: y,
-
-    head: [[
-      'Plazo',
-      'Interés por plazo',
-      'Interés',
-      'Total a pagar',
-      'Mensualidades'
-    ]],
-
+    startY: yDespues + 2,
+    head: [cabecera],
     body: withoutDownPaymentBody,
-
-    margin: {
-      left: 18,
-      right: 18
-    },
-
-    theme: 'grid',
-
-    styles: {
-      font: this.FONT,
-      fontSize: 7.2,
-      cellPadding: 2.2,
-      textColor: this.TEXT,
-      lineColor: this.BORDER,
-      lineWidth: 0.15,
-      valign: 'middle'
-    },
-
-    headStyles: {
-      font: this.FONT,
-      fontStyle: 'bold',
-      fillColor: this.WE_BLUE,
-      textColor: [255, 255, 255],
-      halign: 'center'
-    },
-
-    alternateRowStyles: {
-      fillColor: [248, 250, 253]
-    },
-
-    columnStyles: {
-      0: {
-        halign: 'center',
-        cellWidth: 29
-      },
-      1: {
-        halign: 'center',
-        cellWidth: 34
-      },
-      2: {
-        halign: 'right',
-        cellWidth: 34
-      },
-      3: {
-        halign: 'right',
-        cellWidth: 38
-      },
-      4: {
-        halign: 'right'
-      }
-    }
-
+    margin: { left: 20, right: 20 },
+    ...this.estiloTabla(7.5),
+    columnStyles: columnas,
   });
-
 
   return (
     (doc as any).lastAutoTable.finalY +
     10
   );
 }
-
 
   // ==============================
   // CARGAR MONTSERRAT
@@ -1784,23 +955,18 @@ private addNanuuFinancingTable(
     });
     await this.loadFonts(doc);
 
-    // FONDO
-    doc.setFillColor(...this.WE_DARK);
-    doc.rect(0, 0, pageWidth, pageHeight, 'F');
-
-    // ENCABEZADO: acento azul, título y fecha
-    doc.setFillColor(96, 165, 250);
-    doc.roundedRect(margen, headerHeight / 2 - 2.6 * k, 1.1 * k, 5.2 * k, 0.5 * k, 0.5 * k, 'F');
-
-    doc.setTextColor(255, 255, 255);
+    // ENCABEZADO sobre fondo blanco: título azul, fecha gris a la derecha y línea azul bajo la franja
+    doc.setTextColor(...this.WE_BLUE);
     doc.setFont(this.FONT, 'bold');
     doc.setFontSize(11 * k);
-    doc.text(`Plano interactivo · ${data.desarrolloNombre}`, margen + 3.2 * k, headerHeight / 2 + 1.5 * k);
+    doc.text(`Plano interactivo · ${data.desarrolloNombre}`, margen, headerHeight / 2 + 1.5 * k);
 
-    doc.setTextColor(148, 163, 184);
+    doc.setTextColor(...this.MUTED);
     doc.setFont(this.FONT, 'normal');
     doc.setFontSize(7 * k);
     doc.text(`Generado el ${data.fecha}`, pageWidth - margen, headerHeight / 2 + 1.5 * k, { align: 'right' });
+
+    this.linea(doc, 0, headerHeight - 0.15, pageWidth, headerHeight - 0.15, 0.5, this.WE_BLUE);
 
     // IMAGEN DEL PLANO, de borde a borde. El JPEG original se incrusta tal cual ('NONE': sin
     // recomprimir), no repintado en un canvas.
@@ -1833,6 +999,8 @@ private addNanuuFinancingTable(
     }
     doc.setGState(opaco);
 
+    this.linea(doc, 0, drawY + drawHeight + 0.15, pageWidth, drawY + drawHeight + 0.15, 0.15, this.BORDER);
+
     // LEYENDA (puntos de color y etiquetas) y nota al pie, en una sola franja bajo el plano
     const legendY = drawY + drawHeight + legendHeight / 2 + 0.8 * k;
     let legendX = margen;
@@ -1844,13 +1012,13 @@ private addNanuuFinancingTable(
       doc.setFillColor(...item.color);
       doc.circle(legendX + radioPunto, legendY - 0.9 * k, radioPunto, 'F');
 
-      doc.setTextColor(226, 232, 240);
+      doc.setTextColor(...this.TEXT);
       doc.text(item.label, legendX + radioPunto * 2 + 1.6 * k, legendY);
 
       legendX += radioPunto * 2 + 1.6 * k + doc.getTextWidth(item.label) + 8 * k;
     }
 
-    doc.setTextColor(148, 163, 184);
+    doc.setTextColor(...this.MUTED);
     doc.setFontSize(6 * k);
     doc.text('WE Real Estate · Plano informativo, sujeto a cambios', pageWidth - margen, legendY, { align: 'right' });
 
