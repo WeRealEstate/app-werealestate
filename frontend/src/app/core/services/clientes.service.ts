@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Amortizacion } from '../models/amortizacion.model';
-import { Cliente, ClienteLista, ClienteRequest, NumeracionCliente } from '../models/cliente.model';
+import { Cliente, ClienteEliminacion, ClienteLista, ClienteRequest, NumeracionCliente } from '../models/cliente.model';
 import { Venta } from '../models/venta.model';
 
 @Injectable({ providedIn: 'root' })
@@ -55,5 +55,15 @@ export class ClientesService {
 
   actualizar(id: number, request: ClienteRequest): Promise<Cliente> {
     return firstValueFrom(this.http.put<Cliente>(`${this.baseUrl}/${id}`, request));
+  }
+
+  /** Lo que se borraría al eliminar el cliente (ventas como titular, copropiedades, registros de We Forms…). */
+  vistaPreviaEliminacion(id: number): Promise<ClienteEliminacion> {
+    return firstValueFrom(this.http.get<ClienteEliminacion>(`${this.baseUrl}/${id}/eliminacion`));
+  }
+
+  /** Elimina el cliente con sus ventas como titular (admin y administración, con su contraseña). */
+  eliminar(id: number, password: string): Promise<void> {
+    return firstValueFrom(this.http.post<void>(`${this.baseUrl}/${id}/eliminar`, { password }));
   }
 }

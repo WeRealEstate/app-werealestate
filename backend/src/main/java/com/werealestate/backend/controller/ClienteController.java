@@ -29,11 +29,14 @@ public class ClienteController {
     private final ClienteService clienteService;
     private final VentaService ventaService;
     private final EstadoCuentaService estadoCuentaService;
+    private final com.werealestate.backend.service.EliminacionClienteService eliminacionService;
 
-    public ClienteController(ClienteService clienteService, VentaService ventaService, EstadoCuentaService estadoCuentaService) {
+    public ClienteController(ClienteService clienteService, VentaService ventaService, EstadoCuentaService estadoCuentaService,
+            com.werealestate.backend.service.EliminacionClienteService eliminacionService) {
         this.clienteService = clienteService;
         this.ventaService = ventaService;
         this.estadoCuentaService = estadoCuentaService;
+        this.eliminacionService = eliminacionService;
     }
 
     @GetMapping
@@ -89,5 +92,20 @@ public class ClienteController {
     @PutMapping("/{id}")
     public ClienteDto actualizar(@PathVariable Long id, @Valid @RequestBody ClienteRequest request) {
         return clienteService.actualizar(id, request);
+    }
+
+    /** Lo que se borraría al eliminar el cliente (para la ventana de confirmación). */
+    @GetMapping("/{id}/eliminacion")
+    public com.werealestate.backend.dto.ClienteEliminacionDto vistaPreviaEliminacion(@PathVariable Long id) {
+        return eliminacionService.vistaPrevia(id);
+    }
+
+    /** Elimina el cliente con sus ventas como titular y sus registros de We Forms (admin y administración, con su
+     * contraseña). POST y no DELETE porque lleva cuerpo. */
+    @PostMapping("/{id}/eliminar")
+    public org.springframework.http.ResponseEntity<Void> eliminar(
+            @PathVariable Long id, @Valid @RequestBody com.werealestate.backend.dto.ClienteEliminarRequest request) {
+        eliminacionService.eliminar(id, request.password());
+        return org.springframework.http.ResponseEntity.noContent().build();
     }
 }

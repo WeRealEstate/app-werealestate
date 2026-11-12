@@ -1,8 +1,10 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
-import { LucideExternalLink, LucidePencil, LucidePhone } from '@lucide/angular';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { AuthService } from '../../../../core/services/auth.service';
+import { EliminarClienteComponent } from '../../../../shared/eliminar-cliente/eliminar-cliente.component';
+import { LucideExternalLink, LucidePencil, LucidePhone, LucideTrash2 } from '@lucide/angular';
 import { Amortizacion, cuentaAtraso, frasePagosAtrasados } from '../../../../core/models/amortizacion.model';
 import { UBICACION_DOCUMENTO_LABELS } from '../../../../core/models/asesor-externo.model';
 import {
@@ -22,12 +24,27 @@ import { WeLoaderComponent } from '../../../../shared/we-loader/we-loader.compon
 
 @Component({
   selector: 'app-cliente-detalle',
-  imports: [WeLoaderComponent, FormsModule, RouterLink, ClienteFormModalComponent, TablaAmortizacionComponent, ConfirmarCambioContratoComponent, LucideExternalLink, LucidePencil, LucidePhone],
+  imports: [WeLoaderComponent, FormsModule, RouterLink, ClienteFormModalComponent, TablaAmortizacionComponent, ConfirmarCambioContratoComponent, EliminarClienteComponent, LucideExternalLink, LucidePencil, LucidePhone, LucideTrash2],
   templateUrl: './cliente-detalle.component.html',
 })
 export class ClienteDetalleComponent {
   private readonly clientesService = inject(ClientesService);
-  private readonly id = Number(inject(ActivatedRoute).snapshot.paramMap.get('id'));
+  private readonly router = inject(Router);
+  private readonly auth = inject(AuthService);
+
+  /** Eliminar cliente: solo admin y administración (el servidor también lo valida y pide la contraseña). */
+  readonly puedeEliminar = computed(() => {
+    const rol = this.auth.currentUser()?.rol;
+    return rol === 'ADMIN' || rol === 'LIDER_AREA';
+  });
+  readonly eliminandoCliente = signal(false);
+
+  async alEliminarCliente(): Promise<void> {
+    this.eliminandoCliente.set(false);
+    this.toast.success('Cliente eliminado.');
+    await this.router.navigate(['/panel/clientes']);
+  }
+  readonly id = Number(inject(ActivatedRoute).snapshot.paramMap.get('id'));
 
   readonly cliente = signal<Cliente | null>(null);
   readonly cargando = signal(true);

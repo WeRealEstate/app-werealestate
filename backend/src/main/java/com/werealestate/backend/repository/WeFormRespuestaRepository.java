@@ -45,4 +45,7 @@ public interface WeFormRespuestaRepository extends JpaRepository<WeFormRespuesta
 
     @Query("select r from WeFormRespuesta r left join fetch r.venta left join fetch r.cliente where r.fechaEnvio >= :desde order by r.fechaEnvio desc")
     List<WeFormRespuesta> recientes(@Param("desde") LocalDateTime desde);
+
+    /** Los registros de venta ligados a un cliente (para eliminarlo con ellos). */
+    List<WeFormRespuesta> findByClienteId(Long clienteId);
 }

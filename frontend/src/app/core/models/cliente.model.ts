@@ -174,3 +174,16 @@ export interface ClienteRequest {
   /** null = sin cambios al editar. */
   activo: boolean | null;
 }
+
+/** Lo que se borra al eliminar un cliente (ver backend EliminacionClienteService). ventas: las suyas como titular (se
+ * eliminan completas, como al eliminar una venta); copropiedades: ventas de otro titular de las que solo se le quita;
+ * numeros: sus números de cliente; archivosEnServidor: los de sus registros de We Forms (lo de Google Drive no se toca). */
+export interface ClienteEliminacion {
+  clienteId: number;
+  nombre: string;
+  numeros: string[];
+  ventas: { etiqueta: string; lotes: string[]; recibos: number; comisiones: number }[];
+  copropiedades: string[];
+  registrosWeForms: number;
+  archivosEnServidor: number;
+}

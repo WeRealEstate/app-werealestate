@@ -53,4 +53,11 @@ public interface ClienteNumeroRepository extends JpaRepository<ClienteNumero, Lo
     @Query(value = "update cliente_numero set numero = :numero where desarrollo_id = :desarrolloId and cliente_id in (:clientes)",
             nativeQuery = true)
     int fijar(@Param("desarrolloId") Long desarrolloId, @Param("clientes") List<Long> clientes, @Param("numero") long numero);
+
+    /** Baja 1 los números de ese desarrollo mayores a {@code desde} (al eliminar al último cliente que tenía ese
+     * número): la numeración no queda con hueco. */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = "update cliente_numero set numero = numero - 1 where desarrollo_id = :desarrolloId and numero > :desde",
+            nativeQuery = true)
+    int bajarDesde(@Param("desarrolloId") Long desarrolloId, @Param("desde") long desde);
 }

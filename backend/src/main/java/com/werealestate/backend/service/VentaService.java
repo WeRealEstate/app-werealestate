@@ -542,6 +542,15 @@ public class VentaService {
         if (!passwordEncoder.matches(request.password(), actual.getPassword())) {
             throw new ForbiddenOperationException("Contraseña incorrecta");
         }
+        eliminarYaAutorizada(id);
+    }
+
+    /**
+     * Elimina la venta sin volver a validar rol ni contraseña: solo para quien ya lo hizo (eliminar() y la eliminación
+     * de un cliente con sus ventas, EliminacionClienteService). Las consultas de numeración vacían el contexto de
+     * persistencia, así que cada venta se vuelve a leer por su id.
+     */
+    public void eliminarYaAutorizada(Long id) {
         Venta venta = obtenerEntidad(id);
         ventaRepository.bloquearNumeracion();
         long numeroEliminado = venta.getNumeroGlobal();

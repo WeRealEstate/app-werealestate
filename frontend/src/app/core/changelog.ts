@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.21.0', fecha: '2026-11-12', cambios: [
+    "Clientes: Admin y Administración ya pueden eliminar un cliente desde su ficha (botón «Eliminar», con su contraseña y una cuenta regresiva de 10 s). Antes de confirmar se muestra exactamente lo que se borra: sus ventas como titular (con sus recibos; sus lotes vuelven a Disponible y sus comisiones se conservan como «Venta eliminada»), sus registros de We Forms y archivos del servidor (lo que ya está en Google Drive no se toca) y sus números de cliente (los mayores de su desarrollo bajan 1). De las ventas de otro titular donde es copropietario solo se le quita.",
+  ] },
   { version: '11.20.0', fecha: '2026-11-12', cambios: [
     "We Forms: cada formulario tiene ahora el interruptor «Avisar a finanzas por correo» en su tarjeta de la lista. Solo los formularios con el interruptor encendido mandan el correo «¡Es hora de realizar un contrato!» a finanzas cuando llega un registro de venta; con él apagado el registro se guarda igual, solo que sin correo. Los formularios que ya existían quedan apagados hasta que los enciendas; un formulario nuevo nace apagado y uno duplicado copia el valor del original.",
   ] },
