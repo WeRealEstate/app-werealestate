@@ -18,6 +18,17 @@ const TEXT: Rgb = [26, 26, 26];
 const MUTED: Rgb = [115, 115, 115];
 const BORDER: Rgb = [200, 200, 200];
 const LINEA_FILA: Rgb = [225, 225, 225];
+/**
+ * Color del mes actual en la tabla: barrita a la izquierda del renglón y el texto de su estado. Solo para los
+ * estados que dicen algo ya cobrado o vencido (pagado con retraso cuenta como pagado: verde, decisión del usuario);
+ * Le toca y Pendiente van sin marca.
+ */
+const COLOR_MES_ACTUAL: Partial<Record<EstadoPagoPlan, Rgb>> = {
+  ATRASADO: [185, 28, 28],
+  PAGADO: [21, 128, 61],
+  PAGADO_CON_RETRASO: [21, 128, 61],
+  ABONADO: [3, 105, 161],
+};
 
 const FUENTE = 'Montserrat';
 const MARGEN = 20;
@@ -105,6 +116,13 @@ export class PdfAmortizacionService {
 
     // TABLA: siempre empieza en una hoja nueva, con el encabezado completo y su título.
     const filas = a.detalleMensual;
+    // Renglones del mes de la fecha de corte (el mismo del rótulo "ESTADO DE CUENTA AL"), por su posición en `filas`.
+    const mesActual = a.corte.slice(0, 7);
+    const marcas = new Map<number, Rgb>();
+    filas.forEach((f, i) => {
+      const color = f.fecha?.slice(0, 7) === mesActual ? COLOR_MES_ACTUAL[f.estado] : undefined;
+      if (color) marcas.set(i, color);
+    });
     doc.addPage('letter', 'portrait');
     const primeraHojaTabla = doc.getNumberOfPages();
     this.encabezado(doc, a, ancho, true, 'TABLA DE AMORTIZACIÓN');
@@ -140,7 +158,10 @@ export class PdfAmortizacionService {
         if (hook.section === 'foot' && hook.column.index >= 3) hook.cell.styles.halign = 'right';
         // El encabezado se alinea como su columna (autoTable no lo hereda del columnStyles).
         if (hook.section === 'head') hook.cell.styles.halign = hook.table.styles.columnStyles?.[hook.column.index]?.halign ?? 'left';
-        if (hook.section !== 'body') return;
+        if (hook.section === 'body' && hook.column.index === 6) {
+          const color = marcas.get(hook.row.index);
+          if (color) hook.cell.styles.textColor = color;
+        }
       },
       didDrawCell: (hook) => {
         const { x, y: yc, width, height } = hook.cell;
@@ -153,8 +174,13 @@ export class PdfAmortizacionService {
         doc.setLineWidth(hook.section === 'head' ? 0.4 : 0.15);
         doc.setDrawColor(...(hook.section === 'head' ? MUTED : LINEA_FILA));
         doc.line(x, yc + height, x + width, yc + height);
+        if (hook.section === 'body' && hook.column.index === 0 && marcas.has(hook.row.index)) {
+          // Barrita de 1 mm pegada al borde izquierdo del renglón, a lo alto de la celda.
+          doc.setFillColor(...marcas.get(hook.row.index)!);
+          doc.rect(x - 1.6, yc, 1, height, 'F');
+        }
         if (hook.section === 'body' && hook.column.index === 6) {
-          doc.setFillColor(...MUTED);
+          doc.setFillColor(...(marcas.get(hook.row.index) ?? MUTED));
           doc.circle(x + 2.6, yc + height / 2, 0.8, 'F');
         }
       },

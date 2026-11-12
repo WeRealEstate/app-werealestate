@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.18.15', fecha: '2026-11-12', cambios: [
+    "El PDF de la tabla de amortización marca el mes actual: rojo si está atrasado, verde si está pagado y azul si va abonando. La marca es una barra a la izquierda del renglón y el estado de ese mes en el mismo color; los meses que siguen (le toca, pendiente) no llevan marca.",
+  ] },
   { version: '11.18.14', fecha: '2026-11-12', cambios: [
     "PDF de amortización: la tabla de amortización siempre empieza en una hoja nueva. La primera hoja se titula «Estado de cuenta» (datos del cliente, de la venta y resumen a la fecha); la hoja de la tabla lleva el título «Tabla de amortización» con su encabezado completo, y las que siguen solo continúan la tabla con sus encabezados de columna.",
   ] },
