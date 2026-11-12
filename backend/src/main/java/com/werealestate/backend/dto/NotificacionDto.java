@@ -4,7 +4,8 @@ package com.werealestate.backend.dto;
  * NotificacionLeida): al marcarla como leída, se guarda junto con tipo y el id de la entidad, y
  * mientras la firma no cambie (la condición no se "renueva" de verdad) no vuelve a aparecer.
  * movimientoId (avisos de lotes) es el id del MovimientoLote que originó el aviso; ventaId, el de la venta; loteId, el
- * del lote en los avisos de lotes desincronizados con Ventas. fija = no se puede descartar: desaparece sola cuando se
+ * del lote (en los avisos de cambios de lote solo sirve para abrir Lotes filtrado: lo leído y la clave del push
+ * siguen siendo por movimientoId; en los desincronizados con Ventas sí es la identidad del aviso). fija = no se puede descartar: desaparece sola cuando se
  * corrige lo que la provoca. */
 public record NotificacionDto(
         String tipo,
@@ -35,17 +36,17 @@ public record NotificacionDto(
         return new NotificacionDto("EVENTO_PENDIENTE", mensaje, null, null, eventoId, null, null, firma);
     }
 
-    public static NotificacionDto loteApartado(String mensaje, Long movimientoId, String firma) {
-        return new NotificacionDto("LOTE_APARTADO", mensaje, null, null, null, movimientoId, null, firma);
+    public static NotificacionDto loteApartado(String mensaje, Long movimientoId, Long loteId, String firma) {
+        return new NotificacionDto("LOTE_APARTADO", mensaje, null, null, null, movimientoId, null, firma, loteId, false);
     }
 
-    public static NotificacionDto loteDesapartado(String mensaje, Long movimientoId, String firma) {
-        return new NotificacionDto("LOTE_DESAPARTADO", mensaje, null, null, null, movimientoId, null, firma);
+    public static NotificacionDto loteDesapartado(String mensaje, Long movimientoId, Long loteId, String firma) {
+        return new NotificacionDto("LOTE_DESAPARTADO", mensaje, null, null, null, movimientoId, null, firma, loteId, false);
     }
 
     /** Cualquier otro cambio de estado de un lote (firma, vendido, entre apartados…). */
-    public static NotificacionDto loteEstado(String mensaje, Long movimientoId, String firma) {
-        return new NotificacionDto("LOTE_ESTADO", mensaje, null, null, null, movimientoId, null, firma);
+    public static NotificacionDto loteEstado(String mensaje, Long movimientoId, Long loteId, String firma) {
+        return new NotificacionDto("LOTE_ESTADO", mensaje, null, null, null, movimientoId, null, firma, loteId, false);
     }
 
     /** Se registró una venta (solo admin y Administración). */

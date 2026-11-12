@@ -230,6 +230,7 @@ public class NotificacionService {
                         lote + " pasó de " + etiqueta(m.getEstadoAnterior()) + " a " + etiqueta(m.getEstadoNuevo())
                                 + (autor != null ? " por " + autor : "") + ".",
                         m.getId(),
+                        m.getLote().getId(),
                         firma));
             } else if (apartado) {
                 String conCliente = m.getNombreCliente() != null ? " para " + m.getNombreCliente() : "";
@@ -237,11 +238,13 @@ public class NotificacionService {
                 notificaciones.add(NotificacionDto.loteApartado(
                         lote + " fue apartado" + conMonto + conCliente + (autor != null ? " por " + autor : "") + ".",
                         m.getId(),
+                        m.getLote().getId(),
                         firma));
             } else {
                 notificaciones.add(NotificacionDto.loteDesapartado(
                         lote + (autor != null ? " fue liberado por " + autor + "." : " se liberó automáticamente por vencimiento del apartado."),
                         m.getId(),
+                        m.getLote().getId(),
                         firma));
             }
         }

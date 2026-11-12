@@ -181,9 +181,11 @@ public class PushService {
         return sb.append('"').toString();
     }
 
-    private static String claveDe(NotificacionDto n) {
-        // El lote va primero: en un aviso de lote desincronizado, varios lotes pueden ser de la misma venta.
-        Long id = n.loteId() != null ? n.loteId() : n.leadId() != null ? n.leadId() : n.tareaId() != null ? n.tareaId() : n.eventoId() != null ? n.eventoId() : n.movimientoId() != null ? n.movimientoId() : n.ventaId();
+    static String claveDe(NotificacionDto n) {
+        // El movimiento va primero: los avisos de cambios de lote traen también loteId (solo para abrir Lotes
+        // filtrado) y su clave debe seguir siendo la del movimiento. Después el lote: en un aviso de lote
+        // desincronizado, varios lotes pueden ser de la misma venta (no tienen movimiento).
+        Long id = n.movimientoId() != null ? n.movimientoId() : n.loteId() != null ? n.loteId() : n.leadId() != null ? n.leadId() : n.tareaId() != null ? n.tareaId() : n.eventoId() != null ? n.eventoId() : n.ventaId();
         return NotificacionService.clave(n.tipo(), id, n.firma());
     }
 
@@ -210,7 +212,7 @@ public class PushService {
     }
 
     private static String rutaDe(NotificacionDto n) {
-        // Avisos de lotes desincronizados: Lotes filtrado a ese lote.
+        // Avisos de lotes (cambios de estado y desincronizados): Lotes filtrado a ese lote.
         if (n.loteId() != null) return "/panel/lotes?loteId=" + n.loteId();
         return switch (n.tipo()) {
             case "SEGUIMIENTO_PENDIENTE" -> "/panel/leads";
