@@ -123,9 +123,10 @@ final class TablaMensual {
                 arrastre = BigDecimal.ZERO;
                 continue;
             }
-            // arrastre negativo = lo que se le descontó por pagos de más en otros meses.
-            BigDecimal arrastreRecibido = descuento[i].negate();
-            BigDecimal toca = c.monto().subtract(descuento[i]);
+            // arrastre: + lo que faltó de meses anteriores ya vencidos (pasa al siguiente, decisión del usuario 2026-11-11);
+            // − lo que se le descontó por pagos de más en otros meses.
+            BigDecimal arrastreRecibido = arrastre.subtract(descuento[i]);
+            BigDecimal toca = c.monto().add(arrastre).subtract(descuento[i]);
             BigDecimal resta = toca.subtract(pagado); // + falta, − pagó de más (no se adelanta)
             boolean vencido = c.fecha().isBefore(hoy);
 
@@ -150,8 +151,9 @@ final class TablaMensual {
                     toca.subtract(resta.max(BigDecimal.ZERO)).max(BigDecimal.ZERO),
                     precio.subtract(programado).max(BigDecimal.ZERO), estado,
                     arrastreRecibido, pagado, List.copyOf(delMes), c.tramo(), BigDecimal.ZERO));
-            // Sin arrastre (decisión del usuario): lo que le faltó a un mes se queda en ese mes, no pasa al siguiente.
-            arrastre = BigDecimal.ZERO;
+            // Lo que le falta a un mes ya vencido (con o sin pagos) pasa a la mensualidad siguiente; el mes se queda
+            // Abonado (si recibió algo) o Atrasado (si no).
+            arrastre = vencido ? resta.max(BigDecimal.ZERO) : BigDecimal.ZERO;
         }
 
         // Un renglón por cada mes con pagos extemporáneos después del plan: «Pago extemporáneo», pagado con lo que llegó.

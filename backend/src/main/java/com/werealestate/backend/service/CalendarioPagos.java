@@ -373,9 +373,11 @@ public final class CalendarioPagos {
         for (AmortizacionDto.Fila f : mensual) {
             if (f.fecha() == null) continue; // "Sin fecha en el plan": nunca vence
             BigDecimal falta = f.monto().subtract(f.pagado()).max(BigDecimal.ZERO);
+            // Lo que falta de un mes vencido ya va sumado en el siguiente (arrastre): el atraso es lo que falta del
+            // último mes vencido (cero si ese mes ya cubrió todo lo que traía).
+            if (f.fecha().isBefore(hoy)) atraso = falta;
             if (falta.compareTo(TOLERANCIA) <= 0) continue;
             if (f.fecha().isBefore(hoy)) {
-                atraso = atraso.add(falta);
                 if (f.estado() == EstadoPagoPlan.ATRASADO) {
                     pagosAtrasados++;
                     if ("Mensualidad".equals(f.concepto())) mensualidadesAtrasadas++;

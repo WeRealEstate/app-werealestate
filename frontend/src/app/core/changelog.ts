@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.18.11', fecha: '2026-11-11', cambios: [
+    "Tabla de amortización: lo que le falta a una mensualidad vencida (aunque sea poco) ahora se suma a la mensualidad siguiente, que muestra «Incluye $X de meses anteriores». El mes sigue marcado como Abonado (o Atrasado si no recibió nada). Lo pagado de más sigue descontándose de la última mensualidad.",
+  ] },
   { version: '11.18.10', fecha: '2026-11-11', cambios: [
     "Reestructurar plan de pagos: ahora eliges la forma de pago del plan nuevo: Mensualidades, Con enganche / pago inicial o Anualidades / aportaciones. Abre con la forma actual de la venta. Si la venta ya tiene enganche, se conserva; si no tenía, puedes agregar uno y el resto se reparte en mensualidades.",
   ] },

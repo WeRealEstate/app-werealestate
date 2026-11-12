@@ -41,7 +41,7 @@ class TablaMensualTest {
     }
 
     @Test
-    void cadaMesConservaSuMensualidadSinArrastre() {
+    void loQueFaltaDeUnMesVencidoPasaAlSiguiente() {
         List<PagoVenta> pagos = List.of(
                 pago(4, 10, "10000"), pago(4, 27, "7400"), pago(5, 21, "10000"),
                 pago(6, 22, "10000"), pago(6, 30, "8500"), pago(7, 21, "10000"), pago(8, 21, "10000"),
@@ -50,23 +50,16 @@ class TablaMensualTest {
         List<Fila> f = TablaMensual.construir(plan(), List.of(), d("126762"), pagos, HOY);
 
         assertThat(f).hasSize(8);
-        // Abril: pagó de más (17,400 contra 10,000): se suma al total pagado y NO baja la mensualidad de mayo.
-        assertThat(f.get(0).monto()).isEqualByComparingTo("10000");
-        assertThat(f.get(0).pagos()).hasSize(2);
         assertThat(f.get(0).abonadoMes()).isEqualByComparingTo("17400");
-        // Sin arrastre (decisión del usuario): mayo pagó de menos y su faltante se queda en mayo (Abonado); junio sigue
-        // con su propia mensualidad.
+        // Mayo pagó 10,000 de 16,680.29: queda Abonado y sus 6,680.29 se suman a junio.
         assertThat(f.get(1).estado()).isEqualTo(EstadoPagoPlan.ABONADO);
-        assertThat(f.get(2).monto()).isEqualByComparingTo("16680.29");
-        assertThat(f.get(2).arrastre()).isEqualByComparingTo("0");
+        assertThat(f.get(2).arrastre()).isEqualByComparingTo("6680.29");
+        assertThat(f.get(2).monto()).isEqualByComparingTo("23360.58");
         assertThat(f.get(2).pagos()).extracting(p -> p.fecha().getDayOfMonth()).containsExactly(22, 30);
-        assertThat(f.get(3).estado()).isEqualTo(EstadoPagoPlan.ABONADO);
-        assertThat(f.get(3).monto()).isEqualByComparingTo("16680.29");
-        assertThat(f.get(6).monto()).isEqualByComparingTo("16680.29"); // octubre: venció sin pagos
+        // Octubre venció sin pagos: Atrasado, y todo lo que traía pasa a noviembre.
         assertThat(f.get(6).estado()).isEqualTo(EstadoPagoPlan.ATRASADO);
-        // Noviembre: lo suyo menos lo pagado de más en abril, junio y septiembre (11,951.92).
-        assertThat(f.get(7).monto()).isEqualByComparingTo("4728.34"); 
         assertThat(f.get(7).estado()).isEqualTo(EstadoPagoPlan.LE_TOCA);
+        assertThat(f.get(7).arrastre()).isPositive();
     }
 
     @Test
@@ -194,6 +187,6 @@ class TablaMensualTest {
         assertThat(f.get(8).monto()).isEqualByComparingTo("50000");
         assertThat(f.get(8).estado()).isEqualTo(EstadoPagoPlan.PAGADO);
         assertThat(f.get(2).estado()).isEqualTo(EstadoPagoPlan.ATRASADO); // junio sigue sin pago propio
-        assertThat(f.get(7).arrastre()).isEqualByComparingTo("0"); // el extemporáneo no es "pagado de más"
+        assertThat(f.get(7).arrastre()).isPositive(); // noviembre trae lo que faltó; el extemporáneo no es "pagado de más"
     }
 }

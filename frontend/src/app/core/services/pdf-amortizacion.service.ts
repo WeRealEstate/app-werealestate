@@ -168,7 +168,7 @@ export class PdfAmortizacionService {
     // Notas al pie de la tabla.
     const finTabla = (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y;
     const notas = [
-      'Mensualidad: lo que toca pagar ese mes; lo que le falte a un mes se queda en ese mes y no pasa al siguiente. Un pago cuenta como atrasado desde el día siguiente a su fecha.',
+      'Mensualidad: lo que toca pagar ese mes más lo que faltó de los meses anteriores ya vencidos. Un pago cuenta como atrasado desde el día siguiente a su fecha.',
       'Saldo: lo que falta del precio después de cada pago, según el plan.',
       'Monto pagado: cada abono en el mes que cubre (el que marca su recibo), con su fecha real y el folio de su recibo; lo que se paga de más en un mes se descuenta de la última mensualidad. Estado: Pagado (cubrió la mensualidad), Abonado (algún pago, sin cubrirla) o Atrasado (su fecha pasó sin ningún pago).',
     ];
