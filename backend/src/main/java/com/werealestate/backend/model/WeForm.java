@@ -43,6 +43,10 @@ public class WeForm {
     @JoinColumn(name = "creado_por")
     private Usuario creadoPor;
 
+    /** Si es true, cada registro de venta de este formulario avisa por correo a finanzas. Apagado de origen. */
+    @Column(name = "aviso_finanzas", nullable = false)
+    private boolean avisoFinanzas = false;
+
     @Column(name = "fecha_creacion", nullable = false, updatable = false)
     private LocalDateTime fechaCreacion = LocalDateTime.now();
 
@@ -64,6 +68,11 @@ public class WeForm {
         this.estado = estado;
     }
 
+    public void setAvisoFinanzas(boolean avisoFinanzas) {
+        this.avisoFinanzas = avisoFinanzas;
+    }
+
+    public boolean isAvisoFinanzas() { return avisoFinanzas; }
     public Long getId() { return id; }
     public String getNombre() { return nombre; }
     public String getDescripcion() { return descripcion; }

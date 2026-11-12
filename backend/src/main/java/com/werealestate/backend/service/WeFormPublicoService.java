@@ -376,12 +376,20 @@ public class WeFormPublicoService {
             throw e;
         }
 
-        // 7) Aviso por correo a finanzas: sale solo si todo lo anterior queda guardado (ver AvisoRegistroVentaCorreo).
-        eventos.publishEvent(new AvisoRegistroVentaCorreo.RegistroDeVentaRecibido(
+        // 7) Aviso por correo a finanzas: solo si el formulario tiene encendido "Avisar a finanzas por correo" (apagado,
+        // el registro se guarda igual y no sale correo). Sale solo si todo lo anterior queda guardado (ver AvisoRegistroVentaCorreo).
+        avisarAFinanzas(form, new AvisoRegistroVentaCorreo.RegistroDeVentaRecibido(
                 resuelto.cliente().nombreCompleto(), asesor.nombre(), form.getDesarrollo().getNombre(), form.getNombre(),
                 venta.getEtiqueta(), lotes.stream().map(l -> "Manzana " + l.getManzana() + ", Lote " + l.getNumeroLote()).toList()));
         return new WeFormDtos.EnvioResultado(
                 respuesta.getId(), venta.getEtiqueta(), resuelto.cliente().nombreCompleto(), resuelto.nuevo());
+    }
+
+    /** Publica el aviso a finanzas solo si el formulario tiene encendido "Avisar a finanzas por correo". */
+    void avisarAFinanzas(WeForm form, AvisoRegistroVentaCorreo.RegistroDeVentaRecibido aviso) {
+        if (form.isAvisoFinanzas()) {
+            eventos.publishEvent(aviso);
+        }
     }
 
     // ---------------------------------------------------------------- validación de cada pregunta

@@ -123,4 +123,26 @@ class WeFormServiceDuplicarTest {
         assertThrows(ValidationException.class, () -> service.duplicar(5L, new WeFormDtos.DuplicarRequest("X", null, 3L)));
         verify(formRepo, never()).save(any(WeForm.class));
     }
+
+    @Test
+    void laCopiaHeredaElAvisoAFinanzasDelOriginal() {
+        when(preguntaRepo.findByFormIdAndArchivadaFalseOrderByOrdenAsc(5L)).thenReturn(new ArrayList<>());
+        original.setAvisoFinanzas(true);
+        assertTrue(service.duplicar(5L, new WeFormDtos.DuplicarRequest("A", null, 2L)).avisoFinanzas());
+        original.setAvisoFinanzas(false);
+        assertEquals(false, service.duplicar(5L, new WeFormDtos.DuplicarRequest("B", null, 2L)).avisoFinanzas());
+    }
+
+    @Test
+    void unFormularioNuevoOExistenteNaceConElAvisoApagado() {
+        assertEquals(false, original.isAvisoFinanzas());
+    }
+
+    @Test
+    void cambiarAvisoFinanzasEnciendeYApaga() {
+        when(preguntaRepo.findByFormIdAndArchivadaFalseOrderByOrdenAsc(5L)).thenReturn(new ArrayList<>());
+        assertTrue(service.cambiarAvisoFinanzas(5L, new WeFormDtos.AvisoFinanzasRequest(true)).avisoFinanzas());
+        assertTrue(original.isAvisoFinanzas());
+        assertEquals(false, service.cambiarAvisoFinanzas(5L, new WeFormDtos.AvisoFinanzasRequest(false)).avisoFinanzas());
+    }
 }

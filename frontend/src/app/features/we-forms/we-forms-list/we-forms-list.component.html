@@ -61,6 +61,31 @@
             </span>
           </div>
           <p class="mt-4 text-sm text-ink"><span class="font-semibold">{{ f.totalRespuestas }}</span> {{ f.totalRespuestas === 1 ? 'respuesta' : 'respuestas' }}</p>
+          <div class="mt-3 flex items-center gap-3">
+            <button
+              type="button"
+              role="switch"
+              [attr.aria-checked]="f.avisoFinanzas"
+              [attr.aria-labelledby]="'aviso-finanzas-' + f.id"
+              [disabled]="guardandoAviso().has(f.id)"
+              (click)="alternarAviso(f)"
+              data-testid="aviso-finanzas"
+              class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200
+                     focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50 disabled:opacity-60"
+              [class.bg-we-primary]="f.avisoFinanzas"
+              [class.bg-border]="!f.avisoFinanzas"
+            >
+              <span
+                class="inline-block h-5 w-5 rounded-full bg-white shadow transition-transform duration-200"
+                [class.translate-x-5]="f.avisoFinanzas"
+                [class.translate-x-0.5]="!f.avisoFinanzas"
+              ></span>
+            </button>
+            <span [id]="'aviso-finanzas-' + f.id" class="min-w-0 text-sm text-ink">
+              Avisar a finanzas por correo
+              <span class="ml-1 text-xs font-semibold" [class]="f.avisoFinanzas ? 'text-green-700 dark:text-green-300' : 'text-ink-muted'">{{ f.avisoFinanzas ? 'Sí' : 'No' }}</span>
+            </span>
+          </div>
           <div class="mt-4 flex flex-wrap gap-2">
             <a
               [routerLink]="['/panel/we-forms', f.id]"

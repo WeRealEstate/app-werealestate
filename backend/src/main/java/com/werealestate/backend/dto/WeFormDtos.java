@@ -19,7 +19,7 @@ public final class WeFormDtos {
 
     public record Lista(
             Long id, String nombre, String slug, Long desarrolloId, String desarrolloNombre, EstadoWeForm estado,
-            long totalRespuestas, LocalDateTime fechaCreacion) {
+            long totalRespuestas, LocalDateTime fechaCreacion, boolean avisoFinanzas) {
     }
 
     public record Pregunta(
@@ -35,7 +35,11 @@ public final class WeFormDtos {
 
     public record Detalle(
             Long id, String nombre, String descripcion, String slug, Long desarrolloId, String desarrolloNombre,
-            String proyecto, EstadoWeForm estado, LocalDateTime fechaCreacion, List<Pregunta> preguntas) {
+            String proyecto, EstadoWeForm estado, LocalDateTime fechaCreacion, boolean avisoFinanzas, List<Pregunta> preguntas) {
+    }
+
+    /** Enciende o apaga el aviso por correo a finanzas de un formulario. */
+    public record AvisoFinanzasRequest(@NotNull Boolean activo) {
     }
 
     public record CrearRequest(

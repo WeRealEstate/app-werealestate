@@ -61,6 +61,12 @@ public class WeFormController {
         return service.actualizar(id, request);
     }
 
+    /** Interruptor "Avisar a finanzas por correo" del formulario. */
+    @PutMapping("/{id}/aviso-finanzas")
+    public WeFormDtos.Detalle avisoFinanzas(@PathVariable Long id, @Valid @RequestBody WeFormDtos.AvisoFinanzasRequest request) {
+        return service.cambiarAvisoFinanzas(id, request);
+    }
+
     @PostMapping("/{id}/preguntas")
     public WeFormDtos.Pregunta crearPregunta(@PathVariable Long id, @Valid @RequestBody WeFormDtos.PreguntaRequest request) {
         return service.crearPregunta(id, request);

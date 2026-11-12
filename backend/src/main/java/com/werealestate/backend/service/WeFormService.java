@@ -99,7 +99,7 @@ public class WeFormService {
                 .map(f -> new WeFormDtos.Lista(
                         f.getId(), f.getNombre(), f.getSlug(), f.getDesarrollo().getId(),
                         f.getDesarrollo().getNombre(), f.getEstado(), conteos.getOrDefault(f.getId(), 0L),
-                        f.getFechaCreacion()))
+                        f.getFechaCreacion(), f.isAvisoFinanzas()))
                 .toList();
     }
 
@@ -323,7 +323,7 @@ public class WeFormService {
 
     /** Copia un formulario: sus preguntas activas tal como están (orden, título, obligatoria, visible, opciones y vínculo
      * con el cliente o la venta) en un formulario nuevo, Activo y con su propio link, para el desarrollo elegido. No copia
-     * respuestas ni preguntas archivadas. Los lotes que se ofrecen salen del desarrollo del formulario nuevo. */
+     * respuestas ni preguntas archivadas. Copia también el interruptor del aviso a finanzas del original. Los lotes que se ofrecen salen del desarrollo del formulario nuevo. */
     public WeFormDtos.Detalle duplicar(Long id, WeFormDtos.DuplicarRequest request) {
         Usuario actual = exigirAcceso();
         WeForm original = obtenerEntidad(id);
@@ -334,6 +334,7 @@ public class WeFormService {
         }
         WeForm copia = formRepository.save(new WeForm(
                 request.nombre().trim(), limpio(request.descripcion()), nuevoSlug(request.nombre()), desarrollo, actual));
+        copia.setAvisoFinanzas(original.isAvisoFinanzas());
         int orden = 0;
         for (WeFormPregunta p : preguntaRepository.findByFormIdAndArchivadaFalseOrderByOrdenAsc(original.getId())) {
             preguntaRepository.save(new WeFormPregunta(
@@ -348,6 +349,14 @@ public class WeFormService {
         WeForm form = obtenerEntidad(id);
         form.actualizar(request.nombre().trim(), limpio(request.descripcion()), request.estado());
         return detalle(form);
+    }
+
+    /** Enciende o apaga el aviso por correo a finanzas del formulario (mismo permiso que editarlo). */
+    public WeFormDtos.Detalle cambiarAvisoFinanzas(Long id, WeFormDtos.AvisoFinanzasRequest request) {
+        exigirAcceso();
+        WeForm form = obtenerEntidad(id);
+        form.setAvisoFinanzas(Boolean.TRUE.equals(request.activo()));
+        return detalle(formRepository.save(form));
     }
 
     // ---------------------------------------------------------------- preguntas
@@ -463,7 +472,7 @@ public class WeFormService {
                 .stream().map(this::preguntaDto).toList();
         return new WeFormDtos.Detalle(
                 f.getId(), f.getNombre(), f.getDescripcion(), f.getSlug(), f.getDesarrollo().getId(),
-                f.getDesarrollo().getNombre(), proyectoDe(f), f.getEstado(), f.getFechaCreacion(), preguntas);
+                f.getDesarrollo().getNombre(), proyectoDe(f), f.getEstado(), f.getFechaCreacion(), f.isAvisoFinanzas(), preguntas);
     }
 
     private WeFormDtos.Pregunta preguntaDto(WeFormPregunta p) {

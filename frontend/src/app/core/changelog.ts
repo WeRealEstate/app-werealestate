@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '11.20.0', fecha: '2026-11-12', cambios: [
+    "We Forms: cada formulario tiene ahora el interruptor «Avisar a finanzas por correo» en su tarjeta de la lista. Solo los formularios con el interruptor encendido mandan el correo «¡Es hora de realizar un contrato!» a finanzas cuando llega un registro de venta; con él apagado el registro se guarda igual, solo que sin correo. Los formularios que ya existían quedan apagados hasta que los enciendas; un formulario nuevo nace apagado y uno duplicado copia el valor del original.",
+  ] },
   { version: '11.19.1', fecha: '2026-11-12', cambios: [
     "Tabla de amortización: el lapicito para cambiar la fecha de una mensualidad ya no se encima con el concepto; solo aparece sobre la fecha al pasar el mouse.",
   ] },

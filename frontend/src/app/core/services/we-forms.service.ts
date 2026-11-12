@@ -42,6 +42,11 @@ export class WeFormsService {
     return firstValueFrom(this.http.post<WeFormDetalle>(`${this.baseUrl}/${id}/duplicar`, request));
   }
 
+  /** Enciende o apaga el aviso por correo a finanzas de un formulario. */
+  cambiarAvisoFinanzas(id: number, activo: boolean): Promise<WeFormDetalle> {
+    return firstValueFrom(this.http.put<WeFormDetalle>(`${this.baseUrl}/${id}/aviso-finanzas`, { activo }));
+  }
+
   obtener(id: number): Promise<WeFormDetalle> {
     return firstValueFrom(this.http.get<WeFormDetalle>(`${this.baseUrl}/${id}`));
   }

@@ -17,7 +17,8 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.web.util.HtmlUtils;
 
-/** Avisa por correo a finanzas que llegó un registro de venta de We Forms: "¡Es hora de realizar un contrato!", con el
+/** Avisa por correo a finanzas que llegó un registro de venta de We Forms, solo de los formularios que tienen encendido
+ * el interruptor "Avisar a finanzas por correo" (WeForm.avisoFinanzas; WeFormPublicoService decide si publica el evento): "¡Es hora de realizar un contrato!", con el
  * cliente, el asesor, el desarrollo, los lotes, el número de venta y el formulario. Sale por SMTP (Gmail) con la cuenta
  * de MAIL_USERNAME y su contraseña de aplicación en MAIL_PASSWORD; sin ellas no se manda nada (solo queda en el log).
  * Se manda cuando el registro ya quedó guardado (si el envío del formulario falla, no hay correo) y en segundo plano:

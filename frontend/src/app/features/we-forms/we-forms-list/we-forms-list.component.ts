@@ -61,6 +61,32 @@ export class WeFormsListComponent {
     }
   }
 
+  /** Ids de formularios cuyo interruptor de aviso a finanzas está guardándose (evita doble clic). */
+  readonly guardandoAviso = signal<ReadonlySet<number>>(new Set());
+
+  /** Enciende o apaga "Avisar a finanzas por correo": se ve el cambio al instante y se revierte si el servidor falla. */
+  async alternarAviso(f: WeFormLista): Promise<void> {
+    if (this.guardandoAviso().has(f.id)) return;
+    const nuevo = !f.avisoFinanzas;
+    const poner = (valor: boolean) =>
+      this.formularios.update((lista) => lista.map((x) => (x.id === f.id ? { ...x, avisoFinanzas: valor } : x)));
+    this.guardandoAviso.update((s) => new Set(s).add(f.id));
+    poner(nuevo);
+    try {
+      await this.service.cambiarAvisoFinanzas(f.id, nuevo);
+      this.toast.success(nuevo ? 'Aviso a finanzas encendido.' : 'Aviso a finanzas apagado.');
+    } catch {
+      poner(!nuevo);
+      this.toast.error('No se pudo cambiar el aviso a finanzas.');
+    } finally {
+      this.guardandoAviso.update((s) => {
+        const copia = new Set(s);
+        copia.delete(f.id);
+        return copia;
+      });
+    }
+  }
+
   /** El link público que se comparte con los asesores (pide su PIN al abrirse). */
   linkDe(slug: string): string {
     return `${window.location.origin}/we-forms/${slug}`;

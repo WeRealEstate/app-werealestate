@@ -72,6 +72,8 @@ export interface WeFormLista {
   estado: EstadoWeForm;
   totalRespuestas: number;
   fechaCreacion: string;
+  /** Si está encendido, cada registro de venta de este formulario avisa por correo a finanzas. */
+  avisoFinanzas: boolean;
 }
 
 export interface WeFormPregunta {
@@ -103,6 +105,7 @@ export interface WeFormDetalle {
   proyecto: string;
   estado: EstadoWeForm;
   fechaCreacion: string;
+  avisoFinanzas: boolean;
   preguntas: WeFormPregunta[];
 }
 
