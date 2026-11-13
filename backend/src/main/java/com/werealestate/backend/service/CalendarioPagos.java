@@ -51,8 +51,6 @@ public final class CalendarioPagos {
     public static final Set<String> ETIQUETAS_PAGO_INICIAL = Set.of("Enganche", "Pago inicial");
     public static final String SIN_FECHA = "Sin fecha en el plan";
 
-    /** Hasta cuánto le puede faltar al calendario para que la última mensualidad lo absorba (redondeo). */
-    private static final BigDecimal AJUSTE_MAXIMO = new BigDecimal("1.00");
     /** Diferencias de un centavo o menos no cuentan: el pago se da por cubierto. */
     private static final BigDecimal TOLERANCIA = new BigDecimal("0.01");
 
@@ -383,11 +381,15 @@ public final class CalendarioPagos {
             restante = restante.subtract(monto);
         }
 
-        // Centavos que deja el redondeo de la mensualidad: los absorbe la última mensualidad.
-        if (conPlazo && restante.signum() > 0 && restante.compareTo(AJUSTE_MAXIMO) <= 0) {
+        BigDecimal noProgramado = !pagoInicial && plan.enganche() != null
+                ? plan.enganche().max(BigDecimal.ZERO)
+                : BigDecimal.ZERO;
+        BigDecimal sobranteMensualidades = restante.subtract(noProgramado);
+        // Cualquier diferencia que deje el redondeo o ajuste de la mensualidad la absorbe la última mensualidad.
+        if (conPlazo && sobranteMensualidades.signum() > 0) {
             for (int i = resultado.size() - 1; i >= 0; i--) {
                 if (resultado.get(i).mensualidad()) {
-                    resultado.set(i, resultado.get(i).conMonto(resultado.get(i).monto().add(restante)));
+                    resultado.set(i, resultado.get(i).conMonto(resultado.get(i).monto().add(sobranteMensualidades)));
                     break;
                 }
             }

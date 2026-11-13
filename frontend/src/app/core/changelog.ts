@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.1.9', fecha: '2026-11-13', cambios: [
+    "Tabla de amortización: cuando la suma de mensualidades queda por debajo del precio total (aunque la diferencia sea mayor a $1.00), el sobrante se suma automáticamente a la última mensualidad en lugar de crear «Sin fecha en el plan».",
+  ] },
   { version: '12.1.8', fecha: '2026-11-13', cambios: [
     "Tabla de amortización: eliminado el aviso amarillo de «Plan reestructurado» dentro de la tabla.",
   ] },

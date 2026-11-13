@@ -172,6 +172,17 @@ class CalendarioPagosTest {
     }
 
     @Test
+    void elSobranteDeMensualidadesSeSumaALaUltimaMensualidadAunqueSupereUnPeso() {
+        // 10 mensualidades de $2,700 = $27,000, pero el precio es $27,686: los $686 sobrantes van a la última.
+        Venta v = venta(LocalDate.of(2026, 7, 1), "2700", 10, null, null, 1, false);
+        CalendarioPagos.EstadoDeCuenta c = cuenta(v, "27686", "0", List.of());
+
+        assertThat(c.filas()).hasSize(10);
+        assertThat(c.filas()).noneMatch(f -> CalendarioPagos.SIN_FECHA.equals(f.concepto()));
+        assertThat(c.filas().get(9).monto()).isEqualByComparingTo("3386");
+    }
+
+    @Test
     void unCentavoNoCuentaComoAtraso() {
         // Vencieron 03/09 y 03/10; le falta un centavo de la segunda.
         Venta v = venta(LocalDate.of(2026, 8, 3), "5000", 24, null, null, 3, false);
