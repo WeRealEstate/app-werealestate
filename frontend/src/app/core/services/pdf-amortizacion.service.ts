@@ -75,6 +75,7 @@ export class PdfAmortizacionService {
     doc.setFontSize(7.5);
     doc.text(`ESTADO DE CUENTA AL ${fechaCorta(a.corte)}`, MARGEN, y, { charSpace: 0.4 });
     doc.setTextColor(...TEXT);
+    doc.setFont(FUENTE, 'bold');
     doc.setFontSize(12);
     doc.text(recortar(doc, a.cliente, anchoTextoPortada), MARGEN, y + 8);
     doc.setTextColor(...MUTED);

@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.1.6', fecha: '2026-11-13', cambios: [
+    "Estado de cuenta (PDF): el nombre del cliente en la portada vuelve a mostrarse en negritas.",
+  ] },
   { version: '12.1.5', fecha: '2026-11-13', cambios: [
     "Estado de cuenta (PDF): todas las mensualidades con estado «Atrasado» aparecen en rojo en la tabla de amortización, no solo la del mes actual.",
   ] },
