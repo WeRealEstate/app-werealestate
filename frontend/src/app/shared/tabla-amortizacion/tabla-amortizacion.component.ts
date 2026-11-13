@@ -10,6 +10,7 @@ import {
   cuentaAtraso,
   fechaCorta,
   FilaAmortizacion,
+  PagoMes,
   ReestructuracionPlan,
 } from '../../core/models/amortizacion.model';
 import { AuthService } from '../../core/services/auth.service';
@@ -216,6 +217,11 @@ export class TablaAmortizacionComponent {
     } finally {
       this.generando.set(false);
     }
+  }
+
+  /** Alto (px) del bloque de un abono: igual en Monto pagado, Fecha del pago y Folio para que queden alineados. */
+  alturaPago(p: PagoMes): number {
+    return 16 * (1 + (p.parteDe ? 1 : 0) + (p.aCuentaComision ? 1 : 0));
   }
 
   money(valor: number): string {

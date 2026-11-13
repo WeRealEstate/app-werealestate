@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import type { jsPDF } from 'jspdf';
 import {
   Amortizacion,
+  PagoMes,
   CONCEPTO_SIN_FECHA,
   etiquetaEstadoPago,
   EstadoPagoPlan,
@@ -128,17 +129,19 @@ export class PdfAmortizacionService {
     this.encabezado(doc, a, ancho, true, 'TABLA DE AMORTIZACIÓN');
     autoTable(doc, {
       startY: 30,
-      head: [['N.º', 'FECHA', 'CONCEPTO', 'MENSUALIDAD', 'MONTO PAGADO', 'SALDO', 'ESTADO']],
+      head: [['N.º', 'DÍA DE PAGO', 'CONCEPTO', 'PAGO CORRESPONDIENTE', 'MONTO PAGADO', 'FECHA DEL PAGO', 'FOLIO', 'SALDO', 'ESTADO']],
       body: filas.map((f) => [
         f.numero ?? '—',
         fechaCorta(f.fecha),
         f.concepto,
         dinero(f.monto),
-        f.fecha ? (f.pagos.length ? f.pagos.map((x) => [fechaCorta(x.fecha), x.folio ? `Folio ${x.folio}` : null, `${dinero(x.monto)}${x.parteDe ? ` (parte de ${dinero(x.parteDe)})` : ''}${x.aCuentaComision ? ' (a cuenta de comisión)' : ''}`].filter(Boolean).join('\n')).join('\n\n') : dinero(0)) : '—',
+        columnaPagos(f, (x) => x.monto, dinero(0), true),
+        columnaPagos(f, (x) => fechaCorta(x.fecha), '—'),
+        columnaPagos(f, (x) => x.folio || '—', '—'),
         f.fecha ? dinero(f.saldo) : '—',
         etiquetaEstadoPago(f.estado, f.fecha, a.corte),
       ]),
-      foot: [['', '', 'Total pagado', '', dinero(sumar(filas.map((f) => f.abonadoMes))), '', '']],
+      foot: [['', '', 'Total pagado', '', dinero(sumar(filas.map((f) => f.abonadoMes))), '', '', '', '']],
       showFoot: 'lastPage',
       margin: { left: MARGEN, right: MARGEN, top: 26, bottom: ALTO_PIE + 4 },
       theme: 'plain',
@@ -146,19 +149,21 @@ export class PdfAmortizacionService {
       headStyles: { font: FUENTE, fontStyle: 'bold', fillColor: false, textColor: TEXT, fontSize: 6.5 },
       footStyles: { font: FUENTE, fontStyle: 'bold', fillColor: false, textColor: TEXT },
       columnStyles: {
-        0: { halign: 'center', cellWidth: 11 },
-        1: { halign: 'left', cellWidth: 22 },
+        0: { halign: 'center', cellWidth: 8 },
+        1: { halign: 'left', cellWidth: 17 },
         2: { cellWidth: 'auto' },
-        3: { halign: 'right', cellWidth: 25 },
-        4: { halign: 'right', cellWidth: 34 },
-        5: { halign: 'right', cellWidth: 26 },
-        6: { halign: 'left', cellWidth: 28, cellPadding: { top: 2.3, bottom: 2.3, left: 5, right: 1.5 } },
+        3: { halign: 'right', cellWidth: 28 },
+        4: { halign: 'right', cellWidth: 24 },
+        5: { halign: 'left', cellWidth: 17 },
+        6: { halign: 'left', cellWidth: 14 },
+        7: { halign: 'right', cellWidth: 20 },
+        8: { halign: 'left', cellWidth: 20, cellPadding: { top: 2.3, bottom: 2.3, left: 4.5, right: 1 } },
       },
       didParseCell: (hook) => {
-        if (hook.section === 'foot' && hook.column.index >= 3) hook.cell.styles.halign = 'right';
+        if (hook.section === 'foot' && hook.column.index >= 3 && hook.column.index !== 5 && hook.column.index !== 6 && hook.column.index !== 8) hook.cell.styles.halign = 'right';
         // El encabezado se alinea como su columna (autoTable no lo hereda del columnStyles).
         if (hook.section === 'head') hook.cell.styles.halign = hook.table.styles.columnStyles?.[hook.column.index]?.halign ?? 'left';
-        if (hook.section === 'body' && hook.column.index === 6) {
+        if (hook.section === 'body' && hook.column.index === 8) {
           const color = marcas.get(hook.row.index);
           if (color) hook.cell.styles.textColor = color;
         }
@@ -179,7 +184,7 @@ export class PdfAmortizacionService {
           doc.setFillColor(...marcas.get(hook.row.index)!);
           doc.rect(x - 1.6, yc, 1, height, 'F');
         }
-        if (hook.section === 'body' && hook.column.index === 6) {
+        if (hook.section === 'body' && hook.column.index === 8) {
           doc.setFillColor(...(marcas.get(hook.row.index) ?? MUTED));
           doc.circle(x + 2.6, yc + height / 2, 0.8, 'F');
         }
@@ -193,9 +198,9 @@ export class PdfAmortizacionService {
     // Notas al pie de la tabla.
     const finTabla = (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y;
     const notas = [
-      'Mensualidad: lo que toca pagar ese mes más lo que faltó de los meses anteriores ya vencidos. Un pago cuenta como atrasado desde el día siguiente a su fecha.',
+      'Pago correspondiente: lo que toca pagar ese mes más lo que faltó de los meses anteriores ya vencidos. Un pago cuenta como atrasado desde el día siguiente a su fecha.',
       'Saldo: lo que falta del precio después de cada pago, según el plan.',
-      'Monto pagado: cada abono en el mes que cubre (el que marca su recibo), con su fecha real y el folio de su recibo; lo que se paga de más en un mes se descuenta de la última mensualidad. Estado: Pagado (cubrió la mensualidad), Abonado (algún pago, sin cubrirla) o Atrasado (su fecha pasó sin ningún pago).',
+      'Monto pagado: cada abono en el mes que cubre (el que marca su recibo), con la fecha del pago y el folio de su recibo en las columnas siguientes; lo que se paga de más en un mes se descuenta de la última mensualidad. Estado: Pagado (cubrió la mensualidad), Abonado (algún pago, sin cubrirla) o Atrasado (su fecha pasó sin ningún pago).',
     ];
     if (filas.some((f) => f.concepto === CONCEPTO_SIN_FECHA)) {
       notas.push(`${CONCEPTO_SIN_FECHA}: parte del precio a la que la venta no le asigna fecha (por ejemplo, anualidades); no cuenta como atraso.`);
@@ -351,6 +356,20 @@ function recortar(doc: jsPDF, texto: string, anchoMax: number): string {
   let corto = texto;
   while (corto.length > 1 && doc.getTextWidth(`${corto}…`) > anchoMax) corto = corto.slice(0, -1);
   return `${corto.trimEnd()}…`;
+}
+
+/**
+ * Un abono por bloque, igual de alto en Monto pagado, Fecha del pago y Folio para que queden alineados: la nota
+ * («parte de», «a cta. comisión») va en líneas extra bajo el monto y las otras dos columnas dejan esas líneas en blanco.
+ */
+function columnaPagos(f: Amortizacion['detalleMensual'][number], dato: (p: PagoMes) => string | number, vacio: string, conNotas = false): string {
+  if (!f.fecha) return '—';
+  if (!f.pagos.length) return vacio;
+  return f.pagos.map((p) => {
+    const extras = [p.parteDe ? `parte de ${dinero(p.parteDe)}` : '', p.aCuentaComision ? 'a cta. comisión' : ''].filter(Boolean);
+    const principal = conNotas ? dinero(p.monto) : String(dato(p));
+    return conNotas ? [principal, ...extras].join('\n') : principal + '\n'.repeat(extras.length);
+  }).join('\n');
 }
 
 function dinero(valor: number): string {
