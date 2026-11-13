@@ -40,7 +40,7 @@ class CalendarioPausasTest {
         // La aportación del mes de la mensualidad 9 (feb 2027) ya se guardó recorrida 5 meses (jul 2027).
         VentaAportacion aportacion = new VentaAportacion(v, 2027, 7, new BigDecimal("26750.00"));
 
-        List<CalendarioPagos.Concepto> cs = CalendarioPagos.conceptos(v, PRECIO, List.of(aportacion));
+        List<CalendarioPagos.Concepto> cs = CalendarioPagos.conceptos(v, PRECIO, List.of(aportacion), List.of());
 
         assertThat(cs).hasSize(60);
         assertThat(numero(cs, 2).fecha()).isEqualTo(LocalDate.of(2026, 7, 1));
@@ -52,14 +52,14 @@ class CalendarioPausasTest {
         assertThat(numero(cs, 60).fecha()).isEqualTo(LocalDate.of(2031, 10, 1));
         // Ningún renglón en los meses de la pausa.
         assertThat(cs).noneMatch(c -> c.fecha().isAfter(LocalDate.of(2026, 7, 1)) && c.fecha().isBefore(LocalDate.of(2027, 1, 1)));
-        assertThat(CalendarioPagos.rangoDeMeses(v)[1]).isEqualTo(YearMonth.of(2031, 10));
+        assertThat(CalendarioPagos.rangoDeMeses(v, List.of())[1]).isEqualTo(YearMonth.of(2031, 10));
     }
 
     @Test
     void losMesesDeLaPausaNoCuentanComoAtraso() {
         Venta v = venta();
         pausar(v, 3, LocalDate.of(2026, 8, 1), LocalDate.of(2027, 1, 1));
-        List<CalendarioPagos.Concepto> cs = CalendarioPagos.conceptos(v, PRECIO, List.of());
+        List<CalendarioPagos.Concepto> cs = CalendarioPagos.conceptos(v, PRECIO, List.of(), List.of());
 
         CalendarioPagos.EstadoDeCuenta c =
                 CalendarioPagos.estadoDeCuenta(cs, PRECIO, new BigDecimal("5424.94"), LocalDate.of(2026, 11, 12));
@@ -73,7 +73,7 @@ class CalendarioPausasTest {
     void elDiaDeLaFechaNuevaEsElDiaDePagoDeAhiEnAdelante() {
         Venta v = venta();
         pausar(v, 3, LocalDate.of(2026, 8, 1), LocalDate.of(2027, 1, 31));
-        List<CalendarioPagos.Concepto> cs = CalendarioPagos.conceptos(v, PRECIO, List.of());
+        List<CalendarioPagos.Concepto> cs = CalendarioPagos.conceptos(v, PRECIO, List.of(), List.of());
 
         assertThat(numero(cs, 2).fecha()).isEqualTo(LocalDate.of(2026, 7, 1));
         assertThat(numero(cs, 3).fecha()).isEqualTo(LocalDate.of(2027, 1, 31));
@@ -87,7 +87,7 @@ class CalendarioPausasTest {
         Venta v = venta();
         pausar(v, 3, LocalDate.of(2026, 8, 1), LocalDate.of(2027, 1, 1));
         pausar(v, 10, LocalDate.of(2027, 8, 1), LocalDate.of(2028, 1, 5));
-        List<CalendarioPagos.Concepto> cs = CalendarioPagos.conceptos(v, PRECIO, List.of());
+        List<CalendarioPagos.Concepto> cs = CalendarioPagos.conceptos(v, PRECIO, List.of(), List.of());
 
         assertThat(cs).hasSize(60);
         assertThat(numero(cs, 9).fecha()).isEqualTo(LocalDate.of(2027, 7, 1));
@@ -101,7 +101,7 @@ class CalendarioPausasTest {
         VentaPausa p = new VentaPausa(v, null, 3, LocalDate.of(2026, 8, 1), LocalDate.of(2027, 1, 1), "Prueba", null);
         v.agregarPausa(p);
         p.deshacer(null, "Error");
-        List<CalendarioPagos.Concepto> cs = CalendarioPagos.conceptos(v, PRECIO, List.of());
+        List<CalendarioPagos.Concepto> cs = CalendarioPagos.conceptos(v, PRECIO, List.of(), List.of());
 
         assertThat(numero(cs, 3).fecha()).isEqualTo(LocalDate.of(2026, 8, 1));
         assertThat(numero(cs, 60).fecha()).isEqualTo(LocalDate.of(2031, 5, 1));

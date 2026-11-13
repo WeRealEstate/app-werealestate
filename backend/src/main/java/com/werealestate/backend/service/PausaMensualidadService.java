@@ -80,7 +80,8 @@ public class PausaMensualidadService {
     public void pausar(Long ventaId, VentaPausaRequest request) {
         Usuario actual = autorizar(request.password());
         Venta venta = venta(ventaId);
-        CalendarioPagos.Plan plan = CalendarioPagos.planVigente(venta);
+        CalendarioPagos.Plan plan = CalendarioPagos.planVigente(
+                venta, pagoVentaRepository.findVigentesByVentaIdOrderByFechaAscIdAsc(venta.getId()));
         if (!plan.conPlazoPublico() || plan.plazoMeses() < 1) {
             throw new ValidationException("Esta venta no tiene mensualidades");
         }
@@ -186,7 +187,7 @@ public class PausaMensualidadService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         List<PagoVenta> pagos = pagoVentaRepository.findVigentesByVentaIdOrderByFechaAscIdAsc(venta.getId());
         List<CalendarioPagos.Concepto> conceptos = CalendarioPagos.conceptos(
-                venta, precio, ventaAportacionRepository.findByVentaIdOrderByAnioAscMesAsc(venta.getId()));
+                venta, precio, ventaAportacionRepository.findByVentaIdOrderByAnioAscMesAsc(venta.getId()), pagos);
         CalendarioPagos.EstadoDeCuenta cuenta = CalendarioPagos.estadoDeCuenta(conceptos, precio, pagos, LocalDate.now());
         return new Corte(conceptos, cuenta.mensual());
     }

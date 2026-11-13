@@ -2,6 +2,7 @@ package com.werealestate.backend.service;
 
 import com.werealestate.backend.dto.AmortizacionDto;
 import com.werealestate.backend.model.EstadoPagoPlan;
+import com.werealestate.backend.model.MesCubierto;
 import com.werealestate.backend.model.PagoVenta;
 import com.werealestate.backend.model.Venta;
 import com.werealestate.backend.model.VentaAportacion;
@@ -31,6 +32,12 @@ import java.util.TreeMap;
  * (la mensualidad se redondea a centavos) la última mensualidad absorbe la diferencia. Las anualidades de ventas
  * viejas ("Aportación anual" en el enganche) no se proyectan: la venta no guarda en qué mes caen ni cuántas son; en
  * la tabla de amortización esa parte queda en un renglón final "Sin fecha en el plan".
+ *
+ * <p>Regla del mes de la venta: un plan nunca arranca antes del MES de la fecha de venta (si lo hace, p. ej. porque la
+ * fecha se corrigió después de reestructurar, se toma la fecha de venta como inicio), salvo que algún abono vigente
+ * tenga marcado como mes cubierto uno anterior. Por eso todo lo que arma el calendario ({@link #conceptos},
+ * {@link #planVigente}, {@link #planOriginal}, {@link #rangoDeMeses}) recibe los abonos vigentes de la venta: no hay
+ * forma de calcularlo sin ellos, y así todos los módulos aplican exactamente la misma regla.
  *
  * <p>Estado de cuenta: lo abonado (recibos vigentes) va cubriendo los pagos del más antiguo al más nuevo. Un pago que
  * no quedó cubierto está atrasado desde el día siguiente a su fecha. Ese reparto por monto no arrastra faltantes (una
@@ -90,6 +97,10 @@ public final class CalendarioPagos {
             return new Plan(inicio, mensualidad, plazoMeses, diaPago, primeraEnMesInicio, engancheLabel, enganche, nuevas);
         }
 
+        Plan conInicio(LocalDate nuevo) {
+            return new Plan(nuevo, mensualidad, plazoMeses, diaPago, primeraEnMesInicio, engancheLabel, enganche, pausas);
+        }
+
         /** Fecha de la mensualidad número {@code k} (1 = la primera): la de su mes en el plan o, si una pausa la movió,
          * la que le toca desde la pausa más reciente que empieza en ella o antes (mes a mes, con el día de la pausa). */
         public LocalDate fechaDe(int k) {
@@ -144,8 +155,34 @@ public final class CalendarioPagos {
     public record Pausa(int desde, LocalDate fecha) {
     }
 
-    /** El plan vigente de la venta (el último, si se reestructuró: ese ya no lleva el pago inicial). */
-    public static Plan planVigente(Venta venta) {
+    /**
+     * Regla del mes de la venta: un plan nunca arranca antes del MES de la fecha de venta. Si su inicio cae en un mes
+     * anterior (p. ej. la fecha de venta se corrigió después de reestructurar y {@code inicioPlan} se quedó con la
+     * vieja), arranca en la fecha de venta, con su mismo día de pago y su misma regla de primera mensualidad.
+     * Excepción: si algún abono vigente marcó como mes cubierto uno anterior al mes de la venta, el plan se deja como
+     * está (hay dinero aplicado a esos meses). Los abonos sin meses (apartado, enganche, extemporáneo) no cuentan.
+     *
+     * @param pagosVigentes los abonos vigentes (recibo no anulado) de la venta
+     */
+    static Plan aplicandoMesDeVenta(Plan plan, Venta venta, Collection<PagoVenta> pagosVigentes) {
+        YearMonth mesVenta = YearMonth.from(venta.getFechaVenta());
+        if (!YearMonth.from(plan.inicio()).isBefore(mesVenta)) return plan;
+        for (PagoVenta p : pagosVigentes) {
+            for (MesCubierto m : p.getMeses()) {
+                if (YearMonth.of(m.getAnio(), m.getMes()).isBefore(mesVenta)) return plan;
+            }
+        }
+        return plan.conInicio(venta.getFechaVenta());
+    }
+
+    /** El plan vigente de la venta (el último, si se reestructuró: ese ya no lleva el pago inicial), con la regla del
+     * mes de la venta ya aplicada (ver {@link #aplicandoMesDeVenta}). */
+    public static Plan planVigente(Venta venta, Collection<PagoVenta> pagosVigentes) {
+        return aplicandoMesDeVenta(planVigenteGuardado(venta), venta, pagosVigentes);
+    }
+
+    /** El plan vigente tal como está guardado en la venta, sin la regla del mes de la venta. */
+    private static Plan planVigenteGuardado(Venta venta) {
         // Con una reestructuración por saldo el plan vigente ya no lleva el pago inicial; con una completa sí (rehace
         // todo el plan desde la venta y conserva el enganche capturado).
         List<VentaReestructuracion> rs = venta.getReestructuraciones();
@@ -177,9 +214,9 @@ public final class CalendarioPagos {
     }
 
     /** El plan con que se registró la venta (antes de cualquier reestructuración): la primera guarda una copia. */
-    public static Plan planOriginal(Venta venta) {
+    public static Plan planOriginal(Venta venta, Collection<PagoVenta> pagosVigentes) {
         List<VentaReestructuracion> rs = venta.getReestructuraciones();
-        return rs.isEmpty() ? planVigente(venta) : planAnterior(rs.get(0));
+        return aplicandoMesDeVenta(rs.isEmpty() ? planVigenteGuardado(venta) : planAnterior(rs.get(0)), venta, pagosVigentes);
     }
 
     /** El plan que reemplazó una reestructuración. */
@@ -190,13 +227,15 @@ public final class CalendarioPagos {
 
     /** Primer y último mes en que una mensualidad puede caer, sumando todos los planes de la venta; null si ningún
      * plan tiene mensualidades. Lo usa la validación de los meses de un recibo. */
-    public static YearMonth[] rangoDeMeses(Venta venta) {
+    public static YearMonth[] rangoDeMeses(Venta venta, Collection<PagoVenta> pagosVigentes) {
         List<Plan> planes = new ArrayList<>();
         List<VentaReestructuracion> rs = venta.getReestructuraciones();
         for (int i = 0; i < rs.size(); i++) {
-            planes.add(planAnterior(rs.get(i)).conPausas(pausasDelPlan(venta, i == 0 ? null : rs.get(i - 1).getId())));
+            planes.add(aplicandoMesDeVenta(
+                    planAnterior(rs.get(i)).conPausas(pausasDelPlan(venta, i == 0 ? null : rs.get(i - 1).getId())),
+                    venta, pagosVigentes));
         }
-        planes.add(planVigente(venta));
+        planes.add(planVigente(venta, pagosVigentes));
         YearMonth primero = null;
         YearMonth ultimo = null;
         for (Plan p : planes) {
@@ -246,17 +285,18 @@ public final class CalendarioPagos {
      * sumar lo que se abonó mientras estuvo vigente (lo que se pagó con él), y el plan siguiente reparte lo que faltaba
      * del precio en ese corte. Así lo pagado antes del cambio sale igual y el total sigue siendo el precio.
      */
-    public static List<Concepto> conceptos(Venta venta, BigDecimal precio, Collection<VentaAportacion> aportacionesDeLaVenta) {
+    public static List<Concepto> conceptos(
+            Venta venta, BigDecimal precio, Collection<VentaAportacion> aportacionesDeLaVenta, Collection<PagoVenta> pagosVigentes) {
         List<VentaReestructuracion> rs = venta.getReestructuraciones();
-        if (rs.isEmpty()) return conceptosDePlan(planVigente(venta), precio, aportacionesDeLaVenta, 0);
+        if (rs.isEmpty()) return conceptosDePlan(planVigente(venta, pagosVigentes), precio, aportacionesDeLaVenta, 0);
         VentaReestructuracion ultima = rs.get(rs.size() - 1);
         if (ultima.isCompleta()) {
             // Rehace todo el plan: un solo tramo desde el primer mes de la venta que reparte el precio completo; lo
             // abonado se aplica en orden sobre él (y los meses vencidos sin cubrir salen atrasados).
             return conceptosDePlan(
-                    planVigente(venta), precio, aportacionesDelPlan(aportacionesDeLaVenta, ultima.getId()), rs.size());
+                    planVigente(venta, pagosVigentes), precio, aportacionesDelPlan(aportacionesDeLaVenta, ultima.getId()), rs.size());
         }
-        return conceptosPorTramos(venta, precio, aportacionesDeLaVenta, rs);
+        return conceptosPorTramos(venta, precio, aportacionesDeLaVenta, rs, pagosVigentes);
     }
 
     /** Las aportaciones que pertenecen a un plan (null = el original de la venta). */
@@ -267,7 +307,8 @@ public final class CalendarioPagos {
     /** Una reestructuración por saldo: de cada plan reemplazado quedan sus pagos más antiguos hasta sumar lo que se
      * abonó mientras estuvo vigente, y el último plan reparte lo que faltaba del precio en ese corte. */
     private static List<Concepto> conceptosPorTramos(
-            Venta venta, BigDecimal precio, Collection<VentaAportacion> aportacionesDeLaVenta, List<VentaReestructuracion> rs) {
+            Venta venta, BigDecimal precio, Collection<VentaAportacion> aportacionesDeLaVenta, List<VentaReestructuracion> rs,
+            Collection<PagoVenta> pagosVigentes) {
         List<Concepto> resultado = new ArrayList<>();
         BigDecimal abonadoAntes = BigDecimal.ZERO;
         for (int i = 0; i <= rs.size(); i++) {
@@ -275,12 +316,13 @@ public final class CalendarioPagos {
             List<VentaAportacion> propias = aportacionesDelPlan(aportacionesDeLaVenta, etiqueta);
             BigDecimal base = precio.subtract(abonadoAntes).max(BigDecimal.ZERO);
             if (i == rs.size()) {
-                resultado.addAll(conceptosDePlan(planVigente(venta), base, propias, i));
+                resultado.addAll(conceptosDePlan(planVigente(venta, pagosVigentes), base, propias, i));
                 break;
             }
             VentaReestructuracion r = rs.get(i);
             BigDecimal cubierto = r.getAbonadoAlCorte().subtract(abonadoAntes).max(BigDecimal.ZERO);
-            for (Concepto c : conceptosDePlan(planAnterior(r).conPausas(pausasDelPlan(venta, etiqueta)), base, propias, i)) {
+            Plan reemplazado = aplicandoMesDeVenta(planAnterior(r).conPausas(pausasDelPlan(venta, etiqueta)), venta, pagosVigentes);
+            for (Concepto c : conceptosDePlan(reemplazado, base, propias, i)) {
                 if (cubierto.signum() <= 0) break;
                 BigDecimal monto = c.monto().min(cubierto);
                 resultado.add(c.conMonto(monto));

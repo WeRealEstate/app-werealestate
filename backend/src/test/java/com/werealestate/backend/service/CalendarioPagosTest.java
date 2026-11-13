@@ -27,7 +27,7 @@ class CalendarioPagosTest {
     }
 
     private static CalendarioPagos.EstadoDeCuenta cuenta(Venta v, String precio, String abonado, List<VentaAportacion> aportaciones) {
-        List<CalendarioPagos.Concepto> conceptos = CalendarioPagos.conceptos(v, d(precio), aportaciones);
+        List<CalendarioPagos.Concepto> conceptos = CalendarioPagos.conceptos(v, d(precio), aportaciones, List.of());
         return CalendarioPagos.estadoDeCuenta(conceptos, d(precio), d(abonado), HOY);
     }
 
@@ -188,7 +188,7 @@ class CalendarioPagosTest {
         // Venta real: enganche 10 mil y 7 mensualidades (la última de 16,680.26 por el redondeo); lleva 75,900.
         Venta v = venta(LocalDate.of(2026, 4, 10), "16680.29", 7, "Enganche", "10000", 10, false);
         LocalDate hoy = LocalDate.of(2026, 11, 10);
-        List<CalendarioPagos.Concepto> conceptos = CalendarioPagos.conceptos(v, d("126762"), List.of());
+        List<CalendarioPagos.Concepto> conceptos = CalendarioPagos.conceptos(v, d("126762"), List.of(), List.of());
         CalendarioPagos.EstadoDeCuenta c = CalendarioPagos.estadoDeCuenta(conceptos, d("126762"), d("75900"), hoy);
         List<AmortizacionDto.Fila> f = c.filas();
 
@@ -255,7 +255,7 @@ class CalendarioPagosTest {
                 .isEqualByComparingTo("153000");
         assertThat(c.pagosAtrasados()).isZero();
         assertThat(c.proximaFecha()).isEqualTo(LocalDate.of(2026, 12, 15));
-        assertThat(CalendarioPagos.rangoDeMeses(v)).containsExactly(
+        assertThat(CalendarioPagos.rangoDeMeses(v, List.of())).containsExactly(
                 java.time.YearMonth.of(2026, 9), java.time.YearMonth.of(2029, 4));
     }
 

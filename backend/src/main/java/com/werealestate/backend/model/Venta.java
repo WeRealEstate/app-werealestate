@@ -192,6 +192,28 @@ public class Venta {
         this.notas = notas;
     }
 
+    /**
+     * Tras corregir la fecha de venta ({@link #actualizar}): si el plan vigente viene de una reestructuración COMPLETA
+     * (la que rehace todo desde el inicio de la venta) y arrancaba justo en la fecha de venta de antes, su inicio la
+     * sigue a la nueva; si no, {@code inicioPlan} se quedaría en la fecha vieja. No toca una reestructuración por saldo
+     * (su inicio es la fecha de corte) ni mueve nada si algún abono vigente marcó un mes anterior al mes de la venta
+     * nueva (hay dinero aplicado a esos meses). Mismo criterio que CalendarioPagos.aplicandoMesDeVenta.
+     *
+     * @param pagosVigentes los abonos vigentes (recibo no anulado) de la venta
+     */
+    public void seguirFechaDeVenta(LocalDate fechaAnterior, java.util.Collection<PagoVenta> pagosVigentes) {
+        if (inicioPlan == null || fechaAnterior == null || fechaVenta.equals(fechaAnterior)) return;
+        if (!inicioPlan.equals(fechaAnterior)) return;
+        if (reestructuraciones.isEmpty() || !reestructuraciones.get(reestructuraciones.size() - 1).isCompleta()) return;
+        java.time.YearMonth mesVenta = java.time.YearMonth.from(fechaVenta);
+        for (PagoVenta p : pagosVigentes) {
+            for (MesCubierto m : p.getMeses()) {
+                if (java.time.YearMonth.of(m.getAnio(), m.getMes()).isBefore(mesVenta)) return;
+            }
+        }
+        this.inicioPlan = fechaVenta;
+    }
+
     /** Contrato firmado: la comisión de la venta solo se puede entregar con el contrato firmado
      * (ver ComisionService, regla nueva). La fecha de firma es obligatoria cuando está firmado. */
     @jakarta.persistence.Column(name = "contrato_firmado", nullable = false)

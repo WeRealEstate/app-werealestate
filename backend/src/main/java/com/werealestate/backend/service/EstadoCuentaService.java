@@ -100,7 +100,7 @@ public class EstadoCuentaService {
         BigDecimal precio = lotes.stream().map(VentaLote::getPrecio).reduce(BigDecimal.ZERO, BigDecimal::add);
         List<PagoVenta> pagos = pagoVentaRepository.findVigentesByVentaIdOrderByFechaAscIdAsc(venta.getId());
         List<CalendarioPagos.Concepto> conceptos = CalendarioPagos.conceptos(
-                venta, precio, ventaAportacionRepository.findByVentaIdOrderByAnioAscMesAsc(venta.getId()));
+                venta, precio, ventaAportacionRepository.findByVentaIdOrderByAnioAscMesAsc(venta.getId()), pagos);
         CalendarioPagos.EstadoDeCuenta cuenta = CalendarioPagos.estadoDeCuenta(conceptos, precio, pagos, hoy);
 
         Cliente titular = venta.getClienteRef();
@@ -116,7 +116,7 @@ public class EstadoCuentaService {
                 .map(cp -> cp.getCliente().nombreCompleto())
                 .toList();
         boolean conPlazo = venta.getMensualidad() != null && venta.getPlazoMeses() != null;
-        CalendarioPagos.Plan original = CalendarioPagos.planOriginal(venta);
+        CalendarioPagos.Plan original = CalendarioPagos.planOriginal(venta, pagos);
 
         return new AmortizacionDto(
                 venta.getId(),

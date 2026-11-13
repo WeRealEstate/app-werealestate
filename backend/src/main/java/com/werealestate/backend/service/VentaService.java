@@ -351,6 +351,7 @@ public class VentaService {
             venta.setFechaProvisional(false);
         }
 
+        LocalDate fechaAnterior = venta.getFechaVenta();
         venta.setModalidadPago(request.modalidadPago());
         venta.actualizar(
                 venta.getCliente(),
@@ -367,6 +368,8 @@ public class VentaService {
                         ? request.primeraMensualidadMesVenta()
                         : venta.isPrimeraMensualidadMesVenta(),
                 notas);
+        // El plan reestructurado de forma completa arranca en la fecha de venta: si esta cambió, lo sigue.
+        if (fechaCambio) venta.seguirFechaDeVenta(fechaAnterior, consultas.pagosVigentes(venta.getId()));
         if (request.clienteId() != null) {
             Cliente nuevo = clienteService.obtenerEntidad(request.clienteId());
             venta.ligarCliente(nuevo);

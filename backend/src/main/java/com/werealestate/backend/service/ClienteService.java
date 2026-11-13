@@ -511,7 +511,8 @@ public class ClienteService {
         /** Cómo va la venta con sus pagos a hoy: el mismo cálculo que Finanzas y la tabla de amortización. */
         CalendarioPagos.EstadoDeCuenta cuentaDe(Venta v, BigDecimal precio, BigDecimal abonado) {
             return cuentas.computeIfAbsent(v.getId(), id -> CalendarioPagos.estadoDeCuenta(
-                    CalendarioPagos.conceptos(v, precio, aportacionesPorVenta.getOrDefault(id, List.of())),
+                    CalendarioPagos.conceptos(v, precio, aportacionesPorVenta.getOrDefault(id, List.of()),
+                            pagosPorVenta.getOrDefault(id, List.of())),
                     precio,
                     pagosPorVenta.getOrDefault(id, List.of()),
                     hoy));

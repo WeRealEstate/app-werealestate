@@ -137,6 +137,8 @@ public class ReciboVentaService {
             LocalDate fechaExtemporaneo,
             Long aportacionActual) {
         boolean traeMeses = mesesPedidos != null && !mesesPedidos.isEmpty();
+        // Los abonos vigentes fijan el primer mes posible del plan (CalendarioPagos.aplicandoMesDeVenta).
+        List<PagoVenta> pagosVigentes = pagoVentaRepository.findVigentesByVentaIdOrderByFechaAscIdAsc(venta.getId());
 
         if (extemporaneo && !tipo.esMensual()) {
             throw new ValidationException("Solo una mensualidad puede ser un pago extemporáneo");
@@ -155,7 +157,7 @@ public class ReciboVentaService {
                 }
                 // Extemporáneo = después de que terminó el plan (decisión del usuario): dentro del plazo es una
                 // mensualidad normal con sus meses.
-                YearMonth[] rango = CalendarioPagos.rangoDeMeses(venta);
+                YearMonth[] rango = CalendarioPagos.rangoDeMeses(venta, pagosVigentes);
                 if (fechaExtemporaneo != null && rango != null && !YearMonth.from(fechaExtemporaneo).isAfter(rango[1])) {
                     throw new ValidationException("El plan termina en " + rango[1]
                             + ": un pago extemporáneo solo se registra después; dentro del plazo elige los meses que cubre");
@@ -165,7 +167,7 @@ public class ReciboVentaService {
             if (!traeMeses) {
                 throw new ValidationException("Indica el mes o los meses que cubre la mensualidad");
             }
-            return new Referencias(mesesDelPlazo(venta, mesesPedidos), null);
+            return new Referencias(mesesDelPlazo(venta, mesesPedidos, pagosVigentes), null);
         }
 
         // Un apartado va a la deuda total (sin meses) o, si así se eligió, a la mensualidad de uno o varios meses: solo
@@ -177,7 +179,7 @@ public class ReciboVentaService {
             if (aportacionId != null) {
                 throw new ValidationException("Un apartado no se liga a una aportación");
             }
-            return new Referencias(mesesDelPlazo(venta, mesesPedidos), null);
+            return new Referencias(mesesDelPlazo(venta, mesesPedidos, pagosVigentes), null);
         }
 
         if (traeMeses) {
@@ -207,8 +209,9 @@ public class ReciboVentaService {
 
     /** Valida que los meses estén dentro del plazo (con reestructuraciones, del primer mes del plan original al último
      * del vigente) y no se repitan. */
-    private static List<MesCubierto> mesesDelPlazo(Venta venta, List<PagoVentaCreateRequest.Mes> mesesPedidos) {
-        YearMonth[] rango = CalendarioPagos.rangoDeMeses(venta);
+    private static List<MesCubierto> mesesDelPlazo(
+            Venta venta, List<PagoVentaCreateRequest.Mes> mesesPedidos, List<PagoVenta> pagosVigentes) {
+        YearMonth[] rango = CalendarioPagos.rangoDeMeses(venta, pagosVigentes);
         YearMonth primero = rango[0];
         YearMonth ultimo = rango[1];
         Set<YearMonth> vistos = new HashSet<>();

@@ -41,6 +41,12 @@ public class ConsultasVenta {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
+    /** Los abonos vigentes (recibo no anulado) de la venta: lo que necesita CalendarioPagos para su regla del mes de la
+     * venta, además del total abonado. */
+    public List<PagoVenta> pagosVigentes(Long ventaId) {
+        return pagoVentaRepository.findVigentesByVentaIdOrderByFechaAscIdAsc(ventaId);
+    }
+
     /** Lo abonado de verdad: los recibos anulados ya no cuentan. */
     public BigDecimal totalAbonado(Long ventaId) {
         return pagoVentaRepository.findVigentesByVentaIdOrderByFechaAscIdAsc(ventaId).stream()

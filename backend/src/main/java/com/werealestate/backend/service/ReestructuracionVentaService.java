@@ -4,6 +4,7 @@ import com.werealestate.backend.dto.VentaDto;
 import com.werealestate.backend.dto.VentaReestructurarRequest;
 import com.werealestate.backend.exception.ConflictException;
 import com.werealestate.backend.exception.ValidationException;
+import com.werealestate.backend.model.PagoVenta;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.model.Venta;
 import com.werealestate.backend.model.VentaAportacion;
@@ -72,7 +73,8 @@ public class ReestructuracionVentaService {
         // Se rehace TODO el plan (decisión del usuario): arranca en el primer mes del plan original de la venta y reparte
         // el precio completo menos el enganche capturado; lo abonado se vuelve a aplicar en orden y los meses vencidos
         // sin cubrir salen atrasados.
-        CalendarioPagos.Plan original = CalendarioPagos.planOriginal(venta);
+        List<PagoVenta> pagosVigentes = consultas.pagosVigentes(id);
+        CalendarioPagos.Plan original = CalendarioPagos.planOriginal(venta, pagosVigentes);
         EngancheNuevo engancheNuevo = engancheNuevoDeLaReestructuracion(original, request, precio);
         BigDecimal enganche = engancheNuevo != null
                 ? engancheNuevo.monto()
@@ -87,7 +89,7 @@ public class ReestructuracionVentaService {
         BigDecimal aportado = aportaciones.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal mensualidad = mensualidadDelPlanNuevo(aRepartir, aportado, plazo - aportaciones.size());
 
-        CalendarioPagos.Plan anterior = CalendarioPagos.planVigente(venta);
+        CalendarioPagos.Plan anterior = CalendarioPagos.planVigente(venta, pagosVigentes);
         String formaPago = "Reestructurada · " + (enganche.signum() > 0 ? "con enganche · " : "") + plazo + " meses"
                 + (aportaciones.isEmpty() ? "" : " + aportaciones");
         if (formaPago.length() > 50) formaPago = formaPago.substring(0, 50);
@@ -96,7 +98,7 @@ public class ReestructuracionVentaService {
                 venta, LocalDate.now(), abonado, aRepartir, request.motivo().trim(), actual,
                 anterior.inicio(), venta.getFormaPago(), anterior.mensualidad(), anterior.plazoMeses(), anterior.diaPago(),
                 anterior.primeraEnMesInicio(), anterior.engancheLabel(), anterior.enganche(),
-                describirPlanVigente(venta), resumenNuevo).comoCompleta();
+                describirPlanVigente(venta, pagosVigentes), resumenNuevo).comoCompleta();
         entityManager.persist(r);
         venta.agregarReestructuracion(r);
         if (engancheNuevo != null) venta.ponerEnganche(engancheNuevo.etiqueta(), engancheNuevo.monto());
@@ -164,8 +166,8 @@ public class ReestructuracionVentaService {
         return resto.divide(BigDecimal.valueOf(regulares), 2, RoundingMode.DOWN);
     }
 
-    private String describirPlanVigente(Venta venta) {
-        CalendarioPagos.Plan p = CalendarioPagos.planVigente(venta);
+    private String describirPlanVigente(Venta venta, List<PagoVenta> pagosVigentes) {
+        CalendarioPagos.Plan p = CalendarioPagos.planVigente(venta, pagosVigentes);
         if (!p.conPlazoPublico()) return venta.getFormaPago() + " · contado";
         List<VentaAportacion> propias = ventaAportacionRepository.findByVentaIdOrderByAnioAscMesAsc(venta.getId()).stream()
                 .filter(a -> ConsultasVenta.delPlanVigente(venta, a))

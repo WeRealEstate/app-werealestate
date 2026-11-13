@@ -309,7 +309,7 @@ public class FinanzasService {
             List<PagoVenta> pagosVigentes,
             LocalDate hoy,
             YearMonth mesActual) {
-        List<CalendarioPagos.Concepto> conceptos = CalendarioPagos.conceptos(venta, precio, aportaciones);
+        List<CalendarioPagos.Concepto> conceptos = CalendarioPagos.conceptos(venta, precio, aportaciones, pagosVigentes);
         BigDecimal esperadoMes = BigDecimal.ZERO;
         LocalDate fechaMes = null;
         for (CalendarioPagos.Concepto c : conceptos) {
@@ -351,7 +351,8 @@ public class FinanzasService {
 
     /** Lo que se espera cobrar de la venta, en orden de fecha, sin pasar nunca de su precio. */
     private static List<CalendarioPagos.Concepto> calendario(Datos datos, Venta venta) {
-        return CalendarioPagos.conceptos(venta, datos.precioDe(venta.getId()), datos.aportacionesDe(venta.getId()));
+        return CalendarioPagos.conceptos(
+                venta, datos.precioDe(venta.getId()), datos.aportacionesDe(venta.getId()), datos.pagosDe(venta.getId()));
     }
 
     /** Cómo se lee el pago en el detalle de Ingresos: "Mensualidad 3/24", "Aportación", "Enganche"… */

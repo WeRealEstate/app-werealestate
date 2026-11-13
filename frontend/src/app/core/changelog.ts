@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.0.2', fecha: '2026-11-13', cambios: [
+    "Tabla de amortización: el plan de pagos ya no arranca antes del mes de la venta (por ejemplo, si se corrigió la fecha de venta después de reestructurar); si algún recibo ya marcó esos meses, se queda como estaba.",
+  ] },
   { version: '12.0.1', fecha: '2026-11-13', cambios: [
     "Plano público: al dar clic en un lote ya no se pierde el zoom; el plano se queda donde estabas.",
   ] },
