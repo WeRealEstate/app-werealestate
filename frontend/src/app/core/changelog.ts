@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.1.4', fecha: '2026-11-13', cambios: [
+    "Estado de cuenta (PDF): logo de WE mejor centrado bajo la línea azul y valores de los campos en texto normal (solo encabezados en negritas).",
+  ] },
   { version: '12.1.3', fecha: '2026-11-13', cambios: [
     "Estado de cuenta (PDF): agregado el logo de WE debajo de la línea azul del encabezado y eliminada la etiqueta «Reestructurada ·» de la forma de pago tanto en el PDF como en el sistema.",
   ] },

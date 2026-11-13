@@ -65,12 +65,13 @@ export class PdfAmortizacionService {
     this.encabezado(doc, a, ancho, true, 'ESTADO DE CUENTA');
     const logoW = 24;
     const logoH = logoW / LOGO_PROPORCION;
-    doc.addImage(logo, 'PNG', ancho - MARGEN - logoW, 26, logoW, logoH, 'logo-we');
-    const anchoTextoPortada = ancho - 2 * MARGEN - logoW - 6;
+    const logoX = ancho - MARGEN - logoW - 10;
+    doc.addImage(logo, 'PNG', logoX, 31, logoW, logoH, 'logo-we');
+    const anchoTextoPortada = logoX - MARGEN - 6;
 
     let y = 32;
     doc.setTextColor(...MUTED);
-    doc.setFont(FUENTE, 'bold');
+    doc.setFont(FUENTE, 'normal');
     doc.setFontSize(7.5);
     doc.text(`ESTADO DE CUENTA AL ${fechaCorta(a.corte)}`, MARGEN, y, { charSpace: 0.4 });
     doc.setTextColor(...TEXT);
@@ -265,7 +266,7 @@ export class PdfAmortizacionService {
     const renglones: { campo: Campo; columna: number; lineas: string[]; tamano: number }[][] = [];
     let actual: { campo: Campo; columna: number; lineas: string[]; tamano: number }[] = [];
     let ocupadas = 0;
-    doc.setFont(FUENTE, 'bold');
+    doc.setFont(FUENTE, 'normal');
     for (const campo of campos) {
       const n = Math.min(campo.columnas ?? 1, columnas);
       if (ocupadas + n > columnas) {
@@ -292,7 +293,7 @@ export class PdfAmortizacionService {
         doc.setFontSize(6.5);
         doc.text(recortar(doc, campo.etiqueta, anchoColumna * (campo.columnas ?? 1) - 4), x, yRenglon);
         doc.setTextColor(...TEXT);
-        doc.setFont(FUENTE, 'bold');
+        doc.setFont(FUENTE, 'normal');
         doc.setFontSize(t);
         doc.text(lineas, x, yRenglon + 4.2);
       }
