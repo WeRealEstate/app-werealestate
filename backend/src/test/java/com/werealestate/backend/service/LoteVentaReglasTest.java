@@ -50,6 +50,8 @@ class LoteVentaReglasTest {
     private UsuarioRepository usuarios;
     private Usuario actual;
     private LoteService service;
+    private LoteVentaService loteVenta;
+    private LoteConsultaService consulta;
     private final List<Object[]> numeros = new ArrayList<>();
 
     @BeforeEach
@@ -63,8 +65,13 @@ class LoteVentaReglasTest {
         when(actual.getRol()).thenReturn(Role.ADMIN);
         when(provider.getUsuarioActual()).thenReturn(actual);
         when(ventaLotes.numeroDeVentaPorLote(any())).thenReturn(numeros);
-        service = new LoteService(lotes, mock(DesarrolloRepository.class), usuarios, mock(AsesorExternoRepository.class),
-                movimientos, ventaLotes, provider, mock(PasswordEncoder.class));
+        DesarrolloRepository desarrollos = mock(DesarrolloRepository.class);
+        AutorizacionLotes autorizacion = new AutorizacionLotes(provider);
+        consulta = new LoteConsultaService(lotes, desarrollos, ventaLotes, autorizacion);
+        HistorialLoteService historial = new HistorialLoteService(movimientos, consulta, autorizacion);
+        service = new LoteService(lotes, desarrollos, usuarios, mock(AsesorExternoRepository.class),
+                ventaLotes, provider, mock(PasswordEncoder.class), consulta, historial, autorizacion);
+        loteVenta = new LoteVentaService(ventaLotes, provider, consulta, historial, autorizacion);
     }
 
     private Lote lote(long id, EstadoLote estado) {
@@ -168,7 +175,7 @@ class LoteVentaReglasTest {
         Lote lote = lote(1, EstadoLote.EN_PROCESO_DE_FIRMA);
         lote.setMontoApartado(new BigDecimal("5000"));
 
-        service.liberarPorVentaEliminada(1L);
+        loteVenta.liberarPorVentaEliminada(1L);
 
         assertEquals(EstadoLote.DISPONIBLE, lote.getEstado());
         assertNull(lote.getMontoApartado());
@@ -178,7 +185,7 @@ class LoteVentaReglasTest {
     void alEliminarLaVentaUnLoteEnOtroEstadoSeQuedaIgual() {
         Lote lote = lote(1, EstadoLote.RESERVADO_WE);
 
-        service.liberarPorVentaEliminada(1L);
+        loteVenta.liberarPorVentaEliminada(1L);
 
         assertEquals(EstadoLote.RESERVADO_WE, lote.getEstado());
         verify(movimientos, never()).save(any());
@@ -190,8 +197,8 @@ class LoteVentaReglasTest {
         sinFirmar.setMontoApartado(new BigDecimal("3000"));
         Lote firmado = lote(2, EstadoLote.DISPONIBLE);
 
-        service.marcarPorVenta(1L, false, "Cliente", "Asesor");
-        service.marcarPorVenta(2L, true, "Cliente", "Asesor");
+        loteVenta.marcarPorVenta(1L, false, "Cliente", "Asesor");
+        loteVenta.marcarPorVenta(2L, true, "Cliente", "Asesor");
 
         assertEquals(EstadoLote.EN_PROCESO_DE_FIRMA, sinFirmar.getEstado());
         assertNull(sinFirmar.getMontoApartado());
@@ -202,10 +209,10 @@ class LoteVentaReglasTest {
     void elContratoSoloDejaMovimientoSiCambiaElEstado() {
         Lote lote = lote(1, EstadoLote.VENDIDO);
 
-        service.ponerEstadoDeVenta(1L, EstadoLote.VENDIDO, "Cliente", "Contrato firmado");
+        loteVenta.ponerEstadoDeVenta(1L, EstadoLote.VENDIDO, "Cliente", "Contrato firmado");
         verify(movimientos, never()).save(any());
 
-        service.ponerEstadoDeVenta(1L, EstadoLote.EN_PROCESO_DE_FIRMA, "Cliente", "Se quitó la firma del contrato");
+        loteVenta.ponerEstadoDeVenta(1L, EstadoLote.EN_PROCESO_DE_FIRMA, "Cliente", "Se quitó la firma del contrato");
         assertEquals(EstadoLote.EN_PROCESO_DE_FIRMA, lote.getEstado());
         verify(movimientos).save(any());
     }
@@ -220,7 +227,7 @@ class LoteVentaReglasTest {
         DesarrolloRepository desarrollos = (DesarrolloRepository) ReflectionTestUtils.getField(service, "desarrolloRepository");
         when(desarrollos.findById(10L)).thenReturn(Optional.of(mock(Desarrollo.class)));
 
-        List<LoteDto> plano = service.obtenerMapa(10L).lotes();
+        List<LoteDto> plano = consulta.obtenerMapa(10L).lotes();
 
         assertEquals("S-5", plano.get(0).ventaNumero());
         assertTrue(!plano.get(0).sinVentaRegistrada());
@@ -251,7 +258,7 @@ class LoteVentaReglasTest {
         ReflectionTestUtils.setField(sinFirma, "montoApartado", new BigDecimal("5000"));
         ventaDe(sinFirma, 10, 18, false);
 
-        LoteDto dto = service.alinearConVenta(1L);
+        LoteDto dto = loteVenta.alinearConVenta(1L);
 
         assertEquals(EstadoLote.EN_PROCESO_DE_FIRMA, sinFirma.getEstado());
         assertEquals(null, sinFirma.getMontoApartado());
@@ -262,7 +269,7 @@ class LoteVentaReglasTest {
 
         Lote firmado = lote(2, EstadoLote.DISPONIBLE);
         ventaDe(firmado, 11, 19, true);
-        service.alinearConVenta(2L);
+        loteVenta.alinearConVenta(2L);
         assertEquals(EstadoLote.VENDIDO, firmado.getEstado());
     }
 
@@ -270,11 +277,11 @@ class LoteVentaReglasTest {
     void alinearNoAplicaSinVentaNiSiYaCoincide() {
         lote(1, EstadoLote.VENDIDO);
         when(ventaLotes.findByLoteId(1L)).thenReturn(List.of());
-        assertThrows(ConflictException.class, () -> service.alinearConVenta(1L));
+        assertThrows(ConflictException.class, () -> loteVenta.alinearConVenta(1L));
 
         Lote yaAlineado = lote(2, EstadoLote.VENDIDO);
         ventaDe(yaAlineado, 12, 20, true);
-        assertThrows(ConflictException.class, () -> service.alinearConVenta(2L));
+        assertThrows(ConflictException.class, () -> loteVenta.alinearConVenta(2L));
         verify(movimientos, never()).save(any());
     }
 
@@ -284,7 +291,7 @@ class LoteVentaReglasTest {
         ventaDe(lote, 13, 21, false);
         when(actual.getRol()).thenReturn(Role.ASESOR);
 
-        assertThrows(ForbiddenOperationException.class, () -> service.alinearConVenta(1L));
+        assertThrows(ForbiddenOperationException.class, () -> loteVenta.alinearConVenta(1L));
         assertEquals(EstadoLote.APARTADO, lote.getEstado());
     }
 }

@@ -1,5 +1,4 @@
 import { LucideChevronDown, LucideCircleAlert, LucideHandCoins, LucideLandmark, LucideTrendingUp, LucideWallet } from '@lucide/angular';
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -21,7 +20,7 @@ import {
   FormaPagoComision,
   MODALIDAD_COMISION_LABELS,
 } from '../../../core/models/finanzas.model';
-import { frasePagosAtrasados } from '../../../core/models/amortizacion.model';
+import { frasePagosAtrasados, fechaCorta } from '../../../core/models/amortizacion.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { FinanzasService } from '../../../core/services/finanzas.service';
@@ -33,6 +32,7 @@ import { FinanzasValorComponent } from './finanzas-valor.component';
 import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 import { SkeletonKpisComponent } from '../../../shared/skeleton-kpis/skeleton-kpis.component';
 import { MonedaInputDirective } from '../../../shared/moneda-input/moneda-input.directive';
+import { dinero, mensajeDe } from '../../../core/utils/formato-pantalla';
 
 type Pestana = 'comisiones' | 'ingresos' | 'valor' | 'gastos';
 
@@ -574,9 +574,7 @@ export class FinanzasComponent {
   }
 
   fecha(iso: string | null): string {
-    if (!iso) return '—';
-    const [anio, mes, dia] = iso.slice(0, 10).split('-');
-    return `${dia}/${mes}/${anio}`;
+    return fechaCorta(iso);
   }
 
   money(valor: number): string {
@@ -608,10 +606,3 @@ function hoyIso(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function dinero(valor: number): string {
-  return valor.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function mensajeDe(error: unknown, porDefecto: string): string {
-  return error instanceof HttpErrorResponse && typeof error.error?.message === 'string' ? error.error.message : porDefecto;
-}

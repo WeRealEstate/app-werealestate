@@ -14,7 +14,6 @@ import {
   EstadoLote,
   Lote,
   MAX_LOTES_APARTADO_MULTIPLE,
-  PuntoMapa,
 } from '../../../core/models/lote.model';
 import { LotesService } from '../../../core/services/lotes.service';
 import { colorDeBarra, fondoDePagina } from '../../../core/utils/pagina';
@@ -22,7 +21,20 @@ import { DetectorDeRueda } from '../../../core/utils/rueda';
 import { leerImagenParaPdf } from '../../../core/utils/imagen-pdf';
 import { ToastService } from '../../../core/services/toast.service';
 import { WeFormsPublicoService } from '../../../core/services/we-forms-publico.service';
+import {
+  acotarOCentrar,
+  alternarLoteEnSeleccion,
+  cargarImagenEnSegundoPlano,
+  desplazamientoAlHacerZoom,
+  limitar,
+  puntosSvg,
+  tienePoligono,
+  urlVistaRapida,
+} from '../../../core/utils/plano-vista';
+import { salirDePantallaCompleta } from '../../../core/utils/pantalla-completa';
+import { guardarAsesor, leerAsesorGuardado, marcarSinAcceso, olvidarSinAcceso, sinAccesoReciente } from './plano-publico-almacen';
 import { ToastContainerComponent } from '../../../shared/toast-container/toast-container.component';
+import { AccesoAsesorModalComponent } from './acceso-asesor-modal/acceso-asesor-modal.component';
 
 type ProyectoPublico = 'samai' | 'nanuu';
 
@@ -34,10 +46,10 @@ const NOTA_MAX_LENGTH = 500;
  * Para deshacerla sin tocar nada más: ponerlo en false (vuelve al comportamiento anterior, el
  * grosor sigue al zoom en vivo), o revertir el commit de esta optimización (git revert). */
 const CONGELAR_TRAZO_EN_GESTO = true;
-const CLAVE_ASESOR = 'plano-publico-asesor-';
 
 /** Mismos límites/pasos de zoom que /panel/plano (ver ese componente para el porqué de cada
- * valor); no se comparte el código porque esta vista no tiene nada de edición. */
+ * valor); la matemática del visor (zoom alrededor de un punto, acotar el desplazamiento) se comparte con él en
+ * core/utils/plano-vista. */
 /** Tope inferior de seguridad del zoom de ajuste: un plano absurdamente alto/angosto no debe
  * reducirse hasta desaparecer. */
 const ZOOM_MIN = 0.1;
@@ -58,67 +70,6 @@ const DURACION_ANIMACION_MS = 220;
 const CLAVE_AVISO_ROTAR = 'plano-publico-aviso-rotar';
 const DURACION_AVISO_ROTAR_MS = 9000;
 
-function leerAsesorGuardado(proyecto: string): string | null {
-  try {
-    return sessionStorage.getItem(CLAVE_ASESOR + proyecto);
-  } catch {
-    return null;
-  }
-}
-
-function guardarAsesor(proyecto: string, nombre: string | null): void {
-  try {
-    if (nombre) sessionStorage.setItem(CLAVE_ASESOR + proyecto, nombre);
-    else sessionStorage.removeItem(CLAVE_ASESOR + proyecto);
-  } catch {
-    // Sin almacenamiento: el acceso solo dura hasta recargar.
-  }
-}
-
-/** Desarrollos a los que el PIN recordado NO tiene acceso (proyecto → { pin, hasta }). Evita volver a preguntarle
- * al servidor en cada visita: cada respuesta "sin acceso" cuenta como intento fallido del PIN en esa IP (ver
- * AsesorPublicoController), y con 5 se bloquea por 10 minutos a todos los que entran desde ahí. Caduca en unas
- * horas por si administración le da acceso después; escribir el PIN a mano con el botón "Asesor" también lo borra. */
-const CLAVE_SIN_ACCESO = 'plano-publico-sin-acceso';
-const DURACION_SIN_ACCESO_MS = 12 * 60 * 60 * 1000;
-
-function leerSinAcceso(): Record<string, { pin: string; hasta: number }> {
-  try {
-    return JSON.parse(localStorage.getItem(CLAVE_SIN_ACCESO) ?? '{}');
-  } catch {
-    return {};
-  }
-}
-
-function sinAccesoReciente(pin: string, proyecto: string): boolean {
-  const marca = leerSinAcceso()[proyecto];
-  return !!marca && marca.pin === pin && marca.hasta > Date.now();
-}
-
-function marcarSinAcceso(pin: string, proyecto: string): void {
-  try {
-    const marcas = leerSinAcceso();
-    marcas[proyecto] = { pin, hasta: Date.now() + DURACION_SIN_ACCESO_MS };
-    localStorage.setItem(CLAVE_SIN_ACCESO, JSON.stringify(marcas));
-  } catch {
-    // Sin almacenamiento: se vuelve a preguntar en la siguiente visita.
-  }
-}
-
-function olvidarSinAcceso(proyecto?: string): void {
-  try {
-    if (!proyecto) {
-      localStorage.removeItem(CLAVE_SIN_ACCESO);
-      return;
-    }
-    const marcas = leerSinAcceso();
-    delete marcas[proyecto];
-    localStorage.setItem(CLAVE_SIN_ACCESO, JSON.stringify(marcas));
-  } catch {
-    // nada que borrar
-  }
-}
-
 /** Plano interactivo público, en pantalla completa y sin sesión — para compartir el link de un
  * desarrollo directamente (/samai, /aldea-nanuu, ver app.routes.ts). Cualquiera puede ver el estado de cada
  * lote y apartar uno disponible (pidiendo nombre de asesor y de cliente, ver LoteService.cambiarEstadoPublico), pero no editar el
@@ -126,7 +77,7 @@ function olvidarSinAcceso(proyecto?: string): void {
 @Component({
   selector: 'app-plano-publico',
   standalone: true,
-  imports: [FormsModule, DecimalPipe, RouterLink, ToastContainerComponent],
+  imports: [FormsModule, DecimalPipe, RouterLink, ToastContainerComponent, AccesoAsesorModalComponent],
   templateUrl: './plano-publico.component.html',
   // Con cientos de polígonos, revisar toda la plantilla en cada paso de zoom era lo más caro: todo el estado que
   // lee la plantilla son signals, así que solo se repinta lo que cambia.
@@ -172,7 +123,7 @@ export class PlanoPublicoComponent implements OnDestroy {
 
   async alternarPantallaCompleta(): Promise<void> {
     if (document.fullscreenElement) {
-      await document.exitFullscreen().catch(() => undefined);
+      await salirDePantallaCompleta();
       return;
     }
     await this.raizPlano?.nativeElement.requestFullscreen().catch(() => undefined);
@@ -186,7 +137,7 @@ export class PlanoPublicoComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
+    void salirDePantallaCompleta();
   }
 
   /** Fijo por la ruta (/samai o /aldea-nanuu, ver app.routes.ts) — a diferencia del panel, esta
@@ -223,9 +174,7 @@ export class PlanoPublicoComponent implements OnDestroy {
   readonly planoImagenUrl = computed(() => {
     const url = this.planoUrl();
     if (!url) return null;
-    if (this.usandoPreview() && !this.hdLista()) {
-      return url.replace(/\.(jpg|jpeg|png|webp)(?=\?|$)/i, '-preview.jpg');
-    }
+    if (this.usandoPreview() && !this.hdLista()) return urlVistaRapida(url);
     const intento = this.reintentoImagen();
     if (intento === 0) return url;
     return `${url}${url.includes('?') ? '&' : '?'}r=${intento}`;
@@ -242,10 +191,10 @@ export class PlanoPublicoComponent implements OnDestroy {
    * cada movimiento del mouse o del dedo era lo que más trabajo de JavaScript metía. */
   readonly poligonos = computed(() =>
     this.lotes()
-      .filter((l) => this.tienePoligono(l))
+      .filter(tienePoligono)
       .map((lote) => ({
         lote,
-        puntos: this.puntosSvg(lote.mapaPoligono!),
+        puntos: puntosSvg(lote.mapaPoligono!),
         titulo: `MZ ${lote.manzana} - Lote ${lote.numeroLote}`,
       })),
   );
@@ -273,19 +222,9 @@ export class PlanoPublicoComponent implements OnDestroy {
   }
 
   private alternarSeleccion(lote: Lote): void {
-    if (this.seleccion().includes(lote.id)) {
-      this.seleccion.update((ids) => ids.filter((id) => id !== lote.id));
-      return;
-    }
-    if (!this.puedeApartar(lote)) {
-      this.toast.error('Solo se pueden elegir lotes disponibles.');
-      return;
-    }
-    if (this.seleccion().length >= MAX_LOTES_APARTADO_MULTIPLE) {
-      this.toast.error(`Máximo ${MAX_LOTES_APARTADO_MULTIPLE} lotes a la vez.`);
-      return;
-    }
-    this.seleccion.update((ids) => [...ids, lote.id]);
+    const resultado = alternarLoteEnSeleccion(this.seleccion(), lote, this.puedeApartar(lote), MAX_LOTES_APARTADO_MULTIPLE);
+    if ('error' in resultado) this.toast.error(resultado.error);
+    else this.seleccion.set(resultado.seleccion);
   }
 
   abrirApartarVarios(): void {
@@ -350,9 +289,6 @@ export class PlanoPublicoComponent implements OnDestroy {
   // al abrir cualquier plano se verifica solo contra ese desarrollo (ver entrarConPinGuardado).
   readonly asesorVerificado = signal<string | null>(leerAsesorGuardado(this.proyecto));
   readonly mostrarAcceso = signal(false);
-  /** PIN del botón Asesor: un carácter por casilla. */
-  readonly pinCasillas = signal<string[]>(['', '', '', '']);
-  readonly accesoNombre = computed(() => this.pinCasillas().join(''));
   readonly accesoError = signal<string | null>(null);
   readonly isVerificando = signal(false);
   readonly nombreAsesorInput = signal('');
@@ -521,14 +457,8 @@ export class PlanoPublicoComponent implements OnDestroy {
     void this.cargar();
   }
 
-  tienePoligono(lote: Lote): boolean {
-    return !!lote.mapaPoligono && lote.mapaPoligono.length >= 3;
-  }
-
-  /** Convierte los vértices en el atributo "points" que espera <polygon>. */
-  puntosSvg(puntos: PuntoMapa[]): string {
-    return puntos.map((p) => `${p.x},${p.y}`).join(' ');
-  }
+  readonly tienePoligono = tienePoligono;
+  readonly puntosSvg = puntosSvg;
 
   /** El precio lo calcula el servidor con el precio por m² del lote (propio, o el del desarrollo). */
   precioEstimado(lote: Lote): number {
@@ -560,53 +490,17 @@ export class PlanoPublicoComponent implements OnDestroy {
   }
 
   abrirAcceso(): void {
-    this.pinCasillas.set(['', '', '', '']);
     this.accesoError.set(null);
     this.mostrarAcceso.set(true);
-  }
-
-  /** Escribe en una casilla (acepta pegar el PIN completo) y pasa a la siguiente. */
-  escribirPin(indice: number, valor: string, evento: Event): void {
-    const limpio = valor.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    const casillas = [...this.pinCasillas()];
-    if (!limpio) {
-      casillas[indice] = '';
-      this.pinCasillas.set(casillas);
-      (evento.target as HTMLInputElement).value = '';
-      return;
-    }
-    for (let i = 0; i < limpio.length && indice + i < 4; i++) casillas[indice + i] = limpio[i];
-    this.pinCasillas.set(casillas);
-    this.accesoError.set(null);
-    const host = (evento.target as HTMLInputElement).closest('[data-pin]') as HTMLElement;
-    const inputs = Array.from(host.querySelectorAll('input'));
-    inputs.forEach((el, i) => (el.value = casillas[i]));
-    inputs[Math.min(indice + limpio.length, 3)]?.focus();
-  }
-
-  teclaPin(indice: number, evento: KeyboardEvent): void {
-    const input = evento.target as HTMLInputElement;
-    if (evento.key === 'Backspace' && !input.value && indice > 0) {
-      const inputs = Array.from((input.closest('[data-pin]') as HTMLElement).querySelectorAll('input'));
-      const casillas = [...this.pinCasillas()];
-      casillas[indice - 1] = '';
-      this.pinCasillas.set(casillas);
-      inputs[indice - 1].value = '';
-      inputs[indice - 1].focus();
-      evento.preventDefault();
-    } else if (evento.key === 'ArrowLeft' && indice > 0) {
-      (input.previousElementSibling as HTMLInputElement | null)?.focus();
-    } else if (evento.key === 'ArrowRight' && indice < 3) {
-      (input.nextElementSibling as HTMLInputElement | null)?.focus();
-    }
   }
 
   cerrarAcceso(): void {
     this.mostrarAcceso.set(false);
   }
 
-  async confirmarAcceso(): Promise<void> {
-    const nombre = this.accesoNombre().trim();
+  /** `pin` = lo escrito en las casillas de la ventana de acceso (ver AccesoAsesorModalComponent). */
+  async confirmarAcceso(pin: string): Promise<void> {
+    const nombre = pin.trim();
     if (!nombre || this.isVerificando()) return;
     this.isVerificando.set(true);
     this.accesoError.set(null);
@@ -620,16 +514,7 @@ export class PlanoPublicoComponent implements OnDestroy {
       this.mostrarAcceso.set(false);
       this.toast.success(`Bienvenido, ${registrado}.`);
     } catch (e) {
-      const estado = e instanceof HttpErrorResponse ? e.status : 0;
-      this.accesoError.set(
-        estado === 404
-          ? 'PIN incorrecto.'
-          : estado === 403 && typeof (e as HttpErrorResponse).error?.message === 'string'
-            ? (e as HttpErrorResponse).error.message
-            : estado === 429
-            ? 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.'
-            : 'No se pudo verificar. Intenta de nuevo.',
-      );
+      this.accesoError.set(mensajeErrorDeAcceso(e));
     } finally {
       this.isVerificando.set(false);
     }
@@ -665,7 +550,7 @@ export class PlanoPublicoComponent implements OnDestroy {
         anchoImagen: imagen.ancho,
         altoImagen: imagen.alto,
         poligonos: this.lotes()
-          .filter((lote) => this.tienePoligono(lote))
+          .filter(tienePoligono)
           .map((lote) => ({ puntos: lote.mapaPoligono!, color: ESTADO_LOTE_COLOR_RGB[lote.estado] })),
         leyenda: this.estadosLote.map((estado) => ({
           label: this.estadoLabels[estado],
@@ -756,7 +641,7 @@ export class PlanoPublicoComponent implements OnDestroy {
     }
 
     const altoAZoom1 = this.altoNaturalEnPantalla(rect.width);
-    const zoomAjuste = Math.min(1, Math.max(ZOOM_MIN, rect.height / altoAZoom1));
+    const zoomAjuste = limitar(rect.height / altoAZoom1, ZOOM_MIN, 1);
     this.zoomAjuste.set(zoomAjuste);
 
     this.zoom.set(zoomAjuste);
@@ -790,24 +675,14 @@ export class PlanoPublicoComponent implements OnDestroy {
     const urlHd = this.planoUrl();
     if (!urlHd || this.cargandoHd || this.hdLista()) return;
     this.cargandoHd = true;
-    const hd = new Image();
-    hd.decoding = 'async';
-    hd.src = urlHd;
-    const finalizar = () => {
-      const decodificar = typeof hd.decode === 'function' ? hd.decode() : Promise.resolve();
-      decodificar
-        .catch(() => undefined)
-        .then(() => {
-          if (this.planoUrl() === urlHd) {
-            this.hdLista.set(true);
-          }
-        });
-    };
-    hd.onload = finalizar;
-    hd.onerror = () => {
+    cargarImagenEnSegundoPlano(
+      urlHd,
+      () => {
+        if (this.planoUrl() === urlHd) this.hdLista.set(true);
+      },
       // Si el HD falla temporalmente en segundo plano, el usuario sigue viendo la vista rápida sin interrupción.
-      this.cargandoHd = false;
-    };
+      () => (this.cargandoHd = false),
+    );
   }
 
   /** Si la vista rápida no existe todavía, cae directo al plano HD; si el HD falla en el primer intento, reintenta una vez. */
@@ -841,17 +716,18 @@ export class PlanoPublicoComponent implements OnDestroy {
     if (!contenedor) return;
     const rect = this.medirVista() ?? contenedor.getBoundingClientRect();
     const zoomActual = this.zoom();
-    const zoomFinal = Math.min(ZOOM_MAX, Math.max(this.zoomAjuste(), nuevoZoom));
+    const zoomFinal = limitar(nuevoZoom, this.zoomAjuste(), ZOOM_MAX);
     if (zoomFinal === zoomActual) return;
 
-    const puntoX = clientX - rect.left;
-    const puntoY = clientY - rect.top;
-    const contenidoX = (puntoX - this.panX()) / zoomActual;
-    const contenidoY = (puntoY - this.panY()) / zoomActual;
-
+    const pan = desplazamientoAlHacerZoom(
+      { x: clientX - rect.left, y: clientY - rect.top },
+      { x: this.panX(), y: this.panY() },
+      zoomActual,
+      zoomFinal,
+    );
     this.zoom.set(zoomFinal);
-    this.panX.set(puntoX - contenidoX * zoomFinal);
-    this.panY.set(puntoY - contenidoY * zoomFinal);
+    this.panX.set(pan.x);
+    this.panY.set(pan.y);
     this.limitarPan(rect);
   }
 
@@ -870,16 +746,8 @@ export class PlanoPublicoComponent implements OnDestroy {
     const altoContenido = this.altoNaturalEnPantalla(rect.width) * zoom;
     // En un eje donde la imagen es más chica que la pantalla no hay nada que desplazar: se centra
     // (el resto es el fondo negro). Donde es más grande, el pan se acota a sus bordes.
-    this.panX.set(
-      anchoContenido <= rect.width
-        ? (rect.width - anchoContenido) / 2
-        : Math.min(0, Math.max(rect.width - anchoContenido, this.panX())),
-    );
-    this.panY.set(
-      altoContenido <= rect.height
-        ? (rect.height - altoContenido) / 2
-        : Math.min(0, Math.max(rect.height - altoContenido, this.panY())),
-    );
+    this.panX.set(acotarOCentrar(this.panX(), rect.width, anchoContenido));
+    this.panY.set(acotarOCentrar(this.panY(), rect.height, altoContenido));
   }
 
   /** Los cambios discretos (botones, teclado, doble toque) se animan con una transición corta; los
@@ -1172,4 +1040,14 @@ export class PlanoPublicoComponent implements OnDestroy {
     }
     this.ultimoToque = { x: inicio.x, y: inicio.y, t: ahora };
   }
+}
+
+/** Por qué no se pudo verificar el PIN del asesor: 404 = no existe; 403 = sin acceso a este desarrollo o
+ * contrato vencido (el servidor dice cuál); 429 = demasiados intentos desde esta IP. */
+function mensajeErrorDeAcceso(e: unknown): string {
+  const estado = e instanceof HttpErrorResponse ? e.status : 0;
+  if (estado === 404) return 'PIN incorrecto.';
+  if (estado === 403 && typeof (e as HttpErrorResponse).error?.message === 'string') return (e as HttpErrorResponse).error.message;
+  if (estado === 429) return 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.';
+  return 'No se pudo verificar. Intenta de nuevo.';
 }

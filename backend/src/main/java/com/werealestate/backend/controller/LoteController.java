@@ -15,6 +15,9 @@ import com.werealestate.backend.dto.MovimientoLoteDto;
 import com.werealestate.backend.dto.PaginaDto;
 import com.werealestate.backend.dto.PlanoDesarrolloDto;
 import com.werealestate.backend.dto.ResumenLotesDto;
+import com.werealestate.backend.service.HistorialLoteService;
+import com.werealestate.backend.service.LoteConsultaService;
+import com.werealestate.backend.service.LoteVentaService;
 import com.werealestate.backend.service.LoteService;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
@@ -36,9 +39,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class LoteController {
 
     private final LoteService loteService;
+    private final LoteConsultaService consultaService;
+    private final HistorialLoteService historialService;
+    private final LoteVentaService loteVentaService;
 
-    public LoteController(LoteService loteService) {
+    public LoteController(LoteService loteService, LoteConsultaService consultaService,
+            HistorialLoteService historialService, LoteVentaService loteVentaService) {
         this.loteService = loteService;
+        this.consultaService = consultaService;
+        this.historialService = historialService;
+        this.loteVentaService = loteVentaService;
     }
 
     @GetMapping("/buscar")
@@ -52,26 +62,26 @@ public class LoteController {
             @RequestParam(required = false) Boolean reservadoWe,
             @RequestParam(defaultValue = "0") int pagina,
             @RequestParam(defaultValue = "20") int tamano) {
-        return loteService.buscarPaginado(
+        return consultaService.buscarPaginado(
                 manzana, numeroLote, desarrolloId, estado, superficieMin, superficieMax, reservadoWe, pagina, tamano);
     }
 
     /** Inventario por desarrollo y estado, para las cifras del inicio del admin. */
     @GetMapping("/resumen")
     public List<ResumenLotesDto> resumen() {
-        return loteService.resumenPorDesarrollo();
+        return consultaService.resumenPorDesarrollo();
     }
 
     @GetMapping("/disponibles")
     public List<LoteDto> listarDisponibles(@RequestParam Long desarrolloId) {
-        return loteService.listarDisponibles(desarrolloId);
+        return consultaService.listarDisponibles(desarrolloId);
     }
 
     /** Únicos dos endpoints públicos de este controlador, sin sesión (ver SecurityConfig): la
      * disponibilidad de lotes en los planos públicos y el cotizador público. */
     @GetMapping("/publico")
     public List<LoteDto> listarPublico(@RequestParam String proyecto) {
-        return loteService.listarPublicoPorProyecto(proyecto);
+        return consultaService.listarPublicoPorProyecto(proyecto);
     }
 
     /** Apartar varios lotes a la vez desde el plano público (todo o nada, máximo 5). */
@@ -94,19 +104,19 @@ public class LoteController {
             @RequestParam(required = false) Long desarrolloId,
             @RequestParam(defaultValue = "0") int pagina,
             @RequestParam(defaultValue = "20") int tamano) {
-        return loteService.buscarMovimientos(manzana, numeroLote, desarrolloId, pagina, tamano);
+        return historialService.buscarMovimientos(manzana, numeroLote, desarrolloId, pagina, tamano);
     }
 
     @DeleteMapping("/movimientos/{id}")
     public ResponseEntity<Void> eliminarMovimiento(@PathVariable Long id) {
-        loteService.eliminarMovimiento(id);
+        historialService.eliminarMovimiento(id);
         return ResponseEntity.noContent().build();
     }
 
     /** Plano interactivo de un desarrollo, para /panel/plano. */
     @GetMapping("/mapa")
     public PlanoDesarrolloDto obtenerMapa(@RequestParam Long desarrolloId) {
-        return loteService.obtenerMapa(desarrolloId);
+        return consultaService.obtenerMapa(desarrolloId);
     }
 
     @GetMapping("/{id}")
@@ -117,7 +127,7 @@ public class LoteController {
     /** Historial completo de un lote específico, para el ícono de "ver información" en /panel/lotes. */
     @GetMapping("/{id}/historial")
     public List<MovimientoLoteDto> historialDeLote(@PathVariable Long id) {
-        return loteService.historialDeLote(id);
+        return historialService.historialDeLote(id);
     }
 
     @PostMapping
@@ -158,7 +168,7 @@ public class LoteController {
      * LoteService.alinearConVenta). */
     @PutMapping("/{id}/alinear-con-venta")
     public LoteDto alinearConVenta(@PathVariable Long id) {
-        return loteService.alinearConVenta(id);
+        return loteVentaService.alinearConVenta(id);
     }
 
     @PutMapping("/{id}/mapa")

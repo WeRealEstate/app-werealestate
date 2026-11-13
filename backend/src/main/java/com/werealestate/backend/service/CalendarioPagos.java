@@ -2,6 +2,7 @@ package com.werealestate.backend.service;
 
 import com.werealestate.backend.dto.AmortizacionDto;
 import com.werealestate.backend.model.EstadoPagoPlan;
+import com.werealestate.backend.model.PagoVenta;
 import com.werealestate.backend.model.Venta;
 import com.werealestate.backend.model.VentaAportacion;
 import com.werealestate.backend.model.VentaReestructuracion;
@@ -14,6 +15,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -31,9 +33,10 @@ import java.util.TreeMap;
  * la tabla de amortización esa parte queda en un renglón final "Sin fecha en el plan".
  *
  * <p>Estado de cuenta: lo abonado (recibos vigentes) va cubriendo los pagos del más antiguo al más nuevo. Un pago que
- * no quedó cubierto está atrasado desde el día siguiente a su fecha. Sin arrastre (decisión del usuario, 2026-11-11):
- * una mensualidad vencida que se pagó solo en parte queda atrasada con su faltante en su propio renglón; lo que falta
- * nunca se suma al pago siguiente.
+ * no quedó cubierto está atrasado desde el día siguiente a su fecha. Ese reparto por monto no arrastra faltantes (una
+ * mensualidad pagada solo en parte queda atrasada con su faltante en su propio renglón). El estado de cuenta que ven el
+ * cliente y los demás módulos usa la regla por mes (ver {@code estadoDeCuenta} con pagos y {@link TablaMensual}), donde
+ * lo que le falta a un mes vencido pasa a la mensualidad siguiente.
  */
 public final class CalendarioPagos {
 
@@ -168,7 +171,7 @@ public final class CalendarioPagos {
     /** Las pausas vigentes de un plan de la venta, de la más antigua a la más reciente. */
     public static List<Pausa> pausasDelPlan(Venta venta, Long planId) {
         return venta.getPausas().stream()
-                .filter(p -> p.isVigente() && java.util.Objects.equals(p.getReestructuracionId(), planId))
+                .filter(p -> p.isVigente() && Objects.equals(p.getReestructuracionId(), planId))
                 .map(p -> new Pausa(p.getDesdeNumero(), p.getFechaNueva()))
                 .toList();
     }
@@ -250,19 +253,26 @@ public final class CalendarioPagos {
         if (ultima.isCompleta()) {
             // Rehace todo el plan: un solo tramo desde el primer mes de la venta que reparte el precio completo; lo
             // abonado se aplica en orden sobre él (y los meses vencidos sin cubrir salen atrasados).
-            List<VentaAportacion> propias = aportacionesDeLaVenta.stream()
-                    .filter(a -> java.util.Objects.equals(a.getReestructuracionId(), ultima.getId()))
-                    .toList();
-            return conceptosDePlan(planVigente(venta), precio, propias, rs.size());
+            return conceptosDePlan(
+                    planVigente(venta), precio, aportacionesDelPlan(aportacionesDeLaVenta, ultima.getId()), rs.size());
         }
+        return conceptosPorTramos(venta, precio, aportacionesDeLaVenta, rs);
+    }
 
+    /** Las aportaciones que pertenecen a un plan (null = el original de la venta). */
+    private static List<VentaAportacion> aportacionesDelPlan(Collection<VentaAportacion> aportaciones, Long planId) {
+        return aportaciones.stream().filter(a -> Objects.equals(a.getReestructuracionId(), planId)).toList();
+    }
+
+    /** Una reestructuración por saldo: de cada plan reemplazado quedan sus pagos más antiguos hasta sumar lo que se
+     * abonó mientras estuvo vigente, y el último plan reparte lo que faltaba del precio en ese corte. */
+    private static List<Concepto> conceptosPorTramos(
+            Venta venta, BigDecimal precio, Collection<VentaAportacion> aportacionesDeLaVenta, List<VentaReestructuracion> rs) {
         List<Concepto> resultado = new ArrayList<>();
         BigDecimal abonadoAntes = BigDecimal.ZERO;
         for (int i = 0; i <= rs.size(); i++) {
             Long etiqueta = i == 0 ? null : rs.get(i - 1).getId();
-            List<VentaAportacion> propias = aportacionesDeLaVenta.stream()
-                    .filter(a -> java.util.Objects.equals(a.getReestructuracionId(), etiqueta))
-                    .toList();
+            List<VentaAportacion> propias = aportacionesDelPlan(aportacionesDeLaVenta, etiqueta);
             BigDecimal base = precio.subtract(abonadoAntes).max(BigDecimal.ZERO);
             if (i == rs.size()) {
                 resultado.addAll(conceptosDePlan(planVigente(venta), base, propias, i));
@@ -355,16 +365,11 @@ public final class CalendarioPagos {
         BigDecimal proximoMonto = BigDecimal.ZERO;
         List<AmortizacionDto.Fila> filas = new ArrayList<>();
 
-        BigDecimal arrastre = BigDecimal.ZERO;
-        for (int i = 0; i < conceptos.size(); i++) {
-            Concepto c = conceptos.get(i);
-            BigDecimal arrastreRecibido = arrastre;
-            BigDecimal monto = c.monto().add(arrastreRecibido);
-            arrastre = BigDecimal.ZERO;
+        for (Concepto c : conceptos) {
+            BigDecimal monto = c.monto();
             BigDecimal pagado = monto.min(porAplicar);
             porAplicar = porAplicar.subtract(pagado);
             BigDecimal falta = monto.subtract(pagado);
-            BigDecimal ajuste = arrastreRecibido;
             EstadoPagoPlan estado;
             if (falta.compareTo(TOLERANCIA) <= 0) {
                 estado = EstadoPagoPlan.PAGADO;
@@ -383,7 +388,7 @@ public final class CalendarioPagos {
             }
             programado = programado.add(monto);
             filas.add(new AmortizacionDto.Fila(c.numero(), c.fecha(), c.concepto(), monto, pagado,
-                    precio.subtract(programado).max(BigDecimal.ZERO), estado, ajuste, BigDecimal.ZERO, List.of(), c.tramo()));
+                    precio.subtract(programado).max(BigDecimal.ZERO), estado, BigDecimal.ZERO, BigDecimal.ZERO, List.of(), c.tramo()));
         }
 
         // Lo del precio que el plan no fecha (anualidades viejas): un renglón final que nunca vence; lo abonado de más
@@ -418,8 +423,8 @@ public final class CalendarioPagos {
      * ningún pago. Lo usan la tabla de amortización, Clientes, Finanzas y Comisiones para que todos digan lo mismo.
      */
     public static EstadoDeCuenta estadoDeCuenta(
-            List<Concepto> conceptos, BigDecimal precio, List<com.werealestate.backend.model.PagoVenta> pagos, LocalDate hoy) {
-        BigDecimal abonado = pagos.stream().map(com.werealestate.backend.model.PagoVenta::getMonto)
+            List<Concepto> conceptos, BigDecimal precio, List<PagoVenta> pagos, LocalDate hoy) {
+        BigDecimal abonado = pagos.stream().map(PagoVenta::getMonto)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         EstadoDeCuenta reparto = estadoDeCuenta(conceptos, precio, abonado, hoy);
         List<AmortizacionDto.Fila> mensual = TablaMensual.construir(conceptos, reparto.filas(), precio, pagos, hoy);

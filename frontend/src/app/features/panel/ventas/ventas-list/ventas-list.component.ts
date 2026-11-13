@@ -8,6 +8,7 @@ import { LeadsService } from '../../../../core/services/leads.service';
 import { Desarrollo } from '../../../../core/models/lead.model';
 import { Venta } from '../../../../core/models/venta.model';
 import { WeLoaderComponent } from '../../../../shared/we-loader/we-loader.component';
+import { dinero } from '../../../../core/utils/formato-pantalla';
 
 /** Cuántas ventas se cargan por lote. Al llegar al final, "Cargar más" trae el siguiente. */
 const TAMANO_PAGINA = 10;
@@ -177,6 +178,6 @@ export class VentasListComponent {
   }
 
   money(valor: number): string {
-    return valor.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return dinero(valor);
   }
 }

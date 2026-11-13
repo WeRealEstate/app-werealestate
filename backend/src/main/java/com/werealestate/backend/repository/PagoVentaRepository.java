@@ -17,6 +17,15 @@ public interface PagoVentaRepository extends JpaRepository<PagoVenta, Long> {
     @Query("select p from PagoVenta p join fetch p.recibo r where r.anulado = false")
     List<PagoVenta> findAllVigentes();
 
+    /** Lo cobrado en total (solo recibos vigentes), sumado en la base: Finanzas → Valor vendido no necesita cada línea. */
+    @Query("select coalesce(sum(p.monto), 0) from PagoVenta p join p.recibo r where r.anulado = false")
+    java.math.BigDecimal totalVigente();
+
+    /** Las líneas vigentes con los meses que cubre cada una ya cargados, en una sola consulta (no una por cada bloque
+     * de pagos): cobro de toda la cartera, ver FinanzasService.Datos. Deja las colecciones listas en la sesión. */
+    @Query("select p from PagoVenta p join p.recibo r left join fetch p.meses where r.anulado = false")
+    List<PagoVenta> findAllVigentesConMeses();
+
     @Query("select p from PagoVenta p join fetch p.recibo r where p.venta.id = :ventaId and r.anulado = false order by p.fecha asc, p.id asc")
     List<PagoVenta> findVigentesByVentaIdOrderByFechaAscIdAsc(@Param("ventaId") Long ventaId);
 

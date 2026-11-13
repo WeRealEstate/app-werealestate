@@ -10,18 +10,18 @@ class LoteServiceNotasTest {
     @Test
     void unaNotaNulaNoEsDeRegistroDeVenta() {
         // Antes lanzaba NullPointerException y el panel de notificaciones respondía 401 a admin y administración.
-        assertFalse(LoteService.esNotaDeRegistroDeVenta(null));
+        assertFalse(LoteVentaService.esNotaDeRegistroDeVenta(null));
     }
 
     @Test
     void reconoceLaNotaActualYLaAnterior() {
-        assertTrue(LoteService.esNotaDeRegistroDeVenta("Registro de venta We Forms"));
-        assertTrue(LoteService.esNotaDeRegistroDeVenta("Precontrato We Forms"));
+        assertTrue(LoteVentaService.esNotaDeRegistroDeVenta("Registro de venta We Forms"));
+        assertTrue(LoteVentaService.esNotaDeRegistroDeVenta("Precontrato We Forms"));
     }
 
     @Test
     void otrasNotasNoCuentan() {
-        assertFalse(LoteService.esNotaDeRegistroDeVenta("Cliente se retracta"));
-        assertFalse(LoteService.esNotaDeRegistroDeVenta(""));
+        assertFalse(LoteVentaService.esNotaDeRegistroDeVenta("Cliente se retracta"));
+        assertFalse(LoteVentaService.esNotaDeRegistroDeVenta(""));
     }
 }

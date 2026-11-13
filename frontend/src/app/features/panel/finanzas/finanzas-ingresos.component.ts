@@ -8,6 +8,8 @@ import { LeadsService } from '../../../core/services/leads.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 import { SkeletonKpisComponent } from '../../../shared/skeleton-kpis/skeleton-kpis.component';
+import { fechaCorta } from '../../../core/models/amortizacion.model';
+import { dinero, mesActual } from '../../../core/utils/formato-pantalla';
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
@@ -99,12 +101,11 @@ export class FinanzasIngresosComponent {
   }
 
   fecha(iso: string): string {
-    const [anio, mes, dia] = iso.slice(0, 10).split('-');
-    return `${dia}/${mes}/${anio}`;
+    return fechaCorta(iso);
   }
 
   money(valor: number): string {
-    return valor.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return dinero(valor);
   }
 
   /** Diferencia con el signo antes del $ ("-$27,750.00", "+$1,000.00"), no "$-27,750.00". Se compara en
@@ -114,11 +115,6 @@ export class FinanzasIngresosComponent {
     const signo = centavos > 0 ? '+' : centavos < 0 ? '-' : '';
     return `${signo}$${this.money(Math.abs(centavos) / 100)}`;
   }
-}
-
-function mesActual(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
 function sumarMeses(mes: string, delta: number): string {

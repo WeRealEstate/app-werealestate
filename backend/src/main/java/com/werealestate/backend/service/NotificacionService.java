@@ -211,7 +211,7 @@ public class NotificacionService {
             boolean desapartado = ESTADOS_APARTADO.contains(m.getEstadoAnterior()) && m.getEstadoNuevo() == EstadoLote.DISPONIBLE;
             if (m.getEstadoAnterior() == m.getEstadoNuevo()) continue;
             // El aviso del registro de venta (ver agregarAvisosDeRegistrosDeVenta) ya cuenta este cambio de lote.
-            if (LoteService.esNotaDeRegistroDeVenta(m.getNota())) continue;
+            if (LoteVentaService.esNotaDeRegistroDeVenta(m.getNota())) continue;
             boolean otroCambio = !apartado && !desapartado;
             // Los cambios "de otro tipo" son avisos nuevos: solo el último día, para no soltar de golpe el historial.
             if (otroCambio && m.getFecha().isBefore(LocalDateTime.now().minusDays(1))) continue;

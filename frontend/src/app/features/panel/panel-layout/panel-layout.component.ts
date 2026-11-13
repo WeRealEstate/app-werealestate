@@ -1,4 +1,4 @@
-import { Component, HostListener, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import {
   LucideBuilding2,
@@ -213,7 +213,9 @@ export class PanelLayoutComponent {
     void this.auth.refrescarPerfil();
     if (typeof window !== 'undefined') {
       const consulta = window.matchMedia('(min-width: 1024px)');
-      consulta.addEventListener('change', (e) => this.esEscritorio.set(e.matches));
+      const alCambiar = (e: MediaQueryListEvent) => this.esEscritorio.set(e.matches);
+      consulta.addEventListener('change', alCambiar);
+      inject(DestroyRef).onDestroy(() => consulta.removeEventListener('change', alCambiar));
     }
   }
 

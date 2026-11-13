@@ -9,6 +9,7 @@ import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.model.Venta;
 import com.werealestate.backend.model.VentaAportacion;
+import com.werealestate.backend.model.VentaComisionDevolucion;
 import com.werealestate.backend.model.VentaLote;
 import com.werealestate.backend.repository.PagoVentaRepository;
 import com.werealestate.backend.repository.VentaComisionDevolucionRepository;
@@ -22,11 +23,13 @@ import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -69,7 +72,6 @@ public class FinanzasService {
     public FinanzasValorDto valorVendido() {
         exigirAdminOLider();
         List<VentaLote> lotes = ventaLoteRepository.findAllConLoteYDesarrollo();
-        List<PagoVenta> pagos = pagoVentaRepository.findAllVigentes();
 
         BigDecimal total = BigDecimal.ZERO;
         Map<Long, long[]> conteo = new LinkedHashMap<>();
@@ -102,7 +104,7 @@ public class FinanzasService {
                 .thenComparing(FinanzasValorDto.Lote::manzana)
                 .thenComparing(FinanzasValorDto.Lote::numeroLote));
 
-        BigDecimal cobrado = pagos.stream().map(PagoVenta::getMonto).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal cobrado = pagoVentaRepository.totalVigente();
         return new FinanzasValorDto(
                 total, lotes.size(), cobrado, total.subtract(cobrado).max(BigDecimal.ZERO), porDesarrollo, detalle);
     }
@@ -116,49 +118,25 @@ public class FinanzasService {
         exigirAdminOLider();
         Datos datos = cargar();
         YearMonth hoy = YearMonth.now();
+        LibroMensual libro = armarLibro(datos, desarrolloId);
 
-        TreeMap<YearMonth, BigDecimal> esperado = new TreeMap<>();
-        TreeMap<YearMonth, BigDecimal> recibido = new TreeMap<>();
-        TreeMap<YearMonth, BigDecimal> devoluciones = new TreeMap<>();
-        TreeMap<YearMonth, Set<Long>> ventasPorMes = new TreeMap<>();
-
-        for (Venta venta : datos.ventas) {
-            if (!perteneceADesarrollo(datos, venta, desarrolloId)) continue;
-            for (CalendarioPagos.Concepto c : calendario(datos, venta)) {
-                YearMonth ym = YearMonth.from(c.fecha());
-                esperado.merge(ym, c.monto(), BigDecimal::add);
-                ventasPorMes.computeIfAbsent(ym, k -> new java.util.HashSet<>()).add(venta.getId());
-            }
-            // Libro: cada abono en su fecha y, si su recibo se anuló, un contra-asiento negativo en la
-            // fecha de la anulación (el mes original no cambia).
-            for (Movimiento m : datos.movimientosDe(venta.getId())) {
-                YearMonth ym = YearMonth.from(m.fecha());
-                recibido.merge(ym, m.monto(), BigDecimal::add);
-                ventasPorMes.computeIfAbsent(ym, k -> new java.util.HashSet<>()).add(venta.getId());
-            }
-        }
-        for (Devolucion d : datos.devoluciones) {
-            if (desarrolloId != null && (d.ventaId() == null || !perteneceADesarrollo(datos, d.ventaId(), desarrolloId))) continue;
-            devoluciones.merge(YearMonth.from(d.fecha()), d.monto(), BigDecimal::add);
-        }
-
-        TreeMap<YearMonth, Boolean> meses = new TreeMap<>();
-        esperado.keySet().forEach(m -> meses.put(m, true));
-        recibido.keySet().forEach(m -> meses.put(m, true));
-        devoluciones.keySet().forEach(m -> meses.put(m, true));
+        TreeSet<YearMonth> meses = new TreeSet<>();
+        meses.addAll(libro.esperado().keySet());
+        meses.addAll(libro.recibido().keySet());
+        meses.addAll(libro.devoluciones().keySet());
 
         List<FinanzasIngresosDto.IngresoMes> filas = new ArrayList<>();
         BigDecimal acumEsperado = BigDecimal.ZERO;
         BigDecimal acumRecibido = BigDecimal.ZERO;
-        YearMonth ini = meses.isEmpty() ? hoy : meses.firstKey();
-        YearMonth fin = meses.isEmpty() ? hoy : meses.lastKey();
+        YearMonth ini = meses.isEmpty() ? hoy : meses.first();
+        YearMonth fin = meses.isEmpty() ? hoy : meses.last();
         YearMonth rangoDesde = parsear(desde);
         YearMonth rangoHasta = parsear(hasta);
         FinanzasIngresosDto.IngresoMes actual = null;
 
         for (YearMonth ym = ini; !ym.isAfter(fin.isBefore(hoy) ? hoy : fin); ym = ym.plusMonths(1)) {
-            BigDecimal esp = esperado.getOrDefault(ym, BigDecimal.ZERO);
-            BigDecimal rec = recibido.getOrDefault(ym, BigDecimal.ZERO);
+            BigDecimal esp = libro.esperado().getOrDefault(ym, BigDecimal.ZERO);
+            BigDecimal rec = libro.recibido().getOrDefault(ym, BigDecimal.ZERO);
             acumEsperado = acumEsperado.add(esp);
             acumRecibido = acumRecibido.add(rec);
             FinanzasIngresosDto.IngresoMes fila = new FinanzasIngresosDto.IngresoMes(
@@ -167,9 +145,9 @@ public class FinanzasService {
                     rec,
                     rec.subtract(esp),
                     acumEsperado.subtract(acumRecibido).max(BigDecimal.ZERO),
-                    ventasPorMes.getOrDefault(ym, Set.of()).size(),
+                    libro.ventasPorMes().getOrDefault(ym, Set.of()).size(),
                     ym.isAfter(hoy),
-                    devoluciones.getOrDefault(ym, BigDecimal.ZERO));
+                    libro.devoluciones().getOrDefault(ym, BigDecimal.ZERO));
             if (ym.equals(hoy)) actual = fila;
             boolean dentro = (rangoDesde == null || !ym.isBefore(rangoDesde)) && (rangoHasta == null || !ym.isAfter(rangoHasta));
             if (dentro) filas.add(fila);
@@ -180,6 +158,49 @@ public class FinanzasService {
                     hoy.toString(), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 0, false, BigDecimal.ZERO);
         }
         return new FinanzasIngresosDto(actual, filas);
+    }
+
+    /** Lo esperado, lo recibido y lo devuelto en comisiones por mes, y qué ventas tuvieron movimiento en cada mes. */
+    private record LibroMensual(
+            TreeMap<YearMonth, BigDecimal> esperado,
+            TreeMap<YearMonth, BigDecimal> recibido,
+            TreeMap<YearMonth, BigDecimal> devoluciones,
+            TreeMap<YearMonth, Set<Long>> ventasPorMes) {
+    }
+
+    private LibroMensual armarLibro(Datos datos, Long desarrolloId) {
+        TreeMap<YearMonth, BigDecimal> esperado = new TreeMap<>();
+        TreeMap<YearMonth, BigDecimal> recibido = new TreeMap<>();
+        TreeMap<YearMonth, BigDecimal> devoluciones = new TreeMap<>();
+        TreeMap<YearMonth, Set<Long>> ventasPorMes = new TreeMap<>();
+
+        for (Venta venta : datos.ventas) {
+            if (!perteneceADesarrollo(datos, venta, desarrolloId)) continue;
+            for (CalendarioPagos.Concepto c : calendario(datos, venta)) {
+                YearMonth ym = YearMonth.from(c.fecha());
+                esperado.merge(ym, c.monto(), BigDecimal::add);
+                ventasPorMes.computeIfAbsent(ym, k -> new HashSet<>()).add(venta.getId());
+            }
+            // Libro: cada abono en su fecha y, si su recibo se anuló, un contra-asiento negativo en la
+            // fecha de la anulación (el mes original no cambia).
+            for (Movimiento m : datos.movimientosDe(venta.getId())) {
+                YearMonth ym = YearMonth.from(m.fecha());
+                recibido.merge(ym, m.monto(), BigDecimal::add);
+                ventasPorMes.computeIfAbsent(ym, k -> new HashSet<>()).add(venta.getId());
+            }
+        }
+        for (Devolucion d : devolucionesDelDesarrollo(datos, desarrolloId)) {
+            devoluciones.merge(YearMonth.from(d.fecha()), d.monto(), BigDecimal::add);
+        }
+        return new LibroMensual(esperado, recibido, devoluciones, ventasPorMes);
+    }
+
+    /** Las devoluciones de comisión del desarrollo pedido (todas si es null; una sin venta no es de ningún desarrollo). */
+    private static List<Devolucion> devolucionesDelDesarrollo(Datos datos, Long desarrolloId) {
+        if (desarrolloId == null) return datos.devoluciones;
+        return datos.devoluciones.stream()
+                .filter(d -> d.ventaId() != null && perteneceADesarrollo(datos, d.ventaId(), desarrolloId))
+                .toList();
     }
 
     /** Qué se espera de cada venta en el mes, qué día, y los abonos que sí llegaron. */
@@ -210,8 +231,7 @@ public class FinanzasService {
                 }
             }
         }
-        for (Devolucion d : datos.devoluciones) {
-            if (desarrolloId != null && (d.ventaId() == null || !perteneceADesarrollo(datos, d.ventaId(), desarrolloId))) continue;
+        for (Devolucion d : devolucionesDelDesarrollo(datos, desarrolloId)) {
             if (YearMonth.from(d.fecha()).equals(ym)) {
                 devolucionesComision.add(new FinanzasIngresosDto.Abono(
                         d.ventaId(), d.ventaNumero(), d.cliente(), d.fecha(), d.monto(), "Devolución de comisión"));
@@ -318,7 +338,7 @@ public class FinanzasService {
 
     /** Dinero que un asesor devolvió de una comisión ya entregada. */
     private record Devolucion(Long ventaId, String ventaNumero, String cliente, LocalDate fecha, BigDecimal monto) {
-        static Devolucion de(com.werealestate.backend.model.VentaComisionDevolucion d) {
+        static Devolucion de(VentaComisionDevolucion d) {
             var c = d.getComision();
             return new Devolucion(
                     c.getVenta() != null ? c.getVenta().getId() : null,
@@ -361,7 +381,13 @@ public class FinanzasService {
     /** Todo lo necesario en memoria y agrupado por venta (el volumen es chico, y así no hay una
      * consulta por venta). Cuando incluirLibroIngresos es true se leen los recibos con anulados y se derivan
      * de ahí los vigentes (una sola consulta a pago_venta en vez de dos); cuando es false (cobroPorVenta)
-     * se omiten anulados y devoluciones de comisión. */
+     * se omiten anulados y devoluciones de comisión.
+     *
+     * <p>Las colecciones perezosas que lee CalendarioPagos (pausas y reestructuraciones de cada venta y, para el
+     * atraso por mes, los meses de cada pago) se cargan aquí de una vez para toda la cartera: sin eso Hibernate las
+     * pide por bloques de 100 (25 consultas solo para los meses de ~2,500 pagos). Las listas de ventas y pagos
+     * conservan su consulta y su orden de siempre; las consultas extra solo dejan llenas las colecciones de esas
+     * mismas entidades en la sesión. */
     private final class Datos {
         final List<Venta> ventas = ventaRepository.findAll();
         final List<VentaLote> lotes = ventaLoteRepository.findAllConLoteYDesarrollo();
@@ -377,12 +403,15 @@ public class FinanzasService {
         private final Map<Long, List<Movimiento>> movimientosPorVenta = new HashMap<>();
 
         Datos(boolean incluirLibroIngresos) {
+            ventaRepository.findAllConPausas();
+            ventaRepository.findAllConReestructuraciones();
             if (incluirLibroIngresos) {
                 this.pagosConAnulados = pagoVentaRepository.findAllConRecibo();
                 this.pagos = pagosConAnulados.stream().filter(p -> !p.getRecibo().isAnulado()).toList();
                 this.devoluciones = devolucionRepository.findAll().stream().map(Devolucion::de).toList();
             } else {
                 this.pagos = pagoVentaRepository.findAllVigentes();
+                pagoVentaRepository.findAllVigentesConMeses();
                 this.pagosConAnulados = List.of();
                 this.devoluciones = List.of();
             }

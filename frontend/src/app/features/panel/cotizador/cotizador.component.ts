@@ -41,33 +41,30 @@ import { PROJECTS_CONFIG } from '../../../core/data/proyectos-cotizador.config';
 import { FadeInDirective } from '../../../shared/motion/fade-in.directive';
 import { PressDirective } from '../../../shared/motion/press.directive';
 import { RevelarDirective } from '../../../shared/motion/revelar.directive';
-import { ValuePulseDirective } from '../../../shared/motion/value-pulse.directive';
 import { MonedaInputDirective, formatearNumero, limpiarNumero, numeroDeTexto } from '../../../shared/moneda-input/moneda-input.directive';
+import {
+  LoteCotizado,
+  MESES_DEL_ANIO,
+  OPCIONES_PAGO,
+  PRECIO_CONTADO_LOTE_ESTANDAR_SAMAI,
+  PRECIO_M2_CONTADO_SAMAI,
+  PRECIO_M2_MACROLOTE,
+  PRECIO_M2_NANUU,
+  PRECIO_M2_SAMAI,
+  PROYECTOS_COTIZADOR,
+  ProjectId,
+  SUPERFICIE_ESTANDAR_M2,
+  SUPERFICIE_MACROLOTE_M2,
+  compararNatural,
+  enumerar,
+  leerSuperficieEscrita,
+} from './cotizador-datos';
+import { AmortizationRow, MESES_MAYUSCULAS, tablaConAnualidad, tablaFinanciamientoNormal } from './cotizador-tablas';
+import { solicitudDeHistorial } from './cotizador-historial';
+import { CotizadorResumenComponent, ResumenCotizacion } from './cotizador-resumen/cotizador-resumen.component';
 
-export type ProjectId = 'samai' | 'nanuu';
-
-/** Un lote ya confirmado dentro de una cotización de varios lotes juntos. Cada uno guarda su
- * propio precio por m² (no uno solo compartido) porque el umbral de macrolote de SAMAI depende
- * de la superficie de ESE lote en particular. */
-export interface LoteCotizado {
-  manzana: string;
-  lote: string;
-  superficie: number;
-  pricePerM2: number;
-}
-
-/** A partir de esta superficie (m²), SAMAI cobra la tarifa de macrolote ($170/m², la misma tarifa
- * que antes solo se elegía a mano como "Hectarea") en vez del precio de lote normal ($800/m²). */
-const SUPERFICIE_MACROLOTE_M2 = 8000;
-
-/** Compara manzana/lote como números cuando se puede (así "2" queda antes que "10" en vez del
- * orden alfabético de texto); si alguno no es numérico, cae a orden alfabético normal. */
-function compararNatural(a: string, b: string): number {
-  const numeroA = Number(a);
-  const numeroB = Number(b);
-  if (!Number.isNaN(numeroA) && !Number.isNaN(numeroB)) return numeroA - numeroB;
-  return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
-}
+export type { LoteCotizado, ProjectId } from './cotizador-datos';
+export type { AmortizationRow } from './cotizador-tablas';
 
 @Component({
   selector: 'app-cotizador',
@@ -78,12 +75,12 @@ function compararNatural(a: string, b: string): number {
     RouterLink,
     FadeInDirective,
     PressDirective,
-    ValuePulseDirective,
     LucideHistory,
     LucideDollarSign,
     LucideCalendar,
     LucideCheck,
     AportacionesSelectorComponent,
+    CotizadorResumenComponent,
   ],
   templateUrl: './cotizador.component.html',
 })
@@ -172,9 +169,9 @@ export class CotizadorComponent implements OnInit {
     }, 250);
   }
 
-  /** 'SAMAI Campestre' / 'Aldea Nanuu': mismo mapeo que ya se usa para armar el PDF de la cotización. */
+  /** 'SAMAI Campestre' / 'Aldea Nanuu': mismo nombre que va en el PDF de la cotización. */
   private nombreDesarrolloActual(): string {
-    return this.selectedProject === 'samai' ? 'SAMAI Campestre' : 'Aldea Nanuu';
+    return PROYECTOS_COTIZADOR[this.selectedProject].nombre;
   }
 
   /** Lotes disponibles del desarrollo actual: alimentan las sugerencias de manzana/lote de abajo.
@@ -232,7 +229,12 @@ export class CotizadorComponent implements OnInit {
     // El precio de un lote real se determina siempre por su superficie, sin importar qué precio
     // por m² hubiera quedado seleccionado antes a mano.
     this.pricePerM2 =
-      lote.precioM2Propio ?? (this.selectedProject === 'nanuu' ? 3700 : lote.superficie > SUPERFICIE_MACROLOTE_M2 ? 170 : 800);
+      lote.precioM2Propio ??
+      (this.selectedProject === 'nanuu'
+        ? PRECIO_M2_NANUU
+        : lote.superficie > SUPERFICIE_MACROLOTE_M2
+          ? PRECIO_M2_MACROLOTE
+          : PRECIO_M2_SAMAI);
     this.loteBloqueado = true;
     this.revisarPromocionCompatible();
   }
@@ -256,13 +258,13 @@ export class CotizadorComponent implements OnInit {
   }
 
   // Superficie seleccionada
-  selectedArea: number = 200;
+  selectedArea: number = SUPERFICIE_ESTANDAR_M2;
 
   // Indica si el usuario eligió superficie personalizada
   isCustomArea: boolean = false;
 
   // Precio actual por m²
-  pricePerM2: number = 800;
+  pricePerM2: number = PRECIO_M2_SAMAI;
 
   customAreaDisplay = '200';
 
@@ -378,10 +380,10 @@ export class CotizadorComponent implements OnInit {
     this.blockNumber = '';
     this.lotNumber = '';
     this.loteBloqueado = false;
-    this.selectedArea = 200;
+    this.selectedArea = SUPERFICIE_ESTANDAR_M2;
     this.isCustomArea = false;
     this.customAreaDisplay = '200';
-    this.pricePerM2 = this.selectedProject === 'nanuu' ? 3700 : 800;
+    this.pricePerM2 = this.selectedProject === 'nanuu' ? PRECIO_M2_NANUU : PRECIO_M2_SAMAI;
 
     // Contado y las promociones son para un solo lote.
     this.quitarContado();
@@ -403,14 +405,14 @@ export class CotizadorComponent implements OnInit {
     this.interesesActivados.set(true);
 
     if (project === 'samai') {
-      this.pricePerM2 = 800;
-      this.selectedArea = 200;
+      this.pricePerM2 = PRECIO_M2_SAMAI;
+      this.selectedArea = SUPERFICIE_ESTANDAR_M2;
       this.selectedMonths = 60;
     }
 
     if (project === 'nanuu') {
-      this.pricePerM2 = 3700;
-      this.selectedArea = 200;
+      this.pricePerM2 = PRECIO_M2_NANUU;
+      this.selectedArea = SUPERFICIE_ESTANDAR_M2;
       this.selectedMonths = 24;
       this.isCustomArea = false;
       this.customAreaDisplay = '200';
@@ -435,7 +437,7 @@ export class CotizadorComponent implements OnInit {
    * SUPERFICIE_MACROLOTE_M2, sin importar si se escribió a mano o vino de un lote del inventario. */
   private aplicarPrecioMacrolote(): void {
     if (this.selectedProject === 'samai' && this.selectedArea > SUPERFICIE_MACROLOTE_M2) {
-      this.pricePerM2 = 170;
+      this.pricePerM2 = PRECIO_M2_MACROLOTE;
       this.quitarContado();
     }
   }
@@ -449,7 +451,7 @@ export class CotizadorComponent implements OnInit {
     this.pricePerM2 = price;
 
     // Si seleccionamos precio de macrolote
-    if (price === 170) {
+    if (price === PRECIO_M2_MACROLOTE) {
       this.isCustomArea = true;
       this.selectedArea = 0;
       this.customAreaDisplay = '0';
@@ -459,9 +461,9 @@ export class CotizadorComponent implements OnInit {
     }
 
     // Si regresamos al precio normal
-    if (price === 800) {
+    if (price === PRECIO_M2_SAMAI) {
       this.isCustomArea = false;
-      this.selectedArea = 200;
+      this.selectedArea = SUPERFICIE_ESTANDAR_M2;
       this.customAreaDisplay = '200';
     }
 
@@ -469,45 +471,17 @@ export class CotizadorComponent implements OnInit {
   }
 
   onCustomAreaInput(event: Event): void {
-    const input = event.target as HTMLInputElement;
-
-    // Quitamos comas para trabajar con el valor real
-    let rawValue = input.value.replace(/,/g, '');
-
-    // Permitimos solo números y un punto decimal
-    rawValue = rawValue.replace(/[^0-9.]/g, '');
-
-    // Evitamos más de un punto
-    const parts = rawValue.split('.');
-
-    if (parts.length > 2) {
-      rawValue = parts[0] + '.' + parts.slice(1).join('');
-    }
-
-    // Máximo 2 decimales
-    if (rawValue.includes('.')) {
-      const [integerPart, decimalPart] = rawValue.split('.');
-
-      rawValue = integerPart + '.' + decimalPart.slice(0, 2);
-    }
-
-    if (!rawValue) {
+    const superficie = leerSuperficieEscrita((event.target as HTMLInputElement).value);
+    if (!superficie) {
       this.selectedArea = 0;
       this.customAreaDisplay = '';
       return;
     }
 
-    // Valor REAL para los cálculos
-    this.selectedArea = Number(rawValue);
+    this.selectedArea = superficie.valor;
     this.aplicarPrecioMacrolote();
     this.revisarPromocionCompatible();
-
-    // Valor VISUAL con comas y decimales
-    const [integerPart, decimalPart] = rawValue.split('.');
-
-    const formattedInteger = Number(integerPart || 0).toLocaleString('en-US');
-
-    this.customAreaDisplay = decimalPart !== undefined ? `${formattedInteger}.${decimalPart}` : formattedInteger;
+    this.customAreaDisplay = superficie.texto;
   }
 
   onInitialPaymentInput(event: Event): void {
@@ -569,15 +543,15 @@ export class CotizadorComponent implements OnInit {
       !this.esMultiLote &&
       this.esContado &&
       this.selectedProject === 'samai' &&
-      this.selectedArea > 200 &&
-      this.pricePerM2 !== 170
+      this.selectedArea > SUPERFICIE_ESTANDAR_M2 &&
+      this.pricePerM2 !== PRECIO_M2_MACROLOTE
     );
   }
 
   /** Precio por m² vigente del lote actual ($600/m² si aplica contado en SAMAI para > 200 m²,
    * o el pricePerM2 base en cualquier otro caso). */
   get precioM2Vigente(): number {
-    return this.aplicaPrecioContadoMayor200 ? 600 : this.pricePerM2;
+    return this.aplicaPrecioContadoMayor200 ? PRECIO_M2_CONTADO_SAMAI : this.pricePerM2;
   }
 
   /** Precio solo del lote que se está capturando ahora mismo (Manzana/Lote/Superficie de arriba),
@@ -592,12 +566,12 @@ export class CotizadorComponent implements OnInit {
    * los lotes mayores a 200 m² (fuera de macrolote) se cotizan a $600/m² solo cuando el pago es
    * de contado. En cualquier otro caso cobra el precio de lista. */
   get cashPrice(): number {
-    if (!this.esMultiLote && this.selectedProject === 'samai' && this.pricePerM2 !== 170) {
-      if (this.selectedArea === 200) {
-        return 120000;
+    if (!this.esMultiLote && this.selectedProject === 'samai' && this.pricePerM2 !== PRECIO_M2_MACROLOTE) {
+      if (this.selectedArea === SUPERFICIE_ESTANDAR_M2) {
+        return PRECIO_CONTADO_LOTE_ESTANDAR_SAMAI;
       }
-      if (this.selectedArea > 200) {
-        return this.selectedArea * 600;
+      if (this.selectedArea > SUPERFICIE_ESTANDAR_M2) {
+        return this.selectedArea * PRECIO_M2_CONTADO_SAMAI;
       }
     }
 
@@ -612,29 +586,12 @@ export class CotizadorComponent implements OnInit {
       !this.esMultiLote &&
       this.esContado &&
       this.selectedProject === 'samai' &&
-      this.selectedArea === 200
+      this.selectedArea === SUPERFICIE_ESTANDAR_M2
     );
   }
 
   /** Las tarjetas de forma de pago de cada proyecto, en el orden en que se muestran. */
-  readonly opcionesPago: Record<ProjectId, { tipo: TipoPago; titulo: string; detalle: string }[]> = {
-    samai: [
-      { tipo: 'msi', titulo: 'Sin enganche', detalle: 'Hasta 60 MSI' },
-      { tipo: 'downpayment', titulo: 'Con enganche', detalle: 'Tú decides el monto' },
-      { tipo: 'initial', titulo: 'Pago inicial', detalle: 'Baja tu mensualidad' },
-      { tipo: 'annualities', titulo: 'Con anualidades', detalle: 'Aportación anual' },
-      { tipo: 'aportaciones', titulo: 'Con aportaciones', detalle: 'Varias por año, cada una en su mes' },
-      { tipo: 'cash', titulo: 'Contado', detalle: 'Precio especial, pocos lotes' },
-    ],
-    nanuu: [
-      { tipo: 'downpayment', titulo: 'Con enganche', detalle: 'Tú decides el monto' },
-      { tipo: 'msi', titulo: 'Sin enganche', detalle: '0% de enganche' },
-      { tipo: 'initial', titulo: 'Pago inicial', detalle: 'Baja tu mensualidad' },
-      { tipo: 'annualities', titulo: 'Con anualidades', detalle: 'Aportación anual' },
-      { tipo: 'aportaciones', titulo: 'Con aportaciones', detalle: 'Varias por año, cada una en su mes' },
-      { tipo: 'cash', titulo: 'Contado', detalle: 'Pago único, sin intereses' },
-    ],
-  };
+  readonly opcionesPago = OPCIONES_PAGO;
 
   pagoMarcado(tipo: TipoPago): boolean {
     return estaMarcado(this.formaPago, tipo);
@@ -694,7 +651,7 @@ export class CotizadorComponent implements OnInit {
   /** "Contado" no está disponible con tarifa de macrolote (siempre fue así) ni al combinar varios
    * lotes en la misma cotización (el precio especial es exclusivo de un solo lote estándar). */
   get contadoDisponible(): boolean {
-    return !this.esMultiLote && this.pricePerM2 !== 170;
+    return !this.esMultiLote && this.pricePerM2 !== PRECIO_M2_MACROLOTE;
   }
 
   /** Aplica una promoción: cambia al proyecto al que pertenece y activa el modo "promocion".
@@ -703,7 +660,7 @@ export class CotizadorComponent implements OnInit {
   seleccionarPromocion(promo: Promocion): void {
     this.selectProject(promo.proyecto);
     if (promo.tipoPrecio === 'HECTAREA') {
-      this.selectPricePerM2(170);
+      this.selectPricePerM2(PRECIO_M2_MACROLOTE);
       // selectPricePerM2(170) saca del modo promoción; se vuelve a poner un par de líneas abajo, junto
       // con el resto de las promociones.
     }
@@ -742,7 +699,7 @@ export class CotizadorComponent implements OnInit {
   /** LOTE (precio normal por m²) o HECTAREA (tarifa de macrolote): solo SAMAI llega a HECTAREA,
    * cuando el precio por m² vigente ya es el de macrolote (ver aplicarPrecioMacrolote/selectPricePerM2). */
   get tipoPrecioActual(): TipoPrecioPromocion {
-    return this.selectedProject === 'samai' && this.pricePerM2 === 170 ? 'HECTAREA' : 'LOTE';
+    return this.selectedProject === 'samai' && this.pricePerM2 === PRECIO_M2_MACROLOTE ? 'HECTAREA' : 'LOTE';
   }
 
   /** Promociones activas que de verdad aplican a la cotización actual: una promoción de Hectáreas
@@ -813,7 +770,7 @@ export class CotizadorComponent implements OnInit {
    * promoción está calibrada para este tamaño. Cualquier lote distinto (más grande o más chico)
    * se reparte proporcionalmente entre mensualidad y aportación anual, ver `promocionFactorAjuste`. */
   get promocionTotalEstandar(): number {
-    const totalEstandar = 200 * this.pricePerM2;
+    const totalEstandar = SUPERFICIE_ESTANDAR_M2 * this.pricePerM2;
 
     if (this.selectedProject === 'nanuu') {
       return totalEstandar * (1 + this.interestPercentage / 100);
@@ -957,33 +914,7 @@ export class CotizadorComponent implements OnInit {
    * sin sesión, atribuido al usuario de sistema — ver CotizacionesService.registrarPublica). No debe
    * bloquear ni fallar visiblemente la descarga/envío del PDF, que para el asesor ya se completó. */
   private async registrarHistorialCotizacion(data: QuotePdfData): Promise<void> {
-    const request = {
-      proyecto: data.project,
-      nombreCliente: data.clientName,
-      // Solo lo exige/usa el backend en /cotizador-publico (ver CotizacionService.registrarPublica);
-      // en el cotizador con sesión el asesor ya se resuelve del token, así que se manda null.
-      nombreAsesorPublico: this.esPublico ? data.advisorName : null,
-      manzana: data.blockNumber || null,
-      lote: data.lotNumber || null,
-      superficie: data.area,
-      precioM2: data.pricePerM2,
-      precioTotal: data.totalPrice,
-      formaPago: data.paymentMethod,
-      // Sin enganche ni pago inicial, el monto que se guarda es el de las anualidades o aportaciones (como
-      // siempre se guardó "Total en aportaciones"); con entrada, la entrada, y el extra queda en formaPago.
-      // (enganche_label mide 30: va el nombre corto, no el del PDF.)
-      engancheLabel:
-        data.downPayment <= 0 && data.pagoExtra
-          ? this.isAnnualities ? 'Total en anualidades' : 'Total en aportaciones'
-          : data.downPaymentLabel,
-      enganche: data.downPayment <= 0 && data.pagoExtra ? data.pagoExtra.monto : data.downPayment,
-      montoFinanciado: data.financedAmount,
-      meses: data.months,
-      mensualidad: data.monthlyPayment,
-      interesPorcentaje: data.interestPercentage,
-      interesMonto: data.interestAmount,
-      totalInversion: data.totalInvestment,
-    };
+    const request = solicitudDeHistorial(data, this.esPublico, this.isAnnualities);
 
     try {
       if (this.esPublico) {
@@ -996,28 +927,13 @@ export class CotizadorComponent implements OnInit {
     }
   }
 
-  private readonly monthNames = [
-    'ENERO',
-    'FEBRERO',
-    'MARZO',
-    'ABRIL',
-    'MAYO',
-    'JUNIO',
-    'JULIO',
-    'AGOSTO',
-    'SEPTIEMBRE',
-    'OCTUBRE',
-    'NOVIEMBRE',
-    'DICIEMBRE',
-  ];
-
   get amortizationTable(): AmortizationRow[] {
     // ==============================
     // SAMAI - ANUALIDADES
     // ==============================
 
     if (this.isAnnualities) {
-      return this.buildAnnualContributionAmortizationTable(
+      return this.tablaConAnualidad(
         this.financedAmount,
         this.annualContribution,
         this.annualitiesMonthlyPayment,
@@ -1040,7 +956,7 @@ export class CotizadorComponent implements OnInit {
         this.financedAmount,
         this.aportacionesMonthlyPayment,
         this.aportaciones,
-        this.monthNames,
+        MESES_MAYUSCULAS,
       );
     }
 
@@ -1060,11 +976,11 @@ export class CotizadorComponent implements OnInit {
           this.totalInvestment,
           this.monthlyPayment,
           this.aportaciones,
-          this.monthNames,
+          MESES_MAYUSCULAS,
         );
       }
 
-      return this.buildAnnualContributionAmortizationTable(
+      return this.tablaConAnualidad(
         this.totalInvestment,
         this.promocionAnnualContribution,
         this.monthlyPayment,
@@ -1079,157 +995,37 @@ export class CotizadorComponent implements OnInit {
       return [];
     }
 
-    // ==============================
-    // FINANCIAMIENTO NORMAL
-    // ==============================
-
-    const rows: AmortizationRow[] = [];
-
-    let balance = this.financedAmount;
-    let accumulatedPayment = 0;
-
-    const startDate = new Date(this.currentDate);
-
-    for (let i = 1; i <= this.financingMonths; i++) {
-      // El enganche y el pago inicial se cubren de entrada, aparte del calendario de
-      // mensualidades: no cuentan como la primera mensualidad, por eso el conteo de meses
-      // empieza después (offset i, no i - 1).
-      const monthOffset = this.llevaEntrada ? i : i - 1;
-
-      const paymentDate = new Date(startDate.getFullYear(), startDate.getMonth() + monthOffset, 1);
-
-      const payment = i === this.financingMonths ? balance : this.monthlyPayment;
-
-      balance -= payment;
-
-      if (balance < 0.01) {
-        balance = 0;
-      }
-
-      accumulatedPayment += payment;
-
-      rows.push({
-        paymentNumber: i,
-        month: paymentDate.toLocaleString('es-MX', { month: 'long' }).toUpperCase(),
-        year: paymentDate.getFullYear(),
-        payment,
-        balance: Math.max(balance, 0),
-        accumulatedPayment,
-      });
-    }
-
-    return rows;
+    return tablaFinanciamientoNormal(
+      this.currentDate,
+      this.financingMonths,
+      this.financedAmount,
+      this.monthlyPayment,
+      this.llevaEntrada,
+    );
   }
 
-  /** Genera la tabla de amortización para cualquier esquema de "mensualidad + aportación
-   * anual" (Con anualidades y Promoción comparten esta misma mecánica; solo cambia cuál de
-   * las dos cantidades es fija y cuál se calcula). `mesesDespues` = 1 cuando hay enganche o
-   * pago inicial: ese mes se paga la entrada y el calendario empieza el siguiente. */
-  private buildAnnualContributionAmortizationTable(
-    totalAmount: number,
-    annualContributionAmount: number,
-    monthlyPaymentAmount: number,
-    mesesDespues = 0,
-  ): AmortizationRow[] {
-    const rows: AmortizationRow[] = [];
-
-    const startDate = new Date(this.currentDate);
-
-    let balance = totalAmount;
-
-    let accumulatedPayment = 0;
-
-    let annualitiesUsed = 0;
-
-    for (let i = 0; i < this.selectedMonths; i++) {
-      // ==============================
-      // FECHA DEL PAGO
-      // ==============================
-
-      const paymentDate = new Date(startDate.getFullYear(), startDate.getMonth() + i + mesesDespues, 1);
-
-      const monthNumber = paymentDate.getMonth() + 1;
-
-      // ==============================
-      // ¿ESTE MES ES ANUALIDAD?
-      // ==============================
-
-      const isAnnuality =
-        monthNumber === this.annualContributionMonth && annualitiesUsed < this.annualContributionsCount;
-
-      // ==============================
-      // MONTO DEL PAGO
-      // ==============================
-
-      let payment = isAnnuality ? annualContributionAmount : monthlyPaymentAmount;
-
-      // ==============================
-      // ÚLTIMO PAGO
-      // ==============================
-
-      // Nunca permitimos pagar más que el saldo restante.
-
-      if (payment > balance) {
-        payment = balance;
-      }
-
-      // ==============================
-      // ACTUALIZAR SALDO
-      // ==============================
-
-      balance -= payment;
-
-      if (balance < 0.01) {
-        balance = 0;
-      }
-
-      // ==============================
-      // ACUMULADO
-      // ==============================
-
-      accumulatedPayment += payment;
-
-      // ==============================
-      // CONTAR ANUALIDAD UTILIZADA
-      // ==============================
-
-      if (isAnnuality) {
-        annualitiesUsed++;
-      }
-
-      // ==============================
-      // AGREGAR FILA
-      // ==============================
-
-      rows.push({
-        paymentNumber: i + 1,
-        month: this.monthNames[paymentDate.getMonth()],
-        year: paymentDate.getFullYear(),
-        payment,
-        balance,
-        accumulatedPayment,
-      });
-
-      // Si ya se liquidó, no seguimos generando filas.
-
-      if (balance <= 0) {
-        break;
-      }
-    }
-
-    return rows;
+  /** "Mensualidad + aportación anual" (Con anualidades y Promoción) con el mes y el número de anualidades
+   * elegidos; `mesesDespues` = 1 cuando hay enganche o pago inicial. */
+  private tablaConAnualidad(total: number, anualidad: number, mensualidad: number, mesesDespues = 0): AmortizationRow[] {
+    return tablaConAnualidad({
+      hoy: this.currentDate,
+      meses: this.selectedMonths,
+      total,
+      anualidad,
+      mensualidad,
+      mesAnualidad: this.annualContributionMonth,
+      numeroAnualidades: this.annualContributionsCount,
+      mesesDespues,
+    });
   }
 
   private getQuotePdfData(): QuotePdfData {
     const lotes = this.todosLosLotes;
 
     return {
-      project: this.selectedProject === 'samai' ? 'SAMAI Campestre' : 'Aldea Nanuu',
+      project: PROYECTOS_COTIZADOR[this.selectedProject].nombre,
 
-      location:
-        this.selectedProject === 'samai'
-          ? 'San José La Ciénega, Pochutla, Oaxaca'
-          : 'Cuatunalco, Huatulco, Oaxaca',
+      location: PROYECTOS_COTIZADOR[this.selectedProject].ubicacion,
 
       advisorName: this.advisorName,
       clientName: this.clientName,
@@ -1385,17 +1181,15 @@ export class CotizadorComponent implements OnInit {
   }
 
   get currentProjectName(): string {
-    return this.selectedProject === 'samai' ? 'SAMAI CAMPESTRE' : 'ALDEA NANUU';
+    return PROYECTOS_COTIZADOR[this.selectedProject].portada;
   }
 
   get currentProjectLocation(): string {
-    return this.selectedProject === 'samai'
-      ? 'San José La Ciénega, Pochutla, Oaxaca'
-      : 'Cuatunalco, Huatulco, Oaxaca';
+    return PROYECTOS_COTIZADOR[this.selectedProject].ubicacion;
   }
 
   get currentProjectImage(): string {
-    return this.selectedProject === 'samai' ? '/images/samai-cover.png' : '/images/nanuu-cover.png';
+    return PROYECTOS_COTIZADOR[this.selectedProject].imagen;
   }
 
   /** Con un solo lote, Manzana/Lote son obligatorios como siempre. Con varios lotes ya agregados,
@@ -1419,8 +1213,7 @@ export class CotizadorComponent implements OnInit {
     if (this.requiereLoteEnCaptura && !this.lotNumber.trim()) faltan.push('el lote');
     if (!this.hayFormaPago) faltan.push('la forma de pago');
     if (faltan.length === 0) return 'Revisa los montos de la forma de pago para generar el PDF.';
-    const lista = faltan.length === 1 ? faltan[0] : `${faltan.slice(0, -1).join(', ')} y ${faltan[faltan.length - 1]}`;
-    return `Para generar el PDF falta ${lista}.`;
+    return `Para generar el PDF falta ${enumerar(faltan)}.`;
   }
 
   get advisorNameInvalid(): boolean {
@@ -1505,20 +1298,7 @@ export class CotizadorComponent implements OnInit {
   annualContributionMonth: number = 12;
 
   // Reutilizado por el selector de "mes de la aportación" tanto en Anualidades como en Promoción.
-  readonly mesesDelAnio: { value: number; label: string }[] = [
-    { value: 1, label: 'Enero' },
-    { value: 2, label: 'Febrero' },
-    { value: 3, label: 'Marzo' },
-    { value: 4, label: 'Abril' },
-    { value: 5, label: 'Mayo' },
-    { value: 6, label: 'Junio' },
-    { value: 7, label: 'Julio' },
-    { value: 8, label: 'Agosto' },
-    { value: 9, label: 'Septiembre' },
-    { value: 10, label: 'Octubre' },
-    { value: 11, label: 'Noviembre' },
-    { value: 12, label: 'Diciembre' },
-  ];
+  readonly mesesDelAnio = MESES_DEL_ANIO;
 
   // El asesor puede editar el número de aportaciones (compartido entre "Con anualidades" y
   // "Promoción", igual que antes de ser editable). null = todavía no lo ha tocado, así que
@@ -1647,6 +1427,45 @@ export class CotizadorComponent implements OnInit {
     return this.isAnnualities && !this.annualContributionInvalid;
   }
 
+  /** Lo que muestra la tarjeta "Resumen de cotización" (ver CotizadorResumenComponent). */
+  get resumen(): ResumenCotizacion {
+    return {
+      currentProjectImage: this.currentProjectImage,
+      currentProjectName: this.currentProjectName,
+      currentProjectLocation: this.currentProjectLocation,
+      esMultiLote: this.esMultiLote,
+      superficieTotal: this.superficieTotal,
+      cantidadLotes: this.cantidadLotes,
+      cashDiscountApplied: this.cashDiscountApplied,
+      precioM2Promedio: this.precioM2Promedio,
+      displayedLandPrice: this.displayedLandPrice,
+      paymentMethodLabel: this.paymentMethodLabel,
+      isPromocion: this.isPromocion,
+      promocionUsaAportaciones: this.promocionUsaAportaciones,
+      aportacionesTotal: this.aportacionesTotal,
+      promocionAnnualContribution: this.promocionAnnualContribution,
+      promocionContribucionesCount: this.promocionContribucionesCount,
+      llevaEntrada: this.llevaEntrada,
+      extra: this.formaPago.extra,
+      etiquetaEntrada: this.etiquetaEntrada,
+      downPayment: this.downPayment,
+      isAnnualities: this.isAnnualities,
+      annualContributionsCount: this.annualContributionsCount,
+      annualContributionsTotal: this.annualContributionsTotal,
+      isAportaciones: this.isAportaciones,
+      numeroAportaciones: this.aportaciones.length,
+      financedAmount: this.financedAmount,
+      hayFormaPago: this.hayFormaPago,
+      esContado: this.esContado,
+      totalInvestment: this.totalInvestment,
+      monthlyPayment: this.monthlyPayment,
+      financingMonths: this.financingMonths,
+      interestAmount: this.interestAmount,
+      isQuoteValid: this.isQuoteValid,
+      motivoCotizacionIncompleta: this.motivoCotizacionIncompleta,
+    };
+  }
+
   get isQuoteValid(): boolean {
     if (!this.isQuoteDataComplete) {
       return false;
@@ -1674,15 +1493,4 @@ export class CotizadorComponent implements OnInit {
 
     return true;
   }
-}
-
-export interface AmortizationRow {
-  paymentNumber: number;
-  month: string;
-  year: number;
-  payment: number;
-  balance: number;
-  accumulatedPayment: number;
-  /** true en los meses que llevan una aportación (el PDF los resalta). */
-  esAportacion?: boolean;
 }

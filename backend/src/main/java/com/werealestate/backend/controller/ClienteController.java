@@ -10,7 +10,7 @@ import com.werealestate.backend.dto.NumeroContratoRequest;
 import com.werealestate.backend.dto.VentaDto;
 import com.werealestate.backend.service.ClienteService;
 import com.werealestate.backend.service.EstadoCuentaService;
-import com.werealestate.backend.service.VentaService;
+import com.werealestate.backend.service.ContratoVentaService;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,14 +27,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class ClienteController {
 
     private final ClienteService clienteService;
-    private final VentaService ventaService;
+    private final ContratoVentaService contratoVentaService;
     private final EstadoCuentaService estadoCuentaService;
     private final com.werealestate.backend.service.EliminacionClienteService eliminacionService;
 
-    public ClienteController(ClienteService clienteService, VentaService ventaService, EstadoCuentaService estadoCuentaService,
+    public ClienteController(ClienteService clienteService, ContratoVentaService contratoVentaService, EstadoCuentaService estadoCuentaService,
             com.werealestate.backend.service.EliminacionClienteService eliminacionService) {
         this.clienteService = clienteService;
-        this.ventaService = ventaService;
+        this.contratoVentaService = contratoVentaService;
         this.estadoCuentaService = estadoCuentaService;
         this.eliminacionService = eliminacionService;
     }
@@ -81,7 +81,7 @@ public class ClienteController {
      * no /api/ventas) para que lo pueda usar quien tenga el módulo Clientes aunque no tenga el de Ventas. */
     @PutMapping("/ventas/{ventaId}/numero-contrato")
     public VentaDto numeroContratoDeVenta(@PathVariable Long ventaId, @Valid @RequestBody NumeroContratoRequest request) {
-        return ventaService.registrarNumeroContrato(ventaId, request);
+        return contratoVentaService.registrarNumeroContrato(ventaId, request);
     }
 
     @PutMapping("/{id}/numero")

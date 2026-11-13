@@ -1,4 +1,3 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
@@ -12,6 +11,7 @@ import { ComercializadorasService } from '../../core/services/comercializadoras.
 import { ConfirmService } from '../../core/services/confirm.service';
 import { ToastService } from '../../core/services/toast.service';
 import { WeLoaderComponent } from '../../shared/we-loader/we-loader.component';
+import { mensajeDe } from '../../core/utils/formato-pantalla';
 
 /** Comercializadoras (menú, debajo de Asesores externos): cada una tiene una líder (asesor externo) y un enlace
  * que la líder comparte para que cada integrante de su equipo se dé de alta solo y aparezca en su equipo de
@@ -277,6 +277,3 @@ export class ComercializadorasListComponent {
   }
 }
 
-function mensajeDe(error: unknown, porDefecto: string): string {
-  return error instanceof HttpErrorResponse && typeof error.error?.message === 'string' ? error.error.message : porDefecto;
-}

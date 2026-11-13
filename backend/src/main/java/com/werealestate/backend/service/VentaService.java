@@ -2,73 +2,52 @@ package com.werealestate.backend.service;
 
 import com.werealestate.backend.dto.AplicarDepositoRequest;
 import com.werealestate.backend.dto.ContadoresVentasDto;
-import com.werealestate.backend.dto.NumeracionVentaDto;
 import com.werealestate.backend.dto.PaginaDto;
 import com.werealestate.backend.dto.PagoVentaCreateRequest;
-import com.werealestate.backend.dto.PagoVentaDto;
-import com.werealestate.backend.dto.ReciboAnularRequest;
-import com.werealestate.backend.dto.ReciboEditarRequest;
-import com.werealestate.backend.dto.ReciboHistorialDto;
 import com.werealestate.backend.dto.VentaCreateRequest;
-import com.werealestate.backend.dto.ClienteResumenDto;
 import com.werealestate.backend.dto.VentaDto;
-import com.werealestate.backend.dto.VentaAportacionDto;
 import com.werealestate.backend.dto.VentaAportacionItemRequest;
-import com.werealestate.backend.dto.VentaLoteDto;
 import com.werealestate.backend.dto.VentaLoteItemRequest;
 import com.werealestate.backend.dto.VentaUpdateRequest;
 import com.werealestate.backend.dto.VentaEliminarRequest;
 import com.werealestate.backend.exception.ConflictException;
-import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.exception.ValidationException;
 import com.werealestate.backend.model.AsesorExterno;
 import com.werealestate.backend.model.Cliente;
-import com.werealestate.backend.model.EstadoLote;
 import com.werealestate.backend.model.Desarrollo;
 import com.werealestate.backend.model.EtiquetaVenta;
 import com.werealestate.backend.model.Lote;
-import com.werealestate.backend.model.AccionRecibo;
-import com.werealestate.backend.model.MedioFirma;
-import com.werealestate.backend.model.MesCubierto;
-import com.werealestate.backend.model.PagoVenta;
-import com.werealestate.backend.model.ReciboVenta;
-import com.werealestate.backend.model.ReciboVentaHistorial;
 import com.werealestate.backend.model.TipoAbono;
-import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.model.Venta;
 import com.werealestate.backend.model.VentaCopropietario;
 import com.werealestate.backend.repository.VentaCopropietarioRepository;
 import com.werealestate.backend.model.VentaAportacion;
-import com.werealestate.backend.model.VentaReestructuracion;
 import com.werealestate.backend.model.VentaLote;
 import com.werealestate.backend.repository.AsesorExternoRepository;
 import com.werealestate.backend.repository.LoteRepository;
-import com.werealestate.backend.repository.PagoVentaRepository;
-import com.werealestate.backend.repository.ReciboVentaHistorialRepository;
-import com.werealestate.backend.repository.ReciboVentaRepository;
 import com.werealestate.backend.repository.UsuarioRepository;
 import com.werealestate.backend.repository.VentaAportacionRepository;
 import com.werealestate.backend.repository.VentaLoteRepository;
 import com.werealestate.backend.repository.VentaRepository;
+import com.werealestate.backend.repository.WeFormRespuestaRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Predicate;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -89,60 +68,63 @@ public class VentaService {
     private final VentaLoteRepository ventaLoteRepository;
     private final VentaAportacionRepository ventaAportacionRepository;
     private final LoteRepository loteRepository;
-    private final LoteService loteService;
-    private final PagoVentaRepository pagoVentaRepository;
-    private final ReciboVentaRepository reciboVentaRepository;
-    private final ReciboVentaHistorialRepository reciboHistorialRepository;
+    private final LoteVentaService loteVentaService;
+    private final ReciboVentaService reciboVentaService;
+    private final NumeracionVentaService numeracion;
     private final ComisionService comisionService;
     private final ClienteService clienteService;
     private final ClienteNumeracionService clienteNumeracionService;
     private final VentaCopropietarioRepository copropietarioRepository;
-    private final com.werealestate.backend.repository.WeFormRespuestaRepository weFormRespuestaRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final WeFormRespuestaRepository weFormRespuestaRepository;
     private final UsuarioRepository usuarioRepository;
     private final AsesorExternoRepository asesorExternoRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final ConsultasVenta consultas;
+    private final AutorizacionVentas autorizacion;
+    private final VentaDtoArmador dtoArmador;
 
     public VentaService(
             VentaRepository ventaRepository,
             VentaLoteRepository ventaLoteRepository,
             VentaAportacionRepository ventaAportacionRepository,
             LoteRepository loteRepository,
-            LoteService loteService,
-            PagoVentaRepository pagoVentaRepository,
-            ReciboVentaRepository reciboVentaRepository,
-            ReciboVentaHistorialRepository reciboHistorialRepository,
+            LoteVentaService loteVentaService,
+            ReciboVentaService reciboVentaService,
+            NumeracionVentaService numeracion,
             ComisionService comisionService,
             ClienteService clienteService,
             ClienteNumeracionService clienteNumeracionService,
             VentaCopropietarioRepository copropietarioRepository,
-            com.werealestate.backend.repository.WeFormRespuestaRepository weFormRespuestaRepository,
-            PasswordEncoder passwordEncoder,
+            WeFormRespuestaRepository weFormRespuestaRepository,
             UsuarioRepository usuarioRepository,
             AsesorExternoRepository asesorExternoRepository,
-            CurrentUserProvider currentUserProvider) {
+            CurrentUserProvider currentUserProvider,
+            ConsultasVenta consultas,
+            AutorizacionVentas autorizacion,
+            VentaDtoArmador dtoArmador) {
         this.ventaRepository = ventaRepository;
         this.ventaLoteRepository = ventaLoteRepository;
         this.ventaAportacionRepository = ventaAportacionRepository;
         this.loteRepository = loteRepository;
-        this.loteService = loteService;
-        this.pagoVentaRepository = pagoVentaRepository;
-        this.reciboVentaRepository = reciboVentaRepository;
-        this.reciboHistorialRepository = reciboHistorialRepository;
+        this.loteVentaService = loteVentaService;
+        this.reciboVentaService = reciboVentaService;
+        this.numeracion = numeracion;
         this.comisionService = comisionService;
         this.clienteService = clienteService;
         this.clienteNumeracionService = clienteNumeracionService;
         this.copropietarioRepository = copropietarioRepository;
         this.weFormRespuestaRepository = weFormRespuestaRepository;
-        this.passwordEncoder = passwordEncoder;
         this.usuarioRepository = usuarioRepository;
         this.asesorExternoRepository = asesorExternoRepository;
         this.currentUserProvider = currentUserProvider;
+        this.consultas = consultas;
+        this.autorizacion = autorizacion;
+        this.dtoArmador = dtoArmador;
     }
 
     public VentaDto crear(VentaCreateRequest request) {
-        exigirAdminOLider();
-        return toDto(crearVenta(request, currentUserProvider.getUsuarioActual(), false));
+        autorizacion.exigirAdminOLider();
+        return dtoArmador.armar(crearVenta(request, currentUserProvider.getUsuarioActual(), false));
     }
 
     /** La venta que nace de un registro de venta de We Forms (ver WeFormPublicoService): sin sesión, a nombre
@@ -154,53 +136,27 @@ public class VentaService {
     }
 
     private Venta crearVenta(VentaCreateRequest request, Usuario registradaPor, boolean registroDeVenta) {
-        // El desarrollo con el que cuenta la venta: el de su primer lote (en una venta con lotes de dos desarrollos
-        // manda el primero). Su número es consecutivo dentro de ese desarrollo.
         if (request.lotes() == null || request.lotes().isEmpty()) {
             throw new ValidationException("La venta necesita al menos un lote");
         }
+        // El desarrollo con el que cuenta la venta: el de su primer lote (en una venta con lotes de dos desarrollos
+        // manda el primero). Su número es consecutivo dentro de ese desarrollo.
         Long primerLoteId = request.lotes().get(0).loteId();
-        Desarrollo desarrolloDeNumeracion = loteRepository.findById(primerLoteId)
-                .orElseThrow(() -> new ValidationException("Lote no encontrado"))
-                .getDesarrollo();
+        Desarrollo desarrolloDeNumeracion = desarrolloDelLote(primerLoteId);
         // Primero el número (puede recorrer otras ventas y vacía el contexto de persistencia): todavía
         // no se ha cargado nada de esta operación.
-        long numeroVenta = reservarNumeroGlobal();
+        long numeroVenta = numeracion.reservarNumeroGlobal();
         Long numeroEnDesarrollo = ClienteNumeracionService.prefijo(desarrolloDeNumeracion.getNombre()) == null
                 ? null
-                : reservarNumero(request.numero(), desarrolloDeNumeracion.getId(), 0L, -1L);
+                : numeracion.reservarNumero(request.numero(), desarrolloDeNumeracion.getId(), 0L, -1L);
         // Recorrer números vacía el contexto de persistencia: se vuelve a leer el desarrollo para que siga administrado.
-        desarrolloDeNumeracion = loteRepository.findById(primerLoteId)
-                .orElseThrow(() -> new ValidationException("Lote no encontrado"))
-                .getDesarrollo();
+        desarrolloDeNumeracion = desarrolloDelLote(primerLoteId);
 
-        Set<Long> loteIdsUnicos = new HashSet<>();
-        for (VentaLoteItemRequest item : request.lotes()) {
-            if (!loteIdsUnicos.add(item.loteId())) {
-                throw new ValidationException("El mismo lote no puede repetirse dentro de una venta");
-            }
-            // Ni estar en dos ventas: la venta es la que manda el estado del lote (ver LoteService.cambiarEstado).
-            ventaLoteRepository.findFirstByLoteIdOrderByIdDesc(item.loteId()).ifPresent(otra -> {
-                throw new ConflictException("El lote Mz " + otra.getLote().getManzana() + " / Lote "
-                        + otra.getLote().getNumeroLote() + " ya está en la venta " + otra.getVenta().getEtiqueta());
-            });
-        }
+        validarLotesLibres(request.lotes());
 
         AsesorResuelto asesor = resolverAsesor(request.usuarioAsesorId(), request.asesorExternoId());
         validarPorcentajeComision(request.comisionPorcentaje(), "La comisión del asesor");
-        // Copropietario (segundo asesor): opcional; distinto del asesor principal y con su propio %.
-        AsesorResuelto coasesor = null;
-        if (request.coasesorUsuarioId() != null || request.coasesorExternoId() != null) {
-            coasesor = resolverAsesor(request.coasesorUsuarioId(), request.coasesorExternoId());
-            boolean mismoUsuario = coasesor.usuario() != null && asesor.usuario() != null
-                    && coasesor.usuario().getId().equals(asesor.usuario().getId());
-            boolean mismoExterno = coasesor.externo() != null && asesor.externo() != null
-                    && coasesor.externo().getId().equals(asesor.externo().getId());
-            if (mismoUsuario || mismoExterno) {
-                throw new ValidationException("El copropietario debe ser distinto al asesor de la venta");
-            }
-            validarPorcentajeComision(request.coasesorComisionPorcentaje(), "La comisión del copropietario");
-        }
+        AsesorResuelto coasesor = resolverCoasesor(request, asesor);
         List<VentaAportacionItemRequest> aportaciones =
                 request.aportaciones() == null ? List.of() : request.aportaciones();
         validarAportaciones(aportaciones, request);
@@ -210,23 +166,19 @@ public class VentaService {
             throw new ValidationException("Ese cliente está inactivo: actívalo para registrarle una venta");
         }
         String cliente = clienteRef.nombreCompleto();
-        String notas = request.notas() == null || request.notas().isBlank() ? null : request.notas().trim();
-
-        String engancheLabel = request.engancheLabel() == null || request.engancheLabel().isBlank()
-                ? null
-                : request.engancheLabel().trim();
+        boolean contratoFirmado = Boolean.TRUE.equals(request.contratoFirmado());
 
         Venta venta = new Venta(
                 cliente, asesor.usuario(), asesor.externo(), request.formaPago().trim(), request.fechaVenta(),
-                request.mensualidad(), request.plazoMeses(), engancheLabel, request.enganche(),
-                request.diaPago(), Boolean.TRUE.equals(request.primeraMensualidadMesVenta()), notas);
+                request.mensualidad(), request.plazoMeses(), Textos.opcional(request.engancheLabel()), request.enganche(),
+                request.diaPago(), Boolean.TRUE.equals(request.primeraMensualidadMesVenta()),
+                Textos.opcional(request.notas()));
         venta.setNumero(numeroVenta);
         venta.numerar(desarrolloDeNumeracion, numeroEnDesarrollo);
         venta.setModalidadPago(request.modalidadPago());
         venta.ligarCliente(clienteRef);
         venta.setRegistradaPor(registradaPor);
-        boolean contratoFirmado = Boolean.TRUE.equals(request.contratoFirmado());
-        String driveUrl = validarContrato(
+        String driveUrl = ContratoVentaService.validarContrato(
                 contratoFirmado, request.contratoFechaFirma(), request.contratoMedio(), request.contratoDriveUrl());
         venta.registrarContrato(contratoFirmado, request.contratoFechaFirma(), request.contratoMedio(), driveUrl);
         venta = ventaRepository.save(venta);
@@ -236,21 +188,8 @@ public class VentaService {
             ventaAportacionRepository.save(new VentaAportacion(venta, item.anio(), item.mes(), item.monto()));
         }
 
-        BigDecimal depositoPendiente = BigDecimal.ZERO;
-        for (VentaLoteItemRequest item : request.lotes()) {
-            Lote lote = loteRepository
-                    .findById(item.loteId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Lote no encontrado"));
-            ventaLoteRepository.save(new VentaLote(venta, lote, item.precio()));
-
-            if (registroDeVenta) {
-                if (lote.getMontoApartado() != null) depositoPendiente = depositoPendiente.add(lote.getMontoApartado());
-                loteService.marcarEnProcesoDeFirma(lote.getId(), cliente, asesor.nombre(), registradaPor);
-            } else {
-                // Desde el panel, según el contrato: firmado, Vendido; sin firmar, En proceso de firma.
-                loteService.marcarPorVenta(lote.getId(), contratoFirmado, cliente, asesor.nombre());
-            }
-        }
+        BigDecimal depositoPendiente = guardarLotesDeLaVenta(
+                venta, request.lotes(), cliente, asesor, registradaPor, registroDeVenta, contratoFirmado);
         if (registroDeVenta) {
             venta.setFechaProvisional(true);
             venta.setDepositoPendiente(depositoPendiente.signum() > 0 ? depositoPendiente : null);
@@ -265,7 +204,73 @@ public class VentaService {
                 coasesor != null ? coasesor.usuario() : null,
                 coasesor != null ? coasesor.externo() : null,
                 request.coasesorComisionPorcentaje());
-        return obtenerEntidad(venta.getId());
+        return consultas.obtenerEntidad(venta.getId());
+    }
+
+    private Desarrollo desarrolloDelLote(Long loteId) {
+        return loteRepository.findById(loteId)
+                .orElseThrow(() -> new ValidationException("Lote no encontrado"))
+                .getDesarrollo();
+    }
+
+    /** Un lote no se repite dentro de la venta ni puede estar ya en otra: la venta es la que manda el estado del lote
+     * (ver LoteService.cambiarEstado). */
+    private void validarLotesLibres(List<VentaLoteItemRequest> lotes) {
+        Set<Long> loteIdsUnicos = new HashSet<>();
+        for (VentaLoteItemRequest item : lotes) {
+            if (!loteIdsUnicos.add(item.loteId())) {
+                throw new ValidationException("El mismo lote no puede repetirse dentro de una venta");
+            }
+            ventaLoteRepository.findFirstByLoteIdOrderByIdDesc(item.loteId()).ifPresent(otra -> {
+                throw new ConflictException("El lote Mz " + otra.getLote().getManzana() + " / Lote "
+                        + otra.getLote().getNumeroLote() + " ya está en la venta " + otra.getVenta().getEtiqueta());
+            });
+        }
+    }
+
+    /** Copropietario (segundo asesor): opcional; distinto del asesor principal y con su propio %. */
+    private AsesorResuelto resolverCoasesor(VentaCreateRequest request, AsesorResuelto principal) {
+        if (request.coasesorUsuarioId() == null && request.coasesorExternoId() == null) {
+            return null;
+        }
+        AsesorResuelto coasesor = resolverAsesor(request.coasesorUsuarioId(), request.coasesorExternoId());
+        boolean mismoUsuario = coasesor.usuario() != null && principal.usuario() != null
+                && coasesor.usuario().getId().equals(principal.usuario().getId());
+        boolean mismoExterno = coasesor.externo() != null && principal.externo() != null
+                && coasesor.externo().getId().equals(principal.externo().getId());
+        if (mismoUsuario || mismoExterno) {
+            throw new ValidationException("El copropietario debe ser distinto al asesor de la venta");
+        }
+        validarPorcentajeComision(request.coasesorComisionPorcentaje(), "La comisión del copropietario");
+        return coasesor;
+    }
+
+    /** Liga los lotes a la venta y les pone su estado (desde el panel, según el contrato: firmado, Vendido; sin firmar,
+     * En proceso de firma; desde un registro de venta, siempre En proceso de firma). Devuelve el dinero con el que
+     * estuvieran apartados, que solo importa en un registro de venta. */
+    private BigDecimal guardarLotesDeLaVenta(
+            Venta venta,
+            List<VentaLoteItemRequest> items,
+            String cliente,
+            AsesorResuelto asesor,
+            Usuario registradaPor,
+            boolean registroDeVenta,
+            boolean contratoFirmado) {
+        BigDecimal depositoPendiente = BigDecimal.ZERO;
+        for (VentaLoteItemRequest item : items) {
+            Lote lote = loteRepository
+                    .findById(item.loteId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Lote no encontrado"));
+            ventaLoteRepository.save(new VentaLote(venta, lote, item.precio()));
+
+            if (registroDeVenta) {
+                if (lote.getMontoApartado() != null) depositoPendiente = depositoPendiente.add(lote.getMontoApartado());
+                loteVentaService.marcarEnProcesoDeFirma(lote.getId(), cliente, asesor.nombre(), registradaPor);
+            } else {
+                loteVentaService.marcarPorVenta(lote.getId(), contratoFirmado, cliente, asesor.nombre());
+            }
+        }
+        return depositoPendiente;
     }
 
     /** Reglas de las aportaciones (el frontend ya las aplica, aquí se hacen valer en el servidor):
@@ -313,108 +318,19 @@ public class VentaService {
         }
     }
 
-    /** Registra o corrige si el contrato de la venta ya está firmado y desde cuándo. Sin contrato
-     * firmado, la comisión de una venta nueva se acumula pero no se puede entregar; al firmar queda
-     * disponible el sábado siguiente a la firma. Si cambia la firma, cambian también sus lotes (ver
-     * {@link #alinearLotesConContrato}); corregir solo la fecha, el medio o el enlace no los mueve. */
-    public VentaDto registrarContrato(Long ventaId, com.werealestate.backend.dto.ContratoRequest request) {
-        exigirAdminOLider();
-        Venta venta = obtenerEntidad(ventaId);
-        boolean estabaFirmado = venta.isContratoFirmado();
-        String driveUrl = validarContrato(request.firmado(), request.fechaFirma(), request.medio(), request.driveUrl());
-        venta.registrarContrato(request.firmado(), request.fechaFirma(), request.medio(), driveUrl);
-        ventaRepository.save(venta);
-        if (estabaFirmado != request.firmado()) {
-            alinearLotesConContrato(venta);
-        }
-        comisionService.sincronizar(venta);
-        return toDto(venta);
-    }
-
-    /** El estado de los lotes lo manda su venta: con el contrato firmado pasan a Vendido y, si se le quita la firma,
-     * regresan a En proceso de firma, cada cambio con su historial. Si un lote quedó en más de una venta (datos de
-     * antes de que se impidiera), basta con que una esté firmada para que siga Vendido. */
-    private void alinearLotesConContrato(Venta venta) {
-        String nota = venta.isContratoFirmado() ? "Contrato firmado" : "Se quitó la firma del contrato";
-        for (VentaLote vl : ventaLoteRepository.findByVentaId(venta.getId())) {
-            Long loteId = vl.getLote().getId();
-            boolean firmada = ventaLoteRepository.findByLoteId(loteId).stream()
-                    .anyMatch(otra -> otra.getVenta().isContratoFirmado());
-            loteService.ponerEstadoDeVenta(
-                    loteId, firmada ? EstadoLote.VENDIDO : EstadoLote.EN_PROCESO_DE_FIRMA, venta.getCliente(), nota);
-        }
-    }
-
-    /** Con el contrato firmado: fecha (no futura) y medio (físico o DocuSign) obligatorios. El enlace a
-     * la carpeta de Drive es opcional (siempre, firmado o no) y debe ser http(s). Devuelve el enlace
-     * limpio (o null). */
-    private static String validarContrato(
-            boolean firmado, java.time.LocalDate fechaFirma, MedioFirma medio, String driveUrl) {
-        String url = driveUrl == null || driveUrl.isBlank() ? null : driveUrl.trim();
-        if (url != null && !url.startsWith("https://") && !url.startsWith("http://")) {
-            throw new ValidationException("El enlace de Drive debe empezar con https://");
-        }
-        if (!firmado) return url;
-        if (fechaFirma == null) {
-            throw new ValidationException("Indica la fecha de firma del contrato");
-        }
-        if (fechaFirma.isAfter(java.time.LocalDate.now())) {
-            throw new ValidationException("La fecha de firma no puede ser futura");
-        }
-        if (medio == null) {
-            throw new ValidationException("Indica si el contrato se firmó en físico o en DocuSign");
-        }
-        return url;
-    }
-
-    /** Pone, cambia o quita (vacío) el número de contrato de la venta. Es texto libre pero no puede repetirse en
-     * otra venta (sin importar mayúsculas). Lo pueden usar admin y administración, igual que el resto de Ventas. Poner
-     * el primero es libre; cambiar o quitar uno que ya existe exige la contraseña de quien lo hace (como eliminar). */
-    public VentaDto registrarNumeroContrato(Long ventaId, com.werealestate.backend.dto.NumeroContratoRequest request) {
-        Usuario actual = exigirAdminOLider();
-        Venta venta = obtenerEntidad(ventaId);
-        String numero = request.numeroContrato() == null || request.numeroContrato().isBlank()
-                ? null
-                : request.numeroContrato().trim();
-        if (venta.getNumeroContrato() != null && !venta.getNumeroContrato().equals(numero)) {
-            if (request.password() == null || request.password().isBlank()) {
-                throw new ValidationException("Escribe tu contraseña para cambiar o quitar el número de contrato");
-            }
-            if (!passwordEncoder.matches(request.password(), actual.getPassword())) {
-                throw new ForbiddenOperationException("Contraseña incorrecta");
-            }
-        }
-        if (numero != null) {
-            ventaRepository.findFirstByNumeroContratoIgnoreCase(numero)
-                    .filter(otra -> !otra.getId().equals(ventaId))
-                    .ifPresent(otra -> {
-                        throw new ConflictException(
-                                "El número de contrato " + numero + " ya lo tiene la venta " + otra.getEtiqueta());
-                    });
-        }
-        venta.setNumeroContrato(numero);
-        try {
-            ventaRepository.saveAndFlush(venta);
-        } catch (org.springframework.dao.DataIntegrityViolationException e) {
-            // Dos personas guardando el mismo número a la vez: lo frena el índice único.
-            throw new ConflictException("Ese número de contrato ya lo tiene otra venta");
-        }
-        return toDto(venta);
-    }
-
     public VentaDto obtener(Long id) {
-        exigirAdminOLider();
-        return toDto(obtenerEntidad(id));
+        autorizacion.exigirAdminOLider();
+        return dtoArmador.armar(consultas.obtenerEntidad(id));
     }
 
     /** Para abrir una venta desde su dirección (/panel/ventas/11): el número solo sirve para
      * encontrarla; todo lo que escribe (abonos, modificar) sigue usando el id estable de la venta
      * que devuelve esto, porque un número puede cambiar si se registra otra venta con fecha anterior. */
     public VentaDto obtenerPorNumero(String etiqueta) {
-        exigirAdminOLider();
+        autorizacion.exigirAdminOLider();
         EtiquetaVenta.Escrita escrita = EtiquetaVenta.leer(etiqueta)
                 .orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada"));
-        return toDto(ventaRepository
+        return dtoArmador.armar(ventaRepository
                 .findByDesarrolloNombreAndNumeroDesarrollo(EtiquetaVenta.nombreDe(escrita.prefijo()), escrita.numero())
                 .orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada")));
     }
@@ -422,14 +338,12 @@ public class VentaService {
     /** Modifica los datos capturados de una venta (cliente, fechas, términos de financiamiento);
      * no toca sus lotes ni precios. Temporal: ver Venta.actualizar. */
     public VentaDto actualizar(Long id, VentaUpdateRequest request) {
-        exigirAdminOLider();
-        Venta venta = obtenerEntidad(id);
+        autorizacion.exigirAdminOLider();
+        Venta venta = consultas.obtenerEntidad(id);
         AsesorResuelto asesor = resolverAsesor(request.usuarioAsesorId(), request.asesorExternoId());
 
-        String engancheLabel = request.engancheLabel() == null || request.engancheLabel().isBlank()
-                ? null
-                : request.engancheLabel().trim();
-        String notas = request.notas() == null || request.notas().isBlank() ? null : request.notas().trim();
+        String engancheLabel = Textos.opcional(request.engancheLabel());
+        String notas = Textos.opcional(request.notas());
 
         // Una venta registrada desde We Forms con fecha provisional deja de serlo al cambiar la fecha o al confirmarla.
         boolean fechaCambio = !request.fechaVenta().equals(venta.getFechaVenta());
@@ -475,10 +389,10 @@ public class VentaService {
         // leer la venta con el número nuevo. La fecha ya no cambia el número.
         if (request.numero() != null && venta.getDesarrollo() != null && venta.getNumeroDesarrollo() != null
                 && !request.numero().equals(venta.getNumeroDesarrollo())) {
-            long nuevo = reservarNumero(request.numero(), venta.getDesarrollo().getId(), venta.getId(), venta.getNumeroDesarrollo());
+            long nuevo = numeracion.reservarNumero(request.numero(), venta.getDesarrollo().getId(), venta.getId(), venta.getNumeroDesarrollo());
             ventaRepository.fijarNumeroDesarrollo(venta.getId(), nuevo);
         }
-        return toDto(obtenerEntidad(id));
+        return dtoArmador.armar(consultas.obtenerEntidad(id));
     }
 
     /** Aplica el dinero con el que ya estaba apartado el lote de una venta que nació de un registro de venta
@@ -486,8 +400,8 @@ public class VentaService {
      * que falta por pagar; MENSUALIDAD baja la mensualidad (mismo plazo, pago más bajo), igual que al
      * registrar una venta con depósito. Después el depósito ya no está pendiente. */
     public VentaDto aplicarDeposito(Long id, AplicarDepositoRequest request) {
-        Usuario actual = exigirAdminOLider();
-        Venta venta = obtenerEntidad(id);
+        Usuario actual = autorizacion.exigirAdminOLider();
+        Venta venta = consultas.obtenerEntidad(id);
         BigDecimal monto = venta.getDepositoPendiente();
         if (monto == null || monto.signum() <= 0) {
             throw new ValidationException("Esta venta no tiene un depósito pendiente de aplicar");
@@ -497,8 +411,8 @@ public class VentaService {
             if (request.folio() == null || request.folio().isBlank()) {
                 throw new ValidationException("Ingresa el folio del dinero recibido al apartar el lote");
             }
-            registrarPago(id, new PagoVentaCreateRequest(
-                    java.time.LocalDate.now(),
+            reciboVentaService.registrarPago(id, new PagoVentaCreateRequest(
+                    LocalDate.now(),
                     request.folio().trim(),
                     "Dinero recibido al apartar el lote",
                     List.of(new PagoVentaCreateRequest.Linea(TipoAbono.APARTADO, monto, null, null, null))));
@@ -506,7 +420,7 @@ public class VentaService {
             if (venta.getPlazoMeses() == null || venta.getMensualidad() == null) {
                 throw new ValidationException("Esta venta no tiene mensualidades: aplica el depósito al saldo");
             }
-            BigDecimal precio = precioVenta(id);
+            BigDecimal precio = consultas.precioVenta(id);
             BigDecimal enganche = venta.getEnganche() == null ? BigDecimal.ZERO : venta.getEnganche();
             List<VentaAportacion> aportaciones = ventaAportacionRepository.findByVentaIdOrderByAnioAscMesAsc(id);
             BigDecimal aportado = aportaciones.stream().map(VentaAportacion::getMonto).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -515,33 +429,28 @@ public class VentaService {
             if (regulares <= 0 || saldo.signum() <= 0) {
                 throw new ValidationException("El depósito cubre todo el saldo de las mensualidades: aplícalo al saldo");
             }
-            BigDecimal nueva = saldo.divide(BigDecimal.valueOf(regulares), 2, java.math.RoundingMode.HALF_UP);
+            BigDecimal nueva = saldo.divide(BigDecimal.valueOf(regulares), 2, RoundingMode.HALF_UP);
             venta.setMensualidad(nueva);
         }
 
         venta.setDepositoPendiente(null);
         for (VentaLote vl : ventaLoteRepository.findByVentaId(id)) {
-            loteService.limpiarMontoApartado(vl.getLote().getId());
+            loteVentaService.limpiarMontoApartado(vl.getLote().getId());
         }
         comisionService.sincronizar(venta);
-        return toDto(obtenerEntidad(id));
+        return dtoArmador.armar(consultas.obtenerEntidad(id));
     }
 
     /**
      * Elimina una venta por completo. Es destructivo, así que es exclusivo de admin y de
      * administración (líder de área) y exige la contraseña de quien la elimina. Se borran la venta, sus lotes (la relación, no los lotes), sus abonos y sus
      * aportaciones; sus lotes Vendidos o En proceso de firma vuelven a DISPONIBLE; la comisión se queda
-     * en el historial como "venta eliminada" (y lo ya ganado sigue pudiéndose entregar); y se
+     * en el historial como "venta eliminada" (y lo ya ganado sigue pudiéndose entregar); y las
      * ventas con número mayor bajan 1 para no dejar hueco (si eliminas la 4, la 5 pasa a 4, y así).
      */
     public void eliminar(Long id, VentaEliminarRequest request) {
-        Usuario actual = currentUserProvider.getUsuarioActual();
-        if (actual.getRol() != Role.ADMIN && actual.getRol() != Role.LIDER_AREA) {
-            throw new ForbiddenOperationException("Solo un administrador o personal de administración puede eliminar una venta");
-        }
-        if (!passwordEncoder.matches(request.password(), actual.getPassword())) {
-            throw new ForbiddenOperationException("Contraseña incorrecta");
-        }
+        autorizacion.exigirAdminOLiderConContrasena(
+                "Solo un administrador o personal de administración puede eliminar una venta", request.password());
         eliminarYaAutorizada(id);
     }
 
@@ -551,7 +460,7 @@ public class VentaService {
      * persistencia, así que cada venta se vuelve a leer por su id.
      */
     public void eliminarYaAutorizada(Long id) {
-        Venta venta = obtenerEntidad(id);
+        Venta venta = consultas.obtenerEntidad(id);
         ventaRepository.bloquearNumeracion();
         long numeroEliminado = venta.getNumeroGlobal();
         Long desarrolloEliminado = venta.getDesarrollo() != null ? venta.getDesarrollo().getId() : null;
@@ -563,12 +472,7 @@ public class VentaService {
 
         List<VentaLote> lotes = ventaLoteRepository.findByVentaId(id);
         List<Long> loteIds = lotes.stream().map(vl -> vl.getLote().getId()).toList();
-        pagoVentaRepository.deleteAll(pagoVentaRepository.findByVentaIdOrderByFechaDesc(id));
-        pagoVentaRepository.flush();
-        List<ReciboVenta> recibosDeVenta = reciboVentaRepository.findByVentaId(id);
-        recibosDeVenta.forEach(r -> reciboHistorialRepository.deleteAll(reciboHistorialRepository.findByReciboId(r.getId())));
-        reciboHistorialRepository.flush();
-        reciboVentaRepository.deleteAll(recibosDeVenta);
+        reciboVentaService.borrarDeVenta(id);
         ventaAportacionRepository.deleteAll(ventaAportacionRepository.findByVentaIdOrderByAnioAscMesAsc(id));
         copropietarioRepository.deleteAll(copropietarioRepository.findByVentaIdOrderByOrdenAsc(id));
         ventaLoteRepository.deleteAll(lotes);
@@ -580,25 +484,22 @@ public class VentaService {
         // lo incluye (datos de antes de que se impidiera), se queda como está.
         for (Long loteId : loteIds) {
             if (!ventaLoteRepository.existsByLoteId(loteId)) {
-                loteService.liberarPorVentaEliminada(loteId);
+                loteVentaService.liberarPorVentaEliminada(loteId);
             }
         }
         // Las ventas con número mayor bajan 1 (el global y el de su desarrollo): la numeración no queda con hueco.
-        ventaRepository.bajarDesde(numeroEliminado);
-        if (desarrolloEliminado != null && numeroDesarrolloEliminado != null) {
-            ventaRepository.bajarDesarrolloDesde(desarrolloEliminado, numeroDesarrolloEliminado);
-        }
+        numeracion.cerrarHuecoDeVentaEliminada(numeroEliminado, desarrolloEliminado, numeroDesarrolloEliminado);
     }
 
     /** Para el ícono de "ver información de venta" en /panel/lotes: qué venta vendió este lote, si
      * alguna (un lote puede estar en VENDIDO sin venta asociada si alguien cambió el estado a mano
      * en vez de usar el módulo de ventas). */
     public VentaDto obtenerPorLote(Long loteId) {
-        exigirAdminOLider();
+        autorizacion.exigirAdminOLider();
         VentaLote ventaLote = ventaLoteRepository
                 .findFirstByLoteIdOrderByIdDesc(loteId)
                 .orElseThrow(() -> new ResourceNotFoundException("Este lote no tiene una venta registrada"));
-        return toDto(ventaLote.getVenta());
+        return dtoArmador.armar(ventaLote.getVenta());
     }
 
     /** ascendente = la venta más antigua primero (número 1 arriba); si no, la más reciente primero.
@@ -607,7 +508,7 @@ public class VentaService {
      * EtiquetaVenta); una venta con lotes de dos desarrollos aparece solo en el de su primer lote. */
     public PaginaDto<VentaDto> buscarPaginado(
             String busqueda, boolean ascendente, int pagina, int tamano, Long desarrolloId) {
-        exigirAdminOLider();
+        autorizacion.exigirAdminOLider();
         Specification<Venta> spec = (root, query, cb) -> cb.conjunction();
 
         if (desarrolloId != null) {
@@ -622,7 +523,7 @@ public class VentaService {
                 // venta cuyo asesor sea del otro tipo.
                 Join<Venta, Usuario> usuarioAsesor = root.join("usuarioAsesor", JoinType.LEFT);
                 Join<Venta, AsesorExterno> asesorExterno = root.join("asesorExterno", JoinType.LEFT);
-                java.util.List<jakarta.persistence.criteria.Predicate> opciones = new java.util.ArrayList<>(java.util.List.of(
+                List<Predicate> opciones = new ArrayList<>(List.of(
                         cb.like(cb.lower(root.get("cliente")), comodin),
                         cb.like(cb.lower(usuarioAsesor.get("nombre")), comodin),
                         cb.like(cb.lower(asesorExterno.get("nombre")), comodin)));
@@ -635,7 +536,7 @@ public class VentaService {
                 if (!soloNumero.isEmpty() && soloNumero.length() <= 8 && soloNumero.chars().allMatch(Character::isDigit)) {
                     opciones.add(cb.equal(root.get("numeroDesarrollo"), Long.parseLong(soloNumero)));
                 }
-                return cb.or(opciones.toArray(jakarta.persistence.criteria.Predicate[]::new));
+                return cb.or(opciones.toArray(Predicate[]::new));
             });
         }
         spec = spec.and((root, query, cb) -> {
@@ -649,13 +550,13 @@ public class VentaService {
 
         Pageable pageable = PageRequest.of(Math.max(pagina, 0), Math.max(tamano, 1));
         Page<Venta> resultado = ventaRepository.findAll(spec, pageable);
-        return new PaginaDto<>(toDtos(resultado.getContent()), resultado.hasNext());
+        return new PaginaDto<>(dtoArmador.armarPagina(resultado.getContent()), resultado.hasNext());
     }
 
     /** Para los contadores de /panel/ventas: lotes vendidos (cada lote cuenta una vez) y ventas
      * registradas (una por operación, aunque incluya varios lotes). */
     public ContadoresVentasDto contadores(Long desarrolloId) {
-        exigirAdminOLider();
+        autorizacion.exigirAdminOLider();
         if (desarrolloId != null) {
             return new ContadoresVentasDto(
                     ventaLoteRepository.countLotesVendidosByDesarrolloId(desarrolloId),
@@ -665,523 +566,8 @@ public class VentaService {
     }
 
     public long contarLotesVendidosSamaiCampestre() {
-        exigirAdminOLider();
+        autorizacion.exigirAdminOLider();
         return ventaLoteRepository.countLotesVendidosByDesarrolloNombre(DESARROLLO_SAMAI_CAMPESTRE);
-    }
-
-    /** Abonos de una venta, más reciente primero. */
-    public List<PagoVentaDto> listarPagos(Long ventaId) {
-        exigirAdminOLider();
-        obtenerEntidad(ventaId); // valida que la venta exista antes de listar sus pagos
-        return pagoVentaRepository.findByVentaIdOrderByFechaDesc(ventaId).stream().map(PagoVentaDto::from).toList();
-    }
-
-    /** Registra un recibo con una o más líneas (cada una de un tipo). Se rechaza si el total excede el
-     * saldo pendiente: un abono de más casi siempre es un error de captura (monto o venta
-     * equivocada), no un pago real de más. Devuelve las líneas creadas. */
-    public List<PagoVentaDto> registrarPago(Long ventaId, PagoVentaCreateRequest request) {
-        Usuario actual = exigirAdminOLider();
-        Venta venta = obtenerEntidad(ventaId);
-
-        BigDecimal totalRecibo = request.lineas().stream()
-                .map(PagoVentaCreateRequest.Linea::monto)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal saldoPendiente = precioVenta(ventaId).subtract(totalAbonado(ventaId));
-        if (totalRecibo.compareTo(saldoPendiente) > 0) {
-            throw new ConflictException(
-                    "El abono ($" + totalRecibo + ") excede el saldo pendiente ($" + saldoPendiente + ")");
-        }
-
-        String folio = request.folio().trim();
-        if (reciboVentaRepository.existsByFolioIgnoreCaseAndAnuladoFalse(folio)) {
-            throw new ConflictException("Ya existe un abono con el folio " + folio);
-        }
-
-        // Se validan todas las líneas antes de guardar nada.
-        List<PagoVenta> lineas = new ArrayList<>();
-        String notas = request.notas() == null || request.notas().isBlank() ? null : request.notas().trim();
-        ReciboVenta recibo = new ReciboVenta(venta, folio, request.fecha(), notas, actual);
-        for (PagoVentaCreateRequest.Linea linea : request.lineas()) {
-            lineas.add(construirLinea(venta, recibo, linea));
-        }
-
-        reciboVentaRepository.save(recibo);
-        reciboHistorialRepository.save(new ReciboVentaHistorial(
-                recibo, AccionRecibo.CREADO, actual, "Folio " + folio + " · " + describirLineas(lineas)));
-        List<PagoVentaDto> guardadas = pagoVentaRepository.saveAll(lineas).stream().map(PagoVentaDto::from).toList();
-        comisionService.sincronizar(venta);
-        return guardadas;
-    }
-
-    /** Valida lo que cada tipo exige y arma la línea. */
-    private PagoVenta construirLinea(Venta venta, ReciboVenta recibo, PagoVentaCreateRequest.Linea linea) {
-        boolean extemporaneo = Boolean.TRUE.equals(linea.extemporaneo());
-        Referencias ref = validarReferencias(venta, linea.tipo(), linea.meses(), linea.aportacionId(), extemporaneo, recibo.getFecha(), null);
-        return new PagoVenta(venta, recibo, linea.monto(), linea.tipo(), ref.aportacion(), ref.meses(), extemporaneo);
-    }
-
-    private record Referencias(List<MesCubierto> meses, VentaAportacion aportacion) {
-    }
-
-    /** Mensualidad = meses dentro del plazo de la venta (o, si es extemporánea, ningún mes: el cliente ya pasó el plazo
-     * sin terminar de pagar y el dinero solo abona al saldo); aportación = una aportación programada de esta misma
-     * venta; enganche y apartado, nada más. */
-    private Referencias validarReferencias(
-            Venta venta,
-            TipoAbono tipo,
-            List<PagoVentaCreateRequest.Mes> mesesPedidos,
-            Long aportacionId,
-            boolean extemporaneo,
-            java.time.LocalDate fechaExtemporaneo,
-            Long aportacionActual) {
-        boolean traeMeses = mesesPedidos != null && !mesesPedidos.isEmpty();
-
-        if (extemporaneo && !tipo.esMensual()) {
-            throw new ValidationException("Solo una mensualidad puede ser un pago extemporáneo");
-        }
-
-        if (tipo.esMensual()) {
-            if (venta.getPlazoMeses() == null || venta.getPlazoMeses() < 1 || venta.getMensualidad() == null) {
-                throw new ValidationException("Esta venta no tiene mensualidades");
-            }
-            if (aportacionId != null) {
-                throw new ValidationException("Una mensualidad no se liga a una aportación");
-            }
-            if (extemporaneo) {
-                if (traeMeses) {
-                    throw new ValidationException("Un pago extemporáneo no lleva meses: solo abona al saldo");
-                }
-                // Extemporáneo = después de que terminó el plan (decisión del usuario): dentro del plazo es una
-                // mensualidad normal con sus meses.
-                YearMonth[] rango = CalendarioPagos.rangoDeMeses(venta);
-                if (fechaExtemporaneo != null && rango != null && !YearMonth.from(fechaExtemporaneo).isAfter(rango[1])) {
-                    throw new ValidationException("El plan termina en " + rango[1]
-                            + ": un pago extemporáneo solo se registra después; dentro del plazo elige los meses que cubre");
-                }
-                return new Referencias(List.of(), null);
-            }
-            if (!traeMeses) {
-                throw new ValidationException("Indica el mes o los meses que cubre la mensualidad");
-            }
-            return new Referencias(mesesDelPlazo(venta, mesesPedidos), null);
-        }
-
-        // Un apartado va a la deuda total (sin meses) o, si así se eligió, a la mensualidad de uno o varios meses: solo
-        // cambia a qué mes se aplica en la tabla; para la comisión sigue contando como apartado (decisión del usuario).
-        if (tipo == TipoAbono.APARTADO && traeMeses) {
-            if (venta.getPlazoMeses() == null || venta.getPlazoMeses() < 1 || venta.getMensualidad() == null) {
-                throw new ValidationException("Esta venta no tiene mensualidades: el apartado va a la deuda total");
-            }
-            if (aportacionId != null) {
-                throw new ValidationException("Un apartado no se liga a una aportación");
-            }
-            return new Referencias(mesesDelPlazo(venta, mesesPedidos), null);
-        }
-
-        if (traeMeses) {
-            throw new ValidationException("Solo una mensualidad o un apartado cubren meses");
-        }
-        if (tipo == TipoAbono.ENGANCHE && (venta.getEnganche() == null || venta.getEnganche().signum() <= 0)) {
-            throw new ValidationException("Esta venta no tiene enganche: registra el pago como mensualidad o apartado");
-        }
-        if (tipo == TipoAbono.APORTACION) {
-            if (aportacionId == null) {
-                throw new ValidationException("Indica qué aportación programada paga");
-            }
-            VentaAportacion aportacion = ventaAportacionRepository.findById(aportacionId)
-                    .filter(a -> a.getVenta().getId().equals(venta.getId()))
-                    .orElseThrow(() -> new ValidationException("Esa aportación no pertenece a esta venta"));
-            // Una aportación de un plan reemplazado no se puede volver a cobrar (sí conservarla en un recibo que ya la tenía).
-            if (!delPlanVigente(venta, aportacion) && !aportacion.getId().equals(aportacionActual)) {
-                throw new ValidationException("Esa aportación es de un plan anterior a la reestructuración: elige una del plan vigente");
-            }
-            return new Referencias(List.of(), aportacion);
-        }
-        if (aportacionId != null) {
-            throw new ValidationException("Solo una aportación se liga a una aportación programada");
-        }
-        return new Referencias(List.of(), null);
-    }
-
-    /** Valida que los meses estén dentro del plazo (con reestructuraciones, del primer mes del plan original al último
-     * del vigente) y no se repitan. */
-    private static List<MesCubierto> mesesDelPlazo(Venta venta, List<PagoVentaCreateRequest.Mes> mesesPedidos) {
-        YearMonth[] rango = CalendarioPagos.rangoDeMeses(venta);
-        YearMonth primero = rango[0];
-        YearMonth ultimo = rango[1];
-        Set<YearMonth> vistos = new HashSet<>();
-        List<MesCubierto> meses = new ArrayList<>();
-        for (PagoVentaCreateRequest.Mes m : mesesPedidos) {
-            YearMonth ym = YearMonth.of(m.anio(), m.mes());
-            if (ym.isBefore(primero) || ym.isAfter(ultimo)) {
-                throw new ValidationException("El mes " + ym + " está fuera del plazo de la venta (" + primero + " a " + ultimo + ")");
-            }
-            if (!vistos.add(ym)) {
-                throw new ValidationException("El mes " + ym + " está repetido");
-            }
-            meses.add(new MesCubierto(m.anio(), m.mes()));
-        }
-        return meses;
-    }
-
-    /** "Enganche $20,000 · Mensualidad $10,000 (2026-11, 2026-12)" para la bitácora. */
-    private static String describirLineas(List<PagoVenta> lineas) {
-        return lineas.stream().map(VentaService::describirLinea).collect(java.util.stream.Collectors.joining(" · "));
-    }
-
-    private static String describirLinea(PagoVenta l) {
-        String tipo = l.getTipo() == null ? "Sin tipo" : switch (l.getTipo()) {
-            case MENSUALIDAD -> "Mensualidad";
-            case A_CUENTA_COMISION -> "A cuenta de comisión";
-            case ENGANCHE -> "Enganche";
-            case APARTADO -> "Apartado";
-            case APORTACION -> "Aportación";
-        };
-        String meses = l.getMeses().isEmpty()
-                ? ""
-                : " (" + l.getMeses().stream()
-                        .map(m -> YearMonth.of(m.getAnio(), m.getMes()).toString())
-                        .sorted()
-                        .collect(java.util.stream.Collectors.joining(", ")) + ")";
-        String aportacion = l.getAportacion() == null
-                ? ""
-                : " (" + YearMonth.of(l.getAportacion().getAnio(), l.getAportacion().getMes()) + ")";
-        return tipo + " $" + l.getMonto().toPlainString() + meses + aportacion + (l.isExtemporaneo() ? " (extemporáneo)" : "");
-    }
-
-    // ---------------------------------------------------------------- editar / anular un recibo
-
-    /** Edita un recibo: folio, nota, fecha y, por línea, tipo, meses y aportación. El monto no se toca: si está mal,
-     * se anula el recibo y se registra uno nuevo. Al corregir la fecha, Finanzas toma el abono en el mes nuevo y las
-     * comisiones se reconstruyen con ella (el sábado de entrega cambia); lo ya entregado no se modifica. Un recibo
-     * anulado no se edita. Deja constancia en la bitácora. */
-    public List<PagoVentaDto> editarRecibo(Long ventaId, Long reciboId, ReciboEditarRequest request) {
-        Usuario actual = exigirAdminOLider();
-        Venta venta = obtenerEntidad(ventaId);
-        ReciboVenta recibo = obtenerRecibo(ventaId, reciboId);
-        if (recibo.isAnulado()) {
-            throw new ConflictException("Un recibo anulado no se puede editar");
-        }
-
-        String folio = request.folio().trim();
-        reciboVentaRepository.findByFolioIgnoreCaseAndAnuladoFalse(folio)
-                .filter(otro -> !otro.getId().equals(recibo.getId()))
-                .ifPresent(otro -> {
-                    throw new ConflictException("Ya existe un abono con el folio " + folio);
-                });
-
-        List<PagoVenta> lineas = pagoVentaRepository.findByReciboId(reciboId);
-        java.util.Map<Long, PagoVenta> porId = new java.util.HashMap<>();
-        lineas.forEach(l -> porId.put(l.getId(), l));
-
-        String antes = describirLineas(lineas);
-        List<String> cambios = new ArrayList<>();
-        if (!java.util.Objects.equals(recibo.getFolio(), folio)) {
-            cambios.add("Folio " + (recibo.getFolio() == null ? "(vacío)" : recibo.getFolio()) + " → " + folio);
-        }
-        String notas = request.notas() == null || request.notas().isBlank() ? null : request.notas().trim();
-        if (!java.util.Objects.equals(recibo.getNotas(), notas)) {
-            cambios.add("Nota actualizada");
-        }
-        java.time.LocalDate fechaNueva = request.fecha() != null ? request.fecha() : recibo.getFecha();
-        java.time.format.DateTimeFormatter dma = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
-        if (!fechaNueva.equals(recibo.getFecha())) {
-            cambios.add("Fecha " + recibo.getFecha().format(dma) + " → " + fechaNueva.format(dma));
-        }
-
-        // Se validan todas las líneas antes de guardar nada.
-        List<Runnable> aplicar = new ArrayList<>();
-        BigDecimal diferencia = BigDecimal.ZERO;
-        List<String> montosCambiados = new ArrayList<>();
-        for (ReciboEditarRequest.Linea linea : request.lineas()) {
-            PagoVenta pago = porId.get(linea.pagoId());
-            if (pago == null) {
-                throw new ValidationException("La línea " + linea.pagoId() + " no pertenece a este recibo");
-            }
-            boolean extemporaneo = Boolean.TRUE.equals(linea.extemporaneo());
-            // Solo se revisa la fecha del extemporáneo si se acaba de marcar (los de antes de la regla se pueden seguir editando).
-            Referencias ref = validarReferencias(venta, linea.tipo(), linea.meses(), linea.aportacionId(), extemporaneo,
-                    extemporaneo && !pago.isExtemporaneo() ? fechaNueva : null,
-                    pago.getAportacion() != null ? pago.getAportacion().getId() : null);
-            aplicar.add(() -> pago.actualizarConcepto(linea.tipo(), ref.aportacion(), ref.meses(), extemporaneo));
-            if (linea.monto() != null && linea.monto().compareTo(pago.getMonto()) != 0) {
-                BigDecimal nuevo = linea.monto().setScale(2, java.math.RoundingMode.HALF_UP);
-                diferencia = diferencia.add(nuevo.subtract(pago.getMonto()));
-                montosCambiados.add(describirLinea(pago) + ": $" + pago.getMonto() + " → $" + nuevo);
-                aplicar.add(() -> pago.corregirMonto(nuevo));
-            }
-        }
-
-        // Corregir un monto mueve saldo, comisiones y Finanzas: contraseña y motivo, y nunca más que el precio.
-        if (!montosCambiados.isEmpty()) {
-            if (request.password() == null || !passwordEncoder.matches(request.password(), actual.getPassword())) {
-                throw new ForbiddenOperationException("Contraseña incorrecta");
-            }
-            if (request.motivo() == null || request.motivo().isBlank()) {
-                throw new ValidationException("Escribe el motivo del cambio de monto");
-            }
-            BigDecimal saldo = precioVenta(ventaId).subtract(totalAbonado(ventaId));
-            if (diferencia.compareTo(saldo) > 0) {
-                throw new ValidationException("Con el monto nuevo el abonado pasaría del precio: el saldo pendiente es $" + saldo);
-            }
-            cambios.add("Monto " + String.join(", ", montosCambiados) + " · Motivo: " + request.motivo().trim());
-        }
-
-        recibo.setFolio(folio);
-        recibo.setNotas(notas);
-        recibo.cambiarFecha(fechaNueva);
-        lineas.forEach(l -> l.actualizarFecha(fechaNueva));
-        aplicar.forEach(Runnable::run);
-        pagoVentaRepository.saveAll(lineas);
-        String despues = describirLineas(lineas);
-        if (!antes.equals(despues)) {
-            cambios.add("Conceptos: " + antes + " → " + despues);
-        }
-        reciboVentaRepository.save(recibo);
-        reciboHistorialRepository.save(new ReciboVentaHistorial(
-                recibo, AccionRecibo.EDITADO, actual, cambios.isEmpty() ? "Sin cambios" : String.join(" | ", cambios)));
-        // El tipo de cada línea define cuánto aporta a la comisión (regla por tipo de abono) y la fecha, cuándo toca.
-        comisionService.sincronizar(venta);
-        return pagoVentaRepository.findByReciboId(reciboId).stream().map(PagoVentaDto::from).toList();
-    }
-
-    /** Anula un recibo: no se borra, queda con su motivo, quién y cuándo. Su dinero deja de contar en
-     * el saldo de la venta y en las comisiones; en Finanzas se registra un contra-asiento en la fecha
-     * de hoy (el mes original no cambia). Si la comisión ya se había entregado, la entrega no se toca:
-     * lo que ya no esté respaldado por abonos queda como "por devolver". */
-    public List<PagoVentaDto> anularRecibo(Long ventaId, Long reciboId, ReciboAnularRequest request) {
-        Usuario actual = exigirAdminOLider();
-        Venta venta = obtenerEntidad(ventaId);
-        ReciboVenta recibo = obtenerRecibo(ventaId, reciboId);
-        if (recibo.isAnulado()) {
-            throw new ConflictException("Este recibo ya está anulado");
-        }
-
-        String motivo = request.motivo().trim();
-        recibo.anular(motivo, actual, java.time.LocalDate.now());
-        reciboVentaRepository.save(recibo);
-        List<PagoVenta> lineas = pagoVentaRepository.findByReciboId(reciboId);
-        reciboHistorialRepository.save(new ReciboVentaHistorial(
-                recibo, AccionRecibo.ANULADO, actual, "Motivo: " + motivo + " · " + describirLineas(lineas)));
-        comisionService.sincronizar(venta);
-        return lineas.stream().map(PagoVentaDto::from).toList();
-    }
-
-    /** Bitácora de todos los recibos de la venta, la más reciente primero. */
-    public List<ReciboHistorialDto> historialDeRecibos(Long ventaId) {
-        exigirAdminOLider();
-        obtenerEntidad(ventaId);
-        return reciboHistorialRepository.findByVentaId(ventaId).stream().map(ReciboHistorialDto::from).toList();
-    }
-
-    private ReciboVenta obtenerRecibo(Long ventaId, Long reciboId) {
-        return reciboVentaRepository.findById(reciboId)
-                .filter(r -> r.getVenta().getId().equals(ventaId))
-                .orElseThrow(() -> new ResourceNotFoundException("Recibo no encontrado"));
-    }
-
-    private Venta obtenerEntidad(Long id) {
-        return ventaRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada"));
-    }
-
-    /** Lo abonado de verdad: los recibos anulados ya no cuentan. */
-    private BigDecimal totalAbonado(Long ventaId) {
-        return pagoVentaRepository.findVigentesByVentaIdOrderByFechaAscIdAsc(ventaId).stream()
-                .map(PagoVenta::getMonto)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    /** La venta solo muestra (y ofrece para cobrar) las aportaciones de su plan vigente; las de un plan reemplazado
-     * siguen en la base para los recibos que ya las pagaron. */
-    private static boolean delPlanVigente(Venta venta, VentaAportacion a) {
-        List<com.werealestate.backend.model.VentaReestructuracion> rs = venta.getReestructuraciones();
-        Long vigente = rs.isEmpty() ? null : rs.get(rs.size() - 1).getId();
-        return java.util.Objects.equals(vigente, a.getReestructuracionId());
-    }
-
-    /**
-     * Reestructura el plan de pagos de la venta (p. ej. de mensualidades a anualidades). Lo abonado hasta hoy se queda
-     * como estaba y el plan nuevo reparte el saldo de hoy, atrasos incluidos; el precio no cambia (decisiones del
-     * usuario). Los meses con aportación pagan esa aportación y lo demás se reparte en mensualidades iguales. Solo
-     * admin y administración, con su contraseña y un motivo; se puede hacer varias veces y cada una queda registrada.
-     */
-    public VentaDto reestructurar(Long id, com.werealestate.backend.dto.VentaReestructurarRequest request) {
-        Usuario actual = currentUserProvider.getUsuarioActual();
-        if (actual.getRol() != Role.ADMIN && actual.getRol() != Role.LIDER_AREA) {
-            throw new ForbiddenOperationException("Solo un administrador o personal de administración puede reestructurar una venta");
-        }
-        if (!passwordEncoder.matches(request.password(), actual.getPassword())) {
-            throw new ForbiddenOperationException("Contraseña incorrecta");
-        }
-        Venta venta = obtenerEntidad(id);
-        if (venta.getDepositoPendiente() != null) {
-            throw new ConflictException("Primero aplica el depósito pendiente de la venta");
-        }
-        BigDecimal precio = precioVenta(id);
-        BigDecimal abonado = pagoVentaRepository.findVigentesByVentaIdOrderByFechaAscIdAsc(id).stream()
-                .map(PagoVenta::getMonto)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal saldo = precio.subtract(abonado);
-        if (saldo.compareTo(new BigDecimal("0.01")) <= 0) {
-            throw new ConflictException("La venta ya está liquidada: no hay saldo que reestructurar");
-        }
-
-        LocalDate hoy = LocalDate.now();
-        int plazo = request.plazoMeses();
-        // Se rehace TODO el plan (decisión del usuario): arranca en el primer mes del plan original de la venta y reparte
-        // el precio completo menos el enganche capturado; lo abonado se vuelve a aplicar en orden y los meses vencidos
-        // sin cubrir salen atrasados.
-        CalendarioPagos.Plan original = CalendarioPagos.planOriginal(venta);
-        BigDecimal enganche = original.conPagoInicialPublico() ? original.enganche() : BigDecimal.ZERO;
-        // Enganche nuevo solo si la venta no tenía (si ya tenía, se conserva el original).
-        String engancheNuevoLabel = null;
-        BigDecimal engancheNuevo = null;
-        if (!original.conPagoInicialPublico() && request.enganche() != null && request.enganche().signum() > 0) {
-            engancheNuevoLabel = request.engancheLabel() == null ? "Enganche" : request.engancheLabel().trim();
-            if (!CalendarioPagos.ETIQUETAS_PAGO_INICIAL.contains(engancheNuevoLabel)) {
-                throw new ValidationException("El primer pago debe ser «Enganche» o «Pago inicial»");
-            }
-            if (request.enganche().compareTo(precio) >= 0) {
-                throw new ValidationException("El enganche no puede ser igual o mayor al precio");
-            }
-            engancheNuevo = request.enganche().setScale(2, java.math.RoundingMode.HALF_UP);
-            enganche = engancheNuevo;
-        }
-        BigDecimal aRepartir = precio.subtract(enganche);
-        if (aRepartir.compareTo(new BigDecimal("0.01")) <= 0) {
-            throw new ConflictException("El enganche cubre todo el precio: no hay mensualidades que reestructurar");
-        }
-        YearMonth primero = original.primerMes();
-        YearMonth ultimo = primero.plusMonths(plazo - 1L);
-        Map<YearMonth, BigDecimal> aportaciones = new java.util.TreeMap<>();
-        for (var a : request.aportaciones() == null ? List.<com.werealestate.backend.dto.VentaReestructurarRequest.Aportacion>of() : request.aportaciones()) {
-            YearMonth ym = YearMonth.of(a.anio(), a.mes());
-            if (ym.isBefore(primero) || ym.isAfter(ultimo)) {
-                throw new ValidationException("La aportación de " + ym + " está fuera del plazo nuevo (" + primero + " a " + ultimo + ")");
-            }
-            if (aportaciones.put(ym, a.monto()) != null) {
-                throw new ValidationException("Hay dos aportaciones en " + ym);
-            }
-        }
-        BigDecimal aportado = aportaciones.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
-        int regulares = plazo - aportaciones.size();
-        BigDecimal resto = aRepartir.subtract(aportado);
-        BigDecimal mensualidad;
-        if (regulares == 0) {
-            if (resto.abs().compareTo(new BigDecimal("0.01")) > 0) {
-                throw new ValidationException("Todos los meses son aportaciones: deben sumar $" + aRepartir);
-            }
-            mensualidad = BigDecimal.ZERO;
-        } else {
-            if (resto.compareTo(new BigDecimal("0.01")) <= 0) {
-                throw new ValidationException("Las aportaciones cubren todo lo que hay que repartir ($" + aRepartir + "): reduce alguna o el plazo");
-            }
-            // Hacia abajo: los centavos que sobran los absorbe la última mensualidad (CalendarioPagos), en lugar de
-            // recortar el último pago del plan.
-            mensualidad = resto.divide(BigDecimal.valueOf(regulares), 2, java.math.RoundingMode.DOWN);
-        }
-
-        CalendarioPagos.Plan anterior = CalendarioPagos.planVigente(venta);
-        String formaPago = "Reestructurada · " + (enganche.signum() > 0 ? "con enganche · " : "") + plazo + " meses"
-                + (aportaciones.isEmpty() ? "" : " + aportaciones");
-        if (formaPago.length() > 50) formaPago = formaPago.substring(0, 50);
-        String resumenNuevo = describirPlan(formaPago, primero, plazo, mensualidad, aportaciones.size(), aportado);
-        VentaReestructuracion r = new VentaReestructuracion(
-                venta, hoy, abonado, aRepartir, request.motivo().trim(), actual,
-                anterior.inicio(), venta.getFormaPago(), anterior.mensualidad(), anterior.plazoMeses(), anterior.diaPago(),
-                anterior.primeraEnMesInicio(), anterior.engancheLabel(), anterior.enganche(),
-                describirPlanVigente(venta), resumenNuevo).comoCompleta();
-        entityManager.persist(r);
-        venta.agregarReestructuracion(r);
-        if (engancheNuevo != null) venta.ponerEnganche(engancheNuevoLabel, engancheNuevo);
-        venta.aplicarPlanReestructurado(
-                formaPago, original.inicio(), mensualidad, plazo, request.diaPago(), original.primeraEnMesInicio());
-        entityManager.flush();
-        aportaciones.forEach((ym, monto) -> ventaAportacionRepository.save(
-                new VentaAportacion(venta, ym.getYear(), ym.getMonthValue(), monto, r.getId())));
-        comisionService.sincronizar(venta);
-        return toDto(venta);
-    }
-
-    private String describirPlanVigente(Venta venta) {
-        CalendarioPagos.Plan p = CalendarioPagos.planVigente(venta);
-        if (!p.conPlazoPublico()) return venta.getFormaPago() + " · contado";
-        List<VentaAportacion> propias = ventaAportacionRepository.findByVentaIdOrderByAnioAscMesAsc(venta.getId()).stream()
-                .filter(a -> delPlanVigente(venta, a))
-                .toList();
-        BigDecimal aportado = propias.stream().map(VentaAportacion::getMonto).reduce(BigDecimal.ZERO, BigDecimal::add);
-        return describirPlan(venta.getFormaPago(), p.primerMes(), p.plazoMeses(), p.mensualidad(), propias.size(), aportado);
-    }
-
-    /** "Reestructurada · 24 meses: mensualidad $5,000.00 desde 2026-12 (+ 2 aportaciones por $40,000.00)". */
-    private static String describirPlan(String formaPago, YearMonth desde, int plazo, BigDecimal mensualidad, int aportaciones, BigDecimal aportado) {
-        java.text.NumberFormat f = java.text.NumberFormat.getCurrencyInstance(java.util.Locale.forLanguageTag("es-MX"));
-        String texto = formaPago + ": " + plazo + " meses desde " + desde + ", mensualidad " + f.format(mensualidad);
-        if (aportaciones > 0) texto += " + " + aportaciones + (aportaciones == 1 ? " aportación" : " aportaciones") + " por " + f.format(aportado);
-        return texto.length() > 300 ? texto.substring(0, 300) : texto;
-    }
-
-    /** Para guardar una reestructuración (inyectado por campo: no cambia el constructor que usan las pruebas). */
-    @jakarta.persistence.PersistenceContext
-    private jakarta.persistence.EntityManager entityManager;
-
-    private BigDecimal precioVenta(Long ventaId) {
-        return ventaLoteRepository.findByVentaId(ventaId).stream()
-                .map(VentaLote::getPrecio)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    private VentaDto toDto(Venta venta) {
-        List<VentaLoteDto> lotes =
-                ventaLoteRepository.findByVentaId(venta.getId()).stream().map(VentaLoteDto::from).toList();
-        List<VentaAportacionDto> aportaciones = ventaAportacionRepository
-                .findByVentaIdOrderByAnioAscMesAsc(venta.getId())
-                .stream()
-                .filter(a -> delPlanVigente(venta, a))
-                .map(VentaAportacionDto::from)
-                .toList();
-        List<ClienteResumenDto> copropietarios = copropietarioRepository.findByVentaIdOrderByOrdenAsc(venta.getId()).stream()
-                .map(cp -> ClienteResumenDto.from(cp.getCliente()))
-                .toList();
-        return VentaDto.from(venta, lotes, aportaciones, copropietarios, totalAbonado(venta.getId()));
-    }
-
-    /**
-     * Lo mismo que {@link #toDto} para una página de ventas, pero leyendo lotes, aportaciones, copropietarios y lo
-     * abonado de todas con una consulta por tipo: toDto hace cuatro por venta y la lista de Ventas llegaba a ~60
-     * consultas por página. Mismo resultado y mismo orden que llamar a toDto con cada una.
-     */
-    private List<VentaDto> toDtos(List<Venta> ventas) {
-        if (ventas.isEmpty()) return List.of();
-        List<Long> ids = ventas.stream().map(Venta::getId).toList();
-
-        Map<Long, List<VentaLoteDto>> lotes = new HashMap<>();
-        for (VentaLote vl : ventaLoteRepository.findByVentaIdInOrderByIdAsc(ids)) {
-            lotes.computeIfAbsent(vl.getVenta().getId(), id -> new ArrayList<>()).add(VentaLoteDto.from(vl));
-        }
-        Map<Long, List<VentaAportacionDto>> aportaciones = new HashMap<>();
-        for (VentaAportacion a : ventaAportacionRepository.findByVentaIdInOrderByAnioAscMesAsc(ids)) {
-            if (!delPlanVigente(a.getVenta(), a)) continue;
-            aportaciones.computeIfAbsent(a.getVenta().getId(), id -> new ArrayList<>()).add(VentaAportacionDto.from(a));
-        }
-        Map<Long, List<ClienteResumenDto>> copropietarios = new HashMap<>();
-        for (VentaCopropietario cp : copropietarioRepository.findByVentaIdInOrderByOrdenAsc(ids)) {
-            copropietarios.computeIfAbsent(cp.getVenta().getId(), id -> new ArrayList<>())
-                    .add(ClienteResumenDto.from(cp.getCliente()));
-        }
-        Map<Long, BigDecimal> abonado = new HashMap<>();
-        for (Object[] fila : pagoVentaRepository.totalVigentePorVenta(ids)) {
-            abonado.put((Long) fila[0], (BigDecimal) fila[1]);
-        }
-
-        return ventas.stream()
-                .map(v -> VentaDto.from(
-                        v,
-                        lotes.getOrDefault(v.getId(), List.of()),
-                        aportaciones.getOrDefault(v.getId(), List.of()),
-                        copropietarios.getOrDefault(v.getId(), List.of()),
-                        abonado.getOrDefault(v.getId(), BigDecimal.ZERO)))
-                .toList();
     }
 
     /** Reemplaza los copropietarios de la venta: hasta 4 clientes distintos, activos y distintos del principal. */
@@ -1204,70 +590,6 @@ public class VentaService {
         }
     }
 
-    /** El número global de siempre (respaldo interno, ya no se muestra): el siguiente = mayor + 1. Va con candado. */
-    private long reservarNumeroGlobal() {
-        ventaRepository.bloquearNumeracion();
-        return ventaRepository.maxNumero() + 1;
-    }
-
-    /** Deja libre el número que se quiere para una venta dentro de su desarrollo y devuelve el que le toca: sin número
-     * pedido, el siguiente automático (mayor + 1 de ese desarrollo); con número pedido, ese mismo — y si otra venta
-     * del desarrollo ya lo tiene, se recorren +1 esa y las que le siguen de forma consecutiva (se detiene en el primer
-     * hueco). Va con candado para que dos registros simultáneos no se pisen. exceptoId = la venta que se está moviendo
-     * (0 si es una nueva) y numeroActual = el que tenía (-1 si es nueva): al irse, deja libre su lugar. */
-    private long reservarNumero(Long pedido, long desarrolloId, long exceptoId, long numeroActual) {
-        ventaRepository.bloquearNumeracion();
-        if (pedido == null) {
-            return ventaRepository.maxNumeroDesarrollo(desarrolloId) + 1;
-        }
-        long hasta = finDeLaRacha(desarrolloId, pedido, numeroActual);
-        if (hasta >= pedido) {
-            ventaRepository.recorrerDesarrollo(desarrolloId, pedido, hasta, exceptoId);
-        }
-        return pedido;
-    }
-
-    /** Último número de la racha de consecutivos que empieza en "desde" dentro del desarrollo (sin contar el que se
-     * está moviendo, que se va de su lugar); desde - 1 si "desde" está libre. */
-    private long finDeLaRacha(long desarrolloId, long desde, long numeroIgnorado) {
-        java.util.Set<Long> enUso = new java.util.HashSet<>(ventaRepository.numerosDesarrolloDesde(desarrolloId, desde));
-        enUso.remove(numeroIgnorado);
-        long fin = desde - 1;
-        while (enUso.contains(fin + 1)) fin++;
-        return fin;
-    }
-
-    /** Para el formulario: el siguiente número automático del desarrollo y, si el número consultado ya está ocupado
-     * (por una venta distinta de excluirId), cuál es y cuántas ventas se recorrerían. */
-    @Transactional(readOnly = true)
-    public NumeracionVentaDto consultarNumeracion(Long numero, Long excluirId, Long desarrolloId) {
-        exigirAdminOLider();
-        if (desarrolloId == null) return new NumeracionVentaDto(1, null, null, null, 0);
-        long siguiente = ventaRepository.maxNumeroDesarrollo(desarrolloId) + 1;
-        if (numero == null || numero < 1) {
-            return new NumeracionVentaDto(siguiente, null, null, null, 0);
-        }
-        Venta ocupante = ventaRepository.findByDesarrolloIdAndNumeroDesarrollo(desarrolloId, numero).orElse(null);
-        if (ocupante == null || ocupante.getId().equals(excluirId)) {
-            return new NumeracionVentaDto(siguiente, null, null, null, 0);
-        }
-        Long ignorado = excluirId == null ? null : ventaRepository.findById(excluirId).map(Venta::getNumeroDesarrollo).orElse(null);
-        long fin = finDeLaRacha(desarrolloId, numero, ignorado == null ? -1L : ignorado);
-        return new NumeracionVentaDto(
-                siguiente, ocupante.getId(), ocupante.getCliente(), ocupante.getFechaVenta(), (int) (fin - numero + 1));
-    }
-
-    private Usuario exigirAdminOLider() {
-        Usuario actual = currentUserProvider.getUsuarioActual();
-        if (actual.getRol() != Role.ADMIN && actual.getRol() != Role.LIDER_AREA) {
-            throw new ForbiddenOperationException("Solo un administrador o personal de administración puede gestionar ventas");
-        }
-        return actual;
-    }
-
-    /** Exactamente uno de usuarioAsesorId/asesorExternoId debe venir, y debe corresponder a un
-     * asesor activo — así "solo se puede registrar de entre los asesores registrados" se cumple
-     * de verdad en el servidor, no solo porque el <select> del frontend no deje escribir texto. */
     /** null = el 5% por defecto; si se indica, entre 0 y el máximo de 10% del valor de la venta. */
     private static void validarPorcentajeComision(BigDecimal porcentaje, String quien) {
         if (porcentaje == null) return;
@@ -1277,6 +599,9 @@ public class VentaService {
         }
     }
 
+    /** Exactamente uno de usuarioAsesorId/asesorExternoId debe venir, y debe corresponder a un
+     * asesor activo — así "solo se puede registrar de entre los asesores registrados" se cumple
+     * de verdad en el servidor, no solo porque el <select> del frontend no deje escribir texto. */
     private AsesorResuelto resolverAsesor(Long usuarioAsesorId, Long asesorExternoId) {
         boolean tieneInterno = usuarioAsesorId != null;
         boolean tieneExterno = asesorExternoId != null;

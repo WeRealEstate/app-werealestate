@@ -30,8 +30,12 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -93,12 +97,13 @@ public class GastoRecurrenteService {
     public List<GastoRecurrenteDto> listar() {
         exigirAdminOLider();
         generarPendientes();
-        List<GastoRecurrentePago> sinPagar = pagoRepository.findSinPagar();
+        // Se agrupa una sola vez por recurrente (antes se recorría la lista completa por cada uno); cada grupo
+        // conserva el orden de findSinPagar, así que su primer elemento sigue siendo el vencimiento más próximo.
+        Map<Long, List<GastoRecurrentePago>> sinPagarPorRecurrente = pagoRepository.findSinPagar().stream()
+                .collect(Collectors.groupingBy(p -> p.getRecurrente().getId()));
         return recurrenteRepository.findAllByOrderByNombreAsc().stream()
                 .map(g -> {
-                    List<GastoRecurrentePago> suyos = sinPagar.stream()
-                            .filter(p -> p.getRecurrente().getId().equals(g.getId()))
-                            .toList();
+                    List<GastoRecurrentePago> suyos = sinPagarPorRecurrente.getOrDefault(g.getId(), List.of());
                     return GastoRecurrenteDto.from(
                             g, suyos.isEmpty() ? null : suyos.get(0).getFechaVencimiento(), suyos.size());
                 })
@@ -295,25 +300,10 @@ public class GastoRecurrenteService {
     public GastoResumenDto resumen(String mes) {
         exigirAdminOLider();
         generarPendientes();
-        YearMonth ym;
-        try {
-            ym = mes == null || mes.isBlank() ? YearMonth.now() : YearMonth.parse(mes.trim());
-        } catch (RuntimeException e) {
-            throw new ValidationException("Mes inválido: usa el formato yyyy-MM");
-        }
+        YearMonth ym = mesDe(mes);
         LocalDate desde = ym.atDay(1);
         LocalDate hasta = ym.atEndOfMonth();
-        // Libro: cada abono en su mes y, si su recibo se anuló, un contra-asiento negativo en el mes de
-        // la anulación (el mes original no cambia). Solo se leen los movimientos que tocan ese mes.
-        BigDecimal ingresos = BigDecimal.ZERO;
-        for (PagoVenta p : pagoVentaRepository.findEnRangoConRecibo(desde, hasta)) {
-            if (!p.getFecha().isBefore(desde) && !p.getFecha().isAfter(hasta)) ingresos = ingresos.add(p.getMonto());
-            if (p.getRecibo().isAnulado() && p.getRecibo().getAnuladoFecha() != null
-                    && !p.getRecibo().getAnuladoFecha().isBefore(desde)
-                    && !p.getRecibo().getAnuladoFecha().isAfter(hasta)) {
-                ingresos = ingresos.subtract(p.getMonto());
-            }
-        }
+        BigDecimal ingresos = ingresosDelMes(desde, hasta);
         // Lo que los asesores devolvieron de comisiones ya entregadas: ingreso aparte.
         BigDecimal devoluciones = devolucionRepository.sumarEntre(desde, hasta);
         BigDecimal gastado = gastoRepository.sumarEntre(desde, hasta);
@@ -333,6 +323,29 @@ public class GastoRecurrenteService {
                 ym.toString(), ingresos, devoluciones, gastado, ingresos.add(devoluciones).subtract(gastado), pendiente, vencido, vencidos);
     }
 
+    private static YearMonth mesDe(String mes) {
+        try {
+            return mes == null || mes.isBlank() ? YearMonth.now() : YearMonth.parse(mes.trim());
+        } catch (RuntimeException e) {
+            throw new ValidationException("Mes inválido: usa el formato yyyy-MM");
+        }
+    }
+
+    /** Libro: cada abono en su mes y, si su recibo se anuló, un contra-asiento negativo en el mes de la
+     * anulación (el mes original no cambia). Solo se leen los movimientos que tocan ese mes. */
+    private BigDecimal ingresosDelMes(LocalDate desde, LocalDate hasta) {
+        BigDecimal ingresos = BigDecimal.ZERO;
+        for (PagoVenta p : pagoVentaRepository.findEnRangoConRecibo(desde, hasta)) {
+            if (!p.getFecha().isBefore(desde) && !p.getFecha().isAfter(hasta)) ingresos = ingresos.add(p.getMonto());
+            if (p.getRecibo().isAnulado() && p.getRecibo().getAnuladoFecha() != null
+                    && !p.getRecibo().getAnuladoFecha().isBefore(desde)
+                    && !p.getRecibo().getAnuladoFecha().isAfter(hasta)) {
+                ingresos = ingresos.subtract(p.getMonto());
+            }
+        }
+        return ingresos;
+    }
+
     // ---------------------------------------------------------------- vencimientos
 
     /** Crea los vencimientos que falten, hasta 30 días adelante, de los recurrentes activos.
@@ -340,7 +353,7 @@ public class GastoRecurrenteService {
      * un SELECT por cada semana/mes histórico en cada llamada. */
     void generarPendientes() {
         LocalDate hasta = LocalDate.now().plusDays(DIAS_DE_ANTICIPACION);
-        java.util.Set<String> existentes = new java.util.HashSet<>();
+        Set<String> existentes = new HashSet<>();
         for (Object[] fila : pagoRepository.fechasExistentesDeActivos()) {
             existentes.add(fila[0] + ":" + fila[1]);
         }

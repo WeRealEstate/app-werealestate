@@ -6,6 +6,7 @@ import { CotizacionAsesor, CotizacionHistorial } from '../../../core/models/coti
 import { descargarCsv } from '../../../core/utils/csv';
 import { descargarExcel } from '../../../core/utils/excel';
 import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
+import { dinero } from '../../../core/utils/formato-pantalla';
 
 /** Cuántas cotizaciones se cargan por lote. Al llegar al final, "Cargar más" trae el siguiente. */
 const TAMANO_PAGINA = 10;
@@ -171,6 +172,6 @@ export class HistorialCotizacionesComponent {
   }
 
   money(valor: number): string {
-    return valor.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return dinero(valor);
   }
 }

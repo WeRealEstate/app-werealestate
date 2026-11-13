@@ -1,6 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { LucideExternalLink, LucideHardDrive } from '@lucide/angular';
 import { EstadoDrive } from '../../../core/models/drive.model';
@@ -8,6 +7,7 @@ import { ConfirmService } from '../../../core/services/confirm.service';
 import { DriveService } from '../../../core/services/drive.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { elegirCarpetaDeDrive } from '../../../core/utils/google-picker';
+import { mensajeDe } from '../../../core/utils/formato-pantalla';
 
 /** Mensajes al volver de Google (?drive=… lo pone el servidor al terminar la conexión). */
 const AL_VOLVER: Record<string, { tipo: 'success' | 'aviso' | 'error'; texto: string }> = {
@@ -71,7 +71,7 @@ export class DriveConexionComponent implements OnInit {
     try {
       window.location.href = await this.drive.urlParaConectar();
     } catch (e) {
-      this.toast.error(this.mensajeDe(e, 'No se pudo iniciar la conexión con Google.'));
+      this.toast.error(mensajeDe(e, 'No se pudo iniciar la conexión con Google.'));
       this.trabajando.set(false);
     }
   }
@@ -85,7 +85,7 @@ export class DriveConexionComponent implements OnInit {
       this.estado.set(await this.drive.elegirCarpeta(elegida.id));
       this.toast.success(`Los expedientes se guardarán en "${elegida.nombre}".`);
     } catch (e) {
-      this.toast.error(this.mensajeDe(e, 'No se pudo abrir el selector de Google Drive. Intenta de nuevo.'));
+      this.toast.error(mensajeDe(e, 'No se pudo abrir el selector de Google Drive. Intenta de nuevo.'));
     } finally {
       this.trabajando.set(false);
     }
@@ -120,13 +120,10 @@ export class DriveConexionComponent implements OnInit {
     try {
       await fn();
     } catch (e) {
-      this.toast.error(this.mensajeDe(e, 'Google Drive no respondió. Intenta de nuevo.'));
+      this.toast.error(mensajeDe(e, 'Google Drive no respondió. Intenta de nuevo.'));
     } finally {
       this.trabajando.set(false);
     }
   }
 
-  private mensajeDe(e: unknown, porDefecto: string): string {
-    return e instanceof HttpErrorResponse && typeof e.error?.message === 'string' ? e.error.message : porDefecto;
-  }
 }

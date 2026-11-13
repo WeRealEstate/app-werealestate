@@ -1,5 +1,4 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { HttpErrorResponse } from '@angular/common/http';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -21,6 +20,7 @@ import { ToastService } from '../../../core/services/toast.service';
 import { WeFormsService } from '../../../core/services/we-forms.service';
 import { exportarReportePdf, exportarRespuestasExcel } from '../../../core/utils/we-forms-export';
 import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
+import { mensajeDe } from '../../../core/utils/formato-pantalla';
 
 /** A qué campo alimenta cada pregunta predefinida, en palabras. */
 const DESTINO_ETIQUETA: Record<DestinoPregunta, string> = {
@@ -116,10 +116,6 @@ export class WeFormDetalleComponent {
     }
   }
 
-  private mensajeDe(error: unknown, defecto: string): string {
-    return error instanceof HttpErrorResponse && typeof error.error?.message === 'string' ? error.error.message : defecto;
-  }
-
   async copiarLink(): Promise<void> {
     try {
       await navigator.clipboard.writeText(this.linkPublico());
@@ -147,7 +143,7 @@ export class WeFormDetalleComponent {
       this.form.set(await this.service.actualizar(f.id, { nombre, descripcion: this.encDescripcion().trim() || null, estado: f.estado }));
       this.editandoEncabezado.set(false);
     } catch (error) {
-      this.toast.error(this.mensajeDe(error, 'No se pudo guardar.'));
+      this.toast.error(mensajeDe(error, 'No se pudo guardar.'));
     }
   }
 
@@ -167,7 +163,7 @@ export class WeFormDetalleComponent {
       this.form.set(await this.service.actualizar(f.id, { nombre: f.nombre, descripcion: f.descripcion, estado: nuevo }));
       this.toast.success(nuevo === 'ACTIVO' ? 'Formulario activo.' : 'Formulario cerrado.');
     } catch (error) {
-      this.toast.error(this.mensajeDe(error, 'No se pudo cambiar el estado.'));
+      this.toast.error(mensajeDe(error, 'No se pudo cambiar el estado.'));
     }
   }
 
@@ -214,7 +210,7 @@ export class WeFormDetalleComponent {
       this.reemplazar(actualizada);
       this.editandoId.set(null);
     } catch (error) {
-      this.toast.error(this.mensajeDe(error, 'No se pudo guardar la pregunta.'));
+      this.toast.error(mensajeDe(error, 'No se pudo guardar la pregunta.'));
     } finally {
       this.guardandoPregunta.set(false);
     }
@@ -234,7 +230,7 @@ export class WeFormDetalleComponent {
       this.form.update((f) => (f ? { ...f, preguntas: [...f.preguntas, nueva] } : f));
       this.abrirEditor(nueva);
     } catch (error) {
-      this.toast.error(this.mensajeDe(error, 'No se pudo agregar la pregunta.'));
+      this.toast.error(mensajeDe(error, 'No se pudo agregar la pregunta.'));
     }
   }
 
@@ -251,7 +247,7 @@ export class WeFormDetalleComponent {
       this.form.update((f) => (f ? { ...f, preguntas: f.preguntas.filter((x) => x.id !== p.id) } : f));
       this.editandoId.set(null);
     } catch (error) {
-      this.toast.error(this.mensajeDe(error, 'No se pudo quitar la pregunta.'));
+      this.toast.error(mensajeDe(error, 'No se pudo quitar la pregunta.'));
     }
   }
 
@@ -264,7 +260,7 @@ export class WeFormDetalleComponent {
     try {
       await this.service.reordenar(this.formId, preguntas.map((p) => p.id));
     } catch (error) {
-      this.toast.error(this.mensajeDe(error, 'No se pudo guardar el orden.'));
+      this.toast.error(mensajeDe(error, 'No se pudo guardar el orden.'));
       await this.cargar();
     }
   }
@@ -292,7 +288,7 @@ export class WeFormDetalleComponent {
       this.paginaRespuestas++;
       this.respuestasCargadas.set(true);
     } catch (error) {
-      this.toast.error(this.mensajeDe(error, 'No se pudieron cargar las respuestas.'));
+      this.toast.error(mensajeDe(error, 'No se pudieron cargar las respuestas.'));
     } finally {
       this.cargandoRespuestas.set(false);
     }
@@ -308,7 +304,7 @@ export class WeFormDetalleComponent {
     try {
       this.stats.set(await this.service.estadisticas(this.formId, this.filtro()));
     } catch (error) {
-      this.toast.error(this.mensajeDe(error, 'No se pudieron cargar las estadísticas.'));
+      this.toast.error(mensajeDe(error, 'No se pudieron cargar las estadísticas.'));
     } finally {
       this.cargandoStats.set(false);
     }
@@ -346,7 +342,7 @@ export class WeFormDetalleComponent {
         await exportarReportePdf(f.nombre, this.filtro(), stats, respuestas);
       }
     } catch (error) {
-      this.toast.error(this.mensajeDe(error, 'No se pudo exportar.'));
+      this.toast.error(mensajeDe(error, 'No se pudo exportar.'));
     } finally {
       this.exportando.set(null);
     }

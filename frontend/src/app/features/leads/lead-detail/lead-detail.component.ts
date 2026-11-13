@@ -1,6 +1,7 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
@@ -128,11 +129,13 @@ export class LeadDetailComponent implements OnInit {
     columnaPersonalizadaId: this.fb.control<number | null>(null),
   });
 
+  private readonly destroyRef = inject(DestroyRef);
+
   ngOnInit(): void {
     // Angular reutiliza esta misma instancia al navegar de un lead a otro (misma ruta,
     // distinto :id) — por eso el id se lee de forma reactiva y no solo una vez en el snapshot,
     // si no la página se quedaba mostrando el primer lead abierto al abrir otra notificación.
-    this.route.paramMap.subscribe((params) => {
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       this.leadId = Number(params.get('id'));
       this.cargar();
     });

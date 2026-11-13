@@ -20,6 +20,7 @@ import com.werealestate.backend.model.UbicacionDocumento;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.model.Venta;
 import com.werealestate.backend.model.VentaAportacion;
+import com.werealestate.backend.model.VentaCopropietario;
 import com.werealestate.backend.model.VentaLote;
 import com.werealestate.backend.repository.AsesorExternoRepository;
 import com.werealestate.backend.repository.ClienteRepository;
@@ -27,6 +28,7 @@ import com.werealestate.backend.repository.PagoVentaRepository;
 import com.werealestate.backend.repository.UsuarioRepository;
 import com.werealestate.backend.repository.VentaAportacionRepository;
 import com.werealestate.backend.repository.VentaComisionRepository;
+import com.werealestate.backend.repository.VentaCopropietarioRepository;
 import com.werealestate.backend.repository.VentaLoteRepository;
 import com.werealestate.backend.repository.VentaRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
@@ -35,12 +37,16 @@ import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,7 +71,7 @@ public class ClienteService {
     private final ClienteRepository clienteRepository;
     private final VentaRepository ventaRepository;
     private final VentaLoteRepository ventaLoteRepository;
-    private final com.werealestate.backend.repository.VentaCopropietarioRepository copropietarioRepository;
+    private final VentaCopropietarioRepository copropietarioRepository;
     private final PagoVentaRepository pagoVentaRepository;
     private final VentaAportacionRepository ventaAportacionRepository;
     private final VentaComisionRepository comisionRepository;
@@ -78,7 +84,7 @@ public class ClienteService {
             ClienteRepository clienteRepository,
             VentaRepository ventaRepository,
             VentaLoteRepository ventaLoteRepository,
-            com.werealestate.backend.repository.VentaCopropietarioRepository copropietarioRepository,
+            VentaCopropietarioRepository copropietarioRepository,
             PagoVentaRepository pagoVentaRepository,
             VentaAportacionRepository ventaAportacionRepository,
             VentaComisionRepository comisionRepository,
@@ -183,20 +189,13 @@ public class ClienteService {
         String nombre = limpio(r.nombre());
         String paterno = limpio(r.apellidoPaterno());
         String telefono = limpio(r.telefono());
-        String curp = limpio(r.curp()) == null ? null : limpio(r.curp()).toUpperCase(Locale.ROOT);
+        String curp = mayusculas(r.curp());
         if (nombre == null || paterno == null || telefono == null || r.fechaNacimiento() == null || curp == null) {
             throw new ValidationException("Faltan datos del cliente: nombre, apellido paterno, fecha de nacimiento, CURP y teléfono");
         }
-        if (Period.between(r.fechaNacimiento(), LocalDate.now()).getYears() < 18) {
-            throw new ValidationException("El cliente debe ser mayor de edad");
-        }
-        if (!CURP.matcher(curp).matches()) {
-            throw new ValidationException("El CURP no tiene un formato válido (18 caracteres)");
-        }
-        String rfc = limpio(r.rfc()) == null ? null : limpio(r.rfc()).toUpperCase(Locale.ROOT);
-        if (rfc != null && !RFC.matcher(rfc).matches()) {
-            throw new ValidationException("El RFC no tiene un formato válido");
-        }
+        validarMayorDeEdad(r.fechaNacimiento());
+        curpValido(curp);
+        String rfc = rfcValido(r.rfc());
         String pais = paisValido(r.paisResidencia());
         String estado = estadoValido(pais, r.estado());
 
@@ -206,41 +205,54 @@ public class ClienteService {
                 throw new ValidationException(
                         "Ya existe un cliente con ese CURP pero está inactivo: comunícate con administración");
             }
-            // Solo se completa lo que le falte; nada de lo que ya tiene se cambia.
-            existente.actualizarDatos(
-                    existente.getNombre(), existente.getApellidoPaterno(),
-                    vacio(existente.getApellidoMaterno(), limpio(r.apellidoMaterno())),
-                    existente.getFechaNacimiento(), existente.getTelefono(),
-                    vacio(existente.getTelefono2(), limpio(r.telefono2())),
-                    vacio(existente.getCorreo(), limpio(r.correo())), existente.getCurp(),
-                    vacio(existente.getRfc(), rfc),
-                    vacio(existente.getLugarNacimiento(), limpio(r.lugarNacimiento())),
-                    existente.getNacionalidad(), existente.getEstadoCivil(), existente.getOcupacion(),
-                    vacio(existente.getCalle(), limpio(r.calle())),
-                    vacio(existente.getColonia(), limpio(r.colonia())),
-                    vacio(existente.getMunicipio(), limpio(r.municipio())),
-                    vacio(existente.getEstado(), estado),
-                    vacio(existente.getCodigoPostal(), limpio(r.codigoPostal())),
-                    existente.getBeneficiarioNombre(), existente.getBeneficiarioParentesco(),
-                    existente.getFuente(), existente.getFuenteDetalle(),
-                    existente.getCaptadoPorUsuario(), existente.getCaptadoPorAsesor(), existente.getNotas(),
-                    existente.getExpedienteUbicacion(), existente.getExpedienteDriveUrl());
-            if (existente.getPaisResidencia() == null || existente.getPaisResidencia().isBlank()) {
-                existente.setPaisResidencia(pais);
-            }
+            completarLoVacio(existente, r, rfc, estado, pais);
             return new ClienteResuelto(clienteRepository.save(existente), false);
         }
+        return new ClienteResuelto(
+                clienteRepository.save(clienteNuevoDeRegistro(r, curp, rfc, estado, pais, captadoUsuario, captadoAsesor)),
+                true);
+    }
 
+    /** Solo se completa lo que le falte a la ficha existente; nada de lo que ya tiene se cambia. */
+    private void completarLoVacio(Cliente existente, ClienteRequest r, String rfc, String estado, String pais) {
+        existente.actualizarDatos(
+                existente.getNombre(), existente.getApellidoPaterno(),
+                vacio(existente.getApellidoMaterno(), limpio(r.apellidoMaterno())),
+                existente.getFechaNacimiento(), existente.getTelefono(),
+                vacio(existente.getTelefono2(), limpio(r.telefono2())),
+                vacio(existente.getCorreo(), limpio(r.correo())), existente.getCurp(),
+                vacio(existente.getRfc(), rfc),
+                vacio(existente.getLugarNacimiento(), limpio(r.lugarNacimiento())),
+                existente.getNacionalidad(), existente.getEstadoCivil(), existente.getOcupacion(),
+                vacio(existente.getCalle(), limpio(r.calle())),
+                vacio(existente.getColonia(), limpio(r.colonia())),
+                vacio(existente.getMunicipio(), limpio(r.municipio())),
+                vacio(existente.getEstado(), estado),
+                vacio(existente.getCodigoPostal(), limpio(r.codigoPostal())),
+                existente.getBeneficiarioNombre(), existente.getBeneficiarioParentesco(),
+                existente.getFuente(), existente.getFuenteDetalle(),
+                existente.getCaptadoPorUsuario(), existente.getCaptadoPorAsesor(), existente.getNotas(),
+                existente.getExpedienteUbicacion(), existente.getExpedienteDriveUrl());
+        if (existente.getPaisResidencia() == null || existente.getPaisResidencia().isBlank()) {
+            existente.setPaisResidencia(pais);
+        }
+    }
+
+    private Cliente clienteNuevoDeRegistro(
+            ClienteRequest r, String curp, String rfc, String estado, String pais,
+            Usuario captadoUsuario, AsesorExterno captadoAsesor) {
+        String nombre = limpio(r.nombre());
+        String paterno = limpio(r.apellidoPaterno());
         Cliente c = new Cliente(nombre, paterno, limpio(r.apellidoMaterno()));
         c.setNumero(siguienteNumero());
         c.actualizarDatos(
-                nombre, paterno, limpio(r.apellidoMaterno()), r.fechaNacimiento(), telefono, null,
+                nombre, paterno, limpio(r.apellidoMaterno()), r.fechaNacimiento(), limpio(r.telefono()), null,
                 limpio(r.correo()), curp, rfc, limpio(r.lugarNacimiento()), null, null, null,
                 limpio(r.calle()), limpio(r.colonia()), limpio(r.municipio()), estado,
                 limpio(r.codigoPostal()), null, null,
                 FuenteCliente.PRECONTRATO, null, captadoUsuario, captadoAsesor, null, null, null);
         c.setPaisResidencia(pais);
-        return new ClienteResuelto(clienteRepository.save(c), true);
+        return c;
     }
 
     /** El cliente que resultó de un registro de venta y si se acaba de crear (false = ya existía con esa CURP). */
@@ -269,17 +281,9 @@ public class ClienteService {
     /** Valida y copia los datos del request a la ficha (obligatorios, mayoría de edad, duplicados). */
     private void aplicar(Cliente c, ClienteRequest r) {
         LocalDate nacimiento = r.fechaNacimiento();
-        if (Period.between(nacimiento, LocalDate.now()).getYears() < 18) {
-            throw new ValidationException("El cliente debe ser mayor de edad");
-        }
-        String curp = limpio(r.curp()) == null ? null : limpio(r.curp()).toUpperCase(Locale.ROOT);
-        if (curp != null && !CURP.matcher(curp).matches()) {
-            throw new ValidationException("El CURP no tiene un formato válido (18 caracteres)");
-        }
-        String rfc = limpio(r.rfc()) == null ? null : limpio(r.rfc()).toUpperCase(Locale.ROOT);
-        if (rfc != null && !RFC.matcher(rfc).matches()) {
-            throw new ValidationException("El RFC no tiene un formato válido");
-        }
+        validarMayorDeEdad(nacimiento);
+        String curp = curpValido(r.curp());
+        String rfc = rfcValido(r.rfc());
 
         int quienes = (r.captadoPorUsuarioId() != null ? 1 : 0) + (r.captadoPorAsesorId() != null ? 1 : 0);
         if (quienes > 1) throw new ValidationException("Indica una sola persona que captó al cliente");
@@ -318,6 +322,35 @@ public class ClienteService {
                 r.fuente(), limpio(r.fuenteDetalle()), captadoUsuario, captadoAsesor, limpio(r.notas()),
                 ubicacion, url);
         c.setPaisResidencia(pais);
+    }
+
+    private static void validarMayorDeEdad(LocalDate nacimiento) {
+        if (Period.between(nacimiento, LocalDate.now()).getYears() < 18) {
+            throw new ValidationException("El cliente debe ser mayor de edad");
+        }
+    }
+
+    /** El CURP en mayúsculas (null si viene vacío); si viene, debe tener el formato de 18 caracteres. */
+    private static String curpValido(String texto) {
+        String curp = mayusculas(texto);
+        if (curp != null && !CURP.matcher(curp).matches()) {
+            throw new ValidationException("El CURP no tiene un formato válido (18 caracteres)");
+        }
+        return curp;
+    }
+
+    /** El RFC en mayúsculas (null si viene vacío); si viene, debe tener un formato válido. */
+    private static String rfcValido(String texto) {
+        String rfc = mayusculas(texto);
+        if (rfc != null && !RFC.matcher(rfc).matches()) {
+            throw new ValidationException("El RFC no tiene un formato válido");
+        }
+        return rfc;
+    }
+
+    private static String mayusculas(String texto) {
+        String limpio = limpio(texto);
+        return limpio == null ? null : limpio.toUpperCase(Locale.ROOT);
     }
 
     /** El país de la lista que corresponde al texto (null si viene vacío); cualquier otro texto se rechaza. */
@@ -394,7 +427,7 @@ public class ClienteService {
         String[] p = texto.trim().replaceAll("\\s+", " ").split(" ");
         int n = p.length;
         if (n >= 3) {
-            return new Cliente(String.join(" ", java.util.Arrays.copyOfRange(p, 0, n - 2)), p[n - 2], p[n - 1]);
+            return new Cliente(String.join(" ", Arrays.copyOfRange(p, 0, n - 2)), p[n - 2], p[n - 1]);
         }
         if (n == 2) return new Cliente(p[0], p[1], null);
         return new Cliente(p[0], null, null);
@@ -415,7 +448,7 @@ public class ClienteService {
         private final Map<Long, CalendarioPagos.EstadoDeCuenta> cuentas = new HashMap<>();
         private final LocalDate hoy = LocalDate.now();
         /** "clienteId:ventaId" de las ventas en las que el cliente es copropietario (no el principal). */
-        private final java.util.Set<String> copropiedades = new java.util.HashSet<>();
+        private final Set<String> copropiedades = new HashSet<>();
         /** Número de cada cliente en cada desarrollo (S-40, N-12). */
         private final Map<Long, List<NumeroClienteDto>> numeros;
 
@@ -430,7 +463,7 @@ public class ClienteService {
                     ventasPorCliente.computeIfAbsent(v.getClienteRef().getId(), k -> new ArrayList<>()).add(v);
                 }
             }
-            for (com.werealestate.backend.model.VentaCopropietario cp : copropietarioRepository.findAll()) {
+            for (VentaCopropietario cp : copropietarioRepository.findAll()) {
                 ventasPorCliente.computeIfAbsent(cp.getCliente().getId(), k -> new ArrayList<>()).add(cp.getVenta());
                 copropiedades.add(cp.getCliente().getId() + ":" + cp.getVenta().getId());
             }
@@ -447,17 +480,17 @@ public class ClienteService {
             }
         }
 
-        Resumenes(java.util.Collection<Long> clienteIds, Map<Long, List<NumeroClienteDto>> numeros) {
+        Resumenes(Collection<Long> clienteIds, Map<Long, List<NumeroClienteDto>> numeros) {
             this.numeros = numeros;
             if (clienteIds.isEmpty()) return;
-            java.util.Set<Long> ventaIds = new java.util.HashSet<>();
+            Set<Long> ventaIds = new HashSet<>();
             for (Venta v : ventaRepository.findByClienteRefIdIn(clienteIds)) {
                 if (v.getClienteRef() != null) {
                     ventasPorCliente.computeIfAbsent(v.getClienteRef().getId(), k -> new ArrayList<>()).add(v);
                     ventaIds.add(v.getId());
                 }
             }
-            for (com.werealestate.backend.model.VentaCopropietario cp : copropietarioRepository.findByClienteIdIn(clienteIds)) {
+            for (VentaCopropietario cp : copropietarioRepository.findByClienteIdIn(clienteIds)) {
                 ventasPorCliente.computeIfAbsent(cp.getCliente().getId(), k -> new ArrayList<>()).add(cp.getVenta());
                 copropiedades.add(cp.getCliente().getId() + ":" + cp.getVenta().getId());
                 ventaIds.add(cp.getVenta().getId());

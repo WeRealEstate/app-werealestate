@@ -1,0 +1,45 @@
+<button type="button" (click)="cerrar.emit()" aria-label="Cerrar" class="modal-backdrop-enter fixed inset-0 z-50 bg-black/40"></button>
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="acceso-asesor-titulo">
+  <form (ngSubmit)="entrar.emit(pin())" class="modal-panel-enter w-full max-w-sm rounded-xl border border-border bg-surface p-5 shadow-lg">
+    <h2 id="acceso-asesor-titulo" class="font-heading text-lg font-semibold text-ink">Acceso de asesor</h2>
+    <p class="mt-2 text-sm text-ink-muted">Escribe tu PIN de 4 caracteres para cotizar y apartar lotes.</p>
+    <div data-pin class="mt-4 flex justify-center gap-3">
+      @for (i of [0, 1, 2, 3]; track i) {
+        <input
+          type="text"
+          [name]="'pin' + i"
+          [attr.aria-label]="'Carácter ' + (i + 1) + ' del PIN'"
+          [value]="casillas()[i]"
+          (input)="escribir(i, $any($event.target).value, $event)"
+          (keydown)="tecla(i, $event)"
+          (focus)="$any($event.target).select()"
+          maxlength="4"
+          autocomplete="off"
+          autocapitalize="characters"
+          [attr.autofocus]="i === 0 ? '' : null"
+          class="h-14 w-14 rounded-lg border border-border bg-surface text-center font-mono text-2xl uppercase text-ink outline-none transition-all
+                 placeholder:text-ink-muted focus:border-we-primary focus:ring-2 focus:ring-we-primary/50"
+        />
+      }
+    </div>
+    @if (error(); as error) {
+      <p class="mt-2 text-xs text-red-600 dark:text-red-400" role="alert">{{ error }}</p>
+    }
+    <div class="flex justify-end gap-2.5 pt-5">
+      <button
+        type="button"
+        (click)="cerrar.emit()"
+        class="boton-secundario rounded-lg px-4 py-2.5 text-sm font-medium text-ink-muted"
+      >
+        Cancelar
+      </button>
+      <button
+        type="submit"
+        [disabled]="pin().trim().length !== 4 || verificando()"
+        class="rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        {{ verificando() ? 'Verificando…' : 'Entrar' }}
+      </button>
+    </div>
+  </form>
+</div>

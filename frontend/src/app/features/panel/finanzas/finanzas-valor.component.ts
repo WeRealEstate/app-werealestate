@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { FinanzasValor } from '../../../core/models/finanzas.model';
 import { FinanzasService } from '../../../core/services/finanzas.service';
 import { SkeletonKpisComponent } from '../../../shared/skeleton-kpis/skeleton-kpis.component';
+import { dinero } from '../../../core/utils/formato-pantalla';
 
 /** Pestaña "Valor vendido": cuánto dinero hay en lotes vendidos (por desarrollo y por lote). */
 @Component({
@@ -59,6 +60,6 @@ export class FinanzasValorComponent {
   }
 
   money(valor: number): string {
-    return valor.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return dinero(valor);
   }
 }

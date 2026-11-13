@@ -15,6 +15,10 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.0.0', fecha: '2026-11-13', cambios: [
+    "Mejoras internas de código (Código Limpio), sin cambios en lo que ves ni en los cálculos: ventas y lotes divididos en servicios más pequeños; cotizador, planos y PDF de cotización partidos en piezas (el PDF sale idéntico); funciones largas divididas y duplicados unificados; 130 pruebas nuevas (ventas, recibos, reestructuración, finanzas, comisiones, gastos, clientes, búsquedas de lotes y leads).",
+    "Más rápido: Finanzas y Comisiones hacen muchas menos consultas a la base (Comisiones de ~41 a ~13; cobro por venta de 35 a 7) y la lista de gastos recurrentes se arma más rápido.",
+  ] },
   { version: '11.21.1', fecha: '2026-11-12', cambios: [
     "Notificaciones: los avisos de lotes apartados, liberados o con cambio de estado ahora abren Lotes filtrado a ese lote (también desde la notificación del celular).",
   ] },

@@ -5,7 +5,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
 import { EliminarClienteComponent } from '../../../../shared/eliminar-cliente/eliminar-cliente.component';
 import { LucideExternalLink, LucidePencil, LucidePhone, LucideTrash2 } from '@lucide/angular';
-import { Amortizacion, cuentaAtraso, frasePagosAtrasados } from '../../../../core/models/amortizacion.model';
+import { Amortizacion, cuentaAtraso, frasePagosAtrasados, fechaCorta } from '../../../../core/models/amortizacion.model';
 import { UBICACION_DOCUMENTO_LABELS } from '../../../../core/models/asesor-externo.model';
 import {
   Cliente,
@@ -21,6 +21,7 @@ import { ClienteFormModalComponent } from '../../../../shared/cliente-form-modal
 import { ConfirmarCambioContratoComponent } from '../../../../shared/confirmar-cambio-contrato/confirmar-cambio-contrato.component';
 import { TablaAmortizacionComponent } from '../../../../shared/tabla-amortizacion/tabla-amortizacion.component';
 import { WeLoaderComponent } from '../../../../shared/we-loader/we-loader.component';
+import { dinero } from '../../../../core/utils/formato-pantalla';
 
 @Component({
   selector: 'app-cliente-detalle',
@@ -250,13 +251,11 @@ export class ClienteDetalleComponent {
   }
 
   fecha(iso: string | null): string {
-    if (!iso) return '—';
-    const [y, m, d] = iso.slice(0, 10).split('-');
-    return `${d}/${m}/${y}`;
+    return fechaCorta(iso);
   }
 
   money(valor: number): string {
-    return valor.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return dinero(valor);
   }
 
   domicilio(c: Cliente): string {

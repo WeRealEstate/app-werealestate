@@ -17,6 +17,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -187,7 +188,7 @@ public class ClienteNumeracionService {
     /** "s-40", "S40", "#n 12" → (S|N, número); solo dígitos ("40") → (null, número); si no es un número, null. */
     static BusquedaNumero leerBusqueda(String texto) {
         if (texto == null) return null;
-        String t = texto.trim().toUpperCase(java.util.Locale.ROOT).replaceAll("[\\s#-]", "");
+        String t = texto.trim().toUpperCase(Locale.ROOT).replaceAll("[\\s#-]", "");
         if (t.matches("[SN]\\d{1,9}")) return new BusquedaNumero(t.substring(0, 1), Long.parseLong(t.substring(1)));
         if (t.matches("\\d{1,9}")) return new BusquedaNumero(null, Long.parseLong(t));
         return null;

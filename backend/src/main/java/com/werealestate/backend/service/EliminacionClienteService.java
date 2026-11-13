@@ -138,19 +138,34 @@ public class EliminacionClienteService {
         }
         cliente(clienteId);
 
-        // 1) Sus ventas como titular, de la de número más alto a la más baja (cada una se vuelve a leer: la numeración
-        //    vacía el contexto de persistencia).
+        eliminarVentasComoTitular(clienteId);
+        quitarCopropiedadesAjenas(clienteId);
+        borrarAlConfirmar(borrarRegistrosDeWeForms(clienteId));
+        quitarNumerosDeCliente(clienteId);
+
+        // El cliente (se vuelve a leer: los pasos anteriores vaciaron el contexto de persistencia).
+        clienteRepository.delete(cliente(clienteId));
+        clienteRepository.flush();
+    }
+
+    /** Sus ventas como titular, de la de número más alto a la más baja (cada una se vuelve a leer: la numeración
+     * vacía el contexto de persistencia). */
+    private void eliminarVentasComoTitular(Long clienteId) {
         List<Long> ventaIds = ventasComoTitular(clienteId).stream()
                 .sorted(Comparator.comparing(Venta::getNumeroGlobal).reversed())
                 .map(Venta::getId)
                 .toList();
         ventaIds.forEach(ventaService::eliminarYaAutorizada);
+    }
 
-        // 2) Se le quita de las ventas de otro titular donde es copropietario.
+    /** Se le quita de las ventas de otro titular donde es copropietario. */
+    private void quitarCopropiedadesAjenas(Long clienteId) {
         copropietarioRepository.deleteAll(copropiedadesAjenas(clienteId));
         copropietarioRepository.flush();
+    }
 
-        // 3) Sus registros de We Forms y, ya confirmada la transacción, sus archivos del servidor.
+    /** Borra sus registros de We Forms y devuelve las rutas de sus archivos, que se borran ya confirmada la transacción. */
+    private List<Path> borrarRegistrosDeWeForms(Long clienteId) {
         List<WeFormRespuesta> respuestas = respuestaRepository.findByClienteId(clienteId);
         List<Path> archivos = archivosEnServidor(respuestas);
         List<Long> respuestaIds = respuestas.stream().map(WeFormRespuesta::getId).toList();
@@ -160,9 +175,11 @@ public class EliminacionClienteService {
             respuestaRepository.deleteAll(respuestas);
             respuestaRepository.flush();
         }
-        borrarAlConfirmar(archivos);
+        return archivos;
+    }
 
-        // 4) Sus números de cliente: si ya nadie comparte ese número en el desarrollo, los mayores bajan 1.
+    /** Sus números de cliente: si ya nadie comparte ese número en el desarrollo, los mayores bajan 1. */
+    private void quitarNumerosDeCliente(Long clienteId) {
         for (ClienteNumero n : numeroRepository.deCliente(clienteId)) {
             Long desarrolloId = n.getDesarrollo().getId();
             long numero = n.getNumero();
@@ -173,10 +190,6 @@ public class EliminacionClienteService {
                 numeroRepository.bajarDesde(desarrolloId, numero);
             }
         }
-
-        // 5) El cliente (se vuelve a leer: los pasos anteriores vaciaron el contexto de persistencia).
-        clienteRepository.delete(cliente(clienteId));
-        clienteRepository.flush();
     }
 
     private List<Venta> ventasComoTitular(Long clienteId) {

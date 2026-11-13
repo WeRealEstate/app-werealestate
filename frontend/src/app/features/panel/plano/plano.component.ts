@@ -33,6 +33,24 @@ import { LoteCambioEstadoModalComponent } from '../../../shared/lote-cambio-esta
 import { LoteInfoModalComponent } from '../../../shared/lote-info-modal/lote-info-modal.component';
 import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 import { leerImagenParaPdf } from '../../../core/utils/imagen-pdf';
+import {
+  acotarAlBorde,
+  alternarLoteEnSeleccion,
+  cargarImagenEnSegundoPlano,
+  desplazamientoAlHacerZoom,
+  insertarEnBordeMasCercano,
+  limitar,
+  puntoEnImagen,
+  puntosSvg,
+  tienePoligono,
+  urlVistaRapida,
+} from '../../../core/utils/plano-vista';
+import {
+  bajarDeLaCapaSuperior,
+  pedirPantallaCompleta,
+  salirDePantallaCompleta,
+  subirALaCapaSuperior,
+} from '../../../core/utils/pantalla-completa';
 
 /** Qué tan cerca (en % del ancho/alto de la imagen) hay que hacer clic del primer vértice para
  * cerrar el polígono que se está dibujando. */
@@ -117,19 +135,9 @@ export class PlanoComponent implements OnDestroy {
   }
 
   private alternarSeleccion(lote: Lote): void {
-    if (this.seleccion().includes(lote.id)) {
-      this.seleccion.update((ids) => ids.filter((id) => id !== lote.id));
-      return;
-    }
-    if (lote.estado !== 'DISPONIBLE') {
-      this.toast.error('Solo se pueden elegir lotes disponibles.');
-      return;
-    }
-    if (this.seleccion().length >= MAX_LOTES_APARTADO_MULTIPLE) {
-      this.toast.error(`Máximo ${MAX_LOTES_APARTADO_MULTIPLE} lotes a la vez.`);
-      return;
-    }
-    this.seleccion.update((ids) => [...ids, lote.id]);
+    const resultado = alternarLoteEnSeleccion(this.seleccion(), lote, lote.estado === 'DISPONIBLE', MAX_LOTES_APARTADO_MULTIPLE);
+    if ('error' in resultado) this.toast.error(resultado.error);
+    else this.seleccion.set(resultado.seleccion);
   }
 
   onApartadosVarios(lotes: Lote[]): void {
@@ -154,10 +162,7 @@ export class PlanoComponent implements OnDestroy {
   readonly planoImagenUrl = computed(() => {
     const url = this.plano()?.planoUrl ?? null;
     if (!url) return null;
-    if (this.usandoPreview() && !this.hdLista()) {
-      return url.replace(/\.(jpg|jpeg|png|webp)(?=\?|$)/i, '-preview.jpg');
-    }
-    return url;
+    return this.usandoPreview() && !this.hdLista() ? urlVistaRapida(url) : url;
   });
 
   alCargarImagen(evento: Event): void {
@@ -178,22 +183,13 @@ export class PlanoComponent implements OnDestroy {
     const urlHd = this.plano()?.planoUrl;
     if (!urlHd || this.cargandoHd || this.hdLista()) return;
     this.cargandoHd = true;
-    const hd = new Image();
-    hd.decoding = 'async';
-    hd.src = urlHd;
-    hd.onload = () => {
-      const decodificar = typeof hd.decode === 'function' ? hd.decode() : Promise.resolve();
-      decodificar
-        .catch(() => undefined)
-        .then(() => {
-          if (this.plano()?.planoUrl === urlHd) {
-            this.hdLista.set(true);
-          }
-        });
-    };
-    hd.onerror = () => {
-      this.cargandoHd = false;
-    };
+    cargarImagenEnSegundoPlano(
+      urlHd,
+      () => {
+        if (this.plano()?.planoUrl === urlHd) this.hdLista.set(true);
+      },
+      () => (this.cargandoHd = false),
+    );
   }
 
   async alternarPantallaCompleta(): Promise<void> {
@@ -204,16 +200,9 @@ export class PlanoComponent implements OnDestroy {
     const raiz = this.raizPlano?.nativeElement;
     if (!raiz) return;
     this.restablecerZoom();
-    if (document.fullscreenEnabled && raiz.requestFullscreen) {
-      // Hay navegadores incrustados (visores dentro de otras apps) donde la petición ni se concede ni se
-      // rechaza: sin el plazo, el botón parecería muerto. Si pasa, se usa el respaldo.
-      const resultado = await Promise.race([
-        raiz.requestFullscreen().then(
-          () => 'ok' as const,
-          () => 'rechazada' as const,
-        ),
-        new Promise<'plazo'>((resolver) => setTimeout(() => resolver('plazo'), PLAZO_PANTALLA_COMPLETA_MS)),
-      ]);
+    if (document.fullscreenEnabled && typeof raiz.requestFullscreen === 'function') {
+      // Sin el plazo, en un visor incrustado que no responde el botón parecería muerto: ahí se usa el respaldo.
+      const resultado = await pedirPantallaCompleta(raiz, PLAZO_PANTALLA_COMPLETA_MS);
       if (resultado === 'ok') {
         this.pantallaCompletaDelNavegador = true;
         this.pantallaCompleta.set(true);
@@ -222,46 +211,23 @@ export class PlanoComponent implements OnDestroy {
     }
     this.pantallaCompletaDelNavegador = false;
     this.pantallaCompleta.set(true);
-    this.subirALaCapaSuperior(raiz);
+    // En el respaldo la página es un contenedor fijo, pero la barra lateral del panel queda por encima (vive fuera
+    // del contexto de apilamiento de esta página): se sube a la capa superior. Si no se puede, queda el contenedor fijo.
+    if (subirALaCapaSuperior(raiz)) this.respaldoEnCapaSuperior = true;
   }
 
-  /** En el respaldo la página es un contenedor fijo, pero la barra lateral del panel queda por encima (vive
-   * fuera del contexto de apilamiento de esta página y ningún z-index lo arregla). Un popover "manual" va a
-   * la capa superior del navegador, por encima de todo, sin ser pantalla completa ni cerrarse al hacer clic
-   * afuera. Si el navegador no lo soporta, queda solo el contenedor fijo. */
+  /** true mientras la página está en la capa superior como respaldo de la pantalla completa. */
   private respaldoEnCapaSuperior = false;
-
-  private subirALaCapaSuperior(raiz: HTMLElement): void {
-    if (typeof raiz.showPopover !== 'function') return;
-    try {
-      raiz.setAttribute('popover', 'manual');
-      raiz.showPopover();
-      this.respaldoEnCapaSuperior = true;
-    } catch {
-      raiz.removeAttribute('popover');
-    }
-  }
 
   private bajarDeLaCapaSuperior(): void {
     const raiz = this.raizPlano?.nativeElement;
     if (!raiz || !this.respaldoEnCapaSuperior) return;
     this.respaldoEnCapaSuperior = false;
-    try {
-      raiz.hidePopover();
-    } catch {
-      // ya estaba cerrado
-    }
-    raiz.removeAttribute('popover');
+    bajarDeLaCapaSuperior(raiz);
   }
 
   async salirPantallaCompleta(): Promise<void> {
-    if (document.fullscreenElement) {
-      try {
-        await document.exitFullscreen();
-      } catch {
-        // ya no estaba en pantalla completa
-      }
-    }
+    await salirDePantallaCompleta();
     this.bajarDeLaCapaSuperior();
     this.pantallaCompletaDelNavegador = false;
     this.pantallaCompleta.set(false);
@@ -285,7 +251,7 @@ export class PlanoComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     this.bajarDeLaCapaSuperior();
-    if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
+    void salirDePantallaCompleta();
   }
 
   readonly estadoLabels = ESTADO_LOTE_LABELS;
@@ -363,14 +329,8 @@ export class PlanoComponent implements OnDestroy {
     });
   }
 
-  tienePoligono(lote: Lote): boolean {
-    return !!lote.mapaPoligono && lote.mapaPoligono.length >= 3;
-  }
-
-  /** Convierte los vértices en el atributo "points" que espera <polygon>/<polyline>. */
-  puntosSvg(puntos: PuntoMapa[]): string {
-    return puntos.map((p) => `${p.x},${p.y}`).join(' ');
-  }
+  readonly tienePoligono = tienePoligono;
+  readonly puntosSvg = puntosSvg;
 
   onDesarrolloChange(valor: string): void {
     this.desarrolloId.set(valor === '' ? null : +valor);
@@ -378,8 +338,7 @@ export class PlanoComponent implements OnDestroy {
     this.seleccion.set([]);
     this.loteActivo.set(null);
     this.loteAUbicarId.set(null);
-    this.puntosEnProgreso.set([]);
-    this.posicionCursor.set(null);
+    this.descartarTrazo();
     this.restablecerZoom();
     this.cargarMapa();
   }
@@ -405,8 +364,7 @@ export class PlanoComponent implements OnDestroy {
     this.modoEdicion.update((v) => !v);
     this.loteAUbicarId.set(null);
     this.loteActivo.set(null);
-    this.puntosEnProgreso.set([]);
-    this.posicionCursor.set(null);
+    this.descartarTrazo();
   }
 
   async onArchivoPlanoSeleccionado(event: Event): Promise<void> {
@@ -421,11 +379,7 @@ export class PlanoComponent implements OnDestroy {
       await this.cargarMapa();
       this.toast.success('Plano actualizado.');
     } catch (error) {
-      this.toast.error(
-        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
-          ? error.error.message
-          : 'No se pudo subir el plano. Intenta de nuevo.',
-      );
+      this.toast.error(this.mensajeError(error, 'No se pudo subir el plano. Intenta de nuevo.'));
     } finally {
       this.subiendoPlano.set(false);
       input.value = '';
@@ -434,25 +388,18 @@ export class PlanoComponent implements OnDestroy {
 
   onSeleccionarLoteAUbicar(valor: string): void {
     this.loteAUbicarId.set(valor === '' ? null : +valor);
-    this.puntosEnProgreso.set([]);
-    this.posicionCursor.set(null);
+    this.descartarTrazo();
   }
 
-  /** Convierte una posición de pantalla (clientX/Y) al % dentro de la imagen sin escalar, deshaciendo
-   * el pan/zoom actual del visor: el div interno se desplaza panX/panY y se escala zoom, así que el
-   * punto de contenido bajo el cursor es ((posición en el contenedor) - pan) / zoom. */
+  /** Posición de pantalla (clientX/Y) → % dentro de la imagen sin escalar, deshaciendo el pan/zoom actual. */
   private posicionRelativa(clientX: number, clientY: number): PuntoMapa {
     const contenedor = this.contenedorPlano?.nativeElement;
     if (!contenedor) return { x: 0, y: 0 };
-    const rect = contenedor.getBoundingClientRect();
-    const zoom = this.zoom();
-    const innerX = (clientX - rect.left - this.panX()) / zoom;
-    const innerY = (clientY - rect.top - this.panY()) / zoom;
-    const x = Math.min(100, Math.max(0, (innerX / rect.width) * 100));
-    const y = Math.min(100, Math.max(0, (innerY / rect.height) * 100));
-    // 4 decimales: a 2 (lo que había antes) cada paso de redondeo ya se sentía como un salto/imán
-    // en vez de seguir el cursor libremente en cuanto el zoom pasaba de unos cientos por ciento.
-    return { x: Math.round(x * 10000) / 10000, y: Math.round(y * 10000) / 10000 };
+    return puntoEnImagen(clientX, clientY, contenedor.getBoundingClientRect(), this.pan(), this.zoom());
+  }
+
+  private pan(): { x: number; y: number } {
+    return { x: this.panX(), y: this.panY() };
   }
 
   /** UMBRAL_CIERRE_PORCENTAJE está en % de la imagen sin escalar; se divide entre el zoom actual
@@ -522,39 +469,24 @@ export class PlanoComponent implements OnDestroy {
   /** Inserta un vértice nuevo justo después del borde más cercano al punto dado, para poder
    * agregarle más esquinas a un polígono ya guardado sin borrarlo y volver a dibujarlo entero. */
   private async agregarVerticeEnBorde(loteId: number, puntos: PuntoMapa[], nuevo: PuntoMapa): Promise<void> {
-    let mejorIndice = 0;
-    let mejorDistancia = Infinity;
-    for (let i = 0; i < puntos.length; i++) {
-      const distancia = this.distanciaPuntoSegmento(nuevo, puntos[i], puntos[(i + 1) % puntos.length]);
-      if (distancia < mejorDistancia) {
-        mejorDistancia = distancia;
-        mejorIndice = i;
-      }
-    }
-    const actualizados = [...puntos];
-    actualizados.splice(mejorIndice + 1, 0, nuevo);
-    await this.guardarPoligono(loteId, actualizados, 'Vértice agregado.');
-  }
-
-  private distanciaPuntoSegmento(p: PuntoMapa, a: PuntoMapa, b: PuntoMapa): number {
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    const largoCuadrado = dx * dx + dy * dy;
-    if (largoCuadrado === 0) return Math.hypot(p.x - a.x, p.y - a.y);
-    const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / largoCuadrado));
-    return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+    await this.guardarPoligono(loteId, insertarEnBordeMasCercano(puntos, nuevo), 'Vértice agregado.');
   }
 
   private async guardarPoligono(loteId: number, puntos: PuntoMapa[], mensajeExito = 'Lote delimitado.'): Promise<void> {
     try {
       const actualizado = await this.lotesService.actualizarPoligonoMapa(loteId, puntos);
-      this.plano.update((p) => (p ? { ...p, lotes: p.lotes.map((l) => (l.id === loteId ? actualizado : l)) } : p));
-      this.puntosEnProgreso.set([]);
-      this.posicionCursor.set(null);
+      this.reemplazarLote(loteId, actualizado);
+      this.descartarTrazo();
       this.toast.success(mensajeExito);
     } catch {
       this.toast.error('No se pudo guardar la delimitación del lote.');
     }
+  }
+
+  /** Olvida el polígono a medio dibujar y la línea de vista previa hasta el cursor. */
+  private descartarTrazo(): void {
+    this.puntosEnProgreso.set([]);
+    this.posicionCursor.set(null);
   }
 
   /** Quita el último vértice puesto mientras se dibuja (botón "Deshacer" o tecla Escape). */
@@ -668,11 +600,7 @@ export class PlanoComponent implements OnDestroy {
       await this.cargarMapa();
       this.toast.success(`Se quitó la delimitación de ${limpiados} lote${limpiados === 1 ? '' : 's'}.`);
     } catch (error) {
-      this.errorLimpiar.set(
-        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
-          ? error.error.message
-          : 'No se pudo quitar la delimitación. Intenta de nuevo.',
-      );
+      this.errorLimpiar.set(this.mensajeError(error, 'No se pudo quitar la delimitación. Intenta de nuevo.'));
     } finally {
       this.limpiandoTodo.set(false);
     }
@@ -681,7 +609,7 @@ export class PlanoComponent implements OnDestroy {
   async quitarDelimitacion(lote: Lote): Promise<void> {
     try {
       const actualizado = await this.lotesService.actualizarPoligonoMapa(lote.id, null);
-      this.plano.update((p) => (p ? { ...p, lotes: p.lotes.map((l) => (l.id === lote.id ? actualizado : l)) } : p));
+      this.reemplazarLote(lote.id, actualizado);
       this.loteActivo.set(null);
       if (this.loteAUbicarId() === lote.id) {
         this.puntosEnProgreso.set([]);
@@ -800,10 +728,14 @@ export class PlanoComponent implements OnDestroy {
 
   /** Refleja el lote actualizado tanto en la lista del plano como en el panel de detalle abierto. */
   private aplicarLoteActualizado(actualizado: Lote): void {
-    this.plano.update((p) => (p ? { ...p, lotes: p.lotes.map((l) => (l.id === actualizado.id ? actualizado : l)) } : p));
+    this.reemplazarLote(actualizado.id, actualizado);
     if (this.loteActivo()?.id === actualizado.id) {
       this.loteActivo.set(actualizado);
     }
+  }
+
+  private reemplazarLote(id: number, actualizado: Lote): void {
+    this.plano.update((p) => (p ? { ...p, lotes: p.lotes.map((l) => (l.id === id ? actualizado : l)) } : p));
   }
 
   private mensajeError(error: unknown, porDefecto: string): string {
@@ -870,17 +802,13 @@ export class PlanoComponent implements OnDestroy {
     if (!contenedor) return;
     const rect = contenedor.getBoundingClientRect();
     const zoomActual = this.zoom();
-    const zoomFinal = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, nuevoZoom));
+    const zoomFinal = limitar(nuevoZoom, ZOOM_MIN, ZOOM_MAX);
     if (zoomFinal === zoomActual) return;
 
-    const puntoX = clientX - rect.left;
-    const puntoY = clientY - rect.top;
-    const contenidoX = (puntoX - this.panX()) / zoomActual;
-    const contenidoY = (puntoY - this.panY()) / zoomActual;
-
+    const pan = desplazamientoAlHacerZoom({ x: clientX - rect.left, y: clientY - rect.top }, this.pan(), zoomActual, zoomFinal);
     this.zoom.set(zoomFinal);
-    this.panX.set(puntoX - contenidoX * zoomFinal);
-    this.panY.set(puntoY - contenidoY * zoomFinal);
+    this.panX.set(pan.x);
+    this.panY.set(pan.y);
     this.limitarPan(rect);
   }
 
@@ -893,10 +821,8 @@ export class PlanoComponent implements OnDestroy {
   /** Evita que, al alejar el zoom o soltar el arrastre, la imagen quede desplazada fuera de vista. */
   private limitarPan(rect: DOMRect): void {
     const zoom = this.zoom();
-    const minPanX = rect.width - rect.width * zoom;
-    const minPanY = rect.height - rect.height * zoom;
-    this.panX.set(Math.min(0, Math.max(minPanX, this.panX())));
-    this.panY.set(Math.min(0, Math.max(minPanY, this.panY())));
+    this.panX.set(acotarAlBorde(this.panX(), rect.width, rect.width * zoom));
+    this.panY.set(acotarAlBorde(this.panY(), rect.height, rect.height * zoom));
   }
 
   acercarZoom(): void {

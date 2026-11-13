@@ -103,4 +103,14 @@ public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecific
     java.util.List<Venta> recientesDeOtros(
             @org.springframework.data.repository.query.Param("desde") java.time.LocalDateTime desde,
             @org.springframework.data.repository.query.Param("usuarioId") Long usuarioId);
+
+    /** Todas las ventas con sus pausas ya cargadas, en una sola consulta (no una por cada bloque de ventas): para
+     * cálculos de toda la cartera, ver FinanzasService.Datos. Deja las colecciones listas en la sesión. */
+    @Query("select v from Venta v left join fetch v.pausas")
+    java.util.List<Venta> findAllConPausas();
+
+    /** Igual que {@link #findAllConPausas()} con las reestructuraciones (van aparte: dos colecciones List no se pueden
+     * traer en la misma consulta). */
+    @Query("select v from Venta v left join fetch v.reestructuraciones")
+    java.util.List<Venta> findAllConReestructuraciones();
 }

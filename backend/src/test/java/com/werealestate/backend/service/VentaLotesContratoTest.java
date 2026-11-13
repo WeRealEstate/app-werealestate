@@ -27,8 +27,6 @@ import com.werealestate.backend.model.VentaLote;
 import com.werealestate.backend.repository.AsesorExternoRepository;
 import com.werealestate.backend.repository.LoteRepository;
 import com.werealestate.backend.repository.PagoVentaRepository;
-import com.werealestate.backend.repository.ReciboVentaHistorialRepository;
-import com.werealestate.backend.repository.ReciboVentaRepository;
 import com.werealestate.backend.repository.UsuarioRepository;
 import com.werealestate.backend.repository.VentaAportacionRepository;
 import com.werealestate.backend.repository.VentaCopropietarioRepository;
@@ -52,11 +50,12 @@ class VentaLotesContratoTest {
     private VentaRepository ventas;
     private VentaLoteRepository ventaLotes;
     private LoteRepository lotes;
-    private LoteService loteService;
+    private LoteVentaService loteService;
     private UsuarioRepository usuarios;
     private ClienteService clientes;
     private PasswordEncoder passwordEncoder;
     private VentaService service;
+    private ContratoVentaService contratos;
     private final Venta[] guardada = new Venta[1];
 
     @BeforeEach
@@ -64,7 +63,7 @@ class VentaLotesContratoTest {
         ventas = mock(VentaRepository.class);
         ventaLotes = mock(VentaLoteRepository.class);
         lotes = mock(LoteRepository.class);
-        loteService = mock(LoteService.class);
+        loteService = mock(LoteVentaService.class);
         usuarios = mock(UsuarioRepository.class);
         clientes = mock(ClienteService.class);
         passwordEncoder = mock(PasswordEncoder.class);
@@ -79,11 +78,20 @@ class VentaLotesContratoTest {
             return v;
         });
         when(ventas.findById(anyLong())).thenAnswer(inv -> Optional.ofNullable(guardada[0]));
-        service = new VentaService(ventas, ventaLotes, mock(VentaAportacionRepository.class), lotes, loteService,
-                mock(PagoVentaRepository.class), mock(ReciboVentaRepository.class), mock(ReciboVentaHistorialRepository.class),
-                mock(ComisionService.class), clientes, mock(ClienteNumeracionService.class),
-                mock(VentaCopropietarioRepository.class), mock(WeFormRespuestaRepository.class), passwordEncoder, usuarios,
-                mock(AsesorExternoRepository.class), provider);
+        AutorizacionVentas autorizacion = new AutorizacionVentas(provider, passwordEncoder);
+        ConsultasVenta consultas = new ConsultasVenta(ventas, ventaLotes, mock(PagoVentaRepository.class));
+        VentaAportacionRepository aportaciones = mock(VentaAportacionRepository.class);
+        VentaCopropietarioRepository copropietarios = mock(VentaCopropietarioRepository.class);
+        VentaDtoArmador armador = new VentaDtoArmador(
+                ventaLotes, aportaciones, copropietarios, mock(PagoVentaRepository.class), consultas);
+        ComisionService comisiones = mock(ComisionService.class);
+        service = new VentaService(ventas, ventaLotes, aportaciones, lotes, loteService,
+                mock(ReciboVentaService.class), new NumeracionVentaService(ventas, autorizacion),
+                comisiones, clientes, mock(ClienteNumeracionService.class),
+                copropietarios, mock(WeFormRespuestaRepository.class), usuarios,
+                mock(AsesorExternoRepository.class), provider, consultas, autorizacion, armador);
+        contratos = new ContratoVentaService(
+                ventas, ventaLotes, loteService, comisiones, consultas, autorizacion, armador);
     }
 
     private Lote lote(long id) {
@@ -123,7 +131,7 @@ class VentaLotesContratoTest {
     void alFirmarElContratoLosLotesPasanAVendido() {
         venta(10, 1, false, lote(1), lote(2));
 
-        service.registrarContrato(10L, contrato(true));
+        contratos.registrarContrato(10L, contrato(true));
 
         verify(loteService).ponerEstadoDeVenta(1L, EstadoLote.VENDIDO, "Cliente Uno", "Contrato firmado");
         verify(loteService).ponerEstadoDeVenta(2L, EstadoLote.VENDIDO, "Cliente Uno", "Contrato firmado");
@@ -133,7 +141,7 @@ class VentaLotesContratoTest {
     void alQuitarLaFirmaRegresanAEnProcesoDeFirma() {
         venta(10, 1, true, lote(1));
 
-        service.registrarContrato(10L, contrato(false));
+        contratos.registrarContrato(10L, contrato(false));
 
         verify(loteService).ponerEstadoDeVenta(
                 1L, EstadoLote.EN_PROCESO_DE_FIRMA, "Cliente Uno", "Se quitó la firma del contrato");
@@ -143,7 +151,7 @@ class VentaLotesContratoTest {
     void corregirSoloLaFechaNoMueveLosLotes() {
         venta(10, 1, true, lote(1));
 
-        service.registrarContrato(10L, contrato(true));
+        contratos.registrarContrato(10L, contrato(true));
 
         verify(loteService, never()).ponerEstadoDeVenta(anyLong(), any(), any(), any());
     }
@@ -158,7 +166,7 @@ class VentaLotesContratoTest {
         when(ventaLotes.findByLoteId(1L)).thenReturn(List.of(
                 new VentaLote(esta, compartido, BigDecimal.TEN), new VentaLote(otra, compartido, BigDecimal.TEN)));
 
-        service.registrarContrato(10L, contrato(false));
+        contratos.registrarContrato(10L, contrato(false));
 
         verify(loteService).ponerEstadoDeVenta(1L, EstadoLote.VENDIDO, "Cliente Uno", "Se quitó la firma del contrato");
     }

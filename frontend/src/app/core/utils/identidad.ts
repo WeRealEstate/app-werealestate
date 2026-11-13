@@ -53,8 +53,3 @@ export function datosDeCurp(curp: string): DatosCurp | null {
   return { fechaNacimiento: iso, entidad: ENTIDADES[curp.slice(11, 13)] ?? null };
 }
 
-/** "2000-05-17" → "17/05/2000" */
-export function fechaCorta(iso: string): string {
-  const [a, m, d] = iso.split('-');
-  return `${d}/${m}/${a}`;
-}

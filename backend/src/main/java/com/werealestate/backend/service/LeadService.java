@@ -57,6 +57,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Transactional
 public class LeadService {
 
+    private static final List<EstadoLead> ESTADOS_CERRADOS =
+            List.of(EstadoLead.CERRADO_GANADO, EstadoLead.CERRADO_PERDIDO);
+
     /** Base del candado de numeración por asesor (se le suma el id del asesor). */
     private static final long CLAVE_NUMERACION = 7_600_000_000L;
 
@@ -126,24 +129,14 @@ public class LeadService {
         }
 
         if (busqueda != null && !busqueda.isBlank()) {
-            String comodin = "%" + busqueda.trim().toLowerCase() + "%";
-            // Un número solo ("12" o "#12") también busca el lead con ese número.
-            String sinAlmohadilla = busqueda.trim().startsWith("#") ? busqueda.trim().substring(1) : busqueda.trim();
-            Long numeroBuscado = sinAlmohadilla.matches("\\d{1,15}") ? Long.valueOf(sinAlmohadilla) : null;
-            spec = spec.and((root, query, cb) -> {
-                var coincide = cb.or(
-                        cb.like(cb.lower(root.get("nombreCliente")), comodin),
-                        cb.like(cb.lower(root.get("telefono")), comodin));
-                return numeroBuscado == null ? coincide : cb.or(coincide, cb.equal(root.get("numero"), numeroBuscado));
-            });
+            spec = spec.and(filtroPorBusqueda(busqueda.trim()));
         }
 
         if ("FRIOS".equalsIgnoreCase(estado)) {
             LocalDateTime limite = LocalDateTime.now().minusDays(diasFrio);
-            List<EstadoLead> cerrados = List.of(EstadoLead.CERRADO_GANADO, EstadoLead.CERRADO_PERDIDO);
             spec = spec.and((root, query, cb) -> cb.and(
                     cb.lessThan(root.get("fechaUltimoContacto"), limite),
-                    cb.not(root.get("estado").in(cerrados))));
+                    cb.not(root.get("estado").in(ESTADOS_CERRADOS))));
         } else if (estado != null && !estado.isBlank()) {
             EstadoLead estadoEnum = EstadoLead.valueOf(estado);
             spec = spec.and((root, query, cb) -> cb.equal(root.get("estado"), estadoEnum));
@@ -162,6 +155,19 @@ public class LeadService {
 
         List<LeadDto> contenido = resultado.getContent().stream().map(this::toDto).toList();
         return new PaginaDto<>(contenido, resultado.hasNext());
+    }
+
+    /** Texto en nombre o teléfono; un número solo ("12" o "#12") también busca el lead con ese número. */
+    private static Specification<Lead> filtroPorBusqueda(String busquedaRecortada) {
+        String comodin = "%" + busquedaRecortada.toLowerCase() + "%";
+        String sinAlmohadilla = busquedaRecortada.startsWith("#") ? busquedaRecortada.substring(1) : busquedaRecortada;
+        Long numeroBuscado = sinAlmohadilla.matches("\\d{1,15}") ? Long.valueOf(sinAlmohadilla) : null;
+        return (root, query, cb) -> {
+            var coincide = cb.or(
+                    cb.like(cb.lower(root.get("nombreCliente")), comodin),
+                    cb.like(cb.lower(root.get("telefono")), comodin));
+            return numeroBuscado == null ? coincide : cb.or(coincide, cb.equal(root.get("numero"), numeroBuscado));
+        };
     }
 
     /**
@@ -184,10 +190,9 @@ public class LeadService {
             throw new ForbiddenOperationException("Solo un administrador puede ver los leads fríos de todo el equipo");
         }
         LocalDateTime limite = LocalDateTime.now().minusDays(diasFrio);
-        List<EstadoLead> cerrados = List.of(EstadoLead.CERRADO_GANADO, EstadoLead.CERRADO_PERDIDO);
         return leadRepository
                 .findByFechaUltimoContactoBeforeAndEstadoNotInAndArchivadoFalseOrderByFechaUltimoContactoAsc(
-                        limite, cerrados)
+                        limite, ESTADOS_CERRADOS)
                 .stream()
                 .map(this::toDto)
                 .toList();
@@ -204,15 +209,8 @@ public class LeadService {
                 .findById(request.desarrolloId())
                 .orElseThrow(() -> new ResourceNotFoundException("Desarrollo no encontrado"));
 
-        Usuario asesor = actual;
-        if (request.asesorId() != null && !request.asesorId().equals(actual.getId())) {
-            if (actual.getRol() != Role.ADMIN) {
-                throw new ForbiddenOperationException("Solo un administrador puede asignar el lead a otro asesor");
-            }
-            asesor = usuarioRepository
-                    .findById(request.asesorId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
-        }
+        Usuario asesor = resolverAsesorDestino(
+                actual, request.asesorId(), "Solo un administrador puede asignar el lead a otro asesor");
 
         Lead lead = new Lead(
                 request.nombreCliente(),
@@ -228,6 +226,19 @@ public class LeadService {
         lead.setDesarrolloDetalle(normalizarDetalleDesarrollo(desarrollo, request.desarrolloDetalle()));
 
         return toDto(guardarConNumero(lead));
+    }
+
+    /** El asesor dueño de lo que se crea: quien lo pide, o (solo si es admin) el que indicó. */
+    private Usuario resolverAsesorDestino(Usuario actual, Long asesorIdPedido, String mensajeSiNoEsAdmin) {
+        if (asesorIdPedido == null || asesorIdPedido.equals(actual.getId())) {
+            return actual;
+        }
+        if (actual.getRol() != Role.ADMIN) {
+            throw new ForbiddenOperationException(mensajeSiNoEsAdmin);
+        }
+        return usuarioRepository
+                .findById(asesorIdPedido)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
     }
 
     /** Le da al lead el siguiente número de su asesor y lo guarda, todo en la misma transacción y con un candado por
@@ -256,15 +267,8 @@ public class LeadService {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public LeadImportResultado importar(LeadImportBatchRequest request) {
         Usuario actual = currentUserProvider.getUsuarioActual();
-        Usuario asesor = actual;
-        if (request.asesorId() != null && !request.asesorId().equals(actual.getId())) {
-            if (actual.getRol() != Role.ADMIN) {
-                throw new ForbiddenOperationException("Solo un administrador puede importar leads para otro asesor");
-            }
-            asesor = usuarioRepository
-                    .findById(request.asesorId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
-        }
+        Usuario asesor = resolverAsesorDestino(
+                actual, request.asesorId(), "Solo un administrador puede importar leads para otro asesor");
 
         int creados = 0;
         List<LeadImportError> errores = new ArrayList<>();

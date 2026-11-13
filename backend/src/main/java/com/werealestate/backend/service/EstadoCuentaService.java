@@ -11,6 +11,7 @@ import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.model.Venta;
 import com.werealestate.backend.model.VentaCopropietario;
 import com.werealestate.backend.model.VentaLote;
+import com.werealestate.backend.model.VentaReestructuracion;
 import com.werealestate.backend.repository.ClienteRepository;
 import com.werealestate.backend.repository.PagoVentaRepository;
 import com.werealestate.backend.repository.VentaAportacionRepository;
@@ -22,6 +23,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -80,7 +82,7 @@ public class EstadoCuentaService {
         exigirAdminOLider();
         if (!clienteRepository.existsById(clienteId)) throw new ResourceNotFoundException("Cliente no encontrado");
         Map<Long, Venta> ventas = new LinkedHashMap<>();
-        Set<Long> comoCopropietario = new java.util.HashSet<>();
+        Set<Long> comoCopropietario = new HashSet<>();
         for (Venta v : ventaRepository.findByClienteRefId(clienteId)) ventas.put(v.getId(), v);
         for (VentaCopropietario cp : copropietarioRepository.findByClienteId(clienteId)) {
             ventas.putIfAbsent(cp.getVenta().getId(), cp.getVenta());
@@ -97,9 +99,6 @@ public class EstadoCuentaService {
         List<VentaLote> lotes = ventaLoteRepository.findByVentaId(venta.getId());
         BigDecimal precio = lotes.stream().map(VentaLote::getPrecio).reduce(BigDecimal.ZERO, BigDecimal::add);
         List<PagoVenta> pagos = pagoVentaRepository.findVigentesByVentaIdOrderByFechaAscIdAsc(venta.getId());
-        BigDecimal abonado = pagos.stream()
-                .map(PagoVenta::getMonto)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
         List<CalendarioPagos.Concepto> conceptos = CalendarioPagos.conceptos(
                 venta, precio, ventaAportacionRepository.findByVentaIdOrderByAnioAscMesAsc(venta.getId()));
         CalendarioPagos.EstadoDeCuenta cuenta = CalendarioPagos.estadoDeCuenta(conceptos, precio, pagos, hoy);
@@ -158,7 +157,7 @@ public class EstadoCuentaService {
 
     private static List<AmortizacionDto.Reestructuracion> reestructuraciones(Venta venta) {
         List<AmortizacionDto.Reestructuracion> lista = new ArrayList<>();
-        List<com.werealestate.backend.model.VentaReestructuracion> rs = venta.getReestructuraciones();
+        List<VentaReestructuracion> rs = venta.getReestructuraciones();
         for (int i = 0; i < rs.size(); i++) {
             var r = rs.get(i);
             lista.add(new AmortizacionDto.Reestructuracion(i + 1, r.getFechaCorte(), r.getMotivo(),

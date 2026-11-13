@@ -312,7 +312,7 @@ public class WeFormService {
             throw new ValidationException("Solo se pueden crear formularios para SAMAI Campestre o Aldea Nanuu");
         }
         WeForm form = formRepository.save(new WeForm(
-                request.nombre().trim(), limpio(request.descripcion()), nuevoSlug(request.nombre()), desarrollo, actual));
+                request.nombre().trim(), Textos.opcional(request.descripcion()), nuevoSlug(request.nombre()), desarrollo, actual));
         int orden = 0;
         for (Plantilla p : PLANTILLA) {
             preguntaRepository.save(new WeFormPregunta(
@@ -333,7 +333,7 @@ public class WeFormService {
             throw new ValidationException("Solo se pueden crear formularios para SAMAI Campestre o Aldea Nanuu");
         }
         WeForm copia = formRepository.save(new WeForm(
-                request.nombre().trim(), limpio(request.descripcion()), nuevoSlug(request.nombre()), desarrollo, actual));
+                request.nombre().trim(), Textos.opcional(request.descripcion()), nuevoSlug(request.nombre()), desarrollo, actual));
         copia.setAvisoFinanzas(original.isAvisoFinanzas());
         int orden = 0;
         for (WeFormPregunta p : preguntaRepository.findByFormIdAndArchivadaFalseOrderByOrdenAsc(original.getId())) {
@@ -347,7 +347,7 @@ public class WeFormService {
     public WeFormDtos.Detalle actualizar(Long id, WeFormDtos.ActualizarRequest request) {
         exigirAcceso();
         WeForm form = obtenerEntidad(id);
-        form.actualizar(request.nombre().trim(), limpio(request.descripcion()), request.estado());
+        form.actualizar(request.nombre().trim(), Textos.opcional(request.descripcion()), request.estado());
         return detalle(form);
     }
 
@@ -372,7 +372,7 @@ public class WeFormService {
         int orden = preguntaRepository.maxOrden(formId) + 1;
         boolean obligatoria = tipo != TipoPreguntaForm.TITULO && request.obligatoria();
         WeFormPregunta p = preguntaRepository.save(new WeFormPregunta(
-                form, orden, tipo, request.titulo().trim(), limpio(request.descripcion()), obligatoria, opciones, null,
+                form, orden, tipo, request.titulo().trim(), Textos.opcional(request.descripcion()), obligatoria, opciones, null,
                 request.visible() == null || request.visible()));
         return preguntaDto(p);
     }
@@ -394,7 +394,7 @@ public class WeFormService {
         }
         if (p.getTipo() == TipoPreguntaForm.TITULO) obligatoria = false;
         p.editar(
-                request.titulo().trim(), limpio(request.descripcion()), obligatoria,
+                request.titulo().trim(), Textos.opcional(request.descripcion()), obligatoria,
                 destino == null ? opcionesTexto(p.getTipo(), request.opciones()) : p.getOpciones(), visible);
         return preguntaDto(p);
     }
@@ -525,10 +525,6 @@ public class WeFormService {
             if (!formRepository.existsBySlug(slug)) return slug;
         }
         throw new IllegalStateException("No se pudo generar el link del formulario");
-    }
-
-    private static String limpio(String texto) {
-        return texto == null || texto.isBlank() ? null : texto.trim();
     }
 
     private static final Set<TipoPreguntaForm> ESPECIALES = Set.of(

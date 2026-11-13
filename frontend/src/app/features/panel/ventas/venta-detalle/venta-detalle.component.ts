@@ -27,6 +27,7 @@ import { WeLoaderComponent } from '../../../../shared/we-loader/we-loader.compon
 import { MonedaInputDirective } from '../../../../shared/moneda-input/moneda-input.directive';
 import { fechaLarga, porcentajeDe, ultimaMensualidad } from '../../../../core/utils/financiamiento';
 import { NumeroVentaComponent } from '../../../../shared/numero-venta/numero-venta.component';
+import { dinero } from '../../../../core/utils/formato-pantalla';
 
 const SEGUNDOS_ESPERA_ELIMINAR = 10;
 
@@ -241,13 +242,12 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
   });
 
   money(valor: number): string {
-    return valor.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return dinero(valor);
   }
 
   /** "2026-09-12" → "12/09/2026", sin pasar por Date (que la desfasa un día por la zona horaria). */
   fecha(iso: string): string {
-    const [anio, mes, dia] = iso.slice(0, 10).split('-');
-    return `${dia}/${mes}/${anio}`;
+    return fechaCorta(iso);
   }
 
   // --- Modificar venta (temporal) ---

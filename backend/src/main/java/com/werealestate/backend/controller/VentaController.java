@@ -3,6 +3,7 @@ package com.werealestate.backend.controller;
 import com.werealestate.backend.dto.AmortizacionDto;
 import com.werealestate.backend.dto.AplicarDepositoRequest;
 import com.werealestate.backend.dto.ContadoresVentasDto;
+import com.werealestate.backend.dto.ContratoRequest;
 import com.werealestate.backend.dto.NumeracionVentaDto;
 import com.werealestate.backend.dto.NumeroContratoRequest;
 import com.werealestate.backend.dto.PaginaDto;
@@ -13,9 +14,17 @@ import com.werealestate.backend.dto.ReciboEditarRequest;
 import com.werealestate.backend.dto.ReciboHistorialDto;
 import com.werealestate.backend.dto.VentaCreateRequest;
 import com.werealestate.backend.dto.VentaEliminarRequest;
+import com.werealestate.backend.dto.VentaDeshacerPausaRequest;
 import com.werealestate.backend.dto.VentaDto;
+import com.werealestate.backend.dto.VentaPausaRequest;
+import com.werealestate.backend.dto.VentaReestructurarRequest;
 import com.werealestate.backend.dto.VentaUpdateRequest;
+import com.werealestate.backend.service.ContratoVentaService;
+import com.werealestate.backend.service.NumeracionVentaService;
+import com.werealestate.backend.service.ReciboVentaService;
+import com.werealestate.backend.service.ReestructuracionVentaService;
 import com.werealestate.backend.service.EstadoCuentaService;
+import com.werealestate.backend.service.PausaMensualidadService;
 import com.werealestate.backend.service.VentaService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -34,12 +43,22 @@ import org.springframework.web.bind.annotation.RestController;
 public class VentaController {
 
     private final VentaService ventaService;
+    private final ReciboVentaService reciboVentaService;
+    private final ContratoVentaService contratoVentaService;
+    private final NumeracionVentaService numeracionVentaService;
+    private final ReestructuracionVentaService reestructuracionVentaService;
     private final EstadoCuentaService estadoCuentaService;
-    private final com.werealestate.backend.service.PausaMensualidadService pausaService;
+    private final PausaMensualidadService pausaService;
 
-    public VentaController(VentaService ventaService, EstadoCuentaService estadoCuentaService,
-            com.werealestate.backend.service.PausaMensualidadService pausaService) {
+    public VentaController(VentaService ventaService, ReciboVentaService reciboVentaService,
+            ContratoVentaService contratoVentaService, NumeracionVentaService numeracionVentaService,
+            ReestructuracionVentaService reestructuracionVentaService, EstadoCuentaService estadoCuentaService,
+            PausaMensualidadService pausaService) {
         this.ventaService = ventaService;
+        this.reciboVentaService = reciboVentaService;
+        this.contratoVentaService = contratoVentaService;
+        this.numeracionVentaService = numeracionVentaService;
+        this.reestructuracionVentaService = reestructuracionVentaService;
         this.estadoCuentaService = estadoCuentaService;
         this.pausaService = pausaService;
     }
@@ -71,7 +90,7 @@ public class VentaController {
     public NumeracionVentaDto numeracion(
             @RequestParam(required = false) Long numero, @RequestParam(required = false) Long excluirId,
             @RequestParam(required = false) Long desarrolloId) {
-        return ventaService.consultarNumeracion(numero, excluirId, desarrolloId);
+        return numeracionVentaService.consultarNumeracion(numero, excluirId, desarrolloId);
     }
 
     @GetMapping("/samai-campestre/lotes-vendidos")
@@ -104,31 +123,30 @@ public class VentaController {
 
     /** Registra o corrige si el contrato está firmado y desde cuándo. */
     @PutMapping("/{id}/contrato")
-    public VentaDto registrarContrato(@PathVariable Long id, @Valid @RequestBody com.werealestate.backend.dto.ContratoRequest request) {
-        return ventaService.registrarContrato(id, request);
+    public VentaDto registrarContrato(@PathVariable Long id, @Valid @RequestBody ContratoRequest request) {
+        return contratoVentaService.registrarContrato(id, request);
     }
 
     /** Edita los datos no financieros de un recibo (folio, nota, tipo, meses, aportación). */
     @PutMapping("/{id}/recibos/{reciboId}")
     public List<PagoVentaDto> editarRecibo(
             @PathVariable Long id, @PathVariable Long reciboId, @Valid @RequestBody ReciboEditarRequest request) {
-        return ventaService.editarRecibo(id, reciboId, request);
+        return reciboVentaService.editarRecibo(id, reciboId, request);
     }
 
     /** Anula un recibo (con motivo); no se borra. */
     @PostMapping("/{id}/recibos/{reciboId}/anular")
     public List<PagoVentaDto> anularRecibo(
             @PathVariable Long id, @PathVariable Long reciboId, @Valid @RequestBody ReciboAnularRequest request) {
-        return ventaService.anularRecibo(id, reciboId, request);
+        return reciboVentaService.anularRecibo(id, reciboId, request);
     }
 
     /** Bitácora de los recibos de la venta. */
     @GetMapping("/{id}/recibos/historial")
     public List<ReciboHistorialDto> historialDeRecibos(@PathVariable Long id) {
-        return ventaService.historialDeRecibos(id);
+        return reciboVentaService.historialDeRecibos(id);
     }
 
-    /** Temporal: modifica los datos capturados de una venta (cliente, fechas, términos). */
     /** Elimina la venta por completo (admin y administración, con su contraseña). POST y no DELETE porque lleva
      * cuerpo (la contraseña). */
     @PostMapping("/{id}/eliminar")
@@ -140,15 +158,15 @@ public class VentaController {
     /** Cambia el plan de pagos de la venta: lo pagado se respeta y el plan nuevo reparte el saldo de hoy. */
     @PostMapping("/{id}/reestructurar")
     public VentaDto reestructurar(
-            @PathVariable Long id, @Valid @RequestBody com.werealestate.backend.dto.VentaReestructurarRequest request) {
-        return ventaService.reestructurar(id, request);
+            @PathVariable Long id, @Valid @RequestBody VentaReestructurarRequest request) {
+        return reestructuracionVentaService.reestructurar(id, request);
     }
 
     /** Pausa de mensualidades: mueve la fecha de una mensualidad y recorre las siguientes (admin y administración,
      * con su contraseña y un motivo). */
     @PostMapping("/{id}/pausas")
     public ResponseEntity<Void> pausar(
-            @PathVariable Long id, @Valid @RequestBody com.werealestate.backend.dto.VentaPausaRequest request) {
+            @PathVariable Long id, @Valid @RequestBody VentaPausaRequest request) {
         pausaService.pausar(id, request);
         return ResponseEntity.noContent().build();
     }
@@ -156,7 +174,7 @@ public class VentaController {
     /** Deshace la pausa de mensualidades más reciente de la venta. */
     @PostMapping("/{id}/pausas/deshacer")
     public ResponseEntity<Void> deshacerPausa(
-            @PathVariable Long id, @Valid @RequestBody com.werealestate.backend.dto.VentaDeshacerPausaRequest request) {
+            @PathVariable Long id, @Valid @RequestBody VentaDeshacerPausaRequest request) {
         pausaService.deshacer(id, request);
         return ResponseEntity.noContent().build();
     }
@@ -164,9 +182,10 @@ public class VentaController {
     /** Número de contrato de la venta (opcional, único). Lo editan admin y administración. */
     @PutMapping("/{id}/numero-contrato")
     public VentaDto numeroContrato(@PathVariable Long id, @Valid @RequestBody NumeroContratoRequest request) {
-        return ventaService.registrarNumeroContrato(id, request);
+        return contratoVentaService.registrarNumeroContrato(id, request);
     }
 
+    /** Temporal: modifica los datos capturados de una venta (cliente, fechas, términos). */
     @PutMapping("/{id}")
     public VentaDto actualizar(@PathVariable Long id, @Valid @RequestBody VentaUpdateRequest request) {
         return ventaService.actualizar(id, request);
@@ -180,11 +199,11 @@ public class VentaController {
 
     @GetMapping("/{id}/pagos")
     public List<PagoVentaDto> listarPagos(@PathVariable Long id) {
-        return ventaService.listarPagos(id);
+        return reciboVentaService.listarPagos(id);
     }
 
     @PostMapping("/{id}/pagos")
     public List<PagoVentaDto> registrarPago(@PathVariable Long id, @Valid @RequestBody PagoVentaCreateRequest request) {
-        return ventaService.registrarPago(id, request);
+        return reciboVentaService.registrarPago(id, request);
     }
 }

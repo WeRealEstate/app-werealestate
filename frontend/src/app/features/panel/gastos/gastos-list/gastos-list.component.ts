@@ -1,4 +1,3 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideFileText, LucidePencil, LucideTrash2 } from '@lucide/angular';
@@ -19,6 +18,8 @@ import { GastosService } from '../../../../core/services/gastos.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { SkeletonKpisComponent } from '../../../../shared/skeleton-kpis/skeleton-kpis.component';
 import { MonedaInputDirective } from '../../../../shared/moneda-input/moneda-input.directive';
+import { fechaCorta } from '../../../../core/models/amortizacion.model';
+import { dinero, mensajeDe } from '../../../../core/utils/formato-pantalla';
 
 /** Pestaña "Gastos" de Finanzas: resumen del mes, próximos pagos de los gastos recurrentes (renta,
  * luz, nómina...), el catálogo de recurrentes y el historial de todo lo gastado. "Registrar gasto"
@@ -438,13 +439,11 @@ export class GastosListComponent {
   }
 
   fecha(iso: string | null): string {
-    if (!iso) return '—';
-    const [anio, mes, dia] = iso.slice(0, 10).split('-');
-    return `${dia}/${mes}/${anio}`;
+    return fechaCorta(iso);
   }
 
   money(valor: number): string {
-    return valor.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return dinero(valor);
   }
 
   /** Corre una acción de guardado con el estado de "guardando" y el error del servidor en el modal. */
@@ -480,6 +479,3 @@ function mesActual(): string {
   return hoyIso().slice(0, 7);
 }
 
-function mensajeDe(error: unknown, porDefecto: string): string {
-  return error instanceof HttpErrorResponse && typeof error.error?.message === 'string' ? error.error.message : porDefecto;
-}

@@ -87,15 +87,7 @@ public class GastoService {
      * los gastos recurrentes. */
     public Gasto crearGasto(
             String concepto, OrigenGasto origen, LocalDate fecha, BigDecimal monto, MultipartFile ticket, Usuario actual) {
-        if (concepto == null || concepto.isBlank()) {
-            throw new ValidationException("Indica qué se compró o pagó");
-        }
-        if (monto == null || monto.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new ValidationException("El monto debe ser mayor a cero");
-        }
-        if (fecha == null) {
-            throw new ValidationException("Indica la fecha");
-        }
+        validarDatos(concepto, fecha, monto);
         Gasto gasto = gastoRepository.save(new Gasto(concepto.trim(), origen, null, fecha, monto, actual));
         if (ticket != null && !ticket.isEmpty()) {
             gasto.setTicketExtension(guardarTicket(gasto.getId(), ticket));
@@ -129,15 +121,7 @@ public class GastoService {
     public GastoDto actualizar(
             Long id, String concepto, LocalDate fecha, BigDecimal monto, MultipartFile ticket, boolean quitarTicket) {
         exigirAdminOLider();
-        if (concepto == null || concepto.isBlank()) {
-            throw new ValidationException("Indica qué se compró o pagó");
-        }
-        if (monto == null || monto.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new ValidationException("El monto debe ser mayor a cero");
-        }
-        if (fecha == null) {
-            throw new ValidationException("Indica la fecha");
-        }
+        validarDatos(concepto, fecha, monto);
         Gasto gasto = obtenerEntidad(id);
         boolean hayTicketNuevo = ticket != null && !ticket.isEmpty();
         // Se valida el archivo antes de tocar nada: así un comprobante inválido no deja el egreso a medias.
@@ -182,14 +166,20 @@ public class GastoService {
 
     /** Borra el gasto y el archivo de su ticket, sin revisar a qué está ligado (lo hace quien lo llama). */
     public void eliminarGasto(Gasto gasto) {
-        if (gasto.getTicketExtension() != null) {
-            try {
-                Files.deleteIfExists(rutaTicket(gasto.getId(), gasto.getTicketExtension()));
-            } catch (IOException ignored) {
-                // No pasa nada si ya no estaba: lo que importa es borrar el registro.
-            }
-        }
+        borrarArchivoTicket(gasto);
         gastoRepository.delete(gasto);
+    }
+
+    private static void validarDatos(String concepto, LocalDate fecha, BigDecimal monto) {
+        if (concepto == null || concepto.isBlank()) {
+            throw new ValidationException("Indica qué se compró o pagó");
+        }
+        if (monto == null || monto.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ValidationException("El monto debe ser mayor a cero");
+        }
+        if (fecha == null) {
+            throw new ValidationException("Indica la fecha");
+        }
     }
 
     private Gasto obtenerEntidad(Long id) {
@@ -201,38 +191,35 @@ public class GastoService {
     }
 
     private String guardarTicket(Long gastoId, MultipartFile archivo) {
-        byte[] bytes;
-        try {
-            bytes = archivo.getBytes();
-        } catch (IOException e) {
-            throw new UncheckedIOException("No se pudo leer el ticket", e);
-        }
-
-        String extension = detectarExtension(bytes);
-        if (extension == null) {
-            throw new ValidationException("El ticket debe ser una imagen PNG, JPG, WEBP o un PDF");
-        }
+        byte[] bytes = leerBytes(archivo);
+        String extension = extensionDe(bytes);
         escribirBytes(gastoId, bytes, extension);
         return extension;
     }
 
     /** La extensión del comprobante según su firma; lanza ValidationException si no es PNG, JPG, WEBP ni PDF. */
     private String extensionValida(MultipartFile archivo) {
+        return extensionDe(leerBytes(archivo));
+    }
+
+    private void escribirTicket(Long gastoId, MultipartFile archivo, String extension) {
+        escribirBytes(gastoId, leerBytes(archivo), extension);
+    }
+
+    private static byte[] leerBytes(MultipartFile archivo) {
         try {
-            String extension = detectarExtension(archivo.getBytes());
-            if (extension == null) throw new ValidationException("El ticket debe ser una imagen PNG, JPG, WEBP o un PDF");
-            return extension;
+            return archivo.getBytes();
         } catch (IOException e) {
             throw new UncheckedIOException("No se pudo leer el ticket", e);
         }
     }
 
-    private void escribirTicket(Long gastoId, MultipartFile archivo, String extension) {
-        try {
-            escribirBytes(gastoId, archivo.getBytes(), extension);
-        } catch (IOException e) {
-            throw new UncheckedIOException("No se pudo leer el ticket", e);
+    private static String extensionDe(byte[] bytes) {
+        String extension = detectarExtension(bytes);
+        if (extension == null) {
+            throw new ValidationException("El ticket debe ser una imagen PNG, JPG, WEBP o un PDF");
         }
+        return extension;
     }
 
     private void escribirBytes(Long gastoId, byte[] bytes, String extension) {
@@ -250,7 +237,7 @@ public class GastoService {
         try {
             Files.deleteIfExists(rutaTicket(gasto.getId(), gasto.getTicketExtension()));
         } catch (IOException ignored) {
-            // Si ya no estaba no pasa nada.
+            // No pasa nada si ya no estaba: lo que importa es borrar el registro.
         }
     }
 

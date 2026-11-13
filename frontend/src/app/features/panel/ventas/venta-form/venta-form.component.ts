@@ -46,6 +46,7 @@ import {
   unidadPlazo,
 } from '../../../../core/utils/formas-pago';
 import { NumeroVentaComponent } from '../../../../shared/numero-venta/numero-venta.component';
+import { dinero } from '../../../../core/utils/formato-pantalla';
 
 /** Codifica la selección del <select> de asesor como un solo string ("U-5" / "E-3") porque un
  * formControl reactivo solo puede llevar un valor, y el asesor es uno de dos tipos distintos (ver
@@ -673,7 +674,7 @@ export class VentaFormComponent {
   }
 
   money(valor: number): string {
-    return valor.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return dinero(valor);
   }
 }
 

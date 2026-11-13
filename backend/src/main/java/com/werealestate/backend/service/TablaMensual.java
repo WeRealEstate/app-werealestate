@@ -9,8 +9,12 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 /**
@@ -54,63 +58,19 @@ final class TablaMensual {
             BigDecimal precio,
             List<PagoVenta> pagos,
             LocalDate hoy) {
-        // Primer renglón de cada mes del plan.
-        TreeMap<YearMonth, Integer> primeroDelMes = new TreeMap<>();
-        for (int i = 0; i < conceptos.size(); i++) primeroDelMes.putIfAbsent(YearMonth.from(conceptos.get(i).fecha()), i);
-
-        TreeMap<YearMonth, List<PagoMes>> extemporaneos = new TreeMap<>();
-        List<List<PagoMes>> porFila = new ArrayList<>();
-        for (int i = 0; i < conceptos.size(); i++) porFila.add(new ArrayList<>());
-        if (!primeroDelMes.isEmpty()) {
-            YearMonth ultimoMesDelPlan = primeroDelMes.lastKey();
-            for (PagoVenta p : pagos) {
-                // Pago extemporáneo hecho después del último mes del plan: va en su propio renglón, en el mes en que se
-                // pagó (decisión del usuario, 2026-11-11); los meses del plan se quedan como estaban (abonados).
-                if (p.isExtemporaneo() && YearMonth.from(p.getFecha()).isAfter(ultimoMesDelPlan)) {
-                    extemporaneos.computeIfAbsent(YearMonth.from(p.getFecha()), k -> new ArrayList<>())
-                            .add(new PagoMes(p.getFecha(), p.getMonto(), false, p.getFolio(), null));
-                    continue;
-                }
-                List<Parte> partes = ubicar(p, conceptos, primeroDelMes);
-                boolean comision = p.getTipo() == TipoAbono.A_CUENTA_COMISION;
-                for (Parte parte : partes) {
-                    porFila.get(parte.fila()).add(new PagoMes(p.getFecha(), parte.monto(), comision, p.getFolio(),
-                            partes.size() > 1 ? p.getMonto() : null));
-                }
-            }
-            // Cada renglón, sus abonos del más antiguo al más nuevo (los que llegaron de otro mes se intercalan por fecha).
-            porFila.forEach(l -> l.sort(java.util.Comparator.comparing(PagoMes::fecha)));
-        }
+        PagosUbicados ubicados = ubicarPagos(conceptos, pagos);
+        List<List<PagoMes>> porFila = ubicados.porFila();
+        int ultimoTramo = conceptos.stream().mapToInt(CalendarioPagos.Concepto::tramo).max().orElse(0);
+        BigDecimal[] descuento = descuentoPorExcedente(conceptos, porFila, ultimoTramo);
 
         List<Fila> filas = new ArrayList<>();
         BigDecimal arrastre = BigDecimal.ZERO; // lo que quedó pendiente de meses anteriores (nunca negativo)
         BigDecimal programado = BigDecimal.ZERO;
         LocalDate proxima = null;
-        int ultimoTramo = conceptos.stream().mapToInt(CalendarioPagos.Concepto::tramo).max().orElse(0);
-
-        // Lo pagado de más en un mes (excedente) no se queda como "abono a la deuda total": se descuenta de la última
-        // mensualidad, y si no alcanza, de la anterior, y así (decisión del usuario, 2026-11-11). Solo baja la parte
-        // aún no pagada de esos renglones; lo que ya no quepa (todo pagado) queda sin aplicar.
-        BigDecimal[] descuento = new BigDecimal[conceptos.size()];
-        java.util.Arrays.fill(descuento, BigDecimal.ZERO);
-        BigDecimal excedente = BigDecimal.ZERO;
-        for (int i = 0; i < conceptos.size(); i++) {
-            if (conceptos.get(i).tramo() < ultimoTramo) continue;
-            BigDecimal pagadoFila = porFila.get(i).stream().map(PagoMes::monto).reduce(BigDecimal.ZERO, BigDecimal::add);
-            excedente = excedente.add(pagadoFila.subtract(conceptos.get(i).monto()).max(BigDecimal.ZERO));
-        }
-        for (int j = conceptos.size() - 1; j >= 0 && excedente.signum() > 0; j--) {
-            if (conceptos.get(j).tramo() < ultimoTramo) break;
-            BigDecimal pagadoFila = porFila.get(j).stream().map(PagoMes::monto).reduce(BigDecimal.ZERO, BigDecimal::add);
-            BigDecimal libre = conceptos.get(j).monto().subtract(pagadoFila).max(BigDecimal.ZERO);
-            BigDecimal baja = libre.min(excedente);
-            descuento[j] = baja;
-            excedente = excedente.subtract(baja);
-        }
         for (int i = 0; i < conceptos.size(); i++) {
             CalendarioPagos.Concepto c = conceptos.get(i);
             List<PagoMes> delMes = porFila.get(i);
-            BigDecimal pagado = delMes.stream().map(PagoMes::monto).reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal pagado = sumar(delMes);
             if (c.tramo() < ultimoTramo) {
                 // Plan reemplazado por una reestructuración: sus pagos son justo lo que se abonó hasta el corte, así
                 // que su estado es el del reparto (pagado) y nada de él pasa al plan nuevo, que ya reparte el saldo.
@@ -156,27 +116,95 @@ final class TablaMensual {
             arrastre = vencido ? resta.max(BigDecimal.ZERO) : BigDecimal.ZERO;
         }
 
-        // Un renglón por cada mes con pagos extemporáneos después del plan: «Pago extemporáneo», pagado con lo que llegó.
         int tramoFinal = conceptos.isEmpty() ? 0 : ultimoTramo;
-        BigDecimal abonadoAntes = pagos.stream()
-                .filter(p -> !(p.isExtemporaneo() && !extemporaneos.isEmpty()
-                        && !YearMonth.from(p.getFecha()).isBefore(extemporaneos.firstKey())))
-                .map(PagoVenta::getMonto).reduce(BigDecimal.ZERO, BigDecimal::add);
-        for (var e : extemporaneos.entrySet()) {
-            List<PagoMes> delMes = new ArrayList<>(e.getValue());
-            delMes.sort(java.util.Comparator.comparing(PagoMes::fecha));
-            BigDecimal monto = delMes.stream().map(PagoMes::monto).reduce(BigDecimal.ZERO, BigDecimal::add);
-            abonadoAntes = abonadoAntes.add(monto);
-            filas.add(new Fila(null, delMes.get(0).fecha(), "Pago extemporáneo", monto, monto,
-                    precio.subtract(abonadoAntes).max(BigDecimal.ZERO), EstadoPagoPlan.PAGADO,
-                    BigDecimal.ZERO, monto, List.copyOf(delMes), tramoFinal, BigDecimal.ZERO));
-        }
+        filas.addAll(filasExtemporaneas(ubicados.extemporaneos(), pagos, precio, tramoFinal));
 
         // Lo que el plan no fecha: un renglón final que nunca vence (en esta vista no recibe abonos).
         if (filasMotor.size() > conceptos.size()) {
             Fila sinFecha = filasMotor.get(filasMotor.size() - 1);
             filas.add(new Fila(null, null, sinFecha.concepto(), sinFecha.monto(), BigDecimal.ZERO, BigDecimal.ZERO,
                     EstadoPagoPlan.PENDIENTE, BigDecimal.ZERO, BigDecimal.ZERO, List.of(), sinFecha.tramo()));
+        }
+        return filas;
+    }
+
+    private static BigDecimal sumar(List<PagoMes> pagos) {
+        return pagos.stream().map(PagoMes::monto).reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /** Los abonos de cada renglón del plan y, aparte, los pagos extemporáneos hechos después de su último mes. */
+    private record PagosUbicados(List<List<PagoMes>> porFila, TreeMap<YearMonth, List<PagoMes>> extemporaneos) {
+    }
+
+    private static PagosUbicados ubicarPagos(List<CalendarioPagos.Concepto> conceptos, List<PagoVenta> pagos) {
+        // Primer renglón de cada mes del plan.
+        TreeMap<YearMonth, Integer> primeroDelMes = new TreeMap<>();
+        for (int i = 0; i < conceptos.size(); i++) primeroDelMes.putIfAbsent(YearMonth.from(conceptos.get(i).fecha()), i);
+
+        TreeMap<YearMonth, List<PagoMes>> extemporaneos = new TreeMap<>();
+        List<List<PagoMes>> porFila = new ArrayList<>();
+        for (int i = 0; i < conceptos.size(); i++) porFila.add(new ArrayList<>());
+        if (primeroDelMes.isEmpty()) return new PagosUbicados(porFila, extemporaneos);
+
+        YearMonth ultimoMesDelPlan = primeroDelMes.lastKey();
+        for (PagoVenta p : pagos) {
+            // Pago extemporáneo hecho después del último mes del plan: va en su propio renglón, en el mes en que se
+            // pagó (decisión del usuario, 2026-11-11); los meses del plan se quedan como estaban (abonados).
+            if (p.isExtemporaneo() && YearMonth.from(p.getFecha()).isAfter(ultimoMesDelPlan)) {
+                extemporaneos.computeIfAbsent(YearMonth.from(p.getFecha()), k -> new ArrayList<>())
+                        .add(new PagoMes(p.getFecha(), p.getMonto(), false, p.getFolio(), null));
+                continue;
+            }
+            List<Parte> partes = ubicar(p, conceptos, primeroDelMes);
+            boolean comision = p.getTipo() == TipoAbono.A_CUENTA_COMISION;
+            for (Parte parte : partes) {
+                porFila.get(parte.fila()).add(new PagoMes(p.getFecha(), parte.monto(), comision, p.getFolio(),
+                        partes.size() > 1 ? p.getMonto() : null));
+            }
+        }
+        // Cada renglón, sus abonos del más antiguo al más nuevo (los que llegaron de otro mes se intercalan por fecha).
+        porFila.forEach(l -> l.sort(Comparator.comparing(PagoMes::fecha)));
+        return new PagosUbicados(porFila, extemporaneos);
+    }
+
+    /** Lo pagado de más en un mes (excedente) no se queda como "abono a la deuda total": se descuenta de la última
+     * mensualidad, y si no alcanza, de la anterior, y así (decisión del usuario, 2026-11-11). Solo baja la parte aún no
+     * pagada de esos renglones; lo que ya no quepa (todo pagado) queda sin aplicar. Un descuento por renglón. */
+    private static BigDecimal[] descuentoPorExcedente(
+            List<CalendarioPagos.Concepto> conceptos, List<List<PagoMes>> porFila, int ultimoTramo) {
+        BigDecimal[] descuento = new BigDecimal[conceptos.size()];
+        Arrays.fill(descuento, BigDecimal.ZERO);
+        BigDecimal excedente = BigDecimal.ZERO;
+        for (int i = 0; i < conceptos.size(); i++) {
+            if (conceptos.get(i).tramo() < ultimoTramo) continue;
+            excedente = excedente.add(sumar(porFila.get(i)).subtract(conceptos.get(i).monto()).max(BigDecimal.ZERO));
+        }
+        for (int j = conceptos.size() - 1; j >= 0 && excedente.signum() > 0; j--) {
+            if (conceptos.get(j).tramo() < ultimoTramo) break;
+            BigDecimal libre = conceptos.get(j).monto().subtract(sumar(porFila.get(j))).max(BigDecimal.ZERO);
+            BigDecimal baja = libre.min(excedente);
+            descuento[j] = baja;
+            excedente = excedente.subtract(baja);
+        }
+        return descuento;
+    }
+
+    /** Un renglón por cada mes con pagos extemporáneos después del plan: «Pago extemporáneo», pagado con lo que llegó. */
+    private static List<Fila> filasExtemporaneas(
+            TreeMap<YearMonth, List<PagoMes>> extemporaneos, List<PagoVenta> pagos, BigDecimal precio, int tramoFinal) {
+        List<Fila> filas = new ArrayList<>();
+        BigDecimal abonadoAntes = pagos.stream()
+                .filter(p -> !(p.isExtemporaneo() && !extemporaneos.isEmpty()
+                        && !YearMonth.from(p.getFecha()).isBefore(extemporaneos.firstKey())))
+                .map(PagoVenta::getMonto).reduce(BigDecimal.ZERO, BigDecimal::add);
+        for (var e : extemporaneos.entrySet()) {
+            List<PagoMes> delMes = new ArrayList<>(e.getValue());
+            delMes.sort(Comparator.comparing(PagoMes::fecha));
+            BigDecimal monto = sumar(delMes);
+            abonadoAntes = abonadoAntes.add(monto);
+            filas.add(new Fila(null, delMes.get(0).fecha(), "Pago extemporáneo", monto, monto,
+                    precio.subtract(abonadoAntes).max(BigDecimal.ZERO), EstadoPagoPlan.PAGADO,
+                    BigDecimal.ZERO, monto, List.copyOf(delMes), tramoFinal, BigDecimal.ZERO));
         }
         return filas;
     }
@@ -204,7 +232,7 @@ final class TablaMensual {
         // Un apartado con meses (se eligió aplicarlo a una mensualidad) se ubica igual que una mensualidad.
         if (tipo != null && (tipo.esMensual() || tipo == TipoAbono.APARTADO) && !p.isExtemporaneo()
                 && p.getMeses() != null && !p.getMeses().isEmpty()) {
-            java.util.LinkedHashSet<Integer> filas = new java.util.LinkedHashSet<>();
+            Set<Integer> filas = new LinkedHashSet<>();
             p.getMeses().stream()
                     .map(m -> YearMonth.of(m.getAnio(), m.getMes()))
                     .sorted()

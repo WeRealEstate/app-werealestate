@@ -22,7 +22,8 @@ import { CorreoInputDirective } from '../correo-input/correo-input.directive';
 import { ListaSelectorComponent } from '../lista-selector/lista-selector.component';
 import { ESTADOS_MX, estadoCanonico } from '../../core/data/estados-mx';
 import { PAISES, PAIS_PRINCIPAL } from '../../core/data/paises';
-import { curpFormatoValido, datosDeCurp, edadDe, fechaCorta, rfcFormatoValido } from '../../core/utils/identidad';
+import { curpFormatoValido, datosDeCurp, edadDe, rfcFormatoValido } from '../../core/utils/identidad';
+import { fechaCorta } from '../../core/models/amortizacion.model';
 
 /** Alta y edición de un cliente (ficha completa). Se usa en /panel/clientes, en su ficha y en el selector de la venta. */
 @Component({

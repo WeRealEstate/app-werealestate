@@ -31,7 +31,7 @@ class WeFormPublicoAvisoFinanzasTest {
         service = new WeFormPublicoService(
                 mock(WeFormService.class), mock(WeFormRepository.class), mock(WeFormPreguntaRepository.class),
                 mock(WeFormRespuestaRepository.class), mock(WeFormRespuestaItemRepository.class), mock(LoteRepository.class),
-                mock(LoteService.class), mock(ClienteService.class), mock(VentaService.class), mock(UsuarioRepository.class),
+                mock(LoteRegistroVentaService.class), mock(ClienteService.class), mock(VentaService.class), mock(UsuarioRepository.class),
                 eventos);
     }
 

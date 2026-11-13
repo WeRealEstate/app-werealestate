@@ -11,6 +11,7 @@ import { ESTADO_LOTE_LABELS, ESTADOS_LOTE_ORDEN, EstadoLote, ResumenLotes } from
 import { AsignarTareasComponent } from '../../../shared/asignar-tareas/asignar-tareas.component';
 import { DesempenoGeneralComponent } from './desempeno-general/desempeno-general.component';
 import { AdminTareasComponent } from './admin-tareas/admin-tareas.component';
+import { mesActual } from '../../../core/utils/formato-pantalla';
 
 /** Color de cada estado en la barra de inventario: los mismos tonos del plano (verde disponible, ámbar
  * apartado, morado a plazo, gris con dinero, azul We en firma, rojo vendido), ajustados y validados con el
@@ -43,11 +44,6 @@ interface SegmentoInventario {
 }
 
 const MONEDA = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
-
-function mesActual(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
 
 /** Inicio del admin: lo primero que se ve es cómo va el negocio (inventario de cada desarrollo, cobranza del
  * mes, comisiones del sábado y leads fríos); debajo, el desempeño de leads y las tareas. Cada cifra lleva a

@@ -87,7 +87,7 @@ public class WeFormPublicoService {
     private final WeFormRespuestaRepository respuestaRepository;
     private final WeFormRespuestaItemRepository itemRepository;
     private final LoteRepository loteRepository;
-    private final LoteService loteService;
+    private final LoteRegistroVentaService loteService;
     private final ClienteService clienteService;
     private final VentaService ventaService;
     private final UsuarioRepository usuarioRepository;
@@ -100,7 +100,7 @@ public class WeFormPublicoService {
             WeFormRespuestaRepository respuestaRepository,
             WeFormRespuestaItemRepository itemRepository,
             LoteRepository loteRepository,
-            LoteService loteService,
+            LoteRegistroVentaService loteService,
             ClienteService clienteService,
             VentaService ventaService,
             UsuarioRepository usuarioRepository,

@@ -546,7 +546,6 @@ public class MaterialService {
         return s == null || s.isBlank() ? null : s.strip();
     }
 
-    /** Nombre con el que se descarga: sin rutas ni caracteres raros, y siempre con la extensión real. */
     /** Nombre con que sale una imagen de galería al descargarla, en el ZIP y suelta: el título y su posición
      * ("Flyers SAMAI 03.jpg"), para no mostrar el nombre con que se subió (p. ej. "WhatsApp Image…"). El frontend
      * arma el mismo nombre en {@code nombreDescargaImagen}. El título se recorta antes de numerar para que el
@@ -558,6 +557,7 @@ public class MaterialService {
         return String.format("%s %02d.%s", base, posicion, extension);
     }
 
+    /** Nombre con el que se descarga: sin rutas ni caracteres raros, y siempre con la extensión real. */
     static String nombreSeguro(String original, String extension) {
         String base = original == null ? "" : original;
         base = base.substring(Math.max(base.lastIndexOf('/'), base.lastIndexOf('\\')) + 1);
