@@ -140,12 +140,13 @@ class VentaEditarReciboIntegracionTest extends PruebaDeIntegracion {
     // ---------------------------------------------------------------- folio, nota y fecha
 
     @Test
-    void folioRepetidoDeOtroReciboSeRechazaPeroElPropioFolioNo() {
+    void folioRepetidoDeOtroReciboSePermite() {
+        // Los folios se pueden repetir (decisión del usuario, 2026-11-13; V84).
         PagoVentaDto uno = pagarMensualidad("5000", 2026, 2);
         PagoVentaDto dos = pagarMensualidad("5000", 2026, 3);
-        var e = assertThrows(ConflictException.class, () -> reciboVentaService.editarRecibo(venta.id(), dos.reciboId(),
-                edicion(dos, uno.folio().toLowerCase(), null, linea(dos, dos.tipo(), mesesDe(dos), false, null))));
-        assertMensaje("Ya existe un abono con el folio " + uno.folio().toLowerCase(), e);
+        var repetido = reciboVentaService.editarRecibo(venta.id(), dos.reciboId(),
+                edicion(dos, uno.folio(), null, linea(dos, dos.tipo(), mesesDe(dos), false, null)));
+        assertEquals(uno.folio(), repetido.get(0).folio());
 
         // con su propio folio (aunque cambie mayúsculas/espacios) no hay conflicto
         var ok = reciboVentaService.editarRecibo(venta.id(), dos.reciboId(),

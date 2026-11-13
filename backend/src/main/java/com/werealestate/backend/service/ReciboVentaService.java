@@ -94,10 +94,8 @@ public class ReciboVentaService {
                     "El abono ($" + totalRecibo + ") excede el saldo pendiente ($" + saldoPendiente + ")");
         }
 
+        // El folio es obligatorio pero se puede repetir (decisión del usuario, 2026-11-13; V84 quitó el índice único).
         String folio = request.folio().trim();
-        if (reciboVentaRepository.existsByFolioIgnoreCaseAndAnuladoFalse(folio)) {
-            throw new ConflictException("Ya existe un abono con el folio " + folio);
-        }
 
         // Se validan todas las líneas antes de guardar nada.
         List<PagoVenta> lineas = new ArrayList<>();
@@ -268,12 +266,8 @@ public class ReciboVentaService {
             throw new ConflictException("Un recibo anulado no se puede editar");
         }
 
+        // El folio se puede repetir entre recibos (ver registrar).
         String folio = request.folio().trim();
-        reciboVentaRepository.findByFolioIgnoreCaseAndAnuladoFalse(folio)
-                .filter(otro -> !otro.getId().equals(recibo.getId()))
-                .ifPresent(otro -> {
-                    throw new ConflictException("Ya existe un abono con el folio " + folio);
-                });
 
         List<PagoVenta> lineas = pagoVentaRepository.findByReciboId(reciboId);
         String antes = describirLineas(lineas);

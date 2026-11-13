@@ -15,6 +15,10 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.1.2', fecha: '2026-11-13', cambios: [
+    "Tabla de amortización: los nombres de las columnas pueden ocupar dos renglones, así en computadora caben todas las columnas sin deslizar la tabla (en celular se sigue deslizando de lado).",
+    "Recibos: el folio sigue siendo obligatorio, pero ya se puede repetir entre recibos.",
+  ] },
   { version: '12.1.1', fecha: '2026-11-13', cambios: [
     "Tabla de amortización (pantalla y PDF): «Fecha» ahora es «Día de pago» y «Mensualidad» es «Pago correspondiente»; junto a «Monto pagado» hay dos columnas nuevas, «Fecha del pago» y «Folio», con cada abono alineado en su renglón. En celular la tabla se desliza de lado y se ven todas las columnas.",
   ] },

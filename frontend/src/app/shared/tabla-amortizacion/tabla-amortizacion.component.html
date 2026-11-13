@@ -103,18 +103,18 @@
         [attr.aria-label]="'Tabla de amortización de la venta ' + a.ventaNumero"
         data-testid="tabla-amortizacion"
       >
-        <table class="w-full min-w-[60rem] text-left text-xs sm:text-[13px]">
-          <thead class="text-[10px] uppercase tracking-wide text-ink-muted sm:text-[11px]">
+        <table class="w-full min-w-[60rem] text-left text-xs sm:min-w-0 sm:[&_td]:px-1.5 sm:[&_th]:px-1.5">
+          <thead class="text-[10px] uppercase tracking-wide text-ink-muted sm:text-[11px] sm:tracking-normal">
             <tr>
-              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-2 py-2.5  font-semibold whitespace-nowrap text-center">N.º</th>
-              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-2 py-2.5  font-semibold whitespace-nowrap">Día de pago</th>
-              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-2 py-2.5  font-semibold whitespace-nowrap min-w-[10rem]">Concepto</th>
-              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-2 py-2.5  font-semibold whitespace-nowrap text-right">Pago correspondiente</th>
-              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-2 py-2.5  font-semibold whitespace-nowrap text-right" title="Dinero recibido en ese mes, según la fecha de cada recibo">Monto pagado</th>
-              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-2 py-2.5  font-semibold whitespace-nowrap">Fecha del pago</th>
-              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-2 py-2.5  font-semibold whitespace-nowrap">Folio</th>
-              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-2 py-2.5  font-semibold whitespace-nowrap text-right">Saldo</th>
-              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-2 py-2.5  font-semibold whitespace-nowrap">Estado</th>
+              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-2 py-2.5  font-semibold leading-tight text-center">N.º</th>
+              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-2 py-2.5  font-semibold leading-tight">Día de pago</th>
+              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-2 py-2.5  font-semibold leading-tight">Concepto</th>
+              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-2 py-2.5  font-semibold leading-tight text-right">Pago correspondiente</th>
+              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-2 py-2.5  font-semibold leading-tight text-right" title="Dinero recibido en ese mes, según la fecha de cada recibo">Monto pagado</th>
+              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-2 py-2.5  font-semibold leading-tight">Fecha del pago</th>
+              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-2 py-2.5  font-semibold leading-tight">Folio</th>
+              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-2 py-2.5  font-semibold leading-tight text-right">Saldo</th>
+              <th scope="col" class="sticky top-0 z-10 border-b border-border bg-surface-2 px-2 py-2.5  font-semibold leading-tight">Estado</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-border">
