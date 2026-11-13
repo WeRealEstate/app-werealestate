@@ -15,6 +15,8 @@ export interface ResumenCotizacion {
   displayedLandPrice: number;
   paymentMethodLabel: string;
   isPromocion: boolean;
+  isPromocionBonoLotes: boolean;
+  bonoPromocion: number;
   promocionUsaAportaciones: boolean;
   aportacionesTotal: number;
   promocionAnnualContribution: number;

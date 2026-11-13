@@ -7,15 +7,11 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-/**
- * Promoción vigente del Cotizador (ej. "Mes Patrio"): fija la mensualidad de un proyecto y deja
- * que el cotizador calcule las aportaciones anuales necesarias para cuadrar con el precio del
- * terreno de cada cotización. Puede haber una promoción activa por proyecto al mismo tiempo.
- */
 @Entity
 @Table(name = "promocion")
 public class Promocion {
@@ -27,18 +23,28 @@ public class Promocion {
     @Column(nullable = false, length = 150)
     private String nombre;
 
-    /** 'samai' o 'nanuu', igual que el ProjectId del frontend. */
     @Column(nullable = false, length = 20)
     private String proyecto;
 
-    /** A qué tarifa del proyecto aplica: LOTE (precio normal) o HECTAREA (tarifa de macrolote,
-     * solo posible en SAMAI). Fijo desde la creación, igual que `proyecto`. */
-    @Column(name = "tipo_precio", nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_precio", nullable = false, length = 20)
     private TipoPrecioPromocion tipoPrecio = TipoPrecioPromocion.LOTE;
 
-    @Column(name = "mensualidad_fija", nullable = false, precision = 14, scale = 2)
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private ModalidadPromocion modalidad = ModalidadPromocion.MENSUALIDAD_FIJA;
+
+    @Column(name = "mensualidad_fija", precision = 14, scale = 2)
     private BigDecimal mensualidadFija;
+
+    @Column(name = "bono_dos_lotes", precision = 14, scale = 2)
+    private BigDecimal bonoDosLotes;
+
+    @Column(name = "bono_tres_lotes", precision = 14, scale = 2)
+    private BigDecimal bonoTresLotes;
+
+    @Column(name = "plazo_fijo")
+    private Integer plazoFijo;
 
     @Column(length = 255)
     private String descripcion;
@@ -46,34 +52,31 @@ public class Promocion {
     @Column(nullable = false)
     private boolean activa = true;
 
-    /** Cuándo deja de aplicar la promoción; nulo = sin fecha de vencimiento. */
     @Column(name = "fecha_fin")
     private LocalDateTime fechaFin;
 
     @Column(name = "fecha_creacion", nullable = false)
-    private LocalDateTime fechaCreacion = LocalDateTime.now();
+    private LocalDateTime fechaCreacion;
 
-    protected Promocion() {
-        // JPA
-    }
-
-    public Promocion(
-            String nombre,
-            String proyecto,
-            TipoPrecioPromocion tipoPrecio,
-            BigDecimal mensualidadFija,
-            String descripcion,
-            LocalDateTime fechaFin) {
-        this.nombre = nombre;
-        this.proyecto = proyecto;
-        this.tipoPrecio = tipoPrecio;
-        this.mensualidadFija = mensualidadFija;
-        this.descripcion = descripcion;
-        this.fechaFin = fechaFin;
+    @PrePersist
+    protected void onCreate() {
+        if (this.fechaCreacion == null) {
+            this.fechaCreacion = LocalDateTime.now();
+        }
+        if (this.tipoPrecio == null) {
+            this.tipoPrecio = TipoPrecioPromocion.LOTE;
+        }
+        if (this.modalidad == null) {
+            this.modalidad = ModalidadPromocion.MENSUALIDAD_FIJA;
+        }
     }
 
     public Long getId() {
         return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public String getNombre() {
@@ -88,8 +91,24 @@ public class Promocion {
         return proyecto;
     }
 
+    public void setProyecto(String proyecto) {
+        this.proyecto = proyecto;
+    }
+
     public TipoPrecioPromocion getTipoPrecio() {
         return tipoPrecio;
+    }
+
+    public void setTipoPrecio(TipoPrecioPromocion tipoPrecio) {
+        this.tipoPrecio = tipoPrecio;
+    }
+
+    public ModalidadPromocion getModalidad() {
+        return modalidad;
+    }
+
+    public void setModalidad(ModalidadPromocion modalidad) {
+        this.modalidad = modalidad;
     }
 
     public BigDecimal getMensualidadFija() {
@@ -98,6 +117,30 @@ public class Promocion {
 
     public void setMensualidadFija(BigDecimal mensualidadFija) {
         this.mensualidadFija = mensualidadFija;
+    }
+
+    public BigDecimal getBonoDosLotes() {
+        return bonoDosLotes;
+    }
+
+    public void setBonoDosLotes(BigDecimal bonoDosLotes) {
+        this.bonoDosLotes = bonoDosLotes;
+    }
+
+    public BigDecimal getBonoTresLotes() {
+        return bonoTresLotes;
+    }
+
+    public void setBonoTresLotes(BigDecimal bonoTresLotes) {
+        this.bonoTresLotes = bonoTresLotes;
+    }
+
+    public Integer getPlazoFijo() {
+        return plazoFijo;
+    }
+
+    public void setPlazoFijo(Integer plazoFijo) {
+        this.plazoFijo = plazoFijo;
     }
 
     public String getDescripcion() {
@@ -126,5 +169,9 @@ public class Promocion {
 
     public LocalDateTime getFechaCreacion() {
         return fechaCreacion;
+    }
+
+    public void setFechaCreacion(LocalDateTime fechaCreacion) {
+        this.fechaCreacion = fechaCreacion;
     }
 }

@@ -17,6 +17,8 @@ export interface QuotePdfData {
   paymentMethod: string;
   /** true solo si el contado lleva precio especial con descuento (lote estándar de SAMAI); si no, es precio de lista. */
   descuentoContado?: boolean;
+  /** Bono en pesos aplicado cuando la promoción es de modalidad BONO_LOTES (2 o 3+ lotes). */
+  bonoPromocion?: number;
   downPaymentLabel: string;
   downPayment: number;
   /** Anualidades o aportaciones de la forma de pago (pueden ir junto con el enganche o el pago inicial):

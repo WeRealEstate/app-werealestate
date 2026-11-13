@@ -3,128 +3,220 @@ package com.werealestate.backend.service;
 import com.werealestate.backend.dto.PromocionCreateRequest;
 import com.werealestate.backend.dto.PromocionDto;
 import com.werealestate.backend.dto.PromocionUpdateRequest;
-import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.exception.ValidationException;
+import com.werealestate.backend.model.ModalidadPromocion;
 import com.werealestate.backend.model.Promocion;
-import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.TipoPrecioPromocion;
-import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.repository.PromocionRepository;
-import com.werealestate.backend.security.CurrentUserProvider;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@Transactional
 public class PromocionService {
 
     private final PromocionRepository promocionRepository;
-    private final CurrentUserProvider currentUserProvider;
 
-    public PromocionService(PromocionRepository promocionRepository, CurrentUserProvider currentUserProvider) {
+    public PromocionService(PromocionRepository promocionRepository) {
         this.promocionRepository = promocionRepository;
-        this.currentUserProvider = currentUserProvider;
     }
 
-    /** Cualquier asesor o admin puede consultar qué promociones están vigentes para cotizar. */
+    @Transactional
     public List<PromocionDto> listarActivas() {
+        desactivarVencidas();
         return promocionRepository.findByActivaTrue().stream()
-                .peek(this::expirarSiVencida)
-                .filter(Promocion::isActiva)
-                .map(PromocionDto::from)
+                .map(PromocionDto::fromEntity)
                 .toList();
     }
 
-    /** Catálogo completo (activas e inactivas), solo para la pantalla de administración. */
+    @Transactional
     public List<PromocionDto> listar() {
-        exigirAdmin();
+        desactivarVencidas();
         return promocionRepository.findAllByOrderByFechaCreacionDesc().stream()
-                .peek(this::expirarSiVencida)
-                .map(PromocionDto::from)
+                .map(PromocionDto::fromEntity)
                 .toList();
     }
 
+    @Transactional
     public PromocionDto crear(PromocionCreateRequest request) {
-        exigirAdmin();
-        if (request.tipoPrecio() == TipoPrecioPromocion.HECTAREA && !"samai".equals(request.proyecto())) {
-            throw new ValidationException("La tarifa de hectárea solo existe en SAMAI Campestre");
-        }
-        Promocion promocion = new Promocion(
-                request.nombre(),
-                request.proyecto(),
-                request.tipoPrecio(),
+        TipoPrecioPromocion tipoPrecio = request.tipoPrecio() != null ? request.tipoPrecio() : TipoPrecioPromocion.LOTE;
+        ModalidadPromocion modalidad = request.modalidad() != null ? request.modalidad() : ModalidadPromocion.MENSUALIDAD_FIJA;
+
+        Promocion p = new Promocion();
+        p.setNombre(request.nombre().trim());
+        p.setProyecto(request.proyecto().trim());
+        p.setTipoPrecio(tipoPrecio);
+        p.setModalidad(modalidad);
+        aplicarMontosSegunModalidad(
+                p,
+                modalidad,
                 request.mensualidadFija(),
-                request.descripcion(),
-                request.fechaFin());
-        if (promocion.isActiva()) {
-            desactivarOtrasDelProyecto(promocion.getProyecto(), promocion.getTipoPrecio(), null);
+                request.bonoDosLotes(),
+                request.bonoTresLotes(),
+                request.plazoFijo()
+        );
+        p.setDescripcion(limpiarDescripcion(request.descripcion()));
+        p.setFechaFin(request.fechaFin());
+
+        boolean activa = request.activa() == null || request.activa();
+        if (activa && p.getFechaFin() != null && !p.getFechaFin().isAfter(LocalDateTime.now())) {
+            activa = false;
         }
-        promocionRepository.save(promocion);
-        expirarSiVencida(promocion);
-        return PromocionDto.from(promocion);
-    }
+        p.setActiva(activa);
 
-    public PromocionDto actualizar(Long id, PromocionUpdateRequest request) {
-        exigirAdmin();
-        Promocion promocion = buscar(id);
-        promocion.setNombre(request.nombre());
-        promocion.setMensualidadFija(request.mensualidadFija());
-        promocion.setDescripcion(request.descripcion());
-        promocion.setFechaFin(request.fechaFin());
-        promocionRepository.save(promocion);
-        expirarSiVencida(promocion);
-        return PromocionDto.from(promocion);
-    }
-
-    /** Si la promoción sigue marcada como activa pero ya pasó su fecha de fin, se desactiva sola:
-     * ni el cotizador ni la pantalla de administración deben seguir mostrándola como vigente. */
-    private void expirarSiVencida(Promocion promocion) {
-        if (promocion.isActiva() && promocion.getFechaFin() != null && !promocion.getFechaFin().isAfter(LocalDateTime.now())) {
-            promocion.setActiva(false);
-            promocionRepository.save(promocion);
-        }
-    }
-
-    /** Al activar una promoción, se desactiva cualquier otra activa del mismo proyecto: solo una
-     * promoción vigente por proyecto a la vez, para que el cotizador no tenga que elegir entre dos. */
-    public PromocionDto cambiarEstado(Long id, boolean activa) {
-        exigirAdmin();
-        Promocion promocion = buscar(id);
         if (activa) {
-            desactivarOtrasDelProyecto(promocion.getProyecto(), promocion.getTipoPrecio(), id);
+            desactivarOtrasDelProyecto(p.getProyecto(), p.getTipoPrecio(), p.getModalidad(), null);
         }
-        promocion.setActiva(activa);
-        return PromocionDto.from(promocionRepository.save(promocion));
+
+        return PromocionDto.fromEntity(promocionRepository.save(p));
     }
 
+    @Transactional
+    public PromocionDto actualizar(Long id, PromocionUpdateRequest request) {
+        Promocion p = promocionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Promoción no encontrada"));
+
+        if (request.nombre() != null && !request.nombre().isBlank()) {
+            p.setNombre(request.nombre().trim());
+        }
+        if (request.proyecto() != null && !request.proyecto().isBlank()) {
+            p.setProyecto(request.proyecto().trim());
+        }
+        if (request.tipoPrecio() != null) {
+            p.setTipoPrecio(request.tipoPrecio());
+        }
+        ModalidadPromocion modalidad = request.modalidad() != null
+                ? request.modalidad()
+                : (p.getModalidad() != null ? p.getModalidad() : ModalidadPromocion.MENSUALIDAD_FIJA);
+        p.setModalidad(modalidad);
+
+        BigDecimal mensualidadFija = request.mensualidadFija() != null ? request.mensualidadFija() : p.getMensualidadFija();
+        BigDecimal bonoDosLotes = request.bonoDosLotes() != null ? request.bonoDosLotes() : p.getBonoDosLotes();
+        BigDecimal bonoTresLotes = request.bonoTresLotes() != null ? request.bonoTresLotes() : p.getBonoTresLotes();
+        Integer plazoFijo = request.plazoFijo() != null ? request.plazoFijo() : p.getPlazoFijo();
+
+        aplicarMontosSegunModalidad(p, modalidad, mensualidadFija, bonoDosLotes, bonoTresLotes, plazoFijo);
+
+        if (request.descripcion() != null) {
+            p.setDescripcion(limpiarDescripcion(request.descripcion()));
+        }
+        if (Boolean.TRUE.equals(request.limpiarFechaFin())) {
+            p.setFechaFin(null);
+        } else if (request.fechaFin() != null) {
+            p.setFechaFin(request.fechaFin());
+        }
+        if (request.activa() != null) {
+            p.setActiva(request.activa());
+        }
+        if (p.isActiva() && p.getFechaFin() != null && !p.getFechaFin().isAfter(LocalDateTime.now())) {
+            p.setActiva(false);
+        }
+
+        if (p.isActiva()) {
+            desactivarOtrasDelProyecto(p.getProyecto(), p.getTipoPrecio(), p.getModalidad(), p.getId());
+        }
+
+        return PromocionDto.fromEntity(promocionRepository.save(p));
+    }
+
+    @Transactional
+    public PromocionDto cambiarEstado(Long id, boolean activa) {
+        Promocion p = promocionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Promoción no encontrada"));
+
+        if (activa && p.getFechaFin() != null && !p.getFechaFin().isAfter(LocalDateTime.now())) {
+            throw new ValidationException("La fecha de fin ya venció; amplíala o quítala antes de activar la promoción.");
+        }
+
+        p.setActiva(activa);
+        if (activa) {
+            ModalidadPromocion modalidad = p.getModalidad() != null ? p.getModalidad() : ModalidadPromocion.MENSUALIDAD_FIJA;
+            desactivarOtrasDelProyecto(p.getProyecto(), p.getTipoPrecio(), modalidad, p.getId());
+        }
+
+        return PromocionDto.fromEntity(promocionRepository.save(p));
+    }
+
+    @Transactional
     public void eliminar(Long id) {
-        exigirAdmin();
-        Promocion promocion = buscar(id);
-        promocionRepository.delete(promocion);
+        if (!promocionRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Promoción no encontrada");
+        }
+        promocionRepository.deleteById(id);
     }
 
-    /** Solo una promoción activa por proyecto Y tarifa (LOTE u HECTAREA) a la vez: una promoción de
-     * LOTE y otra de HECTAREA del mismo proyecto pueden estar activas al mismo tiempo sin pisarse. */
-    private void desactivarOtrasDelProyecto(String proyecto, TipoPrecioPromocion tipoPrecio, Long exceptoId) {
-        for (Promocion otra : promocionRepository.findByProyectoAndTipoPrecioAndActivaTrue(proyecto, tipoPrecio)) {
-            if (exceptoId == null || !otra.getId().equals(exceptoId)) {
+    private void aplicarMontosSegunModalidad(
+            Promocion p,
+            ModalidadPromocion modalidad,
+            BigDecimal mensualidadFija,
+            BigDecimal bonoDosLotes,
+            BigDecimal bonoTresLotes,
+            Integer plazoFijo
+    ) {
+        if (modalidad == ModalidadPromocion.BONO_LOTES) {
+            if (bonoDosLotes == null || bonoDosLotes.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ValidationException("El bono para 2 lotes debe ser mayor a 0");
+            }
+            if (bonoTresLotes == null || bonoTresLotes.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ValidationException("El bono para 3 o más lotes debe ser mayor a 0");
+            }
+            int plazo = plazoFijo != null ? plazoFijo : 60;
+            if (plazo <= 0) {
+                throw new ValidationException("El plazo fijo debe ser mayor a 0");
+            }
+            p.setMensualidadFija(null);
+            p.setBonoDosLotes(bonoDosLotes);
+            p.setBonoTresLotes(bonoTresLotes);
+            p.setPlazoFijo(plazo);
+        } else {
+            if (mensualidadFija == null || mensualidadFija.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ValidationException("La mensualidad fija debe ser mayor a 0");
+            }
+            p.setMensualidadFija(mensualidadFija);
+            p.setBonoDosLotes(null);
+            p.setBonoTresLotes(null);
+            p.setPlazoFijo(null);
+        }
+    }
+
+    private void desactivarVencidas() {
+        LocalDateTime ahora = LocalDateTime.now();
+        List<Promocion> activas = promocionRepository.findByActivaTrue();
+        for (Promocion p : activas) {
+            if (p.getFechaFin() != null && !p.getFechaFin().isAfter(ahora)) {
+                p.setActiva(false);
+                promocionRepository.save(p);
+            }
+        }
+    }
+
+    private void desactivarOtrasDelProyecto(
+            String proyecto,
+            TipoPrecioPromocion tipoPrecio,
+            ModalidadPromocion modalidad,
+            Long excludeId
+    ) {
+        List<Promocion> activas = promocionRepository.findByProyectoAndTipoPrecioAndModalidadAndActivaTrue(
+                proyecto,
+                tipoPrecio,
+                modalidad
+        );
+        for (Promocion otra : activas) {
+            if (excludeId == null || !otra.getId().equals(excludeId)) {
                 otra.setActiva(false);
                 promocionRepository.save(otra);
             }
         }
     }
 
-    private Promocion buscar(Long id) {
-        return promocionRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Promoción no encontrada"));
-    }
-
-    private void exigirAdmin() {
-        Usuario actual = currentUserProvider.getUsuarioActual();
-        if (actual.getRol() != Role.ADMIN) {
-            throw new ForbiddenOperationException("Solo un administrador puede gestionar promociones");
+    private String limpiarDescripcion(String descripcion) {
+        if (descripcion == null) {
+            return null;
         }
+        String limpia = descripcion.trim();
+        return limpia.isEmpty() ? null : limpia;
     }
 }

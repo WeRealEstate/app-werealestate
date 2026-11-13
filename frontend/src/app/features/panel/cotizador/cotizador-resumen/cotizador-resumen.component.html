@@ -51,7 +51,22 @@
       <strong class="text-sm text-ink">{{ r.paymentMethodLabel }}</strong>
     </div>
 
-    @if (r.isPromocion) {
+    @if (r.isPromocionBonoLotes) {
+      <div class="mt-4 flex justify-between gap-4">
+        <span class="text-sm text-ink-muted">Bono promocional</span>
+        <strong class="text-sm text-emerald-600 dark:text-emerald-400">-${{ r.bonoPromocion.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} MXN</strong>
+      </div>
+
+      <div class="mt-4 flex justify-between gap-4">
+        <span class="text-sm text-ink-muted">Enganche</span>
+        <strong class="text-sm text-ink">$0.00 MXN</strong>
+      </div>
+
+      <div class="mt-4 flex justify-between gap-4">
+        <span class="text-sm text-ink-muted">Saldo</span>
+        <strong class="text-sm text-ink">${{ r.financedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} MXN</strong>
+      </div>
+    } @else if (r.isPromocion) {
       <div class="mt-4 flex justify-between gap-4">
         <span class="text-sm text-ink-muted">{{ r.promocionUsaAportaciones ? 'Total en aportaciones' : 'Aportación anual' }}</span>
         <strong class="text-sm text-ink">${{ (r.promocionUsaAportaciones ? r.aportacionesTotal : r.promocionAnnualContribution).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} MXN</strong>
@@ -127,6 +142,13 @@
       <span class="text-sm text-ink-muted">Total a pagar</span>
       <strong class="text-sm text-ink">${{ r.displayedLandPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} MXN</strong>
     </div>
+
+    @if (r.bonoPromocion > 0) {
+      <div class="flex justify-between">
+        <span class="text-sm text-ink-muted">Bono promocional</span>
+        <strong class="text-sm text-emerald-600 dark:text-emerald-400">-${{ r.bonoPromocion.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} MXN</strong>
+      </div>
+    }
 
     <div class="flex justify-between">
       <span class="text-sm text-ink-muted">Intereses</span>

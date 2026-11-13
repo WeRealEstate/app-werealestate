@@ -385,10 +385,12 @@ export class CotizadorComponent implements OnInit {
     this.customAreaDisplay = '200';
     this.pricePerM2 = this.selectedProject === 'nanuu' ? PRECIO_M2_NANUU : PRECIO_M2_SAMAI;
 
-    // Contado y las promociones son para un solo lote.
+    // Contado y las promociones de 1 lote no aplican a varios lotes.
     this.quitarContado();
-    this.promocionSeleccionada = null;
-    this.modoPromocion = false;
+    if (this.promocionSeleccionada?.modalidad !== 'BONO_LOTES') {
+      this.promocionSeleccionada = null;
+      this.modoPromocion = false;
+    }
     this.mostrarSelectorPromociones.set(false);
   }
 
@@ -658,11 +660,18 @@ export class CotizadorComponent implements OnInit {
    * selectProject() deja la tarifa en la normal (Lotes) por defecto; una promoción de Hectáreas
    * necesita quedar en tarifa de macrolote para no contradecirse con la tarifa que exige. */
   seleccionarPromocion(promo: Promocion): void {
-    this.selectProject(promo.proyecto);
-    if (promo.tipoPrecio === 'HECTAREA') {
+    if (this.selectedProject !== promo.proyecto) {
+      this.selectProject(promo.proyecto);
+    }
+    if (promo.tipoPrecio === 'HECTAREA' && this.pricePerM2 !== PRECIO_M2_MACROLOTE) {
       this.selectPricePerM2(PRECIO_M2_MACROLOTE);
       // selectPricePerM2(170) saca del modo promoción; se vuelve a poner un par de líneas abajo, junto
       // con el resto de las promociones.
+    } else if (promo.tipoPrecio === 'LOTE' && this.selectedProject === 'samai' && this.pricePerM2 === PRECIO_M2_MACROLOTE) {
+      this.selectPricePerM2(PRECIO_M2_SAMAI);
+    }
+    if (promo.modalidad === 'BONO_LOTES' && promo.plazoFijo) {
+      this.selectedMonths = promo.plazoFijo;
     }
     this.promocionSeleccionada = promo;
     this.modoPromocion = true;
@@ -696,6 +705,24 @@ export class CotizadorComponent implements OnInit {
     return this.modoPromocion && this.promocionSeleccionada !== null;
   }
 
+  get isPromocionBonoLotes(): boolean {
+    return this.isPromocion && this.promocionSeleccionada?.modalidad === 'BONO_LOTES';
+  }
+
+  /** Bono en pesos aplicado cuando la promoción activa es de modalidad BONO_LOTES (2 lotes o 3+ lotes). */
+  get bonoPromocion(): number {
+    if (!this.isPromocionBonoLotes || !this.promocionSeleccionada) {
+      return 0;
+    }
+    if (this.cantidadLotes >= 3) {
+      return this.promocionSeleccionada.bonoTresLotes ?? 0;
+    }
+    if (this.cantidadLotes === 2) {
+      return this.promocionSeleccionada.bonoDosLotes ?? 0;
+    }
+    return 0;
+  }
+
   /** LOTE (precio normal por m²) o HECTAREA (tarifa de macrolote): solo SAMAI llega a HECTAREA,
    * cuando el precio por m² vigente ya es el de macrolote (ver aplicarPrecioMacrolote/selectPricePerM2). */
   get tipoPrecioActual(): TipoPrecioPromocion {
@@ -704,19 +731,29 @@ export class CotizadorComponent implements OnInit {
 
   /** Promociones activas que de verdad aplican a la cotización actual: una promoción de Hectáreas
    * solo se ofrece mientras la tarifa de macrolote está vigente, y una de Lotes solo mientras no lo
-   * está. No cambia la superficie/tarifa por sí sola, solo filtra qué se puede elegir. Ninguna
-   * aplica cuando la cotización combina varios lotes: están calibradas para un solo lote estándar. */
+   * está. Con varios lotes solo aplican promociones de modalidad BONO_LOTES. */
   get promocionesElegibles(): Promocion[] {
-    if (this.esMultiLote) {
-      return [];
-    }
-    return this.promocionesActivas().filter((promo) => promo.tipoPrecio === this.tipoPrecioActual);
+    return this.promocionesActivas().filter((promo) => {
+      if (promo.tipoPrecio !== this.tipoPrecioActual) {
+        return false;
+      }
+      if (this.esMultiLote) {
+        return promo.modalidad === 'BONO_LOTES';
+      }
+      return true;
+    });
   }
 
   /** Si un cambio de superficie o precio por m² deja de calificar para la tarifa de la promoción ya
    * aplicada, se quita sola: seguir mostrándola sería incoherente con el nuevo precio. */
   private revisarPromocionCompatible(): void {
-    if (this.promocionSeleccionada && this.promocionSeleccionada.tipoPrecio !== this.tipoPrecioActual) {
+    if (!this.promocionSeleccionada) return;
+    if (this.promocionSeleccionada.tipoPrecio !== this.tipoPrecioActual) {
+      this.promocionSeleccionada = null;
+      this.modoPromocion = false;
+      return;
+    }
+    if (this.esMultiLote && this.promocionSeleccionada.modalidad !== 'BONO_LOTES') {
       this.promocionSeleccionada = null;
       this.modoPromocion = false;
     }
@@ -726,7 +763,7 @@ export class CotizadorComponent implements OnInit {
    * importar la superficie del lote — por eso oculta el panel entero (selector de mes, resumen)
    * y solo muestra el aviso de que hace falta un plazo mayor. */
   get promocionSinAportacionesDisponibles(): boolean {
-    if (!this.isPromocion) {
+    if (!this.isPromocion || this.isPromocionBonoLotes) {
       return false;
     }
     // Con aportaciones por mes, lo que importa es que el plazo tenga meses elegibles (ver aniosElegibles).
@@ -736,6 +773,10 @@ export class CotizadorComponent implements OnInit {
   }
 
   get promocionInvalida(): boolean {
+    if (this.isPromocionBonoLotes) {
+      const plazoRequerido = this.promocionSeleccionada?.plazoFijo;
+      return this.cantidadLotes < 2 || (!!plazoRequerido && this.selectedMonths !== plazoRequerido);
+    }
     if (this.promocionSinAportacionesDisponibles) {
       return true;
     }
@@ -798,7 +839,7 @@ export class CotizadorComponent implements OnInit {
       return 0;
     }
 
-    const mensualidadFija = this.promocionSeleccionada.mensualidadFija;
+    const mensualidadFija = this.promocionSeleccionada.mensualidadFija ?? 0;
     const mesesRegulares = this.selectedMonths - this.promocionContribucionesCount;
     const cubiertoPorMensualidades = mensualidadFija * mesesRegulares;
     const requerido = (this.promocionTotalEstandar - cubiertoPorMensualidades) / this.promocionContribucionesCount;
@@ -853,6 +894,10 @@ export class CotizadorComponent implements OnInit {
   get monthlyPayment(): number {
     if (this.financingMonths <= 0) {
       return 0;
+    }
+
+    if (this.isPromocionBonoLotes) {
+      return this.financedAmount / this.selectedMonths;
     }
 
     // PROMOCIÓN: la mensualidad fija de la promoción se escala por el mismo factor que la
@@ -969,6 +1014,16 @@ export class CotizadorComponent implements OnInit {
         return [];
       }
 
+      if (this.isPromocionBonoLotes) {
+        return tablaFinanciamientoNormal(
+          this.currentDate,
+          this.financingMonths,
+          this.financedAmount,
+          this.monthlyPayment,
+          false,
+        );
+      }
+
       if (this.promocionUsaAportaciones) {
         return tablaConAportaciones(
           this.inicioPlan,
@@ -1044,17 +1099,23 @@ export class CotizadorComponent implements OnInit {
 
       descuentoContado: this.cashDiscountApplied,
 
-      downPaymentLabel: this.isPromocion
-        ? this.promocionUsaAportaciones
-          ? 'Total en aportaciones'
-          : 'Aportación anual'
-        : this.etiquetaEntrada,
+      bonoPromocion: this.bonoPromocion,
 
-      downPayment: this.isPromocion
-        ? this.promocionUsaAportaciones
-          ? this.aportacionesTotal
-          : this.promocionAnnualContribution
-        : this.downPayment,
+      downPaymentLabel: this.isPromocionBonoLotes
+        ? 'Enganche'
+        : this.isPromocion
+          ? this.promocionUsaAportaciones
+            ? 'Total en aportaciones'
+            : 'Aportación anual'
+          : this.etiquetaEntrada,
+
+      downPayment: this.isPromocionBonoLotes
+        ? 0
+        : this.isPromocion
+          ? this.promocionUsaAportaciones
+            ? this.aportacionesTotal
+            : this.promocionAnnualContribution
+          : this.downPayment,
 
       pagoExtra: this.pagoExtraParaPdf,
 
@@ -1152,32 +1213,37 @@ export class CotizadorComponent implements OnInit {
     return this.nanuuFinancing?.downPaymentPercentage ?? 0;
   }
 
+  /** Precio de los lotes después de descontar el bono promocional (si aplica). */
+  get precioDespuesDeBono(): number {
+    return Math.max(this.totalPrice - this.bonoPromocion, 0);
+  }
+
   get interestAmount(): number {
     if (this.selectedProject !== 'nanuu') {
       return 0;
     }
 
-    return this.totalPrice * (this.interestPercentage / 100);
+    return this.precioDespuesDeBono * (this.interestPercentage / 100);
   }
 
   get financedTotalPrice(): number {
     if (this.selectedProject === 'nanuu') {
-      return this.totalPrice + this.interestAmount;
+      return this.precioDespuesDeBono + this.interestAmount;
     }
 
-    return this.totalPrice;
+    return this.precioDespuesDeBono;
   }
 
   get totalInvestment(): number {
     if (this.selectedProject === 'nanuu') {
-      return this.totalPrice + this.interestAmount;
+      return this.precioDespuesDeBono + this.interestAmount;
     }
 
     if (this.esContado) {
       return this.cashPrice;
     }
 
-    return this.totalPrice;
+    return this.precioDespuesDeBono;
   }
 
   get currentProjectName(): string {
@@ -1212,7 +1278,15 @@ export class CotizadorComponent implements OnInit {
     if (this.requiereLoteEnCaptura && !this.blockNumber.trim()) faltan.push('la manzana');
     if (this.requiereLoteEnCaptura && !this.lotNumber.trim()) faltan.push('el lote');
     if (!this.hayFormaPago) faltan.push('la forma de pago');
-    if (faltan.length === 0) return 'Revisa los montos de la forma de pago para generar el PDF.';
+    if (faltan.length === 0) {
+      if (this.isPromocionBonoLotes && this.cantidadLotes < 2) {
+        return 'Esta promoción requiere agregar al menos 2 lotes a la cotización.';
+      }
+      if (this.isPromocionBonoLotes && this.promocionSeleccionada?.plazoFijo && this.selectedMonths !== this.promocionSeleccionada.plazoFijo) {
+        return `Esta promoción aplica únicamente a ${this.promocionSeleccionada.plazoFijo} meses.`;
+      }
+      return 'Revisa los montos de la forma de pago para generar el PDF.';
+    }
     return `Para generar el PDF falta ${enumerar(faltan)}.`;
   }
 
@@ -1441,6 +1515,8 @@ export class CotizadorComponent implements OnInit {
       displayedLandPrice: this.displayedLandPrice,
       paymentMethodLabel: this.paymentMethodLabel,
       isPromocion: this.isPromocion,
+      isPromocionBonoLotes: this.isPromocionBonoLotes,
+      bonoPromocion: this.bonoPromocion,
       promocionUsaAportaciones: this.promocionUsaAportaciones,
       aportacionesTotal: this.aportacionesTotal,
       promocionAnnualContribution: this.promocionAnnualContribution,

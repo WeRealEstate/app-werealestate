@@ -1,14 +1,37 @@
 package com.werealestate.backend.dto;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
+import com.werealestate.backend.model.ModalidadPromocion;
+import com.werealestate.backend.model.TipoPrecioPromocion;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public record PromocionUpdateRequest(
-        @NotBlank String nombre,
-        @NotNull @Positive BigDecimal mensualidadFija,
+        @Size(max = 150, message = "El nombre no puede exceder 150 caracteres")
+        String nombre,
+
+        @Pattern(regexp = "samai|nanuu", message = "El proyecto debe ser 'samai' o 'nanuu'")
+        String proyecto,
+
+        TipoPrecioPromocion tipoPrecio,
+
+        ModalidadPromocion modalidad,
+
+        BigDecimal mensualidadFija,
+
+        BigDecimal bonoDosLotes,
+
+        BigDecimal bonoTresLotes,
+
+        Integer plazoFijo,
+
+        @Size(max = 255, message = "La descripción no puede exceder 255 caracteres")
         String descripcion,
-        LocalDateTime fechaFin) {
-}
+
+        Boolean activa,
+
+        LocalDateTime fechaFin,
+
+        Boolean limpiarFechaFin
+) {}

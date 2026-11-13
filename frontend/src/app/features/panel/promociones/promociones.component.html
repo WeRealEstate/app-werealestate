@@ -4,8 +4,8 @@
   <div class="mt-3">
     <h1 class="font-heading text-2xl font-semibold text-ink">Promociones</h1>
     <p class="mt-1 text-sm text-ink-muted">
-      Crea y administra las promociones del Cotizador. Solo puede haber una promoción activa por proyecto y tarifa
-      (lotes u hectáreas) a la vez.
+      Crea y administra las promociones del Cotizador. Puedes tener activa al mismo tiempo una promoción de mensualidad
+      fija (1 lote) y una promoción de bono por varios lotes por cada proyecto y tarifa.
     </p>
   </div>
 
@@ -20,7 +20,7 @@
           type="text"
           [value]="nombre()"
           (input)="nombre.set($any($event.target).value)"
-          placeholder="Ej. Mes Patrio"
+          placeholder="Ej. Buen Fin"
           class="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted
                  focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
         />
@@ -65,21 +65,88 @@
       </div>
 
       <div>
-        <label class="mb-1.5 block text-sm font-medium text-ink">Mensualidad fija</label>
-        <div class="relative">
-          <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted">$</span>
-          <input
-            type="text"
-            inputmode="decimal"
-            [value]="mensualidadDisplay()"
-            (input)="onMensualidadInput($event)"
-            placeholder="Ej. 1,900"
-            class="w-full rounded-lg border border-border px-3.5 py-2.5 pl-7 pr-14 text-sm text-ink placeholder:text-ink-muted
-                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
-          />
-          <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-ink-muted">MXN</span>
-        </div>
+        <label class="mb-1.5 block text-sm font-medium text-ink">Tipo de promoción</label>
+        <select
+          [value]="modalidad()"
+          (change)="modalidad.set($any($event.target).value)"
+          [disabled]="editandoId() !== null"
+          class="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary disabled:opacity-60"
+        >
+          <option value="MENSUALIDAD_FIJA">Mensualidad fija (1 lote + aportaciones)</option>
+          <option value="BONO_LOTES">Bono / descuento por compra de varios lotes (sin enganche)</option>
+        </select>
+        @if (editandoId() !== null) {
+          <p class="mt-1.5 text-xs text-ink-muted">El tipo de promoción no se puede cambiar al editar.</p>
+        }
       </div>
+
+      @if (modalidad() === 'MENSUALIDAD_FIJA') {
+        <div>
+          <label class="mb-1.5 block text-sm font-medium text-ink">Mensualidad fija</label>
+          <div class="relative">
+            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted">$</span>
+            <input
+              type="text"
+              inputmode="decimal"
+              [value]="mensualidadDisplay()"
+              (input)="onMensualidadInput($event)"
+              placeholder="Ej. 1,900"
+              class="w-full rounded-lg border border-border px-3.5 py-2.5 pl-7 pr-14 text-sm text-ink placeholder:text-ink-muted
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            />
+            <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-ink-muted">MXN</span>
+          </div>
+        </div>
+      } @else {
+        <div>
+          <label class="mb-1.5 block text-sm font-medium text-ink">Bono / descuento por 2 lotes</label>
+          <div class="relative">
+            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted">$</span>
+            <input
+              type="text"
+              inputmode="decimal"
+              [value]="bonoDosLotesDisplay()"
+              (input)="onBonoDosLotesInput($event)"
+              placeholder="Ej. 20,000"
+              class="w-full rounded-lg border border-border px-3.5 py-2.5 pl-7 pr-14 text-sm text-ink placeholder:text-ink-muted
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            />
+            <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-ink-muted">MXN</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="mb-1.5 block text-sm font-medium text-ink">Bono / descuento por 3 o más lotes</label>
+          <div class="relative">
+            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted">$</span>
+            <input
+              type="text"
+              inputmode="decimal"
+              [value]="bonoTresLotesDisplay()"
+              (input)="onBonoTresLotesInput($event)"
+              placeholder="Ej. 30,000"
+              class="w-full rounded-lg border border-border px-3.5 py-2.5 pl-7 pr-14 text-sm text-ink placeholder:text-ink-muted
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            />
+            <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-ink-muted">MXN</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="mb-1.5 block text-sm font-medium text-ink">Plazo fijo requerido (sin enganche)</label>
+          <select
+            [value]="plazoFijo()"
+            (change)="plazoFijo.set(+$any($event.target).value)"
+            class="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          >
+            @for (p of plazoPreviewOpciones; track p) {
+              <option [value]="p">{{ p }} meses sin enganche</option>
+            }
+          </select>
+        </div>
+      }
 
       <div>
         <label class="mb-1.5 block text-sm font-medium text-ink">Descripción (opcional)</label>
@@ -87,7 +154,7 @@
           type="text"
           [value]="descripcion()"
           (input)="descripcion.set($any($event.target).value)"
-          placeholder="Ej. Basada en aportaciones anuales"
+          [placeholder]="modalidad() === 'BONO_LOTES' ? 'Ej. Bono de $20,000 en 2 lotes y $30,000 en 3 lotes a 60 MSI' : 'Ej. Basada en aportaciones anuales'"
           class="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted
                  focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
         />
@@ -142,46 +209,76 @@
 
     <!-- VISTA PREVIA -->
     <div class="mt-5 rounded-xl border border-we-primary/20 dark:border-we-primary/25 bg-we-primary/5 dark:bg-we-primary/10 p-4">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <p class="text-xs font-semibold text-ink">Vista previa: ¿en cuánto queda la aportación anual?</p>
+      @if (modalidad() === 'MENSUALIDAD_FIJA') {
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <p class="text-xs font-semibold text-ink">Vista previa: ¿en cuánto queda la aportación anual?</p>
 
-        <div class="flex items-center gap-2">
-          <label class="text-xs text-ink-muted">Plazo de referencia</label>
-          <select
-            [value]="plazoPreview()"
-            (change)="plazoPreview.set(+$any($event.target).value)"
-            class="rounded-lg border border-border px-2.5 py-1.5 text-xs text-ink bg-surface
-                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
-          >
-            @for (p of plazoPreviewOpciones; track p) {
-              <option [value]="p">{{ p }} meses</option>
-            }
-          </select>
+          <div class="flex items-center gap-2">
+            <label class="text-xs text-ink-muted">Plazo de referencia</label>
+            <select
+              [value]="plazoPreview()"
+              (change)="plazoPreview.set(+$any($event.target).value)"
+              class="rounded-lg border border-border px-2.5 py-1.5 text-xs text-ink bg-surface
+                     focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+            >
+              @for (p of plazoPreviewOpciones; track p) {
+                <option [value]="p">{{ p }} meses</option>
+              }
+            </select>
+          </div>
         </div>
-      </div>
 
-      @if (mensualidadFija() <= 0) {
-        <p class="mt-3 text-xs text-ink-muted">Ingresa la mensualidad fija para ver la aportación anual estimada.</p>
-      } @else if (aportacionesCountPreview <= 0) {
-        <p class="mt-3 text-xs text-red-500">
-          A {{ plazoPreview() }} meses no hay aportaciones anuales disponibles (se necesitan más de 12 meses); esta
-          promoción no se podría aplicar a una cotización con ese plazo.
-        </p>
+        @if (mensualidadFija() <= 0) {
+          <p class="mt-3 text-xs text-ink-muted">Ingresa la mensualidad fija para ver la aportación anual estimada.</p>
+        } @else if (aportacionesCountPreview <= 0) {
+          <p class="mt-3 text-xs text-red-500">
+            A {{ plazoPreview() }} meses no hay aportaciones anuales disponibles (se necesitan más de 12 meses); esta
+            promoción no se podría aplicar a una cotización con ese plazo.
+          </p>
+        } @else {
+          <p class="mt-3 text-xs text-ink-muted">
+            En un lote estándar de 200 m² de {{ proyecto() === 'samai' ? 'SAMAI' : 'Nanuu' }} a {{ plazoPreview() }} meses
+            (precio de referencia ${{ precioReferenciaPreview.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}):
+          </p>
+          <div class="mt-3 grid gap-3 rounded-lg bg-surface p-3 sm:grid-cols-2">
+            <div>
+              <p class="text-xs text-ink-muted">Aportación anual requerida</p>
+              <p class="mt-1 font-semibold text-we-primary dark:text-we-blue-light">
+                ${{ aportacionAnualPreview!.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+              </p>
+            </div>
+            <div>
+              <p class="text-xs text-ink-muted">Número de aportaciones</p>
+              <p class="mt-1 font-semibold text-ink">{{ aportacionesCountPreview }}</p>
+            </div>
+          </div>
+        }
       } @else {
-        <p class="mt-3 text-xs text-ink-muted">
-          En un lote estándar de 200 m² de {{ proyecto() === 'samai' ? 'SAMAI' : 'Nanuu' }} a {{ plazoPreview() }} meses
-          (precio de referencia ${{ precioReferenciaPreview.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}):
+        <p class="text-xs font-semibold text-ink">
+          Vista previa: bono aplicado sobre lotes estándar de 200 m² ({{ proyecto() === 'samai' ? 'SAMAI' : 'Nanuu' }} a {{ plazoFijo() }} meses sin enganche)
         </p>
         <div class="mt-3 grid gap-3 rounded-lg bg-surface p-3 sm:grid-cols-2">
           <div>
-            <p class="text-xs text-ink-muted">Aportación anual requerida</p>
+            <p class="text-xs font-medium text-ink">Compra de 2 lotes (400 m²)</p>
+            <p class="mt-1 text-xs text-ink-muted">
+              Lista: ${{ precioListaDosLotesPreview.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+              &minus; Bono: <span class="text-emerald-600 dark:text-emerald-400 font-medium">${{ bonoDosLotes().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</span>
+            </p>
             <p class="mt-1 font-semibold text-we-primary dark:text-we-blue-light">
-              ${{ aportacionAnualPreview!.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+              Total: ${{ totalConBonoDosLotesPreview.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+              &middot; ${{ mensualidadDosLotesPreview.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} / mes
             </p>
           </div>
           <div>
-            <p class="text-xs text-ink-muted">Número de aportaciones</p>
-            <p class="mt-1 font-semibold text-ink">{{ aportacionesCountPreview }}</p>
+            <p class="text-xs font-medium text-ink">Compra de 3 lotes (600 m²)</p>
+            <p class="mt-1 text-xs text-ink-muted">
+              Lista: ${{ precioListaTresLotesPreview.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+              &minus; Bono: <span class="text-emerald-600 dark:text-emerald-400 font-medium">${{ bonoTresLotes().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</span>
+            </p>
+            <p class="mt-1 font-semibold text-we-primary dark:text-we-blue-light">
+              Total: ${{ totalConBonoTresLotesPreview.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+              &middot; ${{ mensualidadTresLotesPreview.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} / mes
+            </p>
           </div>
         </div>
       }
@@ -191,7 +288,7 @@
       <button
         type="button"
         (click)="guardar()"
-        [disabled]="!nombre().trim() || mensualidadFija() <= 0 || isSaving()"
+        [disabled]="!formularioValido || isSaving()"
         class="inline-flex items-center justify-center rounded-lg bg-we-primary px-5 py-2.5 text-sm font-semibold text-white
                hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
                focus:outline-none focus:ring-2 focus:ring-we-primary/50
@@ -231,7 +328,7 @@
             <th class="px-4 py-3">Nombre</th>
             <th class="px-4 py-3">Proyecto</th>
             <th class="px-4 py-3">Aplica a</th>
-            <th class="px-4 py-3">Mensualidad fija</th>
+            <th class="px-4 py-3">Beneficio</th>
             <th class="px-4 py-3">Vence</th>
             <th class="px-4 py-3">Estado</th>
             <th class="px-4 py-3"></th>
@@ -248,7 +345,24 @@
               </td>
               <td class="px-4 py-3 text-ink-muted">{{ promo.proyecto === 'samai' ? 'SAMAI Campestre' : 'Aldea Nanuu' }}</td>
               <td class="px-4 py-3 text-ink-muted">{{ promo.tipoPrecio === 'HECTAREA' ? 'Hectáreas' : 'Lotes' }}</td>
-              <td class="px-4 py-3 font-medium text-ink">${{ promo.mensualidadFija.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</td>
+              <td class="px-4 py-3 font-medium text-ink">
+                @if (promo.modalidad === 'BONO_LOTES') {
+                  <div class="text-xs">
+                    <span class="font-semibold text-emerald-600 dark:text-emerald-400">
+                      2 lotes: -${{ (promo.bonoDosLotes ?? 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) }}
+                    </span>
+                    &middot;
+                    <span class="font-semibold text-emerald-600 dark:text-emerald-400">
+                      3+ lotes: -${{ (promo.bonoTresLotes ?? 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) }}
+                    </span>
+                    <div class="text-[11px] font-normal text-ink-muted">
+                      {{ promo.plazoFijo ?? 60 }} meses sin enganche
+                    </div>
+                  </div>
+                } @else {
+                  ${{ (promo.mensualidadFija ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} / mes
+                }
+              </td>
               <td class="px-4 py-3 text-ink-muted">
                 {{ promo.fechaFin ? (promo.fechaFin | date: 'dd/MM/yyyy HH:mm') : 'Sin vencimiento' }}
               </td>

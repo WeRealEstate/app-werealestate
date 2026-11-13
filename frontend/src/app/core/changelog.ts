@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.2.0', fecha: '2026-11-13', cambios: [
+    "Promociones y Cotizador: nueva modalidad «Bono / descuento por compra de varios lotes (sin enganche)» que permite configurar un bono para 2 lotes (p. ej. $20,000) y otro para 3 o más lotes (p. ej. $30,000) a un plazo fijo sin enganche (p. ej. 60 meses), coexistiendo con las promociones de 1 lote y reflejando el bono tanto en el resumen como en el PDF.",
+  ] },
   { version: '12.1.10', fecha: '2026-11-13', cambios: [
     "Asesores externos: nuevo buscador junto a los filtros; encuentra al asesor por nombre, celular o correo, sin importar mayúsculas ni acentos.",
   ] },

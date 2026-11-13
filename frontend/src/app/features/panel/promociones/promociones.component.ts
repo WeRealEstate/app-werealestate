@@ -4,7 +4,7 @@ import { Component, inject, signal } from '@angular/core';
 import { LucidePencil, LucideTrash2 } from '@lucide/angular';
 import { RouterLink } from '@angular/router';
 import { PromocionesService } from '../../../core/services/promociones.service';
-import { Promocion, ProyectoPromocion, TipoPrecioPromocion } from '../../../core/models/promocion.model';
+import { ModalidadPromocion, Promocion, ProyectoPromocion, TipoPrecioPromocion } from '../../../core/models/promocion.model';
 import { ToastService } from '../../../core/services/toast.service';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { PROJECTS_CONFIG } from '../../../core/data/proyectos-cotizador.config';
@@ -42,8 +42,14 @@ export class PromocionesComponent {
   readonly nombre = signal('');
   readonly proyecto = signal<ProyectoPromocion>('samai');
   readonly tipoPrecio = signal<TipoPrecioPromocion>('LOTE');
+  readonly modalidad = signal<ModalidadPromocion>('MENSUALIDAD_FIJA');
   readonly mensualidadFija = signal(0);
   readonly mensualidadDisplay = signal('');
+  readonly bonoDosLotes = signal(20000);
+  readonly bonoDosLotesDisplay = signal('20,000');
+  readonly bonoTresLotes = signal(30000);
+  readonly bonoTresLotesDisplay = signal('30,000');
+  readonly plazoFijo = signal(60);
   readonly descripcion = signal('');
 
   /** Fecha y hora en las que la promoción deja de aplicar; vacía = sin vencimiento. */
@@ -59,6 +65,14 @@ export class PromocionesComponent {
 
   constructor() {
     this.cargar();
+  }
+
+  get formularioValido(): boolean {
+    if (!this.nombre().trim()) return false;
+    if (this.modalidad() === 'BONO_LOTES') {
+      return this.bonoDosLotes() > 0 && this.bonoTresLotes() > 0 && this.plazoFijo() > 0;
+    }
+    return this.mensualidadFija() > 0;
   }
 
   /** Precio de referencia de un lote estándar (200 m²) del proyecto, al plazo elegido para la
@@ -93,6 +107,36 @@ export class PromocionesComponent {
     return Math.max((this.precioReferenciaPreview - cubiertoPorMensualidades) / count, 0);
   }
 
+  /** Vista previa para la modalidad BONO_LOTES con 2 y 3 lotes estándar de 200 m². */
+  private precioLoteBaseBonoPreview(): number {
+    const config = PROJECTS_CONFIG[this.proyecto()];
+    return config.minimumArea * config.pricePerM2;
+  }
+
+  get precioListaDosLotesPreview(): number {
+    return this.precioLoteBaseBonoPreview() * 2;
+  }
+
+  get totalConBonoDosLotesPreview(): number {
+    return Math.max(this.precioListaDosLotesPreview - this.bonoDosLotes(), 0);
+  }
+
+  get mensualidadDosLotesPreview(): number {
+    return this.plazoFijo() > 0 ? this.totalConBonoDosLotesPreview / this.plazoFijo() : 0;
+  }
+
+  get precioListaTresLotesPreview(): number {
+    return this.precioLoteBaseBonoPreview() * 3;
+  }
+
+  get totalConBonoTresLotesPreview(): number {
+    return Math.max(this.precioListaTresLotesPreview - this.bonoTresLotes(), 0);
+  }
+
+  get mensualidadTresLotesPreview(): number {
+    return this.plazoFijo() > 0 ? this.totalConBonoTresLotesPreview / this.plazoFijo() : 0;
+  }
+
   async cargar(): Promise<void> {
     this.isLoading.set(true);
     this.errorMessage.set(null);
@@ -122,13 +166,42 @@ export class PromocionesComponent {
     input.value = this.mensualidadDisplay();
   }
 
+  onBonoDosLotesInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const limpio = limpiarNumero(input.value, 2);
+    this.bonoDosLotes.set(numeroDeTexto(limpio));
+    this.bonoDosLotesDisplay.set(formatearNumero(limpio, 2));
+    input.value = this.bonoDosLotesDisplay();
+  }
+
+  onBonoTresLotesInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const limpio = limpiarNumero(input.value, 2);
+    this.bonoTresLotes.set(numeroDeTexto(limpio));
+    this.bonoTresLotesDisplay.set(formatearNumero(limpio, 2));
+    input.value = this.bonoTresLotesDisplay();
+  }
+
   editar(promo: Promocion): void {
     this.editandoId.set(promo.id);
     this.nombre.set(promo.nombre);
     this.proyecto.set(promo.proyecto);
     this.tipoPrecio.set(promo.tipoPrecio);
-    this.mensualidadFija.set(promo.mensualidadFija);
-    this.mensualidadDisplay.set(formatearNumero(String(promo.mensualidadFija), 2));
+    const mod: ModalidadPromocion = promo.modalidad ?? 'MENSUALIDAD_FIJA';
+    this.modalidad.set(mod);
+    if (mod === 'BONO_LOTES') {
+      const b2 = promo.bonoDosLotes ?? 20000;
+      const b3 = promo.bonoTresLotes ?? 30000;
+      this.bonoDosLotes.set(b2);
+      this.bonoDosLotesDisplay.set(formatearNumero(String(b2), 2));
+      this.bonoTresLotes.set(b3);
+      this.bonoTresLotesDisplay.set(formatearNumero(String(b3), 2));
+      this.plazoFijo.set(promo.plazoFijo ?? 60);
+    } else {
+      const mens = promo.mensualidadFija ?? 0;
+      this.mensualidadFija.set(mens);
+      this.mensualidadDisplay.set(mens > 0 ? formatearNumero(String(mens), 2) : '');
+    }
     this.descripcion.set(promo.descripcion ?? '');
 
     if (promo.fechaFin) {
@@ -149,8 +222,14 @@ export class PromocionesComponent {
     this.nombre.set('');
     this.proyecto.set('samai');
     this.tipoPrecio.set('LOTE');
+    this.modalidad.set('MENSUALIDAD_FIJA');
     this.mensualidadFija.set(0);
     this.mensualidadDisplay.set('');
+    this.bonoDosLotes.set(20000);
+    this.bonoDosLotesDisplay.set('20,000');
+    this.bonoTresLotes.set(30000);
+    this.bonoTresLotesDisplay.set('30,000');
+    this.plazoFijo.set(60);
     this.descripcion.set('');
     this.fechaFin.set('');
     this.horaFin.set(HORA_POR_DEFECTO);
@@ -159,9 +238,9 @@ export class PromocionesComponent {
 
   async guardar(): Promise<void> {
     const nombre = this.nombre().trim();
-    const monto = this.mensualidadFija();
-    if (!nombre || monto <= 0 || this.isSaving()) return;
+    if (!this.formularioValido || this.isSaving()) return;
 
+    const mod = this.modalidad();
     const fechaFin = this.fechaFin() ? combinarFechaHora(this.fechaFin(), this.horaFin(), this.minutoFin()) : null;
 
     this.isSaving.set(true);
@@ -170,9 +249,14 @@ export class PromocionesComponent {
       if (id !== null) {
         const actualizada = await this.promocionesService.actualizar(id, {
           nombre,
-          mensualidadFija: monto,
+          modalidad: mod,
+          mensualidadFija: mod === 'MENSUALIDAD_FIJA' ? this.mensualidadFija() : null,
+          bonoDosLotes: mod === 'BONO_LOTES' ? this.bonoDosLotes() : null,
+          bonoTresLotes: mod === 'BONO_LOTES' ? this.bonoTresLotes() : null,
+          plazoFijo: mod === 'BONO_LOTES' ? this.plazoFijo() : null,
           descripcion: this.descripcion().trim() || null,
           fechaFin,
+          limpiarFechaFin: !fechaFin,
         });
         this.promociones.update((lista) => lista.map((p) => (p.id === id ? actualizada : p)));
         this.toast.success('Promoción actualizada.');
@@ -181,15 +265,23 @@ export class PromocionesComponent {
           nombre,
           proyecto: this.proyecto(),
           tipoPrecio: this.tipoPrecio(),
-          mensualidadFija: monto,
+          modalidad: mod,
+          mensualidadFija: mod === 'MENSUALIDAD_FIJA' ? this.mensualidadFija() : null,
+          bonoDosLotes: mod === 'BONO_LOTES' ? this.bonoDosLotes() : null,
+          bonoTresLotes: mod === 'BONO_LOTES' ? this.bonoTresLotes() : null,
+          plazoFijo: mod === 'BONO_LOTES' ? this.plazoFijo() : null,
           descripcion: this.descripcion().trim() || null,
           fechaFin,
         });
-        // Crear una promoción activa desactiva cualquier otra del mismo proyecto Y tarifa (lo hace el backend).
+        // Crear una promoción activa desactiva otra del mismo proyecto, tarifa y modalidad.
         this.promociones.update((lista) => [
           nueva,
           ...lista.map((p) =>
-            p.proyecto === nueva.proyecto && p.tipoPrecio === nueva.tipoPrecio ? { ...p, activa: false } : p,
+            p.proyecto === nueva.proyecto &&
+            p.tipoPrecio === nueva.tipoPrecio &&
+            (p.modalidad ?? 'MENSUALIDAD_FIJA') === (nueva.modalidad ?? 'MENSUALIDAD_FIJA')
+              ? { ...p, activa: false }
+              : p,
           ),
         ]);
         this.toast.success(`Promoción "${nueva.nombre}" creada.`);
@@ -212,7 +304,14 @@ export class PromocionesComponent {
       this.promociones.update((lista) =>
         lista.map((p) => {
           if (p.id === actualizada.id) return actualizada;
-          if (actualizada.activa && p.proyecto === actualizada.proyecto) return { ...p, activa: false };
+          if (
+            actualizada.activa &&
+            p.proyecto === actualizada.proyecto &&
+            p.tipoPrecio === actualizada.tipoPrecio &&
+            (p.modalidad ?? 'MENSUALIDAD_FIJA') === (actualizada.modalidad ?? 'MENSUALIDAD_FIJA')
+          ) {
+            return { ...p, activa: false };
+          }
           return p;
         }),
       );

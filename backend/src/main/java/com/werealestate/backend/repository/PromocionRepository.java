@@ -12,4 +12,10 @@ public interface PromocionRepository extends JpaRepository<Promocion, Long> {
     List<Promocion> findByActivaTrue();
 
     List<Promocion> findByProyectoAndTipoPrecioAndActivaTrue(String proyecto, TipoPrecioPromocion tipoPrecio);
+
+    List<Promocion> findByProyectoAndTipoPrecioAndModalidadAndActivaTrue(
+            String proyecto,
+            TipoPrecioPromocion tipoPrecio,
+             com.werealestate.backend.model.ModalidadPromocion modalidad
+    );
 }

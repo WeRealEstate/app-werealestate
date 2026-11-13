@@ -131,7 +131,12 @@
                   >
                     <span class="font-medium text-ink">{{ promo.nombre }}</span>
                     <span class="text-xs text-ink-muted">
-                      {{ promo.proyecto === 'samai' ? 'SAMAI Campestre' : 'Aldea Nanuu' }} · ${{ promo.mensualidadFija.toLocaleString('en-US') }}/mes
+                      {{ promo.proyecto === 'samai' ? 'SAMAI Campestre' : 'Aldea Nanuu' }} ·
+                      @if (promo.modalidad === 'BONO_LOTES') {
+                        2 lotes: -${{ (promo.bonoDosLotes ?? 0).toLocaleString('en-US') }} · 3+ lotes: -${{ (promo.bonoTresLotes ?? 0).toLocaleString('en-US') }}
+                      } @else {
+                        ${{ (promo.mensualidadFija ?? 0).toLocaleString('en-US') }}/mes
+                      }
                     </span>
                   </button>
                 }
@@ -475,7 +480,7 @@
 
         @if (esMultiLote) {
           <p class="mt-2 text-xs text-ink-muted">
-            Con varios lotes juntos, el precio especial de contado y las promociones no están disponibles (están calibrados para un solo lote estándar).
+            Con varios lotes juntos, el precio especial de contado y las promociones de 1 lote no están disponibles (solo aplican promociones por compra de varios lotes).
           </p>
         }
       </div>
@@ -522,7 +527,50 @@
               </button>
             </div>
 
-            @if (promocionSinAportacionesDisponibles) {
+            @if (isPromocionBonoLotes) {
+              @if (cantidadLotes < 2) {
+                <p class="mt-4 text-xs text-amber-600 dark:text-amber-400">
+                  Esta promoción aplica al comprar 2 o más lotes (bono de
+                  <strong>${{ (promocionSeleccionada?.bonoDosLotes ?? 0).toLocaleString('en-US') }} MXN</strong> por 2 lotes y
+                  <strong>${{ (promocionSeleccionada?.bonoTresLotes ?? 0).toLocaleString('en-US') }} MXN</strong> por 3 o más lotes).
+                  Agrega otro lote arriba con el botón <strong>+ Agregar lote</strong> para activarla.
+                </p>
+              } @else if (promocionSeleccionada?.plazoFijo && selectedMonths !== promocionSeleccionada?.plazoFijo) {
+                <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+                  <p class="text-xs text-red-500">
+                    Esta promoción aplica únicamente a {{ promocionSeleccionada?.plazoFijo }} meses sin enganche.
+                  </p>
+                  <button
+                    type="button"
+                    (click)="selectedMonths = promocionSeleccionada!.plazoFijo!"
+                    class="rounded-lg bg-we-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-we-primary/90"
+                  >
+                    Cambiar a {{ promocionSeleccionada?.plazoFijo }} meses
+                  </button>
+                </div>
+              } @else {
+                <div class="mt-5 grid gap-4 rounded-xl bg-surface p-4 sm:grid-cols-3">
+                  <div>
+                    <p class="text-xs text-ink-muted">Bono por {{ cantidadLotes }} lotes</p>
+                    <p class="mt-1 font-semibold text-emerald-600 dark:text-emerald-400">
+                      -${{ bonoPromocion.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+                    </p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-ink-muted">Total con bono</p>
+                    <p class="mt-1 font-semibold text-ink">
+                      ${{ totalInvestment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+                    </p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-ink-muted">Mensualidad ({{ selectedMonths }} meses sin enganche)</p>
+                    <p class="mt-1 font-semibold text-we-primary dark:text-we-blue-light">
+                      ${{ monthlyPayment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+                    </p>
+                  </div>
+                </div>
+              }
+            } @else if (promocionSinAportacionesDisponibles) {
               <p class="mt-4 text-xs text-red-500">
                 Esta promoción reparte el precio entre mensualidad fija y aportaciones anuales, así que necesita un
                 plazo de financiamiento mayor a 12 meses. Ajusta el plazo arriba para poder aplicarla.

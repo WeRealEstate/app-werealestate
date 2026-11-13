@@ -1,18 +1,21 @@
 export type ProyectoPromocion = 'samai' | 'nanuu';
 
-/** A qué tarifa del proyecto aplica: LOTE (precio normal por m²) o HECTAREA (tarifa de macrolote,
- * solo existe en SAMAI). Fijo desde la creación, igual que el proyecto. */
 export type TipoPrecioPromocion = 'LOTE' | 'HECTAREA';
+
+export type ModalidadPromocion = 'MENSUALIDAD_FIJA' | 'BONO_LOTES';
 
 export interface Promocion {
   id: number;
   nombre: string;
   proyecto: ProyectoPromocion;
   tipoPrecio: TipoPrecioPromocion;
-  mensualidadFija: number;
+  modalidad: ModalidadPromocion;
+  mensualidadFija: number | null;
+  bonoDosLotes: number | null;
+  bonoTresLotes: number | null;
+  plazoFijo: number | null;
   descripcion: string | null;
   activa: boolean;
-  /** Cuándo deja de aplicar la promoción; null = sin vencimiento. Formato LocalDateTime ISO. */
   fechaFin: string | null;
   fechaCreacion: string;
 }
@@ -20,15 +23,28 @@ export interface Promocion {
 export interface PromocionCreateRequest {
   nombre: string;
   proyecto: ProyectoPromocion;
-  tipoPrecio: TipoPrecioPromocion;
-  mensualidadFija: number;
+  tipoPrecio?: TipoPrecioPromocion;
+  modalidad?: ModalidadPromocion;
+  mensualidadFija?: number | null;
+  bonoDosLotes?: number | null;
+  bonoTresLotes?: number | null;
+  plazoFijo?: number | null;
   descripcion?: string | null;
+  activa?: boolean;
   fechaFin?: string | null;
 }
 
 export interface PromocionUpdateRequest {
-  nombre: string;
-  mensualidadFija: number;
+  nombre?: string;
+  proyecto?: ProyectoPromocion;
+  tipoPrecio?: TipoPrecioPromocion;
+  modalidad?: ModalidadPromocion;
+  mensualidadFija?: number | null;
+  bonoDosLotes?: number | null;
+  bonoTresLotes?: number | null;
+  plazoFijo?: number | null;
   descripcion?: string | null;
+  activa?: boolean;
   fechaFin?: string | null;
+  limpiarFechaFin?: boolean;
 }

@@ -97,6 +97,9 @@ function renglonesDetalle(data: QuotePdfData): [string, string][] {
     ['Proyecto', data.project],
     ...renglonesLotes(data),
     ['Monto de inversión', dinero(data.totalPrice)],
+    ...(data.bonoPromocion && data.bonoPromocion > 0
+      ? [['Bono promocional', `-${dinero(data.bonoPromocion)}`] as [string, string]]
+      : []),
     ['Forma de pago', data.paymentMethod],
     ...(data.downPayment > 0 || !data.pagoExtra
       ? [[data.downPaymentLabel, dinero(data.downPayment)] as [string, string]]
