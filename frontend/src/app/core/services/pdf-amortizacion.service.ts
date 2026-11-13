@@ -130,7 +130,9 @@ export class PdfAmortizacionService {
     const mesActual = a.corte.slice(0, 7);
     const marcas = new Map<number, Rgb>();
     filas.forEach((f, i) => {
-      const color = f.fecha?.slice(0, 7) === mesActual ? COLOR_MES_ACTUAL[f.estado] : undefined;
+      const color = f.estado === 'ATRASADO'
+        ? COLOR_MES_ACTUAL.ATRASADO
+        : f.fecha?.slice(0, 7) === mesActual ? COLOR_MES_ACTUAL[f.estado] : undefined;
       if (color) marcas.set(i, color);
     });
     doc.addPage('letter', 'portrait');
