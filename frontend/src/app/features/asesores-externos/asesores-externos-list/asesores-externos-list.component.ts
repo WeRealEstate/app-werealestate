@@ -24,6 +24,7 @@ import {
   EstadoContratoAsesor,
 } from '../../../core/models/asesor-externo.model';
 import { CorreoInputDirective } from '../../../shared/correo-input/correo-input.directive';
+import { normalizarTexto } from '../../../core/utils/lista';
 
 type FiltroDesarrollo = '' | 'SAMAI' | 'NANUU' | 'AMBOS' | 'NINGUNO';
 
@@ -109,13 +110,24 @@ export class AsesoresExternosListComponent {
   readonly contratoLabels = ESTADO_CONTRATO_LABELS;
   readonly contratoClases = ESTADO_CONTRATO_CLASES;
 
-  // Filtros de la lista: por estado de contrato (efectivo) y por a qué planos tiene acceso.
+  // Filtros de la lista: texto (nombre, celular o correo), estado de contrato (efectivo) y a qué planos tiene acceso.
+  readonly busqueda = signal('');
   readonly filtroContrato = signal<'' | EstadoContratoAsesor>('');
   readonly filtroDesarrollo = signal<FiltroDesarrollo>('');
   readonly asesoresFiltrados = computed(() => {
+    const texto = normalizarTexto(this.busqueda());
+    // El celular se compara solo con dígitos ("951 123" encuentra "9511234567"), y solo si no se escribieron letras.
+    const digitos = /\p{L}/u.test(this.busqueda()) ? '' : this.busqueda().replace(/\D/g, '');
     const contrato = this.filtroContrato();
     const desarrollo = this.filtroDesarrollo();
     return this.asesores().filter((a) => {
+      if (texto) {
+        const coincide =
+          normalizarTexto(a.nombre).includes(texto) ||
+          normalizarTexto(a.correo ?? '').includes(texto) ||
+          (digitos.length > 0 && (a.celular ?? '').replace(/\D/g, '').includes(digitos));
+        if (!coincide) return false;
+      }
       if (contrato && a.contratoEstadoEfectivo !== contrato) return false;
       switch (desarrollo) {
         case 'SAMAI':

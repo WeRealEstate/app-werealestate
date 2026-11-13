@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.1.10', fecha: '2026-11-13', cambios: [
+    "Asesores externos: nuevo buscador junto a los filtros; encuentra al asesor por nombre, celular o correo, sin importar mayúsculas ni acentos.",
+  ] },
   { version: '12.1.9', fecha: '2026-11-13', cambios: [
     "Tabla de amortización: cuando la suma de mensualidades queda por debajo del precio total (aunque la diferencia sea mayor a $1.00), el sobrante se suma automáticamente a la última mensualidad en lugar de crear «Sin fecha en el plan».",
   ] },

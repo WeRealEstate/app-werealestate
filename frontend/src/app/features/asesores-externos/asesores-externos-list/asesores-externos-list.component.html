@@ -41,6 +41,18 @@
     </div>
   } @else {
     <div class="mt-6 flex flex-wrap items-end gap-3">
+      <div class="w-full sm:w-64">
+        <label for="filtro-busqueda" class="mb-1 block text-xs font-medium text-ink-muted">Buscar</label>
+        <input
+          id="filtro-busqueda"
+          type="search"
+          [ngModel]="busqueda()"
+          (ngModelChange)="busqueda.set($event)"
+          placeholder="Nombre, celular o correo"
+          autocomplete="off"
+          class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+        />
+      </div>
       <div>
         <label for="filtro-contrato" class="mb-1 block text-xs font-medium text-ink-muted">Contrato</label>
         <select
