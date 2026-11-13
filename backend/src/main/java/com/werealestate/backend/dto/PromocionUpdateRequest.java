@@ -20,6 +20,9 @@ public record PromocionUpdateRequest(
 
         BigDecimal mensualidadFija,
 
+        /** Opcional: vacío o 0 = la promoción no aplica a 1 lote. */
+        BigDecimal bonoUnLote,
+
         BigDecimal bonoDosLotes,
 
         BigDecimal bonoTresLotes,

@@ -22,7 +22,7 @@ Monorepo: `backend/` (Spring Boot) + `frontend/` (Angular). Este archivo existe 
 
 ## Backend: `backend/src/main/java/com/werealestate/backend/`
 Capas: `controller/` → `service/` → `repository/` (Spring Data) + `model/` (entidades y enums) + `dto/` (records). Excepciones en `exception/` (`GlobalExceptionHandler` las traduce: Validation→400, Forbidden→403, NotFound→404, Conflict→409, ResponseStatus→su código con `message`).
-Migraciones: `src/main/resources/db/migration/V1…V84` (la siguiente es **V85**; V84 quitó el índice único del folio de `recibo_venta`: los folios se pueden repetir).
+Migraciones: `src/main/resources/db/migration/V1…V87` (la siguiente es **V88**; V84 quitó el índice único del folio de `recibo_venta`: los folios se pueden repetir; V86 promociones de bono por lotes y V87 su bono opcional para 1 lote, `bono_un_lote`).
 
 ### Seguridad y permisos
 - `SecurityConfig`: stateless, JWT. Públicos: `/api/auth/**`, `GET /api/promociones/activas`, `POST /api/cotizaciones/publica`, `GET /api/lotes/publico`, `PUT /api/lotes/publico/*/estado`, `POST /api/lotes/publico/verificar-asesor`, `GET|POST /api/forms-publico/**`, `GET /api/score-publico`. Cadena aparte para `/uploads/**` (cacheable, público).

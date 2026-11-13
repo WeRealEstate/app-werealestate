@@ -45,6 +45,9 @@ export class PromocionesComponent {
   readonly modalidad = signal<ModalidadPromocion>('MENSUALIDAD_FIJA');
   readonly mensualidadFija = signal(0);
   readonly mensualidadDisplay = signal('');
+  /** 0 = la promoción no aplica a 1 lote. */
+  readonly bonoUnLote = signal(0);
+  readonly bonoUnLoteDisplay = signal('');
   readonly bonoDosLotes = signal(20000);
   readonly bonoDosLotesDisplay = signal('20,000');
   readonly bonoTresLotes = signal(30000);
@@ -113,6 +116,18 @@ export class PromocionesComponent {
     return config.minimumArea * config.pricePerM2;
   }
 
+  get precioListaUnLotePreview(): number {
+    return this.precioLoteBaseBonoPreview();
+  }
+
+  get totalConBonoUnLotePreview(): number {
+    return Math.max(this.precioListaUnLotePreview - this.bonoUnLote(), 0);
+  }
+
+  get mensualidadUnLotePreview(): number {
+    return this.plazoFijo() > 0 ? this.totalConBonoUnLotePreview / this.plazoFijo() : 0;
+  }
+
   get precioListaDosLotesPreview(): number {
     return this.precioLoteBaseBonoPreview() * 2;
   }
@@ -166,6 +181,14 @@ export class PromocionesComponent {
     input.value = this.mensualidadDisplay();
   }
 
+  onBonoUnLoteInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const limpio = limpiarNumero(input.value, 2);
+    this.bonoUnLote.set(numeroDeTexto(limpio));
+    this.bonoUnLoteDisplay.set(formatearNumero(limpio, 2));
+    input.value = this.bonoUnLoteDisplay();
+  }
+
   onBonoDosLotesInput(event: Event): void {
     const input = event.target as HTMLInputElement;
     const limpio = limpiarNumero(input.value, 2);
@@ -190,6 +213,9 @@ export class PromocionesComponent {
     const mod: ModalidadPromocion = promo.modalidad ?? 'MENSUALIDAD_FIJA';
     this.modalidad.set(mod);
     if (mod === 'BONO_LOTES') {
+      const b1 = promo.bonoUnLote ?? 0;
+      this.bonoUnLote.set(b1);
+      this.bonoUnLoteDisplay.set(b1 > 0 ? formatearNumero(String(b1), 2) : '');
       const b2 = promo.bonoDosLotes ?? 20000;
       const b3 = promo.bonoTresLotes ?? 30000;
       this.bonoDosLotes.set(b2);
@@ -225,6 +251,8 @@ export class PromocionesComponent {
     this.modalidad.set('MENSUALIDAD_FIJA');
     this.mensualidadFija.set(0);
     this.mensualidadDisplay.set('');
+    this.bonoUnLote.set(0);
+    this.bonoUnLoteDisplay.set('');
     this.bonoDosLotes.set(20000);
     this.bonoDosLotesDisplay.set('20,000');
     this.bonoTresLotes.set(30000);
@@ -251,6 +279,7 @@ export class PromocionesComponent {
           nombre,
           modalidad: mod,
           mensualidadFija: mod === 'MENSUALIDAD_FIJA' ? this.mensualidadFija() : null,
+          bonoUnLote: mod === 'BONO_LOTES' ? this.bonoUnLote() : null,
           bonoDosLotes: mod === 'BONO_LOTES' ? this.bonoDosLotes() : null,
           bonoTresLotes: mod === 'BONO_LOTES' ? this.bonoTresLotes() : null,
           plazoFijo: mod === 'BONO_LOTES' ? this.plazoFijo() : null,
@@ -267,6 +296,7 @@ export class PromocionesComponent {
           tipoPrecio: this.tipoPrecio(),
           modalidad: mod,
           mensualidadFija: mod === 'MENSUALIDAD_FIJA' ? this.mensualidadFija() : null,
+          bonoUnLote: mod === 'BONO_LOTES' ? this.bonoUnLote() : null,
           bonoDosLotes: mod === 'BONO_LOTES' ? this.bonoDosLotes() : null,
           bonoTresLotes: mod === 'BONO_LOTES' ? this.bonoTresLotes() : null,
           plazoFijo: mod === 'BONO_LOTES' ? this.plazoFijo() : null,

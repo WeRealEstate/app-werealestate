@@ -11,6 +11,8 @@ export interface Promocion {
   tipoPrecio: TipoPrecioPromocion;
   modalidad: ModalidadPromocion;
   mensualidadFija: number | null;
+  /** Bono al comprar 1 lote; null = la promoción no aplica a 1 lote. */
+  bonoUnLote: number | null;
   bonoDosLotes: number | null;
   bonoTresLotes: number | null;
   plazoFijo: number | null;
@@ -26,6 +28,8 @@ export interface PromocionCreateRequest {
   tipoPrecio?: TipoPrecioPromocion;
   modalidad?: ModalidadPromocion;
   mensualidadFija?: number | null;
+  /** 0 o null = no aplica a 1 lote (al editar, 0 lo quita). */
+  bonoUnLote?: number | null;
   bonoDosLotes?: number | null;
   bonoTresLotes?: number | null;
   plazoFijo?: number | null;
@@ -40,6 +44,8 @@ export interface PromocionUpdateRequest {
   tipoPrecio?: TipoPrecioPromocion;
   modalidad?: ModalidadPromocion;
   mensualidadFija?: number | null;
+  /** 0 o null = no aplica a 1 lote (al editar, 0 lo quita). */
+  bonoUnLote?: number | null;
   bonoDosLotes?: number | null;
   bonoTresLotes?: number | null;
   plazoFijo?: number | null;

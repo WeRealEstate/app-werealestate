@@ -54,6 +54,7 @@ public class PromocionService {
                 p,
                 modalidad,
                 request.mensualidadFija(),
+                request.bonoUnLote(),
                 request.bonoDosLotes(),
                 request.bonoTresLotes(),
                 request.plazoFijo()
@@ -94,11 +95,12 @@ public class PromocionService {
         p.setModalidad(modalidad);
 
         BigDecimal mensualidadFija = request.mensualidadFija() != null ? request.mensualidadFija() : p.getMensualidadFija();
+        BigDecimal bonoUnLote = request.bonoUnLote() != null ? request.bonoUnLote() : p.getBonoUnLote();
         BigDecimal bonoDosLotes = request.bonoDosLotes() != null ? request.bonoDosLotes() : p.getBonoDosLotes();
         BigDecimal bonoTresLotes = request.bonoTresLotes() != null ? request.bonoTresLotes() : p.getBonoTresLotes();
         Integer plazoFijo = request.plazoFijo() != null ? request.plazoFijo() : p.getPlazoFijo();
 
-        aplicarMontosSegunModalidad(p, modalidad, mensualidadFija, bonoDosLotes, bonoTresLotes, plazoFijo);
+        aplicarMontosSegunModalidad(p, modalidad, mensualidadFija, bonoUnLote, bonoDosLotes, bonoTresLotes, plazoFijo);
 
         if (request.descripcion() != null) {
             p.setDescripcion(limpiarDescripcion(request.descripcion()));
@@ -152,6 +154,7 @@ public class PromocionService {
             Promocion p,
             ModalidadPromocion modalidad,
             BigDecimal mensualidadFija,
+            BigDecimal bonoUnLote,
             BigDecimal bonoDosLotes,
             BigDecimal bonoTresLotes,
             Integer plazoFijo
@@ -167,7 +170,12 @@ public class PromocionService {
             if (plazo <= 0) {
                 throw new ValidationException("El plazo fijo debe ser mayor a 0");
             }
+            if (bonoUnLote != null && bonoUnLote.compareTo(BigDecimal.ZERO) < 0) {
+                throw new ValidationException("El bono para 1 lote no puede ser negativo");
+            }
             p.setMensualidadFija(null);
+            // 0 o vacío = la promoción no aplica a 1 lote (así también se quita al editar).
+            p.setBonoUnLote(bonoUnLote != null && bonoUnLote.signum() > 0 ? bonoUnLote : null);
             p.setBonoDosLotes(bonoDosLotes);
             p.setBonoTresLotes(bonoTresLotes);
             p.setPlazoFijo(plazo);
@@ -176,6 +184,7 @@ public class PromocionService {
                 throw new ValidationException("La mensualidad fija debe ser mayor a 0");
             }
             p.setMensualidadFija(mensualidadFija);
+            p.setBonoUnLote(null);
             p.setBonoDosLotes(null);
             p.setBonoTresLotes(null);
             p.setPlazoFijo(null);

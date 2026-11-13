@@ -133,7 +133,7 @@
                     <span class="text-xs text-ink-muted">
                       {{ promo.proyecto === 'samai' ? 'SAMAI Campestre' : 'Aldea Nanuu' }} ·
                       @if (promo.modalidad === 'BONO_LOTES') {
-                        2 lotes: -${{ (promo.bonoDosLotes ?? 0).toLocaleString('en-US') }} · 3+ lotes: -${{ (promo.bonoTresLotes ?? 0).toLocaleString('en-US') }}
+                        @if (promo.bonoUnLote) {1 lote: -${{ promo.bonoUnLote.toLocaleString('en-US') }} · }2 lotes: -${{ (promo.bonoDosLotes ?? 0).toLocaleString('en-US') }} · 3+ lotes: -${{ (promo.bonoTresLotes ?? 0).toLocaleString('en-US') }}
                       } @else {
                         ${{ (promo.mensualidadFija ?? 0).toLocaleString('en-US') }}/mes
                       }
@@ -528,7 +528,7 @@
             </div>
 
             @if (isPromocionBonoLotes) {
-              @if (cantidadLotes < 2) {
+              @if (cantidadLotes < lotesMinimosPromocion) {
                 <p class="mt-4 text-xs text-amber-600 dark:text-amber-400">
                   Esta promoción aplica al comprar 2 o más lotes (bono de
                   <strong>${{ (promocionSeleccionada?.bonoDosLotes ?? 0).toLocaleString('en-US') }} MXN</strong> por 2 lotes y
@@ -551,7 +551,7 @@
               } @else {
                 <div class="mt-5 grid gap-4 rounded-xl bg-surface p-4 sm:grid-cols-3">
                   <div>
-                    <p class="text-xs text-ink-muted">Bono por {{ cantidadLotes }} lotes</p>
+                    <p class="text-xs text-ink-muted">Bono por {{ cantidadLotes }} {{ cantidadLotes === 1 ? 'lote' : 'lotes' }}</p>
                     <p class="mt-1 font-semibold text-emerald-600 dark:text-emerald-400">
                       -${{ bonoPromocion.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
                     </p>

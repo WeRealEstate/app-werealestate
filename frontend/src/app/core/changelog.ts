@@ -15,6 +15,10 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.2.1', fecha: '2026-11-13', cambios: [
+    "Promociones de bono por lotes: nuevo campo opcional «Bono / descuento por 1 lote» (p. ej. $10,000). Si se llena, la promoción también aplica a un solo lote en el Cotizador, al mismo plazo fijo sin enganche y sin aportaciones; vacío, sigue aplicando solo desde 2 lotes.",
+    "Promociones: al editar una promoción de bono, el selector de plazo fijo ya muestra el plazo guardado (antes aparecía «12 meses» aunque la promoción tuviera 60).",
+  ] },
   { version: '12.2.0', fecha: '2026-11-13', cambios: [
     "Promociones y Cotizador: nueva modalidad «Bono / descuento por compra de varios lotes (sin enganche)» que permite configurar un bono para 2 lotes (p. ej. $20,000) y otro para 3 o más lotes (p. ej. $30,000) a un plazo fijo sin enganche (p. ej. 60 meses), coexistiendo con las promociones de 1 lote y reflejando el bono tanto en el resumen como en el PDF.",
   ] },

@@ -37,6 +37,10 @@ public class Promocion {
     @Column(name = "mensualidad_fija", precision = 14, scale = 2)
     private BigDecimal mensualidadFija;
 
+    /** Bono al comprar un solo lote (null = la promoción no aplica a 1 lote). */
+    @Column(name = "bono_un_lote", precision = 14, scale = 2)
+    private BigDecimal bonoUnLote;
+
     @Column(name = "bono_dos_lotes", precision = 14, scale = 2)
     private BigDecimal bonoDosLotes;
 
@@ -117,6 +121,14 @@ public class Promocion {
 
     public void setMensualidadFija(BigDecimal mensualidadFija) {
         this.mensualidadFija = mensualidadFija;
+    }
+
+    public BigDecimal getBonoUnLote() {
+        return bonoUnLote;
+    }
+
+    public void setBonoUnLote(BigDecimal bonoUnLote) {
+        this.bonoUnLote = bonoUnLote;
     }
 
     public BigDecimal getBonoDosLotes() {
