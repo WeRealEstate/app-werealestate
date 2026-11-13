@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.1.8', fecha: '2026-11-13', cambios: [
+    "Tabla de amortización: eliminado el aviso amarillo de «Plan reestructurado» dentro de la tabla.",
+  ] },
   { version: '12.1.7', fecha: '2026-11-13', cambios: [
     "Estado de cuenta (PDF): ampliadas las columnas de «Estado» y «Fecha del pago» para que «Pagado con retraso» y las fechas no se partan en varios renglones.",
   ] },

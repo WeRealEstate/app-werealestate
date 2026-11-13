@@ -119,16 +119,6 @@
           </thead>
           <tbody class="divide-y divide-border">
             @for (f of a.detalleMensual; track $index; let i = $index) {
-              @if (reestructuracionAntesDe(i); as r) {
-                <tr class="bg-amber-50 dark:bg-amber-500/10" data-testid="separador-reestructuracion">
-                  <td colspan="9" class="px-2 py-2.5 text-xs text-amber-900 dark:text-amber-200">
-                    <span class="font-semibold">Plan reestructurado el {{ fecha(r.fechaCorte) }}</span>
-                    @if (r.usuario) { por {{ r.usuario }} }
-                    · Pagado al corte ${{ money(r.abonadoAlCorte) }}; el plan nuevo reparte ${{ money(r.saldoAlCorte) }}.
-                    <span class="block text-amber-800/80 dark:text-amber-200/80">Motivo: {{ r.motivo }}</span>
-                  </td>
-                </tr>
-              }
               <tr
                 [class]="claseFila(f.estado)"
                 [attr.data-actual]="i === indiceActual() ? '' : null"

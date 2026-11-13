@@ -11,7 +11,6 @@ import {
   fechaCorta,
   FilaAmortizacion,
   PagoMes,
-  ReestructuracionPlan,
 } from '../../core/models/amortizacion.model';
 import { AuthService } from '../../core/services/auth.service';
 import { VentasService } from '../../core/services/ventas.service';
@@ -63,13 +62,6 @@ export class TablaAmortizacionComponent {
 
   readonly cuentaAtrasados = computed(() => cuentaAtraso(this.amortizacion().pagosAtrasados, this.amortizacion().mensualidadesAtrasadas));
   readonly liquidada = computed(() => this.amortizacion().saldo <= 0.005);
-  /** La reestructuración que empieza en el renglón {@code i} (el primero de su tramo), para poner el separador. */
-  reestructuracionAntesDe(i: number): ReestructuracionPlan | null {
-    const filas = this.amortizacion().detalleMensual;
-    const tramo = filas[i]?.tramo ?? 0;
-    if (tramo === 0 || (i > 0 && filas[i - 1].tramo === tramo)) return null;
-    return this.amortizacion().reestructuraciones?.find((r) => r.tramo === tramo) ?? null;
-  }
 
   readonly conSinFecha = computed(() => this.amortizacion().detalleMensual.some((f) => f.concepto === CONCEPTO_SIN_FECHA));
   readonly totalAbonadoMes = computed(() => redondear(this.amortizacion().detalleMensual.reduce((s, f) => s + f.abonadoMes, 0)));
