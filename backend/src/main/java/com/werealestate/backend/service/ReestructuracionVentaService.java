@@ -90,7 +90,7 @@ public class ReestructuracionVentaService {
         BigDecimal mensualidad = mensualidadDelPlanNuevo(aRepartir, aportado, plazo - aportaciones.size());
 
         CalendarioPagos.Plan anterior = CalendarioPagos.planVigente(venta, pagosVigentes);
-        String formaPago = "Reestructurada · " + (enganche.signum() > 0 ? "con enganche · " : "") + plazo + " meses"
+        String formaPago = (enganche.signum() > 0 ? "Con enganche · " : "") + plazo + " meses"
                 + (aportaciones.isEmpty() ? "" : " + aportaciones");
         if (formaPago.length() > 50) formaPago = formaPago.substring(0, 50);
         String resumenNuevo = describirPlan(formaPago, primero, plazo, mensualidad, aportaciones.size(), aportado);

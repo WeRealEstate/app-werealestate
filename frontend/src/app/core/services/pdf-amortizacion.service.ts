@@ -32,6 +32,8 @@ const COLOR_MES_ACTUAL: Partial<Record<EstadoPagoPlan, Rgb>> = {
 };
 
 const FUENTE = 'Montserrat';
+const LOGO = '/images/we-logo-color.png';
+const LOGO_PROPORCION = 600 / 259;
 const MARGEN = 20;
 const ALTO_PIE = 18;
 
@@ -51,15 +53,21 @@ interface Campo {
 @Injectable({ providedIn: 'root' })
 export class PdfAmortizacionService {
   private fuentes: { regular: string; negrita: string } | null = null;
+  private logo: Uint8Array | null = null;
 
   async descargar(a: Amortizacion): Promise<void> {
     // jsPDF se carga hasta que se pide el PDF: así no pesa en la ficha del cliente ni en la venta.
     const [{ jsPDF }, { default: autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
-    await this.cargarFuentes(doc);
+    const [logo] = await Promise.all([this.cargarLogo(), this.cargarFuentes(doc)]);
     const ancho = doc.internal.pageSize.getWidth();
 
     this.encabezado(doc, a, ancho, true, 'ESTADO DE CUENTA');
+    const logoW = 24;
+    const logoH = logoW / LOGO_PROPORCION;
+    doc.addImage(logo, 'PNG', ancho - MARGEN - logoW, 26, logoW, logoH, 'logo-we');
+    const anchoTextoPortada = ancho - 2 * MARGEN - logoW - 6;
+
     let y = 32;
     doc.setTextColor(...MUTED);
     doc.setFont(FUENTE, 'bold');
@@ -67,11 +75,11 @@ export class PdfAmortizacionService {
     doc.text(`ESTADO DE CUENTA AL ${fechaCorta(a.corte)}`, MARGEN, y, { charSpace: 0.4 });
     doc.setTextColor(...TEXT);
     doc.setFontSize(12);
-    doc.text(recortar(doc, a.cliente, ancho - 2 * MARGEN), MARGEN, y + 8);
+    doc.text(recortar(doc, a.cliente, anchoTextoPortada), MARGEN, y + 8);
     doc.setTextColor(...MUTED);
     doc.setFont(FUENTE, 'normal');
     doc.setFontSize(8);
-    doc.text(recortar(doc, `${a.desarrollos.join(' · ')} · ${a.lotes.join(', ')}`, ancho - 2 * MARGEN), MARGEN, y + 13.5);
+    doc.text(recortar(doc, `${a.desarrollos.join(' · ')} · ${a.lotes.join(', ')}`, anchoTextoPortada), MARGEN, y + 13.5);
     y += 26;
 
     // DATOS DEL CLIENTE
@@ -338,6 +346,15 @@ export class PdfAmortizacionService {
     doc.addFileToVFS('Montserrat-Bold.ttf', this.fuentes.negrita);
     doc.addFont('Montserrat-Bold.ttf', FUENTE, 'bold');
     doc.setFont(FUENTE, 'normal');
+  }
+
+  private async cargarLogo(): Promise<Uint8Array> {
+    if (!this.logo) {
+      const respuesta = await fetch(LOGO);
+      if (!respuesta.ok) throw new Error(`No se pudo cargar el logo: ${LOGO}`);
+      this.logo = new Uint8Array(await respuesta.arrayBuffer());
+    }
+    return this.logo;
   }
 }
 

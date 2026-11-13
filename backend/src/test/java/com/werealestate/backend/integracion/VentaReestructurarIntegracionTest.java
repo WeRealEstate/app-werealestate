@@ -106,7 +106,7 @@ class VentaReestructurarIntegracionTest extends PruebaDeIntegracion {
         assertDinero("10000", r.mensualidad());
         assertEquals(10, r.plazoMeses());
         assertEquals(20, r.diaPago());
-        assertEquals("Reestructurada · con enganche · 10 meses", r.formaPago());
+        assertEquals("Con enganche · 10 meses", r.formaPago());
         assertDinero("20000", r.enganche());
         assertDinero("120000", r.precioVenta());
         assertTrue(r.aportaciones().isEmpty());
@@ -143,7 +143,7 @@ class VentaReestructurarIntegracionTest extends PruebaDeIntegracion {
         assertEquals(15, g.getAntDiaPago());
         assertDinero("20000", g.getAntEnganche());
         assertTrue(g.getResumenAnterior().startsWith("Esquema de prueba: 20 meses desde 2026-01, mensualidad "), g.getResumenAnterior());
-        assertTrue(g.getResumenNuevo().startsWith("Reestructurada · con enganche · 10 meses: 10 meses desde 2026-01, mensualidad "), g.getResumenNuevo());
+        assertTrue(g.getResumenNuevo().startsWith("Con enganche · 10 meses: 10 meses desde 2026-01, mensualidad "), g.getResumenNuevo());
     }
 
     @Test
@@ -165,7 +165,7 @@ class VentaReestructurarIntegracionTest extends PruebaDeIntegracion {
         assertEquals(2, reestructuraciones.findByVentaIdOrderByIdAsc(venta.id()).size());
         assertDinero("20000", segunda.mensualidad()); // 100,000 / 5
         assertEquals(5, segunda.plazoMeses());
-        assertEquals("Reestructurada · con enganche · 5 meses", segunda.formaPago());
+        assertEquals("Con enganche · 5 meses", segunda.formaPago());
     }
 
     // ---------------------------------------------------------------- enganche nuevo en una venta que no tenía
@@ -178,7 +178,7 @@ class VentaReestructurarIntegracionTest extends PruebaDeIntegracion {
         assertDinero("30000", r.enganche());
         assertEquals("Enganche", r.engancheLabel());
         assertDinero("7000", r.mensualidad()); // (100,000 - 30,000) / 10
-        assertEquals("Reestructurada · con enganche · 10 meses", r.formaPago());
+        assertEquals("Con enganche · 10 meses", r.formaPago());
     }
 
     @Test
@@ -187,7 +187,7 @@ class VentaReestructurarIntegracionTest extends PruebaDeIntegracion {
         VentaDto r = reestructuracionVentaService.reestructurar(sin.id(), pedido(10, 10, null));
 
         assertDinero("10000", r.mensualidad());
-        assertEquals("Reestructurada · 10 meses", r.formaPago());
+        assertEquals("10 meses", r.formaPago());
         assertTrue(r.enganche() == null);
     }
 
@@ -239,9 +239,7 @@ class VentaReestructurarIntegracionTest extends PruebaDeIntegracion {
 
         // (100,000 - 30,000) / 9 meses regulares = 7777.77 (hacia abajo)
         assertDinero("7777.77", r.mensualidad());
-        // OJO: comportamiento actual, posible bug: con enganche y aportaciones la etiqueta pasa de 50 caracteres y se
-        // corta a media palabra ("… + aportac").
-        assertEquals("Reestructurada · con enganche · 10 meses + aportac", r.formaPago());
+        assertEquals("Con enganche · 10 meses + aportaciones", r.formaPago());
         assertEquals(1, r.aportaciones().size());
         assertEquals(2026, r.aportaciones().get(0).anio());
         assertEquals(6, r.aportaciones().get(0).mes());
@@ -302,9 +300,8 @@ class VentaReestructurarIntegracionTest extends PruebaDeIntegracion {
     @Test
     void laFormaDePagoSeRecortaACincuentaCaracteres() {
         VentaDto r = reestructuracionVentaService.reestructurar(venta.id(), pedido(600, 10, List.of(aportacion(2026, 1, "1000"))));
-        // "Reestructurada · con enganche · 600 meses + aportaciones" mide más de 50
-        assertEquals(50, r.formaPago().length());
-        assertEquals("Reestructurada · con enganche · 600 meses + aporta", r.formaPago());
+        assertTrue(r.formaPago().length() <= 50);
+        assertEquals("Con enganche · 600 meses + aportaciones", r.formaPago());
     }
 
     // ---------------------------------------------------------------- saldo y depósito

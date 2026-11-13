@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.1.3', fecha: '2026-11-13', cambios: [
+    "Estado de cuenta (PDF): agregado el logo de WE debajo de la línea azul del encabezado y eliminada la etiqueta «Reestructurada ·» de la forma de pago tanto en el PDF como en el sistema.",
+  ] },
   { version: '12.1.2', fecha: '2026-11-13', cambios: [
     "Tabla de amortización: los nombres de las columnas pueden ocupar dos renglones, así en computadora caben todas las columnas sin deslizar la tabla (en celular se sigue deslizando de lado).",
     "Recibos: el folio sigue siendo obligatorio, pero ya se puede repetir entre recibos.",
