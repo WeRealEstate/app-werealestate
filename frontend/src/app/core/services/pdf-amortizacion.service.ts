@@ -162,14 +162,14 @@ export class PdfAmortizacionService {
       footStyles: { font: FUENTE, fontStyle: 'bold', fillColor: false, textColor: TEXT },
       columnStyles: {
         0: { halign: 'center', cellWidth: 8 },
-        1: { halign: 'left', cellWidth: 17 },
+        1: { halign: 'left', cellWidth: 18 },
         2: { cellWidth: 'auto' },
-        3: { halign: 'right', cellWidth: 28 },
-        4: { halign: 'right', cellWidth: 24 },
-        5: { halign: 'left', cellWidth: 17 },
-        6: { halign: 'left', cellWidth: 14 },
+        3: { halign: 'right', cellWidth: 24 },
+        4: { halign: 'right', cellWidth: 22 },
+        5: { halign: 'left', cellWidth: 19 },
+        6: { halign: 'left', cellWidth: 13 },
         7: { halign: 'right', cellWidth: 20 },
-        8: { halign: 'left', cellWidth: 20, cellPadding: { top: 2.3, bottom: 2.3, left: 4.5, right: 1 } },
+        8: { halign: 'left', cellWidth: 31, cellPadding: { top: 2.3, bottom: 2.3, left: 4, right: 0.5 } },
       },
       didParseCell: (hook) => {
         if (hook.section === 'foot' && hook.column.index >= 3 && hook.column.index !== 5 && hook.column.index !== 6 && hook.column.index !== 8) hook.cell.styles.halign = 'right';

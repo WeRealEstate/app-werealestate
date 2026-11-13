@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.1.7', fecha: '2026-11-13', cambios: [
+    "Estado de cuenta (PDF): ampliadas las columnas de «Estado» y «Fecha del pago» para que «Pagado con retraso» y las fechas no se partan en varios renglones.",
+  ] },
   { version: '12.1.6', fecha: '2026-11-13', cambios: [
     "Estado de cuenta (PDF): el nombre del cliente en la portada vuelve a mostrarse en negritas.",
   ] },
