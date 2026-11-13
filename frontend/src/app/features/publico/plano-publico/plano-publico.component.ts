@@ -94,7 +94,11 @@ export class PlanoPublicoComponent implements OnDestroy {
   private contenedorPlano?: ElementRef<HTMLElement>;
   @ViewChild('contenedorPlano')
   private set contenedorPlanoRef(ref: ElementRef<HTMLElement> | undefined) {
+    // Angular vuelve a llamar este setter con el mismo elemento cada vez que se monta o quita una vista dentro del
+    // componente (p. ej. la ficha de un lote): solo cuenta si el contenedor es realmente otro, o se perdía el zoom.
+    const cambio = this.contenedorPlano !== ref;
     this.contenedorPlano = ref;
+    if (!cambio) return;
     // Si la imagen ya había terminado de cargar (precargada por index.html o en caché) antes de que Angular
     // enlazara el ViewChild del contenedor, aquí se calcula el zoom y el centrado de inmediato.
     if (ref?.nativeElement && this.naturalWidth > 0) {
