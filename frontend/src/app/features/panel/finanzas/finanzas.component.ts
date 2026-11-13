@@ -537,19 +537,25 @@ export class FinanzasComponent {
   async alternarCancelada(c: Comision): Promise<void> {
     const cancelar = !c.cancelada;
     const confirmado = await this.confirmService.confirm({
-      titulo: cancelar ? 'Cancelar comisión' : 'Reactivar comisión',
+      titulo: cancelar ? 'Cancelar y eliminar comisión' : 'Reactivar comisión',
       mensaje: cancelar
-        ? `La comisión de ${c.cliente} dejará de generarse y su saldo pendiente no podrá pagarse; tampoco contará en Vencidas ni en los pagos del sábado. Puede reactivarse en cualquier momento.`
+        ? `La comisión de ${c.cliente} se eliminará permanentemente de la base de datos y no podrá reactivarse.`
         : `La comisión de ${c.cliente} volverá a generarse con los pagos del cliente y su saldo podrá pagarse.`,
-      textoConfirmar: cancelar ? 'Cancelar comisión' : 'Reactivar',
+      textoConfirmar: cancelar ? 'Eliminar comisión' : 'Reactivar',
       peligroso: cancelar,
     });
     if (!confirmado) return;
     try {
-      const actualizado = cancelar
-        ? await this.finanzasService.cancelarComision(c.id)
-        : await this.finanzasService.reactivarComision(c.id);
-      if (this.expandidaId() === c.id) this.detalle.set(actualizado);
+      if (cancelar) {
+        await this.finanzasService.cancelarComision(c.id);
+        if (this.expandidaId() === c.id) {
+          this.expandidaId.set(null);
+          this.detalle.set(null);
+        }
+      } else {
+        const actualizado = await this.finanzasService.reactivarComision(c.id);
+        if (this.expandidaId() === c.id) this.detalle.set(actualizado);
+      }
       await this.refrescar();
     } catch (error) {
       this.toast.error(mensajeDe(error, 'No se pudo cambiar la comisión.'));

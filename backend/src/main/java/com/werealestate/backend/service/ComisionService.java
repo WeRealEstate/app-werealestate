@@ -175,6 +175,9 @@ public class ComisionService {
     private void sincronizarPrincipal(Venta venta, boolean ventaNueva, BigDecimal porcentaje) {
         VentaComision comision = comisionRepository.findByVentaIdAndSecundariaFalse(venta.getId()).orElse(null);
         if (comision == null) {
+            if (venta.isSinComision()) {
+                return;
+            }
             comision = crearComision(venta, venta.getUsuarioAsesor(), venta.getAsesorExterno(), porcentaje);
             if (ventaNueva) comision.marcarReglaNueva();
             comision = comisionRepository.save(comision);
@@ -237,7 +240,7 @@ public class ComisionService {
     public void generarFaltantes() {
         try {
             for (Venta venta : ventaRepository.findAll()) {
-                if (!comisionRepository.existsByVentaIdAndSecundariaFalse(venta.getId())) {
+                if (!venta.isSinComision() && !comisionRepository.existsByVentaIdAndSecundariaFalse(venta.getId())) {
                     sincronizar(venta);
                 }
             }
@@ -526,11 +529,22 @@ public class ComisionService {
         return new MontoYPorcentaje(porcentajeDe(comision.getBase(), porcentaje), porcentaje);
     }
 
-    public ComisionDetalleDto cancelar(Long id) {
+    public void cancelar(Long id) {
         exigirAdminOLider();
         VentaComision comision = obtenerEntidad(id);
-        comision.setCancelada(true);
-        return detalle(comision);
+        if (entregaRepository.existsByComisionId(id) || devolucionRepository.existsByComisionId(id)) {
+            throw new ConflictException(
+                    "No se puede cancelar ni eliminar una comisión que ya tiene pagos o devoluciones registrados");
+        }
+        Venta venta = comision.getVenta();
+        if (venta != null && !comision.isSecundaria()) {
+            venta.setSinComision(true);
+            ventaRepository.save(venta);
+        }
+        devengoRepository.deleteByComisionId(id);
+        devengoRepository.flush();
+        comisionRepository.delete(comision);
+        comisionRepository.flush();
     }
 
     public ComisionDetalleDto reactivar(Long id) {

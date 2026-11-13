@@ -12,6 +12,8 @@ public interface VentaComisionDevolucionRepository extends JpaRepository<VentaCo
 
     List<VentaComisionDevolucion> findByComisionIdOrderByFechaAscIdAsc(Long comisionId);
 
+    boolean existsByComisionId(Long comisionId);
+
     @Query("select coalesce(sum(d.monto), 0) from VentaComisionDevolucion d where d.fecha between :desde and :hasta")
     BigDecimal sumarEntre(@Param("desde") LocalDate desde, @Param("hasta") LocalDate hasta);
 }

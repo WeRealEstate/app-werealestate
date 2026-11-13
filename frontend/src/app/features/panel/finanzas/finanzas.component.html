@@ -312,7 +312,13 @@
                   </tr>
                   @for (i of g.items; track i.comision.id) {
                     <tr>
-                      <td class="py-3 pl-6 pr-3 text-ink-muted">{{ i.comision.ventaNumero ?? '—' }}</td>
+                      <td class="py-3 pl-6 pr-3 text-ink-muted">
+                        @if (i.comision.ventaId !== null && i.comision.ventaNumero !== null) {
+                          <a [routerLink]="['/panel/ventas', i.comision.ventaNumero]" class="text-we-primary hover:underline">{{ i.comision.ventaNumero }}</a>
+                        } @else {
+                          {{ i.comision.ventaNumero ?? '—' }}
+                        }
+                      </td>
                       <td class="px-3 py-3 font-medium text-ink">
                         {{ i.comision.cliente }}
                         @if (i.comision.retrasada) {

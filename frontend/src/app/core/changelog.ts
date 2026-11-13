@@ -15,6 +15,12 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.1.1', fecha: '2026-11-13', cambios: [
+    "Tabla de amortización (pantalla y PDF): «Fecha» ahora es «Día de pago» y «Mensualidad» es «Pago correspondiente»; junto a «Monto pagado» hay dos columnas nuevas, «Fecha del pago» y «Folio», con cada abono alineado en su renglón. En celular la tabla se desliza de lado y se ven todas las columnas.",
+  ] },
+  { version: '12.1.0', fecha: '2026-11-13', cambios: [
+    "Comisiones: al cancelar una comisión sin pagos ni devoluciones se elimina permanentemente de la base de datos en lugar de quedar oculta/inactiva; además, el número de venta (S-XX) en Pagos del sábado ahora enlaza directo al detalle de la venta.",
+  ] },
   { version: '12.0.2', fecha: '2026-11-13', cambios: [
     "Tabla de amortización: el plan de pagos ya no arranca antes del mes de la venta (por ejemplo, si se corrigió la fecha de venta después de reestructurar); si algún recibo ya marcó esos meses, se queda como estaba.",
   ] },

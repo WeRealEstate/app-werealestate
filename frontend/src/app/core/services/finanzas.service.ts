@@ -49,8 +49,8 @@ export class FinanzasService {
     return firstValueFrom(this.http.put<ComisionDetalle>(`${this.baseUrl}/${id}`, cambio));
   }
 
-  cancelarComision(id: number): Promise<ComisionDetalle> {
-    return firstValueFrom(this.http.post<ComisionDetalle>(`${this.baseUrl}/${id}/cancelar`, {}));
+  cancelarComision(id: number): Promise<void> {
+    return firstValueFrom(this.http.post<void>(`${this.baseUrl}/${id}/cancelar`, {}));
   }
 
   reactivarComision(id: number): Promise<ComisionDetalle> {

@@ -271,6 +271,18 @@ public class Venta {
         this.numeroContrato = numeroContrato;
     }
 
+    /** Si es true, la comisión principal fue cancelada/eliminada y no debe regenerarse automáticamente (ver V83). */
+    @jakarta.persistence.Column(name = "sin_comision", nullable = false)
+    private boolean sinComision = false;
+
+    public boolean isSinComision() {
+        return sinComision;
+    }
+
+    public void setSinComision(boolean sinComision) {
+        this.sinComision = sinComision;
+    }
+
     public void registrarContrato(boolean firmado, LocalDate fechaFirma, MedioFirma medio, String driveUrl) {
         this.contratoFirmado = firmado;
         this.contratoFechaFirma = firmado ? fechaFirma : null;

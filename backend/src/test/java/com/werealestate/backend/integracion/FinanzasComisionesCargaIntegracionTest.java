@@ -139,10 +139,11 @@ class FinanzasComisionesCargaIntegracionTest extends PruebaDeIntegracion {
                 revisadas++;
             }
         }
-        assertTrue(revisadas >= casos().size(), "cada venta de prueba tiene su comisión");
-        ComisionDto cancelada = listado.stream()
-                .filter(d -> conComisionCancelada.id().equals(d.ventaId())).findFirst().orElseThrow();
-        assertTrue(cancelada.cancelada());
+        assertTrue(revisadas >= casos().size() - 1, "cada venta activa tiene su comisión");
+        assertTrue(listado.stream().noneMatch(d -> conComisionCancelada.id().equals(d.ventaId())),
+                "la comisión cancelada fue eliminada permanentemente");
+        assertTrue(ventas.findById(conComisionCancelada.id()).orElseThrow().isSinComision(),
+                "la venta queda marcada sin comisión para no regenerarla");
         assertFalse(listado.isEmpty());
     }
 

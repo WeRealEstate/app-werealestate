@@ -14,6 +14,7 @@ import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -67,8 +68,9 @@ public class ComisionController {
     }
 
     @PostMapping("/{id}/cancelar")
-    public ComisionDetalleDto cancelar(@PathVariable Long id) {
-        return comisionService.cancelar(id);
+    public ResponseEntity<Void> cancelar(@PathVariable Long id) {
+        comisionService.cancelar(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/reactivar")
