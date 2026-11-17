@@ -12,6 +12,7 @@ import com.werealestate.backend.dto.PagoVentaDto;
 import com.werealestate.backend.dto.ReciboAnularRequest;
 import com.werealestate.backend.dto.ReciboEditarRequest;
 import com.werealestate.backend.dto.ReciboHistorialDto;
+import com.werealestate.backend.dto.BienvenidaClienteDto;
 import com.werealestate.backend.dto.RecordatorioPagoDto;
 import com.werealestate.backend.dto.VentaCreateRequest;
 import com.werealestate.backend.dto.VentaEliminarRequest;
@@ -26,6 +27,7 @@ import com.werealestate.backend.service.ReciboVentaService;
 import com.werealestate.backend.service.ReestructuracionVentaService;
 import com.werealestate.backend.service.EstadoCuentaService;
 import com.werealestate.backend.service.PausaMensualidadService;
+import com.werealestate.backend.service.BienvenidaClienteService;
 import com.werealestate.backend.service.RecordatorioPagoService;
 import com.werealestate.backend.service.VentaService;
 import jakarta.validation.Valid;
@@ -52,11 +54,13 @@ public class VentaController {
     private final EstadoCuentaService estadoCuentaService;
     private final PausaMensualidadService pausaService;
     private final RecordatorioPagoService recordatorioPagoService;
+    private final BienvenidaClienteService bienvenidaService;
 
     public VentaController(VentaService ventaService, ReciboVentaService reciboVentaService,
             ContratoVentaService contratoVentaService, NumeracionVentaService numeracionVentaService,
             ReestructuracionVentaService reestructuracionVentaService, EstadoCuentaService estadoCuentaService,
-            PausaMensualidadService pausaService, RecordatorioPagoService recordatorioPagoService) {
+            PausaMensualidadService pausaService, RecordatorioPagoService recordatorioPagoService,
+            BienvenidaClienteService bienvenidaService) {
         this.ventaService = ventaService;
         this.reciboVentaService = reciboVentaService;
         this.contratoVentaService = contratoVentaService;
@@ -65,6 +69,19 @@ public class VentaController {
         this.estadoCuentaService = estadoCuentaService;
         this.pausaService = pausaService;
         this.recordatorioPagoService = recordatorioPagoService;
+        this.bienvenidaService = bienvenidaService;
+    }
+
+    /** Estado del botón "Enviar correo de bienvenida": si aplica, si se puede y la última enviada. */
+    @GetMapping("/{id}/bienvenida")
+    public BienvenidaClienteDto bienvenida(@PathVariable Long id) {
+        return bienvenidaService.consultar(id);
+    }
+
+    /** Manda ahora el correo de bienvenida al cliente titular (síncrono) y lo registra. */
+    @PostMapping("/{id}/bienvenida")
+    public BienvenidaClienteDto enviarBienvenida(@PathVariable Long id) {
+        return bienvenidaService.enviar(id);
     }
 
     /** Estado del botón "Enviar recordatorio de pago": si se puede, el pago que se recordaría y el último enviado. */

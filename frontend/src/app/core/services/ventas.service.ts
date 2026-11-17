@@ -6,6 +6,7 @@ import { Amortizacion } from '../models/amortizacion.model';
 import { Pagina } from '../models/pagina.model';
 import {
   PagoVenta,
+  BienvenidaCliente,
   RecordatorioPago,
   MedioFirma,
   AplicarDepositoRequest,
@@ -82,6 +83,16 @@ export class VentasService {
   /** Tabla de amortización de la venta con su estado de cuenta a hoy. */
   amortizacion(id: number): Promise<Amortizacion> {
     return firstValueFrom(this.http.get<Amortizacion>(`${this.baseUrl}/${id}/amortizacion`));
+  }
+
+  /** Estado del botón "Enviar correo de bienvenida": si aplica, si se puede y la última enviada. */
+  bienvenida(id: number): Promise<BienvenidaCliente> {
+    return firstValueFrom(this.http.get<BienvenidaCliente>(`${this.baseUrl}/${id}/bienvenida`));
+  }
+
+  /** Manda ahora la bienvenida al correo del cliente titular y devuelve el estado ya actualizado. */
+  enviarBienvenida(id: number): Promise<BienvenidaCliente> {
+    return firstValueFrom(this.http.post<BienvenidaCliente>(`${this.baseUrl}/${id}/bienvenida`, {}));
   }
 
   /** Estado del botón "Enviar recordatorio de pago": si se puede, el pago que se recordaría y el último enviado. */

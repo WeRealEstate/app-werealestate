@@ -310,3 +310,16 @@ export interface RecordatorioPago {
   /** El último recordatorio enviado con éxito; null si nunca se ha enviado. */
   ultimo: { enviadoEn: string; usuario: string | null; correo: string } | null;
 }
+
+/** Estado del botón "Enviar correo de bienvenida" del detalle de la venta (GET /api/ventas/{id}/bienvenida). */
+export interface BienvenidaCliente {
+  /** false si el desarrollo de la venta no tiene plantilla: el botón no se muestra. */
+  disponible: boolean;
+  puedeEnviar: boolean;
+  /** Por qué no se puede enviar (null si se puede). */
+  motivoNoDisponible: string | null;
+  /** Correo del cliente titular (null si no tiene). */
+  correoDestino: string | null;
+  /** La última bienvenida enviada con éxito; null si nunca se ha enviado. */
+  ultimo: { enviadoEn: string; usuario: string | null; correo: string } | null;
+}

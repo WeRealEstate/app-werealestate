@@ -466,6 +466,32 @@
 
     <!-- CONTRATO -->
     <app-contrato-venta [venta]="v" (guardado)="cargar()" />
+    @if (bienvenida(); as b) {
+      @if (b.disponible) {
+        <div class="mt-2 flex flex-wrap items-center justify-end gap-x-4 gap-y-2" data-testid="bienvenida-cliente">
+          @if (b.ultimo; as u) {
+            <p class="text-xs text-ink-muted" data-testid="ultima-bienvenida">
+              Bienvenida enviada el {{ fechaHora(u.enviadoEn) }}@if (u.usuario) { por {{ u.usuario }}}
+            </p>
+          }
+          <button
+            type="button"
+            (click)="enviarBienvenida()"
+            [disabled]="!b.puedeEnviar || enviandoBienvenida()"
+            [attr.title]="b.puedeEnviar ? null : b.motivoNoDisponible"
+            class="boton-secundario inline-flex min-h-[44px] items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-semibold text-ink
+                   active:scale-[0.97] transition duration-150 disabled:opacity-60"
+            data-testid="enviar-bienvenida"
+          >
+            <svg lucideMail [size]="15" aria-hidden="true"></svg>
+            {{ enviandoBienvenida() ? 'Enviando…' : b.ultimo ? 'Reenviar correo de bienvenida' : 'Enviar correo de bienvenida' }}
+          </button>
+          @if (!b.puedeEnviar && b.motivoNoDisponible) {
+            <p class="w-full text-right text-xs text-ink-muted" data-testid="motivo-bienvenida">{{ b.motivoNoDisponible }}</p>
+          }
+        </div>
+      }
+    }
 
     <!-- REGISTRAR ABONO -->
     <div class="mt-6 rounded-2xl border border-border bg-surface p-5">

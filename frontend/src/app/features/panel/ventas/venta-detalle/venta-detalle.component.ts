@@ -17,7 +17,7 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { VentasService } from '../../../../core/services/ventas.service';
 import { UsuariosService } from '../../../../core/services/usuarios.service';
 import { AsesoresExternosService } from '../../../../core/services/asesores-externos.service';
-import { MODALIDAD_PAGO_LABELS, ModalidadPago, PagoVenta, ReciboHistorial, RecordatorioPago, Venta } from '../../../../core/models/venta.model';
+import { BienvenidaCliente, MODALIDAD_PAGO_LABELS, ModalidadPago, PagoVenta, ReciboHistorial, RecordatorioPago, Venta } from '../../../../core/models/venta.model';
 import { ReciboFormComponent } from '../../../../shared/recibo-form/recibo-form.component';
 import { ContratoVentaComponent } from '../../../../shared/contrato-venta/contrato-venta.component';
 import { RecibosVentaComponent } from '../../../../shared/recibos-venta/recibos-venta.component';
@@ -62,6 +62,9 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
   /** Estado del recordatorio de pago por correo (solo admin y administración; null si no se pudo consultar). */
   readonly recordatorio = signal<RecordatorioPago | null>(null);
   readonly enviandoRecordatorio = signal(false);
+  /** Estado del correo de bienvenida (solo admin y administración; null si no se pudo consultar). */
+  readonly bienvenida = signal<BienvenidaCliente | null>(null);
+  readonly enviandoBienvenida = signal(false);
   readonly cuentaAtraso = cuentaAtraso;
   readonly fechaCorta = fechaCorta;
   readonly isLoading = signal(true);
@@ -193,17 +196,19 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
           ? await this.ventasService.obtenerPorNumero(this.numeroEnUrl)
           : await this.ventasService.obtener(this.ventaId);
       this.ventaId = venta.id;
-      const [pagos, historial, amortizacion, recordatorio] = await Promise.all([
+      const [pagos, historial, amortizacion, recordatorio, bienvenida] = await Promise.all([
         this.ventasService.listarPagos(venta.id),
         this.ventasService.historialRecibos(venta.id),
         this.ventasService.amortizacion(venta.id).catch(() => null),
         this.puedeEliminar() ? this.ventasService.recordatorioPago(venta.id).catch(() => null) : Promise.resolve(null),
+        this.puedeEliminar() ? this.ventasService.bienvenida(venta.id).catch(() => null) : Promise.resolve(null),
       ]);
       this.venta.set(venta);
       this.pagos.set(pagos);
       this.historialRecibos.set(historial);
       this.amortizacion.set(amortizacion);
       this.recordatorio.set(recordatorio);
+      this.bienvenida.set(bienvenida);
       this.sincronizarDireccion(venta.etiqueta);
     } catch {
       this.errorMessage.set('No se pudo cargar la venta.');
@@ -246,6 +251,35 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
       );
     } finally {
       this.enviandoRecordatorio.set(false);
+    }
+  }
+
+  /** Pide confirmación (a qué correo va; avisa si ya se envió antes), manda la bienvenida y refresca el estado. */
+  async enviarBienvenida(): Promise<void> {
+    const b = this.bienvenida();
+    const v = this.venta();
+    if (!b || !v || !b.puedeEnviar || this.enviandoBienvenida()) return;
+    const yaEnviada = b.ultimo
+      ? ` Ya se envió antes el ${this.fechaHora(b.ultimo.enviadoEn)}${b.ultimo.usuario ? ` (por ${b.ultimo.usuario})` : ''}.`
+      : '';
+    const confirmado = await this.confirmService.confirm({
+      titulo: b.ultimo ? 'Reenviar correo de bienvenida' : 'Enviar correo de bienvenida',
+      mensaje: `Se enviará el correo de bienvenida de SAMAI Campestre a ${b.correoDestino}.${yaEnviada}`,
+      textoConfirmar: b.ultimo ? 'Reenviar' : 'Enviar',
+    });
+    if (!confirmado) return;
+    this.enviandoBienvenida.set(true);
+    try {
+      this.bienvenida.set(await this.ventasService.enviarBienvenida(v.id));
+      this.toast.success(`Correo de bienvenida enviado a ${b.correoDestino}.`);
+    } catch (error) {
+      this.toast.error(
+        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+          ? error.error.message
+          : 'No se pudo enviar el correo de bienvenida.',
+      );
+    } finally {
+      this.enviandoBienvenida.set(false);
     }
   }
 

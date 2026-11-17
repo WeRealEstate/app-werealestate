@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.4.0', fecha: '2026-11-17', cambios: [
+    "Detalle de la venta: nuevo botón «Enviar correo de bienvenida» junto al contrato (solo Administración y Admin). Manda al cliente titular el correo de bienvenida de SAMAI Campestre cuando el contrato ya está firmado y el cliente tiene correo; pide confirmación mostrando a qué correo va, queda registrado («Bienvenida enviada el … por …») y se puede reenviar. Por ahora es manual; Aldea Nanuu aún no tiene su correo.",
+  ] },
   { version: '12.3.2', fecha: '2026-11-17', cambios: [
     "Recordatorio de pago: las ventas de SAMAI Campestre ahora mandan el correo con el diseño propio (banner de SAMAI, saludo, día y monto del próximo pago con su número de mensualidad, recuadro rojo de atraso solo para quien debe, y datos de la compra). Aldea Nanuu sigue con el correo genérico hasta tener su diseño.",
   ] },
