@@ -36,7 +36,7 @@
             <th class="px-4 py-3">Rol</th>
             <th class="px-4 py-3">Módulos</th>
             <th class="px-4 py-3">PIN</th>
-            <th class="px-4 py-3">Nómina</th>
+            
             <th class="px-4 py-3">Estado</th>
             <th class="px-4 py-3"></th>
           </tr>
@@ -109,21 +109,6 @@
                 } @else {
                   <span class="text-ink-muted">—</span>
                 }
-              </td>
-              <td class="px-4 py-3">
-                <button
-                  type="button"
-                  [disabled]="savingId() === u.id"
-                  (click)="abrirNomina(u)"
-                  [attr.aria-label]="'Editar nómina de ' + u.nombre"
-                  class="rounded-lg border px-3 py-1.5 text-xs font-medium hover:border-we-primary active:scale-[0.97] transition-transform duration-150 disabled:opacity-60"
-                  [class.border-border]="!u.nominaSemanal"
-                  [class.text-ink-muted]="!u.nominaSemanal"
-                  [class.border-we-primary/40]="u.nominaSemanal"
-                  [class.text-ink]="u.nominaSemanal"
-                >
-                  {{ resumenNomina(u) }}
-                </button>
               </td>
               <td class="px-4 py-3">
                 <button

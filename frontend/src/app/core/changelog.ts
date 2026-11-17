@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.2.2', fecha: '2026-11-13', cambios: [
+    "Se oculta apartado de nomina",
+    ] },
   { version: '12.2.1', fecha: '2026-11-13', cambios: [
     "Promociones de bono por lotes: nuevo campo opcional «Bono / descuento por 1 lote» (p. ej. $10,000). Si se llena, la promoción también aplica a un solo lote en el Cotizador, al mismo plazo fijo sin enganche y sin aportaciones; vacío, sigue aplicando solo desde 2 lotes.",
     "Promociones: al editar una promoción de bono, el selector de plazo fijo ya muestra el plazo guardado (antes aparecía «12 meses» aunque la promoción tuviera 60).",
