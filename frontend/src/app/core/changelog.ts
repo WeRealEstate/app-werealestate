@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.3.2', fecha: '2026-11-17', cambios: [
+    "Recordatorio de pago: las ventas de SAMAI Campestre ahora mandan el correo con el diseño propio (banner de SAMAI, saludo, día y monto del próximo pago con su número de mensualidad, recuadro rojo de atraso solo para quien debe, y datos de la compra). Aldea Nanuu sigue con el correo genérico hasta tener su diseño.",
+  ] },
   { version: '12.3.1', fecha: '2026-11-17', cambios: [
     "Plano: el PDF que se descarga del plano (público e interno) ahora se arma en el servidor con el PDF original del plano, que es vectorial: se ve nítido a cualquier zoom (delimitaciones y medidas de cada terreno) y se puede acercar con los dedos en el celular. Encima van los lotes con el color de su estado, el encabezado y la leyenda, igual que antes. IMPORTANTE: los planos que se subieron antes de este cambio no tienen guardado el PDF original, así que hay que volver a subir el plano en PDF una vez (Plano → subir); mientras tanto la descarga sigue funcionando como antes, con la imagen.",
   ] },

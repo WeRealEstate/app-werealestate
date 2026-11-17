@@ -171,6 +171,12 @@ public class RecordatorioPagoService {
             helper.setTo(p.correo());
             helper.setSubject(RecordatorioPagoCorreo.asunto(p.contenido()));
             helper.setText(RecordatorioPagoCorreo.texto(p.contenido()), RecordatorioPagoCorreo.html(p.contenido()));
+            // El banner va dentro del correo (cid:), sin depender de un servidor de imágenes (Mailchimp, etc.).
+            String banner = RecordatorioPagoCorreo.banner(p.contenido());
+            if (banner != null) {
+                helper.addInline(RecordatorioPagoCorreo.CID_BANNER,
+                        new org.springframework.core.io.ClassPathResource(banner), "image/jpeg");
+            }
             sender.send(mensaje);
         } catch (Exception e) {
             log.warn("No se pudo enviar el recordatorio de pago de la venta {}: {}", p.venta().getEtiqueta(), e.toString());
