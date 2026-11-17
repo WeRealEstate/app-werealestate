@@ -252,14 +252,20 @@ public class LoteConsultaService {
                 .toList();
     }
 
+    /** Nombre del desarrollo de un "proyecto" público (samai / nanuu); 404 si no es uno válido. */
+    static String nombreDesarrolloDeProyecto(String proyecto) {
+        String nombre = DESARROLLO_POR_PROYECTO.get(proyecto == null ? "" : proyecto.trim().toLowerCase());
+        if (nombre == null) {
+            throw new ResourceNotFoundException("Proyecto no válido");
+        }
+        return nombre;
+    }
+
     /** Todos los lotes de un desarrollo (cualquier estado) para los planos públicos y el cotizador: a
      * diferencia de {@link #listarDisponibles}, aquí también se muestran los apartados para que el
      * visitante vea la disponibilidad real, aunque solo pueda actuar sobre los disponibles. */
     public List<LoteDto> listarPublicoPorProyecto(String proyecto) {
-        String nombreDesarrollo = DESARROLLO_POR_PROYECTO.get(proyecto == null ? "" : proyecto.trim().toLowerCase());
-        if (nombreDesarrollo == null) {
-            throw new ResourceNotFoundException("Proyecto no válido");
-        }
+        String nombreDesarrollo = nombreDesarrolloDeProyecto(proyecto);
         Desarrollo desarrollo = desarrolloRepository
                 .findByNombre(nombreDesarrollo)
                 .orElseThrow(() -> new ResourceNotFoundException("Desarrollo no encontrado"));

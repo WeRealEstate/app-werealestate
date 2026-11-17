@@ -32,22 +32,6 @@ export function medidasDeJpeg(bytes: Uint8Array): { ancho: number; alto: number 
   return null;
 }
 
-/** Descarga la copia ligera del plano para el PDF (`urlCopia`, ver urlCopiaParaPdf) y, si no existe todavía (el
- * servidor aún no la genera) o falla, cae al plano HD. */
-export async function leerImagenParaPdfConCopia(
-  urlHd: string,
-  urlCopia: string,
-): Promise<{ bytes: Uint8Array; ancho: number; alto: number }> {
-  if (urlCopia !== urlHd) {
-    try {
-      return await leerImagenParaPdf(urlCopia);
-    } catch {
-      // sin copia ligera: se usa el HD
-    }
-  }
-  return leerImagenParaPdf(urlHd);
-}
-
 /** Descarga la imagen del plano para incrustarla en el PDF TAL CUAL (los polígonos se dibujan aparte,
  * como vectores): así el PDF conserva toda la resolución del archivo original, sin reducirla ni
  * volver a comprimirla. Las imágenes que no son JPEG (PNG/WEBP) se convierten a JPEG de calidad 0.92

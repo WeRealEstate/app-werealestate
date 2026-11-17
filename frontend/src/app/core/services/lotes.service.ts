@@ -1,4 +1,4 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -244,5 +244,26 @@ export class LotesService {
     return firstValueFrom(
       this.http.post<{ limpiados: number }>(`${this.baseUrl}/mapa/limpiar`, { desarrolloId, password }),
     );
+  }
+
+  /** PDF vectorial del plano, armado en el servidor con el PDF original que se subió (se ve nítido a cualquier zoom).
+   * null si ese desarrollo no tiene el original guardado (404: se subió como imagen o antes de guardarlo): el que llama
+   * arma el PDF con la imagen, como siempre. Plano interno: con sesión y módulo PLANO. */
+  descargarPlanoPdf(desarrolloId: number): Promise<Blob | null> {
+    return this.pedirPdf(`${environment.apiUrl}/plano/${desarrolloId}/pdf`);
+  }
+
+  /** Igual, para el plano público: el PIN del asesor va en la cabecera, nunca en la URL. */
+  descargarPlanoPdfPublico(proyecto: string, pin: string): Promise<Blob | null> {
+    return this.pedirPdf(`${environment.apiUrl}/plano-publico/${proyecto}/pdf`, new HttpHeaders({ 'X-Asesor-Pin': pin }));
+  }
+
+  private async pedirPdf(url: string, headers?: HttpHeaders): Promise<Blob | null> {
+    try {
+      return await firstValueFrom(this.http.get(url, { headers, responseType: 'blob' }));
+    } catch (error) {
+      if (error instanceof HttpErrorResponse && error.status === 404) return null;
+      throw error;
+    }
   }
 }

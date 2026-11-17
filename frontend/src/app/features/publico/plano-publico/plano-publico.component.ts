@@ -18,7 +18,8 @@ import {
 import { LotesService } from '../../../core/services/lotes.service';
 import { colorDeBarra, fondoDePagina } from '../../../core/utils/pagina';
 import { DetectorDeRueda } from '../../../core/utils/rueda';
-import { leerImagenParaPdfConCopia } from '../../../core/utils/imagen-pdf';
+import { descargarBlob } from '../../../core/utils/descargar-blob';
+import { leerImagenParaPdf } from '../../../core/utils/imagen-pdf';
 import { ToastService } from '../../../core/services/toast.service';
 import { WeFormsPublicoService } from '../../../core/services/we-forms-publico.service';
 import {
@@ -29,7 +30,6 @@ import {
   limitar,
   puntosSvg,
   tienePoligono,
-  urlCopiaParaPdf,
   urlVistaRapida,
 } from '../../../core/utils/plano-vista';
 import { salirDePantallaCompleta } from '../../../core/utils/pantalla-completa';
@@ -544,9 +544,16 @@ export class PlanoPublicoComponent implements OnDestroy {
 
     this.generandoPdf.set(true);
     try {
+      // Primero el PDF vectorial del servidor (hecho con el PDF original del plano); sin él (404) se arma con la imagen.
+      const pin = this.weFormsPublico.pin();
+      const vectorial = pin ? await this.lotesService.descargarPlanoPdfPublico(this.proyecto, pin) : null;
+      if (vectorial) {
+        descargarBlob(vectorial, `Plano-${this.desarrolloNombre().trim().replace(/\s+/g, '-')}.pdf`);
+        return;
+      }
       const [{ PdfService }, imagen] = await Promise.all([
         import('../../../core/services/pdf-cotizacion.service'),
-        leerImagenParaPdfConCopia(url, urlCopiaParaPdf(url)),
+        leerImagenParaPdf(url),
       ]);
       await this.injector.get(PdfService).downloadPlanoPdf({
         desarrolloNombre: this.desarrolloNombre(),

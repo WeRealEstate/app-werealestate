@@ -16,7 +16,7 @@ export interface EntradaVersion {
 
 export const CHANGELOG: EntradaVersion[] = [
   { version: '12.3.1', fecha: '2026-11-17', cambios: [
-    "Plano: el PDF del plano (público e interno) ya se puede acercar con los dedos en el celular. Antes el archivo llevaba una imagen de 150 megapíxeles que los visores del celular no soportan y el zoom regresaba al tamaño original; ahora usa una copia ligera del plano (lado largo máximo de 6000 px) que el servidor genera al subir el plano y al arrancar. Los lotes siguen dibujados como vectores y el archivo pesa mucho menos.",
+    "Plano: el PDF que se descarga del plano (público e interno) ahora se arma en el servidor con el PDF original del plano, que es vectorial: se ve nítido a cualquier zoom (delimitaciones y medidas de cada terreno) y se puede acercar con los dedos en el celular. Encima van los lotes con el color de su estado, el encabezado y la leyenda, igual que antes. IMPORTANTE: los planos que se subieron antes de este cambio no tienen guardado el PDF original, así que hay que volver a subir el plano en PDF una vez (Plano → subir); mientras tanto la descarga sigue funcionando como antes, con la imagen.",
   ] },
   { version: '12.3.0', fecha: '2026-11-17', cambios: [
     "Ventas: nuevo botón «Enviar recordatorio de pago» en el detalle de la venta (solo Administración y Admin). Manda un correo formal al cliente titular con su próximo pago (fecha, monto y concepto), el atraso si lo hay y los datos de su compra; pide confirmación antes de enviar, queda registrado y el detalle muestra la fecha y quién envió el último recordatorio. Si el cliente no tiene correo o no hay pagos pendientes, el botón aparece desactivado con el motivo.",

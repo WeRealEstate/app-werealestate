@@ -37,6 +37,8 @@ public class ModuloAccesoInterceptor implements HandlerInterceptor {
         MODULOS_POR_PREFIJO.put("/api/columnas", EnumSet.of(Modulo.PIPELINE));
         MODULOS_POR_PREFIJO.put("/api/cotizaciones", EnumSet.of(Modulo.COTIZADOR));
         MODULOS_POR_PREFIJO.put("/api/lotes", EnumSet.of(Modulo.LOTES, Modulo.PLANO, Modulo.VENTAS, Modulo.COTIZADOR));
+        // PDF vectorial del plano interno. El del plano público vive en /api/plano-publico, con PIN.
+        MODULOS_POR_PREFIJO.put("/api/plano", EnumSet.of(Modulo.PLANO));
         MODULOS_POR_PREFIJO.put("/api/ventas", EnumSet.of(Modulo.VENTAS));
         MODULOS_POR_PREFIJO.put("/api/score", EnumSet.of(Modulo.SCORE));
         // Más específico primero: el selector de cliente de la venta también lo usa Ventas.

@@ -32,7 +32,8 @@ import { ApartarVariosModalComponent } from '../../../shared/apartar-varios-moda
 import { LoteCambioEstadoModalComponent } from '../../../shared/lote-cambio-estado-modal/lote-cambio-estado-modal.component';
 import { LoteInfoModalComponent } from '../../../shared/lote-info-modal/lote-info-modal.component';
 import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
-import { leerImagenParaPdfConCopia } from '../../../core/utils/imagen-pdf';
+import { descargarBlob } from '../../../core/utils/descargar-blob';
+import { leerImagenParaPdf } from '../../../core/utils/imagen-pdf';
 import {
   acotarAlBorde,
   alternarLoteEnSeleccion,
@@ -43,7 +44,6 @@ import {
   puntoEnImagen,
   puntosSvg,
   tienePoligono,
-  urlCopiaParaPdf,
   urlVistaRapida,
 } from '../../../core/utils/plano-vista';
 import {
@@ -772,7 +772,13 @@ export class PlanoComponent implements OnDestroy {
 
     this.generandoPdf.set(true);
     try {
-      const imagen = await leerImagenParaPdfConCopia(planoActual.planoUrl, urlCopiaParaPdf(planoActual.planoUrl));
+      // Primero el PDF vectorial del servidor (hecho con el PDF original del plano); sin él (404) se arma con la imagen.
+      const vectorial = await this.lotesService.descargarPlanoPdf(planoActual.desarrolloId);
+      if (vectorial) {
+        descargarBlob(vectorial, `Plano-${planoActual.desarrolloNombre.trim().replace(/\s+/g, '-')}.pdf`);
+        return;
+      }
+      const imagen = await leerImagenParaPdf(planoActual.planoUrl);
       await this.pdfService.downloadPlanoPdf({
         desarrolloNombre: planoActual.desarrolloNombre,
         fecha: new Date().toLocaleDateString('es-MX'),

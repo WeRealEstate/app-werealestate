@@ -42,7 +42,7 @@ class DesarrolloServiceTest {
     void setUp() {
         desarrolloRepository = mock(DesarrolloRepository.class);
         currentUserProvider = mock(CurrentUserProvider.class);
-        service = new DesarrolloService(desarrolloRepository, currentUserProvider, tempDir.toString());
+        service = new DesarrolloService(desarrolloRepository, currentUserProvider, tempDir.toString(), tempDir.resolve("privados").toString());
 
         Usuario admin = new Usuario("Admin", "admin@test.com", "hash", Role.ADMIN, null);
         ReflectionTestUtils.setField(admin, "id", 1L);
@@ -109,73 +109,42 @@ class DesarrolloServiceTest {
         assertEquals(1600, preview.getHeight());
     }
 
-    private void escribirJpeg(Path destino, int ancho, int alto) throws Exception {
-        BufferedImage img = new BufferedImage(ancho, alto, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g = img.createGraphics();
-        g.setColor(Color.DARK_GRAY);
-        g.fillRect(0, 0, ancho, alto);
-        g.dispose();
-        ImageIO.write(img, "jpg", destino.toFile());
-    }
-
-    @Test
-    void alArrancarGeneraCopiaParaPdfConLadoLargoDe6000SinCambiarLaProporcion() throws Exception {
-        Path carpeta = tempDir.resolve("planos");
-        Files.createDirectories(carpeta);
-        escribirJpeg(carpeta.resolve("desarrollo-3.jpg"), 9000, 6001);
-
-        service.asegurarPreviewsYOptimizarPlanosExistentes();
-
-        BufferedImage copia = ImageIO.read(carpeta.resolve("desarrollo-3-pdf.jpg").toFile());
-        assertNotNull(copia);
-        assertEquals(6000, copia.getWidth());
-        assertEquals(4001, copia.getHeight());
-        assertEquals(9000d / 6001d, (double) copia.getWidth() / copia.getHeight(), 0.001);
-    }
-
-    @Test
-    void laCopiaParaPdfNoAgrandaUnPlanoChico() throws Exception {
-        Path carpeta = tempDir.resolve("planos");
-        Files.createDirectories(carpeta);
-        escribirJpeg(carpeta.resolve("desarrollo-4.jpg"), 3000, 2000);
-
-        service.asegurarPreviewsYOptimizarPlanosExistentes();
-
-        BufferedImage copia = ImageIO.read(carpeta.resolve("desarrollo-4-pdf.jpg").toFile());
-        assertEquals(3000, copia.getWidth());
-        assertEquals(2000, copia.getHeight());
-    }
-
-    @Test
-    void subirUnaImagenGeneraSuCopiaParaPdf() throws Exception {
-        Desarrollo d = mock(Desarrollo.class);
-        when(desarrolloRepository.findById(1L)).thenReturn(Optional.of(d));
-        Path origen = tempDir.resolve("origen.jpg");
-        escribirJpeg(origen, 7000, 3000);
-
-        service.actualizarPlano(1L, new MockMultipartFile("archivo", "plano.jpg", "image/jpeg", Files.readAllBytes(origen)));
-
-        BufferedImage copia = ImageIO.read(tempDir.resolve("planos/desarrollo-1-pdf.jpg").toFile());
-        assertEquals(6000, copia.getWidth());
-        assertEquals(2571, copia.getHeight());
-    }
-
-    @Test
-    void subirUnPdfTambienGeneraCopiaParaPdf() throws Exception {
-        Desarrollo d = mock(Desarrollo.class);
-        when(desarrolloRepository.findById(1L)).thenReturn(Optional.of(d));
-        byte[] pdfBytes;
+    private byte[] pdfDePrueba() throws Exception {
         try (PDDocument doc = new PDDocument();
                 ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             doc.addPage(new PDPage(new PDRectangle(360, 240)));
             doc.save(out);
-            pdfBytes = out.toByteArray();
+            return out.toByteArray();
         }
+    }
 
-        service.actualizarPlano(1L, new MockMultipartFile("archivo", "plano.pdf", "application/pdf", pdfBytes));
+    @Test
+    void alSubirUnPdfSeGuardaElOriginalEnLaCarpetaPrivadaTalCual() throws Exception {
+        Desarrollo d = mock(Desarrollo.class);
+        when(desarrolloRepository.findById(1L)).thenReturn(Optional.of(d));
+        byte[] pdf = pdfDePrueba();
 
-        BufferedImage copia = ImageIO.read(tempDir.resolve("planos/desarrollo-1-pdf.jpg").toFile());
-        assertNotNull(copia);
-        assertTrue(Math.max(copia.getWidth(), copia.getHeight()) <= 6000);
+        service.actualizarPlano(1L, new MockMultipartFile("archivo", "plano.pdf", "application/pdf", pdf));
+
+        Path original = tempDir.resolve("privados/planos/desarrollo-1-original.pdf");
+        assertTrue(Files.exists(original));
+        org.junit.jupiter.api.Assertions.assertArrayEquals(pdf, Files.readAllBytes(original));
+        // Nada del original en la carpeta pública.
+        assertTrue(!Files.exists(tempDir.resolve("planos/desarrollo-1-original.pdf")));
+    }
+
+    @Test
+    void alSubirUnaImagenSeBorraElOriginalAnterior() throws Exception {
+        Desarrollo d = mock(Desarrollo.class);
+        when(desarrolloRepository.findById(1L)).thenReturn(Optional.of(d));
+        service.actualizarPlano(1L, new MockMultipartFile("archivo", "plano.pdf", "application/pdf", pdfDePrueba()));
+        Path original = tempDir.resolve("privados/planos/desarrollo-1-original.pdf");
+        assertTrue(Files.exists(original));
+
+        ByteArrayOutputStream png = new ByteArrayOutputStream();
+        ImageIO.write(new BufferedImage(40, 30, BufferedImage.TYPE_INT_RGB), "png", png);
+        service.actualizarPlano(1L, new MockMultipartFile("archivo", "plano.png", "image/png", png.toByteArray()));
+
+        assertTrue(!Files.exists(original));
     }
 }
