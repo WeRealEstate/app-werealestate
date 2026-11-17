@@ -79,6 +79,11 @@ public class DesarrolloService {
      * (~450 KB en vez de ~19–26 MB) para que el visor y los polígonos aparezcan en <0.5 s mientras llega el HD. */
     private static final int LADO_PREVIEW = 2400;
     private static final float CALIDAD_JPEG_PREVIEW = 0.78f;
+    /** Copia ligera para el PDF del plano (`desarrollo-{id}-pdf.jpg`): el HD llega a 150 MP y los visores de PDF de los
+     * celulares no lo aguantan (al acercar con los dedos vuelven al tamaño original). 6000 px de lado largo dan ~900 DPI
+     * en una hoja A3 sin pasar de ~25 MP; si el plano es más chico no se agranda. */
+    private static final int LADO_PDF = 6000;
+    private static final float CALIDAD_JPEG_PDF = 0.85f;
     private static final long UMBRAL_RECOMPRIMIR_HD_BYTES = 22L * 1024 * 1024;
     private static final Pattern PATRON_PLANO_BASE = Pattern.compile("^desarrollo-(\\d+)\\.(jpg|jpeg|png|webp)$");
 
@@ -122,10 +127,12 @@ public class DesarrolloService {
         // su primera página (se asume un plano de una sola página) a JPEG antes de seguir — de ahí
         // en adelante se guarda y se sirve exactamente igual que cualquier otro plano subido en JPG.
         byte[] bytesPreview = null;
+        byte[] bytesPdf = null;
         if (empiezaCon(bytes, FIRMA_PDF)) {
             RasterizadoPdf rasterizado = rasterizarPrimeraPaginaPdf(bytes);
             bytes = rasterizado.hd();
             bytesPreview = rasterizado.preview();
+            bytesPdf = rasterizado.paraPdf();
         }
 
         // Se valida por los primeros bytes del archivo, no por el Content-Type que manda el
@@ -147,6 +154,16 @@ public class DesarrolloService {
             }
             if (bytesPreview != null) {
                 Files.write(carpeta.resolve("desarrollo-" + id + "-preview.jpg"), bytesPreview);
+            }
+            if (bytesPdf == null) {
+                bytesPdf = generarCopiaParaPdfDesdeArchivo(destino);
+            }
+            Path copiaPdf = carpeta.resolve("desarrollo-" + id + "-pdf.jpg");
+            if (bytesPdf != null) {
+                Files.write(copiaPdf, bytesPdf);
+            } else {
+                // Si no se pudo generar, no se deja una copia de un plano anterior: el PDF usaría el HD.
+                Files.deleteIfExists(copiaPdf);
             }
         } catch (IOException e) {
             throw new UncheckedIOException("No se pudo guardar la imagen del plano", e);
@@ -208,6 +225,17 @@ public class DesarrolloService {
                             }
                         }
                     }
+                    Path copiaPdf = carpeta.resolve("desarrollo-" + id + "-pdf.jpg");
+                    if (!Files.exists(copiaPdf)
+                            || Files.getLastModifiedTime(copiaPdf).compareTo(Files.getLastModifiedTime(archivo)) < 0) {
+                        byte[] bytesPdf = generarCopiaParaPdfDesdeArchivo(archivo);
+                        if (bytesPdf != null) {
+                            Path tmp = carpeta.resolve("desarrollo-" + id + "-pdf.jpg.tmp");
+                            Files.write(tmp, bytesPdf);
+                            Files.move(tmp, copiaPdf, StandardCopyOption.REPLACE_EXISTING);
+                            log.info("Copia para PDF generada para {} ({} KB)", nombre, bytesPdf.length / 1024);
+                        }
+                    }
                 } catch (Exception e) {
                     log.warn("No se pudo optimizar el plano existente {}: {}", nombre, e.getMessage());
                 }
@@ -217,7 +245,7 @@ public class DesarrolloService {
         }
     }
 
-    private record RasterizadoPdf(byte[] hd, byte[] preview) {}
+    private record RasterizadoPdf(byte[] hd, byte[] preview, byte[] paraPdf) {}
 
     /** Rasteriza directamente en RGB opaco (ImageType.RGB pinta sobre blanco dentro de PDFBox) para no duplicar un
      * segundo BufferedImage de ~600 MB en memoria al quitar el canal alfa antes de comprimir a JPEG, y aprovecha esa
@@ -233,7 +261,8 @@ public class DesarrolloService {
 
             byte[] hd = codificarJpeg(imagen, CALIDAD_JPEG_RASTERIZADO);
             byte[] preview = codificarJpeg(escalarAPreview(imagen), CALIDAD_JPEG_PREVIEW);
-            return new RasterizadoPdf(hd, preview);
+            byte[] paraPdf = codificarJpeg(escalarA(imagen, LADO_PDF), CALIDAD_JPEG_PDF);
+            return new RasterizadoPdf(hd, preview, paraPdf);
         } catch (IOException e) {
             throw new ValidationException("No se pudo leer el PDF del plano");
         }
@@ -242,6 +271,18 @@ public class DesarrolloService {
     /** Genera la vista rápida desde un archivo de imagen en disco usando subsampling del lector para no cargar los
      * 150 MP completos en memoria solo para sacar una vista de 2400 px. */
     private static byte[] generarPreviewDesdeArchivo(Path archivo) {
+        return generarDesdeArchivo(archivo, LADO_PREVIEW, true, CALIDAD_JPEG_PREVIEW);
+    }
+
+    /** Copia ligera para el PDF del plano: lado largo de LADO_PDF px como máximo (sin agrandar), JPEG a 0.85. */
+    static byte[] generarCopiaParaPdfDesdeArchivo(Path archivo) {
+        return generarDesdeArchivo(archivo, LADO_PDF, false, CALIDAD_JPEG_PDF);
+    }
+
+    /** Lee el archivo con subsampling entero (para el preview, hasta el doble del lado pedido; para la copia del PDF
+     * solo lo que no pierda calidad bajo el lado pedido, así un plano de 150 MP se lee a 7500x5000 y no a 150 MP) y
+     * lo escala al lado pedido conservando la proporción. null si no se pudo leer. */
+    private static byte[] generarDesdeArchivo(Path archivo, int lado, boolean holgura, float calidad) {
         try (ImageInputStream in = ImageIO.createImageInputStream(archivo.toFile())) {
             if (in == null) return null;
             Iterator<ImageReader> lectores = ImageIO.getImageReaders(in);
@@ -252,12 +293,12 @@ public class DesarrolloService {
                 int ancho = lector.getWidth(0);
                 int alto = lector.getHeight(0);
                 if (ancho <= 0 || alto <= 0 || (long) ancho * alto > 250_000_000L) return null;
-                int salto = Math.max(1, Math.max(ancho, alto) / (LADO_PREVIEW * 2));
+                int salto = Math.max(1, Math.max(ancho, alto) / (holgura ? lado * 2 : lado));
                 ImageReadParam param = lector.getDefaultReadParam();
                 param.setSourceSubsampling(salto, salto, 0, 0);
                 BufferedImage leida = lector.read(0, param);
                 if (leida == null) return null;
-                return codificarJpeg(escalarAPreview(leida, ancho, alto), CALIDAD_JPEG_PREVIEW);
+                return codificarJpeg(escalarA(leida, ancho, alto, lado), calidad);
             } finally {
                 lector.dispose();
             }
@@ -267,11 +308,17 @@ public class DesarrolloService {
     }
 
     private static BufferedImage escalarAPreview(BufferedImage origen) {
-        return escalarAPreview(origen, origen.getWidth(), origen.getHeight());
+        return escalarA(origen, LADO_PREVIEW);
     }
 
-    private static BufferedImage escalarAPreview(BufferedImage origen, int anchoOriginal, int altoOriginal) {
-        double escala = Math.min(1.0, (double) LADO_PREVIEW / Math.max(anchoOriginal, altoOriginal));
+    private static BufferedImage escalarA(BufferedImage origen, int lado) {
+        return escalarA(origen, origen.getWidth(), origen.getHeight(), lado);
+    }
+
+    /** Escala a `lado` px de lado largo conservando la proporción; nunca agranda. `anchoOriginal/altoOriginal` son las
+     * medidas del archivo completo (el `origen` puede venir ya reducido por subsampling). */
+    private static BufferedImage escalarA(BufferedImage origen, int anchoOriginal, int altoOriginal, int lado) {
+        double escala = Math.min(1.0, (double) lado / Math.max(anchoOriginal, altoOriginal));
         int w = Math.max(1, (int) Math.round(anchoOriginal * escala));
         int h = Math.max(1, (int) Math.round(altoOriginal * escala));
         BufferedImage salida = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);

@@ -88,6 +88,12 @@ export function urlVistaRapida(url: string): string {
   return url.replace(/\.(jpg|jpeg|png|webp)(?=\?|$)/i, '-preview.jpg');
 }
 
+/** URL de la copia ligera del plano para el PDF (`-pdf.jpg`, lado largo ≤ 6000 px): el HD llega a 150 MP y los visores
+ * de PDF de los celulares no lo aguantan. */
+export function urlCopiaParaPdf(url: string): string {
+  return url.replace(/\.(jpg|jpeg|png|webp)(?=\?|$)/i, '-pdf.jpg');
+}
+
 /** Descarga y decodifica una imagen fuera del hilo principal; `alTerminar` se llama ya decodificada (o si el
  * navegador no sabe decodificar aparte) y `alFallar` si no se pudo descargar. */
 export function cargarImagenEnSegundoPlano(url: string, alTerminar: () => void, alFallar: () => void): void {

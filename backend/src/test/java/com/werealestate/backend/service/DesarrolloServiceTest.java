@@ -108,4 +108,74 @@ class DesarrolloServiceTest {
         assertEquals(2400, preview.getWidth());
         assertEquals(1600, preview.getHeight());
     }
+
+    private void escribirJpeg(Path destino, int ancho, int alto) throws Exception {
+        BufferedImage img = new BufferedImage(ancho, alto, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = img.createGraphics();
+        g.setColor(Color.DARK_GRAY);
+        g.fillRect(0, 0, ancho, alto);
+        g.dispose();
+        ImageIO.write(img, "jpg", destino.toFile());
+    }
+
+    @Test
+    void alArrancarGeneraCopiaParaPdfConLadoLargoDe6000SinCambiarLaProporcion() throws Exception {
+        Path carpeta = tempDir.resolve("planos");
+        Files.createDirectories(carpeta);
+        escribirJpeg(carpeta.resolve("desarrollo-3.jpg"), 9000, 6001);
+
+        service.asegurarPreviewsYOptimizarPlanosExistentes();
+
+        BufferedImage copia = ImageIO.read(carpeta.resolve("desarrollo-3-pdf.jpg").toFile());
+        assertNotNull(copia);
+        assertEquals(6000, copia.getWidth());
+        assertEquals(4001, copia.getHeight());
+        assertEquals(9000d / 6001d, (double) copia.getWidth() / copia.getHeight(), 0.001);
+    }
+
+    @Test
+    void laCopiaParaPdfNoAgrandaUnPlanoChico() throws Exception {
+        Path carpeta = tempDir.resolve("planos");
+        Files.createDirectories(carpeta);
+        escribirJpeg(carpeta.resolve("desarrollo-4.jpg"), 3000, 2000);
+
+        service.asegurarPreviewsYOptimizarPlanosExistentes();
+
+        BufferedImage copia = ImageIO.read(carpeta.resolve("desarrollo-4-pdf.jpg").toFile());
+        assertEquals(3000, copia.getWidth());
+        assertEquals(2000, copia.getHeight());
+    }
+
+    @Test
+    void subirUnaImagenGeneraSuCopiaParaPdf() throws Exception {
+        Desarrollo d = mock(Desarrollo.class);
+        when(desarrolloRepository.findById(1L)).thenReturn(Optional.of(d));
+        Path origen = tempDir.resolve("origen.jpg");
+        escribirJpeg(origen, 7000, 3000);
+
+        service.actualizarPlano(1L, new MockMultipartFile("archivo", "plano.jpg", "image/jpeg", Files.readAllBytes(origen)));
+
+        BufferedImage copia = ImageIO.read(tempDir.resolve("planos/desarrollo-1-pdf.jpg").toFile());
+        assertEquals(6000, copia.getWidth());
+        assertEquals(2571, copia.getHeight());
+    }
+
+    @Test
+    void subirUnPdfTambienGeneraCopiaParaPdf() throws Exception {
+        Desarrollo d = mock(Desarrollo.class);
+        when(desarrolloRepository.findById(1L)).thenReturn(Optional.of(d));
+        byte[] pdfBytes;
+        try (PDDocument doc = new PDDocument();
+                ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            doc.addPage(new PDPage(new PDRectangle(360, 240)));
+            doc.save(out);
+            pdfBytes = out.toByteArray();
+        }
+
+        service.actualizarPlano(1L, new MockMultipartFile("archivo", "plano.pdf", "application/pdf", pdfBytes));
+
+        BufferedImage copia = ImageIO.read(tempDir.resolve("planos/desarrollo-1-pdf.jpg").toFile());
+        assertNotNull(copia);
+        assertTrue(Math.max(copia.getWidth(), copia.getHeight()) <= 6000);
+    }
 }

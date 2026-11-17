@@ -32,7 +32,7 @@ import { ApartarVariosModalComponent } from '../../../shared/apartar-varios-moda
 import { LoteCambioEstadoModalComponent } from '../../../shared/lote-cambio-estado-modal/lote-cambio-estado-modal.component';
 import { LoteInfoModalComponent } from '../../../shared/lote-info-modal/lote-info-modal.component';
 import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
-import { leerImagenParaPdf } from '../../../core/utils/imagen-pdf';
+import { leerImagenParaPdfConCopia } from '../../../core/utils/imagen-pdf';
 import {
   acotarAlBorde,
   alternarLoteEnSeleccion,
@@ -43,6 +43,7 @@ import {
   puntoEnImagen,
   puntosSvg,
   tienePoligono,
+  urlCopiaParaPdf,
   urlVistaRapida,
 } from '../../../core/utils/plano-vista';
 import {
@@ -771,7 +772,7 @@ export class PlanoComponent implements OnDestroy {
 
     this.generandoPdf.set(true);
     try {
-      const imagen = await leerImagenParaPdf(planoActual.planoUrl);
+      const imagen = await leerImagenParaPdfConCopia(planoActual.planoUrl, urlCopiaParaPdf(planoActual.planoUrl));
       await this.pdfService.downloadPlanoPdf({
         desarrolloNombre: planoActual.desarrolloNombre,
         fecha: new Date().toLocaleDateString('es-MX'),

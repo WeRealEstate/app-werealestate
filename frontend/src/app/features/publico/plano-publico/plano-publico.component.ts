@@ -18,7 +18,7 @@ import {
 import { LotesService } from '../../../core/services/lotes.service';
 import { colorDeBarra, fondoDePagina } from '../../../core/utils/pagina';
 import { DetectorDeRueda } from '../../../core/utils/rueda';
-import { leerImagenParaPdf } from '../../../core/utils/imagen-pdf';
+import { leerImagenParaPdfConCopia } from '../../../core/utils/imagen-pdf';
 import { ToastService } from '../../../core/services/toast.service';
 import { WeFormsPublicoService } from '../../../core/services/we-forms-publico.service';
 import {
@@ -29,6 +29,7 @@ import {
   limitar,
   puntosSvg,
   tienePoligono,
+  urlCopiaParaPdf,
   urlVistaRapida,
 } from '../../../core/utils/plano-vista';
 import { salirDePantallaCompleta } from '../../../core/utils/pantalla-completa';
@@ -545,7 +546,7 @@ export class PlanoPublicoComponent implements OnDestroy {
     try {
       const [{ PdfService }, imagen] = await Promise.all([
         import('../../../core/services/pdf-cotizacion.service'),
-        leerImagenParaPdf(url),
+        leerImagenParaPdfConCopia(url, urlCopiaParaPdf(url)),
       ]);
       await this.injector.get(PdfService).downloadPlanoPdf({
         desarrolloNombre: this.desarrolloNombre(),
