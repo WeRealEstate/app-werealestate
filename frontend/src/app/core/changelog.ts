@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.3.0', fecha: '2026-11-17', cambios: [
+    "Ventas: nuevo botón «Enviar recordatorio de pago» en el detalle de la venta (solo Administración y Admin). Manda un correo formal al cliente titular con su próximo pago (fecha, monto y concepto), el atraso si lo hay y los datos de su compra; pide confirmación antes de enviar, queda registrado y el detalle muestra la fecha y quién envió el último recordatorio. Si el cliente no tiene correo o no hay pagos pendientes, el botón aparece desactivado con el motivo.",
+  ] },
   { version: '12.2.2', fecha: '2026-11-13', cambios: [
     "Se oculta apartado de nomina",
     ] },

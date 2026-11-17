@@ -293,3 +293,20 @@ export interface AplicarDepositoRequest {
   aplicarA: AplicarDepositoA;
   folio?: string;
 }
+
+/** Estado del botón "Enviar recordatorio de pago" del detalle de la venta (GET /api/ventas/{id}/recordatorio-pago). */
+export interface RecordatorioPago {
+  puedeEnviar: boolean;
+  /** Por qué no se puede enviar (null si se puede). */
+  motivoNoDisponible: string | null;
+  /** Correo del cliente titular (null si no tiene). */
+  correoDestino: string | null;
+  /** El siguiente pago sin cubrir que aún no vence; null si no hay. */
+  /** arrastre: parte del monto que viene de pagos anteriores sin cubrir (0 si es solo el del mes). */
+  proximoPago: { fecha: string; monto: number; concepto: string; arrastre: number } | null;
+  atrasoMonto: number;
+  pagosAtrasados: number;
+  mensualidadesAtrasadas: number;
+  /** El último recordatorio enviado con éxito; null si nunca se ha enviado. */
+  ultimo: { enviadoEn: string; usuario: string | null; correo: string } | null;
+}

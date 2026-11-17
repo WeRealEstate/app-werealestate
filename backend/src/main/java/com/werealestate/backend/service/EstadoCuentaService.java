@@ -76,6 +76,12 @@ public class EstadoCuentaService {
         return amortizacion(venta, false, LocalDate.now());
     }
 
+    /** La misma tabla de una venta ya leída, sin revisar el rol: para quien ya lo hizo (el recordatorio de pago por
+     * correo usa exactamente este cálculo para decir cuál es el próximo pago). */
+    public AmortizacionDto paraVenta(Venta venta, LocalDate hoy) {
+        return amortizacion(venta, false, hoy);
+    }
+
     /** Una tabla por cada compra del cliente (como titular o copropietario), de la más reciente a la más antigua:
      * el mismo orden que la lista de compras de su ficha. */
     public List<AmortizacionDto> deCliente(Long clienteId) {

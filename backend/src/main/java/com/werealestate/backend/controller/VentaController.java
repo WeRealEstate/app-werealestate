@@ -12,6 +12,7 @@ import com.werealestate.backend.dto.PagoVentaDto;
 import com.werealestate.backend.dto.ReciboAnularRequest;
 import com.werealestate.backend.dto.ReciboEditarRequest;
 import com.werealestate.backend.dto.ReciboHistorialDto;
+import com.werealestate.backend.dto.RecordatorioPagoDto;
 import com.werealestate.backend.dto.VentaCreateRequest;
 import com.werealestate.backend.dto.VentaEliminarRequest;
 import com.werealestate.backend.dto.VentaDeshacerPausaRequest;
@@ -25,6 +26,7 @@ import com.werealestate.backend.service.ReciboVentaService;
 import com.werealestate.backend.service.ReestructuracionVentaService;
 import com.werealestate.backend.service.EstadoCuentaService;
 import com.werealestate.backend.service.PausaMensualidadService;
+import com.werealestate.backend.service.RecordatorioPagoService;
 import com.werealestate.backend.service.VentaService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -49,11 +51,12 @@ public class VentaController {
     private final ReestructuracionVentaService reestructuracionVentaService;
     private final EstadoCuentaService estadoCuentaService;
     private final PausaMensualidadService pausaService;
+    private final RecordatorioPagoService recordatorioPagoService;
 
     public VentaController(VentaService ventaService, ReciboVentaService reciboVentaService,
             ContratoVentaService contratoVentaService, NumeracionVentaService numeracionVentaService,
             ReestructuracionVentaService reestructuracionVentaService, EstadoCuentaService estadoCuentaService,
-            PausaMensualidadService pausaService) {
+            PausaMensualidadService pausaService, RecordatorioPagoService recordatorioPagoService) {
         this.ventaService = ventaService;
         this.reciboVentaService = reciboVentaService;
         this.contratoVentaService = contratoVentaService;
@@ -61,6 +64,19 @@ public class VentaController {
         this.reestructuracionVentaService = reestructuracionVentaService;
         this.estadoCuentaService = estadoCuentaService;
         this.pausaService = pausaService;
+        this.recordatorioPagoService = recordatorioPagoService;
+    }
+
+    /** Estado del botón "Enviar recordatorio de pago": si se puede, el pago que se recordaría y el último enviado. */
+    @GetMapping("/{id}/recordatorio-pago")
+    public RecordatorioPagoDto recordatorioPago(@PathVariable Long id) {
+        return recordatorioPagoService.consultar(id);
+    }
+
+    /** Manda ahora el recordatorio de pago al correo del cliente titular (síncrono) y lo registra. */
+    @PostMapping("/{id}/recordatorio-pago")
+    public RecordatorioPagoDto enviarRecordatorioPago(@PathVariable Long id) {
+        return recordatorioPagoService.enviar(id);
     }
 
     @PostMapping

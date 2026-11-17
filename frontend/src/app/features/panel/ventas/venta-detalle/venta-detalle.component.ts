@@ -3,7 +3,7 @@ import { CopropietariosEditorComponent, hayCopropietariosRepetidos, idsCopropiet
 import { ClienteSelectorComponent } from '../../../../shared/cliente-selector/cliente-selector.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
-import { LucideCircleAlert, LucidePencil, LucideTrash2 } from '@lucide/angular';
+import { LucideCircleAlert, LucideMail, LucidePencil, LucideTrash2 } from '@lucide/angular';
 import { Amortizacion, cuentaAtraso, fechaCorta } from '../../../../core/models/amortizacion.model';
 import { ReestructurarVentaComponent } from '../../../../shared/reestructurar-venta/reestructurar-venta.component';
 import { TablaAmortizacionComponent } from '../../../../shared/tabla-amortizacion/tabla-amortizacion.component';
@@ -12,11 +12,12 @@ import { Location } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MESES_NOMBRE } from '../../../../core/utils/aportaciones';
 import { AuthService } from '../../../../core/services/auth.service';
+import { ConfirmService } from '../../../../core/services/confirm.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { VentasService } from '../../../../core/services/ventas.service';
 import { UsuariosService } from '../../../../core/services/usuarios.service';
 import { AsesoresExternosService } from '../../../../core/services/asesores-externos.service';
-import { MODALIDAD_PAGO_LABELS, ModalidadPago, PagoVenta, ReciboHistorial, Venta } from '../../../../core/models/venta.model';
+import { MODALIDAD_PAGO_LABELS, ModalidadPago, PagoVenta, ReciboHistorial, RecordatorioPago, Venta } from '../../../../core/models/venta.model';
 import { ReciboFormComponent } from '../../../../shared/recibo-form/recibo-form.component';
 import { ContratoVentaComponent } from '../../../../shared/contrato-venta/contrato-venta.component';
 import { RecibosVentaComponent } from '../../../../shared/recibos-venta/recibos-venta.component';
@@ -34,7 +35,7 @@ const SEGUNDOS_ESPERA_ELIMINAR = 10;
 @Component({
   selector: 'app-venta-detalle',
   standalone: true,
-  imports: [MonedaInputDirective, WeLoaderComponent, ReciboFormComponent, RecibosVentaComponent, ContratoVentaComponent, TablaAmortizacionComponent, ReestructurarVentaComponent, ReactiveFormsModule, RouterLink, ClienteSelectorComponent, CopropietariosEditorComponent, NumeroVentaComponent, LucideCircleAlert, LucidePencil, LucideTrash2],
+  imports: [MonedaInputDirective, WeLoaderComponent, ReciboFormComponent, RecibosVentaComponent, ContratoVentaComponent, TablaAmortizacionComponent, ReestructurarVentaComponent, ReactiveFormsModule, RouterLink, ClienteSelectorComponent, CopropietariosEditorComponent, NumeroVentaComponent, LucideCircleAlert, LucideMail, LucidePencil, LucideTrash2],
   templateUrl: './venta-detalle.component.html',
 })
 export class VentaDetalleComponent implements OnInit, OnDestroy {
@@ -44,6 +45,7 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
   private readonly usuariosService = inject(UsuariosService);
   private readonly asesoresExternosService = inject(AsesoresExternosService);
   private readonly toast = inject(ToastService);
+  private readonly confirmService = inject(ConfirmService);
   private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
   private readonly fb = inject(FormBuilder);
@@ -57,6 +59,9 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
   readonly amortizacion = signal<Amortizacion | null>(null);
   /** Se queda como la dejó la persona aunque la venta se recargue (p. ej. al registrar un abono). */
   readonly amortizacionAbierta = signal(true);
+  /** Estado del recordatorio de pago por correo (solo admin y administración; null si no se pudo consultar). */
+  readonly recordatorio = signal<RecordatorioPago | null>(null);
+  readonly enviandoRecordatorio = signal(false);
   readonly cuentaAtraso = cuentaAtraso;
   readonly fechaCorta = fechaCorta;
   readonly isLoading = signal(true);
@@ -188,21 +193,65 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
           ? await this.ventasService.obtenerPorNumero(this.numeroEnUrl)
           : await this.ventasService.obtener(this.ventaId);
       this.ventaId = venta.id;
-      const [pagos, historial, amortizacion] = await Promise.all([
+      const [pagos, historial, amortizacion, recordatorio] = await Promise.all([
         this.ventasService.listarPagos(venta.id),
         this.ventasService.historialRecibos(venta.id),
         this.ventasService.amortizacion(venta.id).catch(() => null),
+        this.puedeEliminar() ? this.ventasService.recordatorioPago(venta.id).catch(() => null) : Promise.resolve(null),
       ]);
       this.venta.set(venta);
       this.pagos.set(pagos);
       this.historialRecibos.set(historial);
       this.amortizacion.set(amortizacion);
+      this.recordatorio.set(recordatorio);
       this.sincronizarDireccion(venta.etiqueta);
     } catch {
       this.errorMessage.set('No se pudo cargar la venta.');
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  /** Pide confirmación (a qué correo y qué pago se recordará), manda el correo y refresca el estado. */
+  async enviarRecordatorio(): Promise<void> {
+    const r = this.recordatorio();
+    const v = this.venta();
+    if (!r || !v || !r.puedeEnviar || this.enviandoRecordatorio()) return;
+    const pago = r.proximoPago
+      ? `el pago de ${r.proximoPago.concepto} del ${fechaCorta(r.proximoPago.fecha)} por $${this.money(r.proximoPago.monto)}`
+      : 'su saldo vencido';
+    // Igual que el correo: si el monto ya trae lo vencido, se dice que va incluido para no sumarlo dos veces.
+    const incluido = !!r.proximoPago && r.proximoPago.arrastre > 0.01 && r.proximoPago.arrastre >= r.atrasoMonto - 0.01;
+    const atraso =
+      r.atrasoMonto <= 0.01
+        ? ''
+        : incluido
+          ? ` Ese monto ya incluye $${this.money(r.proximoPago!.arrastre)} pendientes de pagos anteriores; el correo lo desglosa y avisa del atraso.`
+          : ` Incluye el aviso de atraso por $${this.money(r.atrasoMonto)}.`;
+    const confirmado = await this.confirmService.confirm({
+      titulo: 'Enviar recordatorio de pago',
+      mensaje: `Se enviará un correo a ${r.correoDestino} recordándole ${pago}.${atraso}`,
+      textoConfirmar: 'Enviar',
+    });
+    if (!confirmado) return;
+    this.enviandoRecordatorio.set(true);
+    try {
+      this.recordatorio.set(await this.ventasService.enviarRecordatorioPago(v.id));
+      this.toast.success(`Recordatorio enviado a ${r.correoDestino}.`);
+    } catch (error) {
+      this.toast.error(
+        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+          ? error.error.message
+          : 'No se pudo enviar el recordatorio.',
+      );
+    } finally {
+      this.enviandoRecordatorio.set(false);
+    }
+  }
+
+  /** "17/11/2026 14:05" a partir de "2026-11-17T14:05:00" (sin pasar por Date: no se corre por la zona horaria). */
+  fechaHora(iso: string): string {
+    return `${fechaCorta(iso)} ${iso.slice(11, 16)}`;
   }
 
   totalAportaciones(): number {

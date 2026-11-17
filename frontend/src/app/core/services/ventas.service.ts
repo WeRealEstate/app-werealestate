@@ -6,6 +6,7 @@ import { Amortizacion } from '../models/amortizacion.model';
 import { Pagina } from '../models/pagina.model';
 import {
   PagoVenta,
+  RecordatorioPago,
   MedioFirma,
   AplicarDepositoRequest,
   NumeracionVenta,
@@ -81,6 +82,16 @@ export class VentasService {
   /** Tabla de amortización de la venta con su estado de cuenta a hoy. */
   amortizacion(id: number): Promise<Amortizacion> {
     return firstValueFrom(this.http.get<Amortizacion>(`${this.baseUrl}/${id}/amortizacion`));
+  }
+
+  /** Estado del botón "Enviar recordatorio de pago": si se puede, el pago que se recordaría y el último enviado. */
+  recordatorioPago(id: number): Promise<RecordatorioPago> {
+    return firstValueFrom(this.http.get<RecordatorioPago>(`${this.baseUrl}/${id}/recordatorio-pago`));
+  }
+
+  /** Manda ahora el recordatorio al correo del cliente titular y devuelve el estado ya actualizado. */
+  enviarRecordatorioPago(id: number): Promise<RecordatorioPago> {
+    return firstValueFrom(this.http.post<RecordatorioPago>(`${this.baseUrl}/${id}/recordatorio-pago`, {}));
   }
 
   /** Para el ícono de "ver información de venta" en /panel/lotes. Rechaza (404) si el lote no

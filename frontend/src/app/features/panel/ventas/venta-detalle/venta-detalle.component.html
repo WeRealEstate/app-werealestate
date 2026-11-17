@@ -433,6 +433,30 @@
       <div class="mt-4">
         <app-tabla-amortizacion [amortizacion]="a" titulo="Tabla de amortización" [(abierta)]="amortizacionAbierta" (actualizada)="cargar()" />
       </div>
+      @if (recordatorio(); as r) {
+        <div class="mt-2 flex flex-wrap items-center justify-end gap-x-4 gap-y-2" data-testid="recordatorio-pago">
+          @if (r.ultimo; as u) {
+            <p class="text-xs text-ink-muted" data-testid="ultimo-recordatorio">
+              Último recordatorio: {{ fechaHora(u.enviadoEn) }}@if (u.usuario) { por {{ u.usuario }}}
+            </p>
+          }
+          <button
+            type="button"
+            (click)="enviarRecordatorio()"
+            [disabled]="!r.puedeEnviar || enviandoRecordatorio()"
+            [attr.title]="r.puedeEnviar ? null : r.motivoNoDisponible"
+            class="boton-secundario inline-flex min-h-[44px] items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-semibold text-ink
+                   active:scale-[0.97] transition duration-150 disabled:opacity-60"
+            data-testid="enviar-recordatorio-pago"
+          >
+            <svg lucideMail [size]="15" aria-hidden="true"></svg>
+            {{ enviandoRecordatorio() ? 'Enviando…' : 'Enviar recordatorio de pago' }}
+          </button>
+          @if (!r.puedeEnviar && r.motivoNoDisponible) {
+            <p class="w-full text-right text-xs text-ink-muted" data-testid="motivo-recordatorio">{{ r.motivoNoDisponible }}</p>
+          }
+        </div>
+      }
       @if (puedeEliminar() && a.saldo > 0.01 && a.primerMesPlan && !v.depositoPendiente) {
         <div class="mt-2 flex justify-end">
           <app-reestructurar-venta [venta]="v" [saldo]="a.montoAReestructurar" [primerMes]="a.primerMesPlan" (guardado)="cargar()" />
