@@ -7,10 +7,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.werealestate.backend.dto.LeadDto;
 import com.werealestate.backend.dto.PaginaDto;
+import com.werealestate.backend.model.Etiqueta;
+import com.werealestate.backend.model.EtiquetaColor;
 import com.werealestate.backend.model.EstadoLead;
 import com.werealestate.backend.model.Lead;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.Usuario;
+import com.werealestate.backend.repository.EtiquetaRepository;
 import com.werealestate.backend.repository.LeadRepository;
 import com.werealestate.backend.service.LeadService;
 import java.time.LocalDateTime;
@@ -25,6 +28,7 @@ class LeadBuscarPaginadoIntegracionTest extends PruebaDeIntegracion {
 
     @Autowired LeadService leadService;
     @Autowired LeadRepository leads;
+    @Autowired EtiquetaRepository etiquetas;
 
     private Lead lead(Usuario asesor, long numero, String nombre, String telefono) {
         Lead l = new Lead(nombre, telefono, null, "Prueba", samai(), asesor, null);
@@ -33,7 +37,7 @@ class LeadBuscarPaginadoIntegracionTest extends PruebaDeIntegracion {
     }
 
     private PaginaDto<LeadDto> buscar(String busqueda, String estado, Long asesorId, boolean archivados) {
-        return leadService.buscarPaginado(busqueda, estado, asesorId, null, archivados, 0, 100);
+        return leadService.buscarPaginado(busqueda, estado, asesorId, null, false, archivados, 0, 100);
     }
 
     private static List<Long> numeros(PaginaDto<LeadDto> pagina) {
@@ -183,15 +187,32 @@ class LeadBuscarPaginadoIntegracionTest extends PruebaDeIntegracion {
     }
 
     @Test
+    void sinEtiquetasDevuelveSoloLosLeadsSinNingunaEtiqueta() {
+        Usuario asesor = usuario(Role.ASESOR);
+        iniciarSesionComo(asesor);
+        Lead conEtiqueta = lead(asesor, 1, "Con etiqueta", "1");
+        lead(asesor, 2, "Sin etiqueta", "2");
+        Etiqueta et = etiquetas.saveAndFlush(new Etiqueta("Caliente " + etiqueta(), EtiquetaColor.values()[0], asesor));
+        conEtiqueta.getEtiquetas().add(et);
+        leads.saveAndFlush(conEtiqueta);
+
+        PaginaDto<LeadDto> sinEtiquetas = leadService.buscarPaginado(null, null, null, null, true, false, 0, 100);
+        assertEquals(List.of(2L), numeros(sinEtiquetas));
+        // si llegan ambos filtros, «sin etiquetas» gana y etiquetaId se ignora
+        PaginaDto<LeadDto> ambos = leadService.buscarPaginado(null, null, null, et.getId(), true, false, 0, 100);
+        assertEquals(List.of(2L), numeros(ambos));
+    }
+
+    @Test
     void paginaConHayMas() {
         Usuario asesor = usuario(Role.ASESOR);
         iniciarSesionComo(asesor);
         for (long i = 1; i <= 3; i++) lead(asesor, i, "L" + i, "" + i);
 
-        PaginaDto<LeadDto> primera = leadService.buscarPaginado(null, null, null, null, false, 0, 2);
+        PaginaDto<LeadDto> primera = leadService.buscarPaginado(null, null, null, null, false, false, 0, 2);
         assertEquals(2, primera.contenido().size());
         assertTrue(primera.hayMas());
-        PaginaDto<LeadDto> segunda = leadService.buscarPaginado(null, null, null, null, false, 1, 2);
+        PaginaDto<LeadDto> segunda = leadService.buscarPaginado(null, null, null, null, false, false, 1, 2);
         assertEquals(1, segunda.contenido().size());
         assertFalse(segunda.hayMas());
     }

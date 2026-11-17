@@ -113,18 +113,17 @@
         }
       </select>
     }
-    @if (etiquetasDisponibles().length > 0) {
-      <select
-        (change)="onEtiquetaChange($any($event.target).value)"
-        class="w-full max-w-xs rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
-               focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
-      >
-        <option value="" [selected]="etiquetaFiltro() === null">Todas las etiquetas</option>
-        @for (et of etiquetasDisponibles(); track et.id) {
-          <option [value]="et.id" [selected]="et.id === etiquetaFiltro()">{{ et.nombre }}</option>
-        }
-      </select>
-    }
+    <select
+      (change)="onEtiquetaChange($any($event.target).value)"
+      class="w-full max-w-xs rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+             focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+    >
+      <option value="" [selected]="etiquetaFiltro() === null">Todas las etiquetas</option>
+      <option value="SIN" [selected]="etiquetaFiltro() === 'SIN'">Sin etiquetas</option>
+      @for (et of etiquetasDisponibles(); track et.id) {
+        <option [value]="et.id" [selected]="et.id === etiquetaFiltro()">{{ et.nombre }}</option>
+      }
+    </select>
     <button
       type="button"
       (click)="toggleArchivados()"

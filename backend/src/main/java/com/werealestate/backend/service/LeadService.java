@@ -125,7 +125,8 @@ public class LeadService {
      * y la búsqueda/filtros corren en el servidor sobre el total, no solo sobre lo ya cargado.
      */
     public PaginaDto<LeadDto> buscarPaginado(
-            String busqueda, String estado, Long asesorIdFiltro, Long etiquetaId, boolean archivados, int pagina, int tamano) {
+            String busqueda, String estado, Long asesorIdFiltro, Long etiquetaId, boolean sinEtiquetas,
+            boolean archivados, int pagina, int tamano) {
         Usuario actual = currentUserProvider.getUsuarioActual();
 
         Specification<Lead> spec = (root, query, cb) -> cb.equal(root.get("archivado"), archivados);
@@ -152,7 +153,10 @@ public class LeadService {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("estado"), estadoEnum));
         }
 
-        if (etiquetaId != null) {
+        // «Sin etiquetas» gana sobre una etiqueta concreta: si vienen los dos, se ignora etiquetaId.
+        if (sinEtiquetas) {
+            spec = spec.and((root, query, cb) -> cb.isEmpty(root.get("etiquetas")));
+        } else if (etiquetaId != null) {
             spec = spec.and((root, query, cb) -> {
                 query.distinct(true);
                 return cb.equal(root.join("etiquetas").get("id"), etiquetaId);

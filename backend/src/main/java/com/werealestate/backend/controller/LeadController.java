@@ -54,10 +54,11 @@ public class LeadController {
             @RequestParam(required = false) String estado,
             @RequestParam(required = false) Long asesorId,
             @RequestParam(required = false) Long etiquetaId,
+            @RequestParam(defaultValue = "false") boolean sinEtiquetas,
             @RequestParam(defaultValue = "false") boolean archivados,
             @RequestParam(defaultValue = "0") int pagina,
             @RequestParam(defaultValue = "10") int tamano) {
-        return leadService.buscarPaginado(busqueda, estado, asesorId, etiquetaId, archivados, pagina, tamano);
+        return leadService.buscarPaginado(busqueda, estado, asesorId, etiquetaId, sinEtiquetas, archivados, pagina, tamano);
     }
 
     @GetMapping("/frios")

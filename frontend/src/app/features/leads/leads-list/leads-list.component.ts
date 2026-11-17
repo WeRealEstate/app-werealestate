@@ -86,7 +86,8 @@ export class LeadsListComponent {
   readonly filtro = signal('');
   readonly asesorId = signal<number | null>(null);
   readonly estadoFiltro = signal<FiltroEstado | null>(null);
-  readonly etiquetaFiltro = signal<number | null>(null);
+  /** Número = una etiqueta; 'SIN' = leads sin ninguna etiqueta; null = todas. */
+  readonly etiquetaFiltro = signal<number | 'SIN' | null>(null);
   readonly asesoresDisponibles = signal<UsuarioResumen[]>([]);
   readonly totalFrios = signal(0);
 
@@ -113,17 +114,14 @@ export class LeadsListComponent {
   private pagina = 0;
   private debounceHandle: ReturnType<typeof setTimeout> | undefined;
 
-  /** Etiquetas presentes en los leads ya cargados (son privadas por asesor: no hay un catálogo
-   * único que listar de todo el equipo). */
-  readonly etiquetasDisponibles = computed<Etiqueta[]>(() => {
-    const porId = new Map<number, Etiqueta>();
-    for (const lead of this.leads()) {
-      for (const et of lead.etiquetas) {
-        porId.set(et.id, et);
-      }
-    }
-    return [...porId.values()].sort((a, b) => a.nombre.localeCompare(b.nombre));
-  });
+  /** Etiquetas vistas en cualquier lista cargada (son privadas por asesor: no hay un catálogo único que
+   * listar de todo el equipo). Se acumulan y no se borran al filtrar: si no, al elegir una etiqueta o
+   * «Sin etiquetas» las demás opciones desaparecerían, porque ya no habría leads que las tuvieran. */
+  private readonly etiquetasVistas = signal<ReadonlyMap<number, Etiqueta>>(new Map());
+
+  readonly etiquetasDisponibles = computed<Etiqueta[]>(() =>
+    [...this.etiquetasVistas().values()].sort((a, b) => a.nombre.localeCompare(b.nombre)),
+  );
 
   readonly hayFiltrosActivos = computed(
     () =>
@@ -180,6 +178,10 @@ export class LeadsListComponent {
 
   onAsesorChange(valor: string): void {
     this.asesorId.set(valor === '' ? null : +valor);
+    // Las etiquetas son privadas de cada asesor: al cambiar de asesor se vuelven a juntar con lo que se cargue,
+    // y una etiqueta elegida (de otro asesor) dejaría la lista vacía. «Sin etiquetas» sí se conserva.
+    this.etiquetasVistas.set(new Map());
+    if (typeof this.etiquetaFiltro() === 'number') this.etiquetaFiltro.set(null);
     this.recargarDesdeInicio();
   }
 
@@ -189,7 +191,7 @@ export class LeadsListComponent {
   }
 
   onEtiquetaChange(valor: string): void {
-    this.etiquetaFiltro.set(valor === '' ? null : +valor);
+    this.etiquetaFiltro.set(valor === '' ? null : valor === 'SIN' ? 'SIN' : +valor);
     this.recargarDesdeInicio();
   }
 
@@ -229,6 +231,7 @@ export class LeadsListComponent {
     this.errorMessage.set(null);
     try {
       const resultado = await this.buscarPagina(0, TAMANO_PAGINA);
+      this.registrarEtiquetas(resultado.contenido);
       this.leads.set(resultado.contenido);
       this.hayMas.set(resultado.hayMas);
       this.pagina = 0;
@@ -245,6 +248,7 @@ export class LeadsListComponent {
     try {
       const siguiente = this.pagina + 1;
       const resultado = await this.buscarPagina(siguiente, TAMANO_PAGINA);
+      this.registrarEtiquetas(resultado.contenido);
       this.leads.update((actuales) => [...actuales, ...resultado.contenido]);
       this.hayMas.set(resultado.hayMas);
       this.pagina = siguiente;
@@ -302,13 +306,23 @@ export class LeadsListComponent {
     }
   }
 
+  private registrarEtiquetas(leads: Lead[]): void {
+    const nuevo = new Map(this.etiquetasVistas());
+    for (const lead of leads) {
+      for (const et of lead.etiquetas) nuevo.set(et.id, et);
+    }
+    this.etiquetasVistas.set(nuevo);
+  }
+
   private buscarPagina(pagina: number, tamano: number) {
     const estado = this.estadoFiltro();
+    const etiqueta = this.etiquetaFiltro();
     return this.leadsService.buscarPaginado({
       busqueda: this.filtro().trim() || undefined,
       estado: estado ?? undefined,
       asesorId: this.asesorId() ?? undefined,
-      etiquetaId: this.etiquetaFiltro() ?? undefined,
+      etiquetaId: typeof etiqueta === 'number' ? etiqueta : undefined,
+      sinEtiquetas: etiqueta === 'SIN' ? true : undefined,
       archivados: this.verArchivados(),
       pagina,
       tamano,

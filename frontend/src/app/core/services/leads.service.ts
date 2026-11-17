@@ -23,6 +23,8 @@ export interface BuscarLeadsParams {
   estado?: string | null;
   asesorId?: number | null;
   etiquetaId?: number | null;
+  /** Solo leads sin ninguna etiqueta (tiene prioridad sobre etiquetaId en el servidor). */
+  sinEtiquetas?: boolean;
   archivados?: boolean;
   pagina: number;
   tamano: number;
@@ -57,6 +59,7 @@ export class LeadsService {
     if (params.estado) httpParams = httpParams.set('estado', params.estado);
     if (params.asesorId != null) httpParams = httpParams.set('asesorId', params.asesorId);
     if (params.etiquetaId != null) httpParams = httpParams.set('etiquetaId', params.etiquetaId);
+    if (params.sinEtiquetas) httpParams = httpParams.set('sinEtiquetas', 'true');
     if (params.archivados) httpParams = httpParams.set('archivados', 'true');
 
     return firstValueFrom(
