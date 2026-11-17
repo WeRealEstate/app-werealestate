@@ -1,6 +1,7 @@
 package com.werealestate.backend.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -158,28 +159,30 @@ class PlanoPdfServiceTest {
     }
 
     @Test
-    void elPdfTrasladaLaPaginaVectorialLeyendaYEncabezado() throws Exception {
+    void elPdfConservaLaPaginaOriginalYAgregaLeyendaYEncabezado() throws Exception {
         Path original = crearOriginal("a.pdf", new PDRectangle(600, 400), null, 0);
         byte[] pdf = PlanoPdfService.armarPdf(original, "SAMAI Campestre", "17/11/2026", List.of(),
                 List.of(EstadoLote.DISPONIBLE, EstadoLote.VENDIDO));
         try (PDDocument doc = Loader.loadPDF(pdf)) {
             assertEquals(1, doc.getNumberOfPages());
+            // La página es la original: mismo ancho; solo crece hacia arriba (encabezado) y hacia abajo (leyenda),
+            // en proporción con la hoja de 420 mm (10 y 8.5 mm de una carta, escalados).
             PDRectangle caja = doc.getPage(0).getMediaBox();
-            assertEquals(420 * 72 / 25.4, caja.getWidth(), 0.01);
+            double s = 600 / (420 * 72 / 25.4);
+            double k = 420 / 279.4;
+            assertEquals(600, caja.getWidth(), 0.01);
+            assertEquals(400 + (10 * k + 8.5 * k) * 72 / 25.4 * s, caja.getHeight(), 0.01);
+            assertEquals(caja.getHeight(), doc.getPage(0).getCropBox().getHeight(), 0.01);
             String texto = new PDFTextStripper().getText(doc);
             assertTrue(texto.contains("Plano interactivo · SAMAI Campestre"), texto);
             assertTrue(texto.contains("Disponible") && texto.contains("Vendido"), texto);
             assertTrue(texto.contains("Generado el 17/11/2026"), texto);
-            // La página original va como Form XObject (vector), no como imagen raster.
+            // Sin Form XObject envolvente ni imágenes nuevas: el contenido original sigue directo en la página.
             var recursos = doc.getPage(0).getResources();
-            int formas = 0, imagenes = 0;
             for (var nombre : recursos.getXObjectNames()) {
                 var x = recursos.getXObject(nombre);
-                if (x instanceof org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject) formas++;
-                else imagenes++;
+                assertFalse(x instanceof org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject, "no debe envolver la página");
             }
-            assertEquals(1, formas);
-            assertEquals(0, imagenes);
         }
     }
 

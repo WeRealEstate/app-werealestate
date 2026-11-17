@@ -37,9 +37,12 @@ import org.springframework.stereotype.Service;
 
 /**
  * PDF de descarga del plano, armado en el servidor con el PDF ORIGINAL que se subió (vectorial: se ve nítido a cualquier
- * zoom, a diferencia del raster de ~150 MP que usa el mapa interactivo). Importa la página original como Form XObject
- * (conserva vectores e imágenes) y dibuja encima, como vectores, los polígonos de los lotes con el color de su estado,
- * más el encabezado y la leyenda. El diseño replica el de {@code core/services/pdf-cotizacion/pdf-plano.ts} del
+ * zoom, a diferencia del raster de ~150 MP que usa el mapa interactivo). Se dibuja SOBRE la página original, sin
+ * copiarla a una hoja nueva: la página queda idéntica (mismo contenido, recursos y tamaño) y solo se le agranda la caja
+ * para el encabezado y la leyenda y se le agrega encima, como vectores, los polígonos de los lotes con el color de su
+ * estado. Así el PDF se comporta igual que el original en los visores (el primer intento metía la página en un Form
+ * XObject escalado dentro de una hoja nueva y en el navegador se movía con retraso; el original no). Solo una página con
+ * /Rotate usa todavía ese camino ({@link #armarConForma}). El diseño replica el de {@code core/services/pdf-cotizacion/pdf-plano.ts} del
  * frontend (hoja de 420 mm de ancho, encabezado arriba, leyenda abajo); si cambia uno, cambia el otro.
  *
  * <p>Los polígonos están guardados en porcentaje (0-100) de la imagen rasterizada al subir el plano, y esa imagen es
@@ -152,11 +155,74 @@ public class PlanoPdfService {
 
     static byte[] armarPdf(Path original, String nombre, String fecha, List<Poligono> poligonos, List<EstadoLote> leyenda) {
         PlanoPdfService.Semaforo.adquirir();
-        try (PDDocument fuente = Loader.loadPDF(original.toFile());
-                PDDocument doc = new PDDocument()) {
+        try (PDDocument fuente = Loader.loadPDF(original.toFile())) {
             if (fuente.getNumberOfPages() == 0) {
                 throw new ResourceNotFoundException("El PDF original del plano no tiene páginas");
             }
+            if (fuente.getPage(0).getRotation() % 360 == 0) {
+                return armarSobreOriginal(fuente, nombre, fecha, poligonos, leyenda);
+            }
+            return armarConForma(fuente, nombre, fecha, poligonos, leyenda);
+        } catch (IOException e) {
+            throw new UncheckedIOException("No se pudo armar el PDF del plano", e);
+        } finally {
+            PlanoPdfService.Semaforo.liberar();
+        }
+    }
+
+    /**
+     * Camino normal: la primera página del original, tal cual, con su caja visible (CropBox) agrandada arriba para el
+     * encabezado y abajo para la leyenda; lo demás (contenido, imágenes, fuentes) no se toca. Todo lo nuevo va en un
+     * flujo de contenido agregado al final, dentro de un sistema de coordenadas escalado a una hoja "virtual" de 420 mm
+     * de ancho, así los tamaños de texto y márgenes son los mismos que en pdf-plano.ts sin importar el tamaño real de la
+     * página (Documento.pdf de SAMAI mide 2592 x 1728 pt).
+     */
+    static byte[] armarSobreOriginal(
+            PDDocument doc, String nombre, String fecha, List<Poligono> poligonos, List<EstadoLote> leyenda)
+            throws IOException {
+        while (doc.getNumberOfPages() > 1) doc.removePage(doc.getNumberOfPages() - 1);
+        PDPage pagina = doc.getPage(0);
+        PDRectangle visible = pagina.getCropBox();
+        double s = visible.getWidth() / (ANCHO_HOJA * MM); // pt reales por pt de la hoja virtual
+        double dibujoAlto = ANCHO_HOJA * visible.getHeight() / visible.getWidth(); // mm virtuales
+        double altoHoja = ALTO_ENCABEZADO + dibujoAlto + ALTO_LEYENDA;
+        double alturaPt = altoHoja * MM; // alto de la hoja virtual
+
+        // La caja nueva: la visible de siempre más las franjas del encabezado (arriba) y la leyenda (abajo).
+        float abajo = (float) (visible.getLowerLeftY() - ALTO_LEYENDA * MM * s);
+        float arriba = (float) (visible.getUpperRightY() + ALTO_ENCABEZADO * MM * s);
+        PDRectangle caja = new PDRectangle(
+                visible.getLowerLeftX(), abajo, visible.getWidth(), arriba - abajo);
+        pagina.setMediaBox(caja);
+        pagina.setCropBox(caja);
+        pagina.setBleedBox(null);
+        pagina.setTrimBox(null);
+        pagina.setArtBox(null);
+
+        PDFont regular = cargarFuente(doc, "Montserrat-Regular.ttf");
+        PDFont negrita = cargarFuente(doc, "Montserrat-Bold.ttf");
+        // resetContext = true: el contenido original queda entre q/Q y lo nuevo arranca con el estado gráfico limpio.
+        try (PDPageContentStream cs = new PDPageContentStream(doc, pagina, PDPageContentStream.AppendMode.APPEND, true, true)) {
+            // Hoja virtual: (0,0) en la esquina inferior izquierda de la caja nueva, 420 mm de ancho.
+            cs.transform(new Matrix((float) s, 0, 0, (float) s, caja.getLowerLeftX(), caja.getLowerLeftY()));
+            // Lo que el original tuviera fuera de su CropBox quedaría a la vista en las franjas nuevas: se tapan de blanco.
+            cs.setNonStrokingColor(1f, 1f, 1f);
+            cs.addRect(0, (float) (alturaPt - ALTO_ENCABEZADO * MM), (float) (ANCHO_HOJA * MM), (float) (ALTO_ENCABEZADO * MM));
+            cs.addRect(0, 0, (float) (ANCHO_HOJA * MM), (float) (ALTO_LEYENDA * MM));
+            cs.fill();
+            dibujarEncimaDelPlano(cs, regular, negrita, nombre, fecha, poligonos, leyenda,
+                    0, ALTO_ENCABEZADO, ANCHO_HOJA, dibujoAlto, alturaPt);
+        }
+        ByteArrayOutputStream salida = new ByteArrayOutputStream(8 * 1024 * 1024);
+        doc.save(salida);
+        return salida.toByteArray();
+    }
+
+    /** Respaldo para una página con /Rotate: la importa como Form XObject en una hoja nueva de 420 mm. */
+    static byte[] armarConForma(
+            PDDocument fuente, String nombre, String fecha, List<Poligono> poligonos, List<EstadoLote> leyenda)
+            throws IOException {
+        try (PDDocument doc = new PDDocument()) {
             PDFormXObject forma = new LayerUtility(doc).importPageAsForm(fuente, 0);
             // La forma ya trae su BBox (la CropBox de la página) y su matriz (rotación): se mide su caja visible.
             AffineTransform m = forma.getMatrix().createAffineTransform();
@@ -188,16 +254,6 @@ public class PlanoPdfService {
             double alturaPt = altoHoja * MM;
 
             try (PDPageContentStream cs = new PDPageContentStream(doc, pagina)) {
-                // ---- Encabezado ----
-                color(cs, TEXTO, true);
-                texto(cs, negrita, (float) (11 * K), MARGEN_TEXTO * MM, alturaPt - (ALTO_ENCABEZADO / 2 + 1.5 * K) * MM,
-                        "Plano interactivo · " + nombre, false);
-                color(cs, GRIS, true);
-                texto(cs, regular, (float) (7 * K), (ANCHO_HOJA - MARGEN_TEXTO) * MM,
-                        alturaPt - (ALTO_ENCABEZADO / 2 + 1.5 * K) * MM, "Generado el " + fecha, true);
-                linea(cs, 0, alturaPt - (ALTO_ENCABEZADO - 0.15) * MM, ANCHO_HOJA * MM,
-                        alturaPt - (ALTO_ENCABEZADO - 0.15) * MM, 0.5 * MM, AZUL_WE);
-
                 // ---- Página original (vectorial), de borde a borde ----
                 double escala = dibujoAncho * MM / caja.getWidth();
                 cs.saveGraphicsState();
@@ -208,6 +264,33 @@ public class PlanoPdfService {
                         (float) (alturaPt - (dibujoY + dibujoAlto) * MM - caja.getMinY() * escala)));
                 cs.drawForm(forma);
                 cs.restoreGraphicsState();
+
+                dibujarEncimaDelPlano(cs, regular, negrita, nombre, fecha, poligonos, leyenda,
+                        dibujoX, dibujoY, dibujoAncho, dibujoAlto, alturaPt);
+            }
+
+            ByteArrayOutputStream salida = new ByteArrayOutputStream(8 * 1024 * 1024);
+            doc.save(salida);
+            return salida.toByteArray();
+        }
+    }
+
+    /** Encabezado, polígonos de los lotes y leyenda (lo mismo en los dos caminos). Coordenadas de una hoja de
+     * ANCHO_HOJA mm de ancho y alturaPt de alto; el plano ocupa el rectángulo (dibujoX, dibujoY, dibujoAncho,
+     * dibujoAlto) en mm medidos desde arriba. */
+    private static void dibujarEncimaDelPlano(
+            PDPageContentStream cs, PDFont regular, PDFont negrita, String nombre, String fecha,
+            List<Poligono> poligonos, List<EstadoLote> leyenda,
+            double dibujoX, double dibujoY, double dibujoAncho, double dibujoAlto, double alturaPt) throws IOException {
+                // ---- Encabezado ----
+                color(cs, TEXTO, true);
+                texto(cs, negrita, (float) (11 * K), MARGEN_TEXTO * MM, alturaPt - (ALTO_ENCABEZADO / 2 + 1.5 * K) * MM,
+                        "Plano interactivo · " + nombre, false);
+                color(cs, GRIS, true);
+                texto(cs, regular, (float) (7 * K), (ANCHO_HOJA - MARGEN_TEXTO) * MM,
+                        alturaPt - (ALTO_ENCABEZADO / 2 + 1.5 * K) * MM, "Generado el " + fecha, true);
+                linea(cs, 0, alturaPt - (ALTO_ENCABEZADO - 0.15) * MM, ANCHO_HOJA * MM,
+                        alturaPt - (ALTO_ENCABEZADO - 0.15) * MM, 0.5 * MM, AZUL_WE);
 
                 // ---- Polígonos de los lotes (vectores; los puntos son % de la imagen = de la caja visible) ----
                 PDExtendedGraphicsState ligero = new PDExtendedGraphicsState();
@@ -249,16 +332,6 @@ public class PlanoPdfService {
                 color(cs, GRIS, true);
                 texto(cs, regular, (float) (6 * K), (ANCHO_HOJA - MARGEN_TEXTO) * MM, alturaPt - leyendaY * MM,
                         "WE Real Estate · Plano informativo, sujeto a cambios", true);
-            }
-
-            ByteArrayOutputStream salida = new ByteArrayOutputStream(8 * 1024 * 1024);
-            doc.save(salida);
-            return salida.toByteArray();
-        } catch (IOException e) {
-            throw new UncheckedIOException("No se pudo armar el PDF del plano", e);
-        } finally {
-            PlanoPdfService.Semaforo.liberar();
-        }
     }
 
     /** Controla cuántos PDF se arman a la vez (cada uno carga el original completo en memoria). */
