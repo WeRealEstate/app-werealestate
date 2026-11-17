@@ -15,7 +15,7 @@ final class BienvenidaClienteCorreo {
     /** Desarrollo cuya plantilla existe (solo se manda si todos los lotes de la venta son de él). */
     static final String SAMAI = "SAMAI Campestre";
     /** El emoji va como escape unicode para no depender de la codificación del archivo fuente. */
-    static final String ASUNTO = "Bienvenidos a We Real Estate - Samai Campestre 🌴";
+    static final String ASUNTO = "Bienvenido a We Real Estate - Samai Campestre 🌴";
     static final String VISTA_PREVIA = "Gracias por confiar en We Real Estate y formar parte de SAMAI Campestre.";
 
     /** Una imagen incrustada: su Content-ID (cid:...), el archivo en resources y su tipo. */

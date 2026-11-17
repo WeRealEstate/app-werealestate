@@ -72,7 +72,7 @@
             Sin seguimiento hace {{ l.diasSinContacto }} días
           </p>
         }
-        @if (esAdmin()) {
+        @if (veTodos()) {
           <p class="mt-2 text-sm text-ink-muted">Asesor: <span class="font-medium text-ink">{{ l.asesor.nombre }}</span></p>
         }
 
@@ -219,7 +219,7 @@
           }
         </select>
 
-        @if (esAdmin()) {
+        @if (veTodos()) {
           <div class="mt-3">
             <label for="asesor" class="block text-xs font-medium text-ink-muted mb-1">Reasignar a</label>
             <select

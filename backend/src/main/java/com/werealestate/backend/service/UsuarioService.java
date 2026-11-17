@@ -130,6 +130,24 @@ public class UsuarioService {
                 .toList();
     }
 
+    /**
+     * Lista ligera (id/nombre) de a quién se le puede dar un lead (asesores, Administración y admin activos): para el
+     * filtro por asesor, reasignar y crear leads a nombre de otro. Existe porque {@link #listar()} es solo del admin y
+     * Administración también gestiona los leads de todos.
+     */
+    public List<UsuarioResumenDto> paraLeads() {
+        Usuario actual = currentUserProvider.getUsuarioActual();
+        if (actual.getRol() != Role.ADMIN && actual.getRol() != Role.LIDER_AREA) {
+            throw new ForbiddenOperationException("Solo un administrador o personal de administración puede consultar esta lista");
+        }
+        return usuarioRepository.findAll().stream()
+                .filter(u -> u.isActivo() && !esUsuarioSistema(u)
+                        && (u.getRol() == Role.ASESOR || u.getRol() == Role.LIDER_AREA || u.getRol() == Role.ADMIN))
+                .sorted(Comparator.comparing(Usuario::getNombre))
+                .map(UsuarioResumenDto::from)
+                .toList();
+    }
+
     public UsuarioDto crear(UsuarioCreateRequest request) {
         exigirAdmin();
         if (usuarioRepository.findByEmail(request.email()).isPresent()) {

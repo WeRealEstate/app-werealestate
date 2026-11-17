@@ -11,6 +11,8 @@ import {
 } from '@lucide/angular';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { ConfirmService } from '../../../core/services/confirm.service';
+import { ToastService } from '../../../core/services/toast.service';
 import { LeadsService } from '../../../core/services/leads.service';
 import { UsuariosService } from '../../../core/services/usuarios.service';
 import { descargarCsv } from '../../../core/utils/csv';
@@ -30,10 +32,6 @@ import {
 
 /** Filtro de estado: un EstadoLead puntual, o 'FRIOS' para leads sin seguimiento reciente. */
 type FiltroEstado = EstadoLead | 'FRIOS';
-
-/** Roles que aparecen en el filtro por asesor: quienes trabajan leads, más el admin, que
- * también tiene su propia bolsa de leads. */
-const ROLES_ASIGNABLES = new Set(['ASESOR', 'LIDER_AREA', 'ADMIN']);
 
 /** Cuántos leads se cargan por lote. Al llegar al final, "Cargar más" trae el siguiente lote. */
 const TAMANO_PAGINA = 10;
@@ -70,10 +68,12 @@ export class LeadsListComponent {
   private readonly usuariosService = inject(UsuariosService);
   private readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
+  private readonly confirmService = inject(ConfirmService);
+  private readonly toast = inject(ToastService);
 
   readonly estadoLabels = ESTADO_LEAD_LABELS;
   readonly estados = Object.keys(ESTADO_LEAD_LABELS) as EstadoLead[];
-  readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
+  readonly veTodos = computed(() => ['ADMIN', 'LIDER_AREA'].includes(this.auth.currentUser()?.rol ?? ''));
   readonly badgeClasesEtiqueta = ETIQUETA_BADGE_CLASSES;
 
   /** Leads acumulados de los lotes cargados hasta ahora, ya filtrados por el servidor. */
@@ -95,11 +95,20 @@ export class LeadsListComponent {
   readonly titulo = computed(() => {
     if (this.verArchivados()) return 'Leads archivados';
     const asesorId = this.asesorId();
-    if (!this.esAdmin() || asesorId === this.auth.currentUser()?.id) return 'Mis leads';
+    if (!this.veTodos() || asesorId === this.auth.currentUser()?.id) return 'Mis leads';
     if (asesorId === null) return 'Leads de todos los asesores';
     const asesor = this.asesoresDisponibles().find((a) => a.id === asesorId);
     return asesor ? `Leads de ${asesor.nombre}` : 'Leads';
   });
+
+  /** Leads marcados para reasignar (solo de los ya cargados en pantalla). Se vacía al recargar la lista, o sea al
+   * cambiar de filtros, de búsqueda o de vista, para no reasignar algo que ya no se ve. */
+  readonly seleccionados = signal<ReadonlySet<number>>(new Set());
+  readonly asesorDestino = signal<number | null>(null);
+  readonly isReasignando = signal(false);
+  readonly todosSeleccionados = computed(
+    () => this.leads().length > 0 && this.leads().every((l) => this.seleccionados().has(l.id)),
+  );
 
   private pagina = 0;
   private debounceHandle: ReturnType<typeof setTimeout> | undefined;
@@ -133,11 +142,11 @@ export class LeadsListComponent {
     // Por defecto, el admin ve su propia bolsa de leads (igual que un asesor), no la de todo el
     // equipo. Se omite cuando viene de "Alertas de leads fríos" (que es de todo el equipo) o de
     // "Leads de todos los asesores" (asesorId=todos), que explícitamente piden ver a todos.
-    if (this.esAdmin() && !quiereFrios && params.get('asesorId') !== 'todos') {
+    if (this.veTodos() && !quiereFrios && params.get('asesorId') !== 'todos') {
       this.asesorId.set(this.auth.currentUser()!.id);
     }
     this.cargar();
-    if (this.esAdmin()) {
+    if (this.veTodos()) {
       this.cargarAsesores();
       this.cargarTotalFrios();
     }
@@ -145,12 +154,8 @@ export class LeadsListComponent {
 
   private async cargarAsesores(): Promise<void> {
     try {
-      const usuarios = await this.usuariosService.listar();
-      this.asesoresDisponibles.set(
-        usuarios
-          .filter((u) => u.activo && ROLES_ASIGNABLES.has(u.rol))
-          .sort((a, b) => a.nombre.localeCompare(b.nombre)),
-      );
+      const usuarios = await this.usuariosService.paraLeads();
+      this.asesoresDisponibles.set(usuarios);
     } catch {
       // El filtro por asesor es una comodidad, no algo crítico: si falla, simplemente no se muestra.
     }
@@ -219,6 +224,7 @@ export class LeadsListComponent {
   }
 
   async cargar(): Promise<void> {
+    this.seleccionados.set(new Set());
     this.isLoading.set(true);
     this.errorMessage.set(null);
     try {
@@ -246,6 +252,53 @@ export class LeadsListComponent {
       this.errorMessage.set('No se pudieron cargar más leads.');
     } finally {
       this.isLoadingMore.set(false);
+    }
+  }
+
+  alternarSeleccion(id: number): void {
+    this.seleccionados.update((actuales) => {
+      const nuevo = new Set(actuales);
+      if (!nuevo.delete(id)) nuevo.add(id);
+      return nuevo;
+    });
+  }
+
+  /** Marca todos los leads cargados en pantalla; si ya estaban todos marcados, los desmarca. */
+  alternarTodos(): void {
+    this.seleccionados.set(this.todosSeleccionados() ? new Set() : new Set(this.leads().map((l) => l.id)));
+  }
+
+  quitarSeleccion(): void {
+    this.seleccionados.set(new Set());
+    this.asesorDestino.set(null);
+  }
+
+  async reasignarSeleccionados(): Promise<void> {
+    const destinoId = this.asesorDestino();
+    const ids = [...this.seleccionados()];
+    if (destinoId === null || ids.length === 0 || this.isReasignando()) return;
+    const destino = this.asesoresDisponibles().find((a) => a.id === destinoId);
+    const confirmado = await this.confirmService.confirm({
+      titulo: 'Reasignar leads',
+      mensaje:
+        ids.length === 1
+          ? `Se reasignará 1 lead a ${destino?.nombre ?? 'el asesor elegido'}. Sus etiquetas se quitan porque son privadas de cada asesor, y recibe el siguiente número de ese asesor.`
+          : `Se reasignarán ${ids.length} leads a ${destino?.nombre ?? 'el asesor elegido'}. Sus etiquetas se quitan porque son privadas de cada asesor, y cada lead recibe el siguiente número de ese asesor.`,
+      textoConfirmar: 'Reasignar',
+    });
+    if (!confirmado) return;
+
+    this.isReasignando.set(true);
+    try {
+      await this.leadsService.reasignarVarios(ids, destinoId);
+      this.toast.success(`${ids.length} lead${ids.length === 1 ? '' : 's'} reasignado${ids.length === 1 ? '' : 's'} a ${destino?.nombre ?? 'el asesor'}.`);
+      this.asesorDestino.set(null);
+      await this.cargar();
+      this.cargarTotalFrios();
+    } catch {
+      this.toast.error('No se pudieron reasignar los leads. No se cambió ninguno.');
+    } finally {
+      this.isReasignando.set(false);
     }
   }
 

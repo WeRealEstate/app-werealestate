@@ -12,6 +12,7 @@ import com.werealestate.backend.dto.LeadUpdateRequest;
 import com.werealestate.backend.dto.MoverColumnaRequest;
 import com.werealestate.backend.dto.PaginaDto;
 import com.werealestate.backend.dto.ReasignarLeadRequest;
+import com.werealestate.backend.dto.ReasignarVariosLeadsRequest;
 import com.werealestate.backend.exception.ConflictException;
 import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
@@ -100,6 +101,15 @@ public class LeadService {
         this.diasSinContactarNuevo = diasSinContactarNuevo;
     }
 
+    /**
+     * Admin y Administración (LIDER_AREA) gestionan los leads de todos (lista, archivados, fríos, abrir, editar,
+     * reasignar, crear a nombre de otro). Borrar sigue siendo solo del admin, y {@link #listar()} / {@link #resumen()}
+     * (Pipeline e inicio) siguen por dueño para Administración: ahí solo ve los suyos.
+     */
+    private static boolean veTodosLosLeads(Usuario usuario) {
+        return usuario.getRol() == Role.ADMIN || usuario.getRol() == Role.LIDER_AREA;
+    }
+
     public List<LeadDto> listar() {
         Usuario actual = currentUserProvider.getUsuarioActual();
         List<Lead> leads = actual.getRol() == Role.ADMIN
@@ -120,7 +130,7 @@ public class LeadService {
 
         Specification<Lead> spec = (root, query, cb) -> cb.equal(root.get("archivado"), archivados);
 
-        if (actual.getRol() == Role.ADMIN) {
+        if (veTodosLosLeads(actual)) {
             if (asesorIdFiltro != null) {
                 spec = spec.and((root, query, cb) -> cb.equal(root.get("asesor").get("id"), asesorIdFiltro));
             }
@@ -177,7 +187,7 @@ public class LeadService {
      */
     public List<LeadDto> listarArchivados() {
         Usuario actual = currentUserProvider.getUsuarioActual();
-        List<Lead> leads = actual.getRol() == Role.ADMIN
+        List<Lead> leads = veTodosLosLeads(actual)
                 ? leadRepository.findByArchivadoTrueOrderByFechaUltimoContactoDesc()
                 : leadRepository.findByAsesorIdAndArchivadoTrueOrderByFechaUltimoContactoDesc(actual.getId());
 
@@ -186,7 +196,7 @@ public class LeadService {
 
     public List<LeadDto> listarFrios() {
         Usuario actual = currentUserProvider.getUsuarioActual();
-        if (actual.getRol() != Role.ADMIN) {
+        if (!veTodosLosLeads(actual)) {
             throw new ForbiddenOperationException("Solo un administrador puede ver los leads fríos de todo el equipo");
         }
         LocalDateTime limite = LocalDateTime.now().minusDays(diasFrio);
@@ -233,7 +243,7 @@ public class LeadService {
         if (asesorIdPedido == null || asesorIdPedido.equals(actual.getId())) {
             return actual;
         }
-        if (actual.getRol() != Role.ADMIN) {
+        if (!veTodosLosLeads(actual)) {
             throw new ForbiddenOperationException(mensajeSiNoEsAdmin);
         }
         return usuarioRepository
@@ -388,26 +398,68 @@ public class LeadService {
 
     public LeadDto reasignar(Long id, ReasignarLeadRequest request) {
         Usuario actual = currentUserProvider.getUsuarioActual();
-        if (actual.getRol() != Role.ADMIN) {
-            throw new ForbiddenOperationException("Solo un administrador puede reasignar leads");
-        }
+        exigirPoderReasignar(actual);
 
         Lead lead = leadRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Lead no encontrado"));
         Usuario nuevoAsesor = usuarioRepository
                 .findById(request.nuevoAsesorId())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
 
-        if (!nuevoAsesor.getId().equals(lead.getAsesor().getId())) {
-            // Las etiquetas son privadas de cada asesor: al cambiar de dueño, las del anterior ya no aplican.
-            lead.getEtiquetas().clear();
-            // Recibe el siguiente número del asesor que lo recibe; el anterior queda como hueco, no se reutiliza.
-            // Se calcula antes de cambiar el asesor: la consulta vacía los cambios pendientes y el lead (con el asesor
-            // nuevo y su número viejo) podría chocar con otro del mismo número.
-            Long numero = siguienteNumeroDe(nuevoAsesor.getId());
-            lead.setAsesor(nuevoAsesor);
-            lead.setNumero(numero);
-        }
+        moverAlAsesor(lead, nuevoAsesor);
         return toDto(leadRepository.save(lead));
+    }
+
+    /**
+     * Reasigna varios leads a un mismo asesor, todo o nada (la transacción de la clase se revierte si cualquier id no
+     * existe). Devuelve cuántos cambiaron de dueño; los que ya eran del asesor destino se dejan como están.
+     */
+    public int reasignarVarios(ReasignarVariosLeadsRequest request) {
+        Usuario actual = currentUserProvider.getUsuarioActual();
+        exigirPoderReasignar(actual);
+
+        Usuario nuevoAsesor = usuarioRepository
+                .findById(request.nuevoAsesorId())
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        Set<Long> ids = new LinkedHashSet<>(request.leadIds());
+        List<Lead> encontrados = leadRepository.findAllById(ids);
+        if (encontrados.size() != ids.size()) {
+            throw new ResourceNotFoundException("Alguno de los leads ya no existe");
+        }
+        // En el orden pedido, para que los números nuevos sigan ese orden.
+        Map<Long, Lead> porId = new java.util.HashMap<>();
+        encontrados.forEach(l -> porId.put(l.getId(), l));
+
+        int cambiados = 0;
+        for (Long id : ids) {
+            Lead lead = porId.get(id);
+            if (moverAlAsesor(lead, nuevoAsesor)) {
+                leadRepository.saveAndFlush(lead); // el siguiente número de este mismo asesor ya cuenta este
+                cambiados++;
+            }
+        }
+        return cambiados;
+    }
+
+    private void exigirPoderReasignar(Usuario actual) {
+        if (!veTodosLosLeads(actual)) {
+            throw new ForbiddenOperationException("Solo un administrador puede reasignar leads");
+        }
+    }
+
+    /** Cambia el dueño del lead (sin guardar). Devuelve false si ya era de ese asesor. */
+    private boolean moverAlAsesor(Lead lead, Usuario nuevoAsesor) {
+        if (nuevoAsesor.getId().equals(lead.getAsesor().getId())) {
+            return false;
+        }
+        // Las etiquetas son privadas de cada asesor: al cambiar de dueño, las del anterior ya no aplican.
+        lead.getEtiquetas().clear();
+        // Recibe el siguiente número del asesor que lo recibe; el anterior queda como hueco, no se reutiliza.
+        // Se calcula antes de cambiar el asesor: la consulta vacía los cambios pendientes y el lead (con el asesor
+        // nuevo y su número viejo) podría chocar con otro del mismo número.
+        Long numero = siguienteNumeroDe(nuevoAsesor.getId());
+        lead.setAsesor(nuevoAsesor);
+        lead.setNumero(numero);
+        return true;
     }
 
     /**
@@ -469,13 +521,13 @@ public class LeadService {
         leadRepository.delete(lead);
     }
 
-    /** Carga un lead y valida que el usuario actual pueda verlo/editarlo (dueño o admin). */
+    /** Carga un lead y valida que el usuario actual pueda verlo/editarlo (dueño, admin o Administración). */
     Lead buscarLeadPermitido(Long id) {
         Lead lead = leadRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Lead no encontrado"));
         Usuario actual = currentUserProvider.getUsuarioActual();
 
         boolean esDueno = lead.getAsesor().getId().equals(actual.getId());
-        if (!esDueno && actual.getRol() != Role.ADMIN) {
+        if (!esDueno && !veTodosLosLeads(actual)) {
             throw new ForbiddenOperationException("No tienes acceso a este lead");
         }
         return lead;

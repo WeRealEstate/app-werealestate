@@ -55,6 +55,11 @@ public class UsuarioController {
         return usuarioService.paraVenta();
     }
 
+    @GetMapping("/para-leads")
+    public List<UsuarioResumenDto> paraLeads() {
+        return usuarioService.paraLeads();
+    }
+
     @PostMapping
     public UsuarioDto crear(@Valid @RequestBody UsuarioCreateRequest request) {
         return usuarioService.crear(request);

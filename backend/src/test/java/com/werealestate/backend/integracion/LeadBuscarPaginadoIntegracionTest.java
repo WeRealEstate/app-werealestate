@@ -225,7 +225,7 @@ class LeadBuscarPaginadoIntegracionTest extends PruebaDeIntegracion {
     }
 
     @Test
-    void administracionSoloVeSusPropiosLeadsComoUnAsesor() {
+    void administracionVeLosLeadsDeTodosComoElAdmin() {
         Usuario asesor = usuario(Role.ASESOR);
         Usuario administracion = usuario(Role.LIDER_AREA);
         String tag = etiqueta();
@@ -233,9 +233,10 @@ class LeadBuscarPaginadoIntegracionTest extends PruebaDeIntegracion {
         lead(administracion, 1, "De administracion " + tag, "2");
         iniciarSesionComo(administracion);
 
-        // OJO: comportamiento actual: solo ADMIN ve todos los leads; LIDER_AREA queda con el alcance de un asesor.
-        assertEquals(List.of("De administracion " + tag),
-                buscar(tag, null, null, false).contenido().stream().map(LeadDto::nombreCliente).toList());
+        // Administración ve a todos (y puede filtrar por asesor), igual que el admin; solo borrar sigue siendo del admin.
+        assertEquals(2, buscar(tag, null, null, false).contenido().size());
+        assertEquals(List.of("Del asesor " + tag),
+                buscar(tag, null, asesor.getId(), false).contenido().stream().map(LeadDto::nombreCliente).toList());
     }
 
     @Test

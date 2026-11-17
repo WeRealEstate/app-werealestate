@@ -28,7 +28,6 @@ import {
   TipoSeguimiento,
   UsuarioResumen,
 } from '../../../core/models/lead.model';
-import { Usuario } from '../../../core/models/user.model';
 import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 import { POSICION_MENU_DERECHA } from '../../../shared/menu/posicion-menu';
 import {
@@ -43,7 +42,6 @@ import {
 
 /** Roles que pueden recibir la reasignación de un lead: quienes trabajan leads, más el admin,
  * que también tiene su propia bolsa de leads. */
-const ROLES_ASIGNABLES = new Set(['ASESOR', 'LIDER_AREA', 'ADMIN']);
 
 @Component({
   selector: 'app-lead-detail',
@@ -71,6 +69,8 @@ export class LeadDetailComponent implements OnInit {
   readonly horasOpciones = HORAS_OPCIONES;
   readonly minutosOpciones = MINUTOS_OPCIONES;
   readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
+  /** Admin y Administración gestionan los leads de todos; borrar sigue siendo solo del admin (`esAdmin`). */
+  readonly veTodos = computed(() => ['ADMIN', 'LIDER_AREA'].includes(this.auth.currentUser()?.rol ?? ''));
   readonly posicionMenu = POSICION_MENU_DERECHA;
   readonly propioId = computed(() => this.auth.currentUser()?.id);
   /** Las tarjetas son por asesor (ver ColumnaPersonalizadaService.resolverAsesorId): solo se
@@ -79,7 +79,7 @@ export class LeadDetailComponent implements OnInit {
   readonly puedeMoverTarjeta = computed(() => {
     const l = this.lead();
     if (!l) return false;
-    return this.esAdmin() || l.asesor.id === this.propioId();
+    return this.veTodos() || l.asesor.id === this.propioId();
   });
   readonly coloresEtiqueta = ETIQUETA_COLORES;
   readonly badgeClasesEtiqueta = ETIQUETA_BADGE_CLASSES;
@@ -97,7 +97,7 @@ export class LeadDetailComponent implements OnInit {
   readonly isGuardandoEtiquetas = signal(false);
   readonly seguimientos = signal<Seguimiento[]>([]);
   readonly columnasDisponibles = signal<ColumnaPersonalizada[]>([]);
-  readonly asesores = signal<Usuario[]>([]);
+  readonly asesores = signal<UsuarioResumen[]>([]);
   readonly isLoading = signal(true);
   readonly isSavingEstado = signal(false);
   readonly isSavingAsesor = signal(false);
@@ -140,9 +140,9 @@ export class LeadDetailComponent implements OnInit {
       this.cargar();
     });
 
-    if (this.esAdmin()) {
-      this.usuariosService.listar().then((usuarios) => {
-        this.asesores.set(usuarios.filter((u) => u.activo && ROLES_ASIGNABLES.has(u.rol)));
+    if (this.veTodos()) {
+      this.usuariosService.paraLeads().then((usuarios) => {
+        this.asesores.set(usuarios);
       });
     }
   }
@@ -160,7 +160,7 @@ export class LeadDetailComponent implements OnInit {
       this.catalogoEtiquetas.set(await this.etiquetasService.listar(lead.asesor.id));
       this.seguimientoForm.controls.columnaPersonalizadaId.setValue(lead.columnaPersonalizadaId);
       this.columnasDisponibles.set(
-        this.esAdmin() || lead.asesor.id === this.propioId()
+        this.veTodos() || lead.asesor.id === this.propioId()
           ? await this.columnasService.listar(lead.asesor.id)
           : [],
       );

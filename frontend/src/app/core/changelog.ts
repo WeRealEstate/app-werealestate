@@ -15,6 +15,10 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.5.0', fecha: '2026-11-17', cambios: [
+    "Leads: ahora se pueden reasignar varios leads a la vez. En la lista aparece una casilla en cada lead (y una arriba para marcar todos los que se ven); al marcar aparece una barra con «Reasignar a…», se confirma y todos pasan al asesor elegido (si algo falla no se cambia ninguno). Los leads reasignados pierden sus etiquetas, que son privadas de cada asesor, y reciben el siguiente número de su nuevo asesor.",
+    "Administración ahora ve y gestiona los leads de todos los asesores igual que el Admin (lista con filtro por asesor, archivados, alertas de leads fríos, abrir y editar cualquier lead, crear o importar a nombre de otro, reasignar), excepto borrar leads, que sigue siendo solo del Admin. El Pipeline y el Inicio de Administración no cambian: siguen mostrando solo sus propios leads.",
+  ] },
   { version: '12.4.0', fecha: '2026-11-17', cambios: [
     "Detalle de la venta: nuevo botón «Enviar correo de bienvenida» junto al contrato (solo Administración y Admin). Manda al cliente titular el correo de bienvenida de SAMAI Campestre cuando el contrato ya está firmado y el cliente tiene correo; pide confirmación mostrando a qué correo va, queda registrado («Bienvenida enviada el … por …») y se puede reenviar. Por ahora es manual; Aldea Nanuu aún no tiene su correo.",
   ] },

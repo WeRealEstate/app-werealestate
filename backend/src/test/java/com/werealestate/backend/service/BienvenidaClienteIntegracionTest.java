@@ -97,7 +97,7 @@ class BienvenidaClienteIntegracionTest extends PruebaDeIntegracion {
         MimeMessage m = enviado.getValue();
         m.saveChanges();
         assertEquals("cliente@ejemplo.com", m.getAllRecipients()[0].toString());
-        assertEquals("Bienvenidos a We Real Estate - Samai Campestre 🌴", m.getSubject());
+        assertEquals("Bienvenido a We Real Estate - Samai Campestre 🌴", m.getSubject());
         // En el encabezado crudo viaja codificado en UTF-8 (no se pierden el emoji ni los acentos).
         assertTrue(m.getHeader("Subject", null).contains("=?UTF-8?"), m.getHeader("Subject", null));
         StringBuilder cuerpo = new StringBuilder();

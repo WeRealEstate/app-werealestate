@@ -31,7 +31,7 @@
             <svg lucideFileDown [size]="16" aria-hidden="true"></svg>
             Descargar plantilla
           </button>
-          @if (esAdmin() && !isLoading() && !errorMessage() && leads().length > 0) {
+          @if (veTodos() && !isLoading() && !errorMessage() && leads().length > 0) {
             <div class="menu-separador" role="separator"></div>
             <button cdkMenuItem type="button" (cdkMenuItemTriggered)="exportarCsv()" class="menu-item">
               <svg lucideDownload [size]="16" aria-hidden="true"></svg>
@@ -55,7 +55,7 @@
     </div>
   </div>
 
-  @if (!verArchivados() && esAdmin() && totalFrios() > 0) {
+  @if (!verArchivados() && veTodos() && totalFrios() > 0) {
     <button
       type="button"
       (click)="toggleSoloFrios()"
@@ -101,7 +101,7 @@
         <option [value]="e" [selected]="e === estadoFiltro()">{{ estadoLabels[e] }}</option>
       }
     </select>
-    @if (esAdmin() && asesoresDisponibles().length > 0) {
+    @if (veTodos() && asesoresDisponibles().length > 0) {
       <select
         (change)="onAsesorChange($any($event.target).value)"
         class="w-full max-w-xs rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
@@ -161,7 +161,7 @@
           Todavía no hay leads registrados.
         }
       </p>
-      @if (esAdmin() && asesorId() !== null) {
+      @if (veTodos() && asesorId() !== null) {
         <button
           type="button"
           (click)="verTodosLosAsesores()"
@@ -174,15 +174,32 @@
       }
     </div>
   } @else {
-    <div class="mt-6 overflow-x-auto rounded-xl border border-border">
+    @if (veTodos()) {
+      <label class="mt-6 flex min-h-[44px] items-center gap-2.5 text-sm text-ink sm:hidden">
+        <input type="checkbox" [checked]="todosSeleccionados()" (change)="alternarTodos()" class="h-5 w-5 accent-we-primary" />
+        Seleccionar todos los que se ven
+      </label>
+    }
+    <div class="overflow-x-auto rounded-xl border border-border" [class.mt-6]="!veTodos()" [class.sm:mt-6]="veTodos()">
       <table class="mobile-records min-w-full divide-y divide-border text-sm">
         <thead class="bg-surface-2">
           <tr class="text-left text-xs font-medium uppercase tracking-wide text-ink-muted">
+            @if (veTodos()) {
+              <th class="w-10 px-4 py-3">
+                <input
+                  type="checkbox"
+                  [checked]="todosSeleccionados()"
+                  (change)="alternarTodos()"
+                  aria-label="Seleccionar todos los leads que se ven"
+                  class="h-4 w-4 accent-we-primary"
+                />
+              </th>
+            }
             <th class="px-4 py-3">N.º</th>
             <th class="px-4 py-3">Cliente</th>
             <th class="px-4 py-3">Desarrollo</th>
             <th class="px-4 py-3">Estado</th>
-            @if (esAdmin()) {
+            @if (veTodos()) {
               <th class="px-4 py-3">Asesor</th>
             }
             <th class="px-4 py-3">Último contacto</th>
@@ -192,6 +209,17 @@
         <tbody class="divide-y divide-border bg-surface">
           @for (lead of leads(); track lead.id; let i = $index) {
             <tr class="stagger-item hover:bg-surface-2 transition-colors duration-150" [style.animation-delay.ms]="i < 8 ? i * 40 : 0">
+              @if (veTodos()) {
+                <td data-label="Seleccionar" class="px-4 py-3">
+                  <input
+                    type="checkbox"
+                    [checked]="seleccionados().has(lead.id)"
+                    (change)="alternarSeleccion(lead.id)"
+                    [attr.aria-label]="'Seleccionar a ' + lead.nombreCliente"
+                    class="h-4 w-4 accent-we-primary"
+                  />
+                </td>
+              }
               <td data-label="N.º" class="px-4 py-3 tabular-nums text-ink-muted">{{ lead.numero }}</td>
               <td data-label="Cliente" class="px-4 py-3">
                 <div class="font-medium text-ink">{{ lead.nombreCliente }}</div>
@@ -212,7 +240,7 @@
                   {{ estadoLabels[lead.estado] }}
                 </span>
               </td>
-              @if (esAdmin()) {
+              @if (veTodos()) {
                 <td data-label="Asesor" class="px-4 py-3 text-ink-muted">{{ lead.asesor.nombre }}</td>
               }
               <td data-label="Último contacto" class="px-4 py-3">
@@ -254,5 +282,53 @@
         </button>
       </div>
     }
+  }
+
+  @if (veTodos() && seleccionados().size > 0) {
+    <div
+      class="sticky bottom-0 z-30 mt-4 rounded-xl border border-border bg-surface px-4 py-3 shadow-lg"
+      role="region"
+      aria-label="Reasignar leads seleccionados"
+    >
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <span class="text-sm font-medium text-ink sm:mr-2">
+          {{ seleccionados().size }} seleccionado{{ seleccionados().size === 1 ? '' : 's' }}
+        </span>
+        <select
+          [value]="asesorDestino() ?? ''"
+          (change)="asesorDestino.set($any($event.target).value === '' ? null : +$any($event.target).value)"
+          aria-label="Reasignar a"
+          class="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink sm:max-w-xs
+                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+        >
+          <option value="">Reasignar a…</option>
+          @for (a of asesoresDisponibles(); track a.id) {
+            <option [value]="a.id">{{ a.nombre }}</option>
+          }
+        </select>
+        <div class="flex gap-2">
+          <button
+            type="button"
+            (click)="reasignarSeleccionados()"
+            [disabled]="asesorDestino() === null || isReasignando()"
+            class="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-lg bg-we-primary px-4 text-sm font-semibold text-white
+                   hover:bg-we-primary/90 active:scale-[0.97] transition-transform duration-150
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50
+                   disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
+          >
+            {{ isReasignando() ? 'Reasignando…' : 'Reasignar' }}
+          </button>
+          <button
+            type="button"
+            (click)="quitarSeleccion()"
+            [disabled]="isReasignando()"
+            class="boton-secundario inline-flex min-h-[44px] flex-1 items-center justify-center whitespace-nowrap rounded-lg px-4 text-sm font-semibold text-ink
+                   active:scale-[0.97] transition duration-150 focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+          >
+            Quitar selección
+          </button>
+        </div>
+      </div>
+    </div>
   }
 </div>

@@ -112,6 +112,14 @@ export class LeadsService {
     );
   }
 
+  /** Reasigna varios leads a un asesor, todo o nada. Devuelve cuántos cambiaron de dueño. */
+  async reasignarVarios(leadIds: number[], nuevoAsesorId: number): Promise<number> {
+    const r = await firstValueFrom(
+      this.http.put<{ reasignados: number }>(`${this.baseUrl}/reasignar-varios`, { leadIds, nuevoAsesorId }),
+    );
+    return r.reasignados;
+  }
+
   moverColumna(id: number, request: MoverColumnaRequest): Promise<Lead> {
     return firstValueFrom(this.http.put<Lead>(`${this.baseUrl}/${id}/mover-columna`, request).pipe(map((l) => this.normalizar(l))));
   }

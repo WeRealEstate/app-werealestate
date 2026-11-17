@@ -7,15 +7,10 @@ import { AuthService } from '../../../core/services/auth.service';
 import { LeadsService } from '../../../core/services/leads.service';
 import { UsuariosService } from '../../../core/services/usuarios.service';
 import { ToastService } from '../../../core/services/toast.service';
-import { Desarrollo, ESTADOS_REPUBLICA, Lead, PAIS_LABELS, Pais } from '../../../core/models/lead.model';
-import { Usuario } from '../../../core/models/user.model';
+import { Desarrollo, ESTADOS_REPUBLICA, Lead, PAIS_LABELS, Pais, UsuarioResumen } from '../../../core/models/lead.model';
 import { WeLoaderComponent } from '../../../shared/we-loader/we-loader.component';
 import { MonedaInputDirective } from '../../../shared/moneda-input/moneda-input.directive';
 import { CorreoInputDirective } from '../../../shared/correo-input/correo-input.directive';
-
-/** Roles que pueden recibir la asignación de un lead: quienes trabajan leads, más el admin,
- * que también tiene su propia bolsa de leads. */
-const ROLES_ASIGNABLES = new Set(['ASESOR', 'LIDER_AREA', 'ADMIN']);
 
 @Component({
   selector: 'app-lead-form',
@@ -34,12 +29,12 @@ export class LeadFormComponent implements OnInit {
 
   private leadOriginal: Lead | null = null;
 
-  readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
+  readonly veTodos = computed(() => ['ADMIN', 'LIDER_AREA'].includes(this.auth.currentUser()?.rol ?? ''));
 
   readonly leadId = signal<number | null>(null);
   readonly modoEdicion = computed(() => this.leadId() !== null);
   readonly desarrollos = signal<Desarrollo[]>([]);
-  readonly asesores = signal<Usuario[]>([]);
+  readonly asesores = signal<UsuarioResumen[]>([]);
   readonly isLoading = signal(false);
   readonly isCargandoLead = signal(false);
   readonly errorMessage = signal<string | null>(null);
@@ -94,13 +89,13 @@ export class LeadFormComponent implements OnInit {
       const id = Number(idParam);
       this.leadId.set(id);
       await this.cargarLeadParaEditar(id);
-    } else if (this.esAdmin()) {
+    } else if (this.veTodos()) {
       this.form.controls.asesorId.addValidators(Validators.required);
     }
 
-    if (this.esAdmin() && !this.modoEdicion()) {
-      const usuarios = await this.usuariosService.listar();
-      this.asesores.set(usuarios.filter((u) => u.activo && ROLES_ASIGNABLES.has(u.rol)));
+    if (this.veTodos() && !this.modoEdicion()) {
+      const usuarios = await this.usuariosService.paraLeads();
+      this.asesores.set(usuarios);
     }
   }
 

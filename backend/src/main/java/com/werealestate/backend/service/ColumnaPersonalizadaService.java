@@ -83,7 +83,7 @@ public class ColumnaPersonalizadaService {
                 columnaRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Columna no encontrada"));
 
         boolean esDueno = columna.getAsesor().getId().equals(actual.getId());
-        if (!esDueno && actual.getRol() != Role.ADMIN) {
+        if (!esDueno && !veTodasLasColumnas(actual)) {
             throw new ForbiddenOperationException("No tienes acceso a esta columna");
         }
         return columna;
@@ -94,9 +94,14 @@ public class ColumnaPersonalizadaService {
         if (asesorIdParam == null || asesorIdParam.equals(actual.getId())) {
             return actual.getId();
         }
-        if (actual.getRol() != Role.ADMIN) {
+        if (!veTodasLasColumnas(actual)) {
             throw new ForbiddenOperationException("No tienes acceso a las columnas de otro asesor");
         }
         return asesorIdParam;
+    }
+
+    /** Administración gestiona los leads de todos, así que también ve las columnas del asesor dueño del lead. */
+    private static boolean veTodasLasColumnas(Usuario usuario) {
+        return usuario.getRol() == Role.ADMIN || usuario.getRol() == Role.LIDER_AREA;
     }
 }

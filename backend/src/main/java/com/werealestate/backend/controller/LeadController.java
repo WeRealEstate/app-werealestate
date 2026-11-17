@@ -10,9 +10,11 @@ import com.werealestate.backend.dto.LeadUpdateRequest;
 import com.werealestate.backend.dto.MoverColumnaRequest;
 import com.werealestate.backend.dto.PaginaDto;
 import com.werealestate.backend.dto.ReasignarLeadRequest;
+import com.werealestate.backend.dto.ReasignarVariosLeadsRequest;
 import com.werealestate.backend.service.LeadService;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -86,6 +88,12 @@ public class LeadController {
     @PutMapping("/{id}")
     public LeadDto actualizar(@PathVariable Long id, @Valid @RequestBody LeadUpdateRequest request) {
         return leadService.actualizar(id, request);
+    }
+
+    /** Reasigna varios leads a un asesor, todo o nada. Responde cuántos cambiaron de dueño. */
+    @PutMapping("/reasignar-varios")
+    public Map<String, Integer> reasignarVarios(@Valid @RequestBody ReasignarVariosLeadsRequest request) {
+        return Map.of("reasignados", leadService.reasignarVarios(request));
     }
 
     @PutMapping("/{id}/reasignar")

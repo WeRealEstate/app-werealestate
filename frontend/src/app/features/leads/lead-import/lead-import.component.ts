@@ -6,12 +6,7 @@ import { LeadsService } from '../../../core/services/leads.service';
 import { UsuariosService } from '../../../core/services/usuarios.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { generarPlantillaLeads } from '../../../core/utils/plantilla-leads';
-import { Desarrollo, LeadImportResultado } from '../../../core/models/lead.model';
-import { Usuario } from '../../../core/models/user.model';
-
-/** Roles que pueden recibir la asignación de un lead: quienes trabajan leads, más el admin,
- * que también tiene su propia bolsa de leads. */
-const ROLES_ASIGNABLES = new Set(['ASESOR', 'LIDER_AREA', 'ADMIN']);
+import { Desarrollo, LeadImportResultado, UsuarioResumen } from '../../../core/models/lead.model';
 
 /** Una fila ya parseada del Excel, editable en la vista previa antes de confirmar la importación. */
 interface FilaImportacion {
@@ -45,10 +40,10 @@ export class LeadImportComponent {
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
 
-  readonly esAdmin = computed(() => this.auth.currentUser()?.rol === 'ADMIN');
+  readonly veTodos = computed(() => ['ADMIN', 'LIDER_AREA'].includes(this.auth.currentUser()?.rol ?? ''));
 
   readonly desarrollos = signal<Desarrollo[]>([]);
-  readonly asesores = signal<Usuario[]>([]);
+  readonly asesores = signal<UsuarioResumen[]>([]);
   readonly asesorId = signal<number | null>(null);
   readonly desarrolloDefaultId = signal<number | null>(null);
 
@@ -67,9 +62,9 @@ export class LeadImportComponent {
 
   private async cargarInicial(): Promise<void> {
     this.desarrollos.set(await this.leadsService.listarDesarrollos());
-    if (this.esAdmin()) {
-      const usuarios = await this.usuariosService.listar();
-      this.asesores.set(usuarios.filter((u) => u.activo && ROLES_ASIGNABLES.has(u.rol)));
+    if (this.veTodos()) {
+      const usuarios = await this.usuariosService.paraLeads();
+      this.asesores.set(usuarios);
     }
   }
 
@@ -177,7 +172,7 @@ export class LeadImportComponent {
       this.toast.error('Elige un desarrollo por defecto para las filas que no traen uno.');
       return;
     }
-    if (this.esAdmin() && this.asesorId() === null) {
+    if (this.veTodos() && this.asesorId() === null) {
       this.toast.error('Elige a qué asesor se le asignarán estos leads.');
       return;
     }
@@ -185,7 +180,7 @@ export class LeadImportComponent {
     this.isImportando.set(true);
     try {
       const resultado = await this.leadsService.importar({
-        asesorId: this.esAdmin() ? this.asesorId() : null,
+        asesorId: this.veTodos() ? this.asesorId() : null,
         leads: incluidas.map((f) => ({
           nombreCliente: f.nombreCliente,
           telefono: f.telefono,

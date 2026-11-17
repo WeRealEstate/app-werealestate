@@ -16,6 +16,7 @@ export class UsuariosService {
   private readonly cacheTodos = new CacheLista<Usuario>();
   private readonly cacheAsignables = new CacheLista<UsuarioResumen>();
   private readonly cacheParaVenta = new CacheLista<UsuarioResumen>();
+  private readonly cacheParaLeads = new CacheLista<UsuarioResumen>();
 
   listar(): Promise<Usuario[]> {
     return this.cacheTodos.obtener(() => firstValueFrom(this.http.get<Usuario[]>(this.baseUrl)));
@@ -46,6 +47,14 @@ export class UsuariosService {
     );
   }
 
+  /** Lista ligera (id/nombre) de asesores, Administración y admin activos, a quienes se les puede dar un lead
+   * (filtro por asesor, reasignar, crear a nombre de otro). Solo admin y Administración. */
+  paraLeads(): Promise<UsuarioResumen[]> {
+    return this.cacheParaLeads.obtener(() =>
+      firstValueFrom(this.http.get<UsuarioResumen[]>(`${this.baseUrl}/para-leads`)),
+    );
+  }
+
   crear(request: UsuarioCreateRequest): Promise<Usuario> {
     return this.yRefrescarListas(firstValueFrom(this.http.post<Usuario>(this.baseUrl, request)));
   }
@@ -73,6 +82,7 @@ export class UsuariosService {
       this.cacheTodos.invalidar();
       this.cacheAsignables.invalidar();
       this.cacheParaVenta.invalidar();
+      this.cacheParaLeads.invalidar();
     });
   }
 }

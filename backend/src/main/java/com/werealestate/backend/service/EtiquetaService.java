@@ -79,7 +79,7 @@ public class EtiquetaService {
                 etiquetaRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Etiqueta no encontrada"));
 
         boolean esDueno = etiqueta.getAsesor().getId().equals(actual.getId());
-        if (!esDueno && actual.getRol() != Role.ADMIN) {
+        if (!esDueno && !veTodasLasEtiquetas(actual)) {
             throw new ForbiddenOperationException("No tienes acceso a esta etiqueta");
         }
         return etiqueta;
@@ -90,9 +90,14 @@ public class EtiquetaService {
         if (asesorIdParam == null || asesorIdParam.equals(actual.getId())) {
             return actual.getId();
         }
-        if (actual.getRol() != Role.ADMIN) {
+        if (!veTodasLasEtiquetas(actual)) {
             throw new ForbiddenOperationException("No tienes acceso a las etiquetas de otro asesor");
         }
         return asesorIdParam;
+    }
+
+    /** Administración gestiona los leads de todos, así que también opera las etiquetas del asesor dueño del lead. */
+    private static boolean veTodasLasEtiquetas(Usuario usuario) {
+        return usuario.getRol() == Role.ADMIN || usuario.getRol() == Role.LIDER_AREA;
     }
 }
