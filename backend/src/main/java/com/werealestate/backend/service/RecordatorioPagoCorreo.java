@@ -207,14 +207,15 @@ final class RecordatorioPagoCorreo {
         sb.append("<div style=\"display:none;max-height:0;overflow:hidden;opacity:0;color:#FAFAFA;\">")
                 .append(e(vistaPrevia(c))).append("</div>");
         sb.append("<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" ")
-                .append("style=\"border-collapse:collapse;background-color:#FAFAFA;\"><tr><td align=\"center\" style=\"padding:10px;\">")
+                .append("style=\"border-collapse:collapse;background-color:#FAFAFA;\">");
+        // Banner a todo el ancho de la ventana del correo (decisión del usuario), fuera de la columna de 600 px del texto.
+        sb.append("<tr><td style=\"padding:0;\">")
+                .append("<img src=\"cid:").append(CID_BANNER).append("\" width=\"100%\" alt=\"SAMAI Campestre\" ")
+                .append("style=\"display:block;width:100%;height:auto;border:0;outline:none;text-decoration:none;\">")
+                .append("</td></tr>");
+        sb.append("<tr><td align=\"center\" style=\"padding:0 10px 10px;\">")
                 .append("<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" ")
                 .append("style=\"border-collapse:collapse;max-width:600px;\">");
-        // Banner
-        sb.append("<tr><td style=\"padding:18px 18px 9px;background-color:#FAFAFA;\">")
-                .append("<img src=\"cid:").append(CID_BANNER).append("\" width=\"564\" alt=\"SAMAI Campestre\" ")
-                .append("style=\"display:block;width:100%;max-width:564px;height:auto;border:0;outline:none;text-decoration:none;\">")
-                .append("</td></tr>");
         // Cuerpo
         sb.append("<tr><td style=\"background-color:#FFFFFF;border-bottom:2px solid #EAEAEA;padding:18px 18px 18px;\">");
         sb.append("<h1 style=\"display:block;margin:0;padding:0;color:#202020;font-family:Helvetica,Arial,sans-serif;")

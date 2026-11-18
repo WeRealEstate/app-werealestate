@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.7.1', fecha: '2026-11-18', cambios: [
+    "Recordatorio de pago de SAMAI Campestre: el banner ahora ocupa todo el ancho del correo.",
+  ] },
   { version: '12.7.0', fecha: '2026-11-18', cambios: [
     "Detalle de la venta: nuevo botón «Enviar correos de liquidación», debajo de las tarjetas de inversión, abonado y saldo (solo Administración y Admin, ventas de SAMAI Campestre). Se habilita cuando la venta ya está pagada por completo y manda dos correos: una felicitación al cliente titular y el aviso «¡Es hora de realizar una carta finiquito!» a finanzas, con los datos del cliente, de los copropietarios, de la venta y un enlace directo a ella. Si el cliente no tiene correo, solo se avisa a finanzas (la confirmación lo dice). Queda registrado («Enviados el … por …») y se puede reenviar. Por ahora es manual.",
   ] },
