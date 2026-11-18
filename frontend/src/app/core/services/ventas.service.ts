@@ -7,6 +7,7 @@ import { Pagina } from '../models/pagina.model';
 import {
   PagoVenta,
   BienvenidaCliente,
+  LiquidacionAviso,
   RecordatorioPago,
   MedioFirma,
   AplicarDepositoRequest,
@@ -83,6 +84,16 @@ export class VentasService {
   /** Tabla de amortización de la venta con su estado de cuenta a hoy. */
   amortizacion(id: number): Promise<Amortizacion> {
     return firstValueFrom(this.http.get<Amortizacion>(`${this.baseUrl}/${id}/amortizacion`));
+  }
+
+  /** Estado del botón "Enviar correos de liquidación": si aplica, si ya está liquidada y el último envío. */
+  liquidacion(id: number): Promise<LiquidacionAviso> {
+    return firstValueFrom(this.http.get<LiquidacionAviso>(`${this.baseUrl}/${id}/liquidacion`));
+  }
+
+  /** Manda ahora los correos de liquidación (cliente y finanzas) y devuelve el estado ya actualizado. */
+  enviarLiquidacion(id: number): Promise<LiquidacionAviso> {
+    return firstValueFrom(this.http.post<LiquidacionAviso>(`${this.baseUrl}/${id}/liquidacion`, {}));
   }
 
   /** Estado del botón "Enviar correo de bienvenida": si aplica, si se puede y la última enviada. */

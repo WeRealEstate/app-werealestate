@@ -17,7 +17,7 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { VentasService } from '../../../../core/services/ventas.service';
 import { UsuariosService } from '../../../../core/services/usuarios.service';
 import { AsesoresExternosService } from '../../../../core/services/asesores-externos.service';
-import { BienvenidaCliente, MODALIDAD_PAGO_LABELS, ModalidadPago, PagoVenta, ReciboHistorial, RecordatorioPago, Venta } from '../../../../core/models/venta.model';
+import { BienvenidaCliente, LiquidacionAviso, MODALIDAD_PAGO_LABELS, ModalidadPago, PagoVenta, ReciboHistorial, RecordatorioPago, Venta } from '../../../../core/models/venta.model';
 import { ReciboFormComponent } from '../../../../shared/recibo-form/recibo-form.component';
 import { ContratoVentaComponent } from '../../../../shared/contrato-venta/contrato-venta.component';
 import { RecibosVentaComponent } from '../../../../shared/recibos-venta/recibos-venta.component';
@@ -65,6 +65,9 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
   /** Estado del correo de bienvenida (solo admin y administración; null si no se pudo consultar). */
   readonly bienvenida = signal<BienvenidaCliente | null>(null);
   readonly enviandoBienvenida = signal(false);
+  /** Estado de los correos de liquidación (solo admin y administración; null si no se pudo consultar). */
+  readonly liquidacion = signal<LiquidacionAviso | null>(null);
+  readonly enviandoLiquidacion = signal(false);
   readonly cuentaAtraso = cuentaAtraso;
   readonly fechaCorta = fechaCorta;
   readonly isLoading = signal(true);
@@ -196,12 +199,13 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
           ? await this.ventasService.obtenerPorNumero(this.numeroEnUrl)
           : await this.ventasService.obtener(this.ventaId);
       this.ventaId = venta.id;
-      const [pagos, historial, amortizacion, recordatorio, bienvenida] = await Promise.all([
+      const [pagos, historial, amortizacion, recordatorio, bienvenida, liquidacion] = await Promise.all([
         this.ventasService.listarPagos(venta.id),
         this.ventasService.historialRecibos(venta.id),
         this.ventasService.amortizacion(venta.id).catch(() => null),
         this.puedeEliminar() ? this.ventasService.recordatorioPago(venta.id).catch(() => null) : Promise.resolve(null),
         this.puedeEliminar() ? this.ventasService.bienvenida(venta.id).catch(() => null) : Promise.resolve(null),
+        this.puedeEliminar() ? this.ventasService.liquidacion(venta.id).catch(() => null) : Promise.resolve(null),
       ]);
       this.venta.set(venta);
       this.pagos.set(pagos);
@@ -209,6 +213,7 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
       this.amortizacion.set(amortizacion);
       this.recordatorio.set(recordatorio);
       this.bienvenida.set(bienvenida);
+      this.liquidacion.set(liquidacion);
       this.sincronizarDireccion(venta.etiqueta);
     } catch {
       this.errorMessage.set('No se pudo cargar la venta.');
@@ -280,6 +285,42 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
       );
     } finally {
       this.enviandoBienvenida.set(false);
+    }
+  }
+
+  /** Pide confirmación (a quién va cada correo; avisa si ya se enviaron antes), manda los correos de liquidación y refresca. */
+  async enviarLiquidacion(): Promise<void> {
+    const l = this.liquidacion();
+    const v = this.venta();
+    if (!l || !v || !l.puedeEnviar || this.enviandoLiquidacion()) return;
+    const destinos = l.correoCliente
+      ? `Se enviará la felicitación al cliente (${l.correoCliente}) y el aviso «¡Es hora de realizar una carta finiquito!» a finanzas.`
+      : 'El cliente no tiene correo: solo se avisará a finanzas («¡Es hora de realizar una carta finiquito!»).';
+    const yaEnviados = l.ultimo
+      ? ` Ya se enviaron antes el ${this.fechaHora(l.ultimo.enviadoEn)}${l.ultimo.usuario ? ` (por ${l.ultimo.usuario})` : ''}; finanzas recibirá el aviso otra vez.`
+      : '';
+    const confirmado = await this.confirmService.confirm({
+      titulo: l.ultimo ? 'Reenviar correos de liquidación' : 'Enviar correos de liquidación',
+      mensaje: `${destinos}${yaEnviados}`,
+      textoConfirmar: l.ultimo ? 'Reenviar' : 'Enviar',
+    });
+    if (!confirmado) return;
+    this.enviandoLiquidacion.set(true);
+    try {
+      this.liquidacion.set(await this.ventasService.enviarLiquidacion(v.id));
+      this.toast.success(
+        l.correoCliente ? 'Correos de liquidación enviados al cliente y a finanzas.' : 'Aviso de liquidación enviado a finanzas.',
+      );
+    } catch (error) {
+      this.toast.error(
+        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+          ? error.error.message
+          : 'No se pudieron enviar los correos de liquidación.',
+      );
+      // Si el de finanzas salió y el del cliente no, el envío quedó registrado: refresca para mostrarlo.
+      this.liquidacion.set(await this.ventasService.liquidacion(v.id).catch(() => l));
+    } finally {
+      this.enviandoLiquidacion.set(false);
     }
   }
 

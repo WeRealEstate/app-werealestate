@@ -13,6 +13,7 @@ import com.werealestate.backend.dto.ReciboAnularRequest;
 import com.werealestate.backend.dto.ReciboEditarRequest;
 import com.werealestate.backend.dto.ReciboHistorialDto;
 import com.werealestate.backend.dto.BienvenidaClienteDto;
+import com.werealestate.backend.dto.LiquidacionAvisoDto;
 import com.werealestate.backend.dto.RecordatorioPagoDto;
 import com.werealestate.backend.dto.VentaCreateRequest;
 import com.werealestate.backend.dto.VentaEliminarRequest;
@@ -28,6 +29,7 @@ import com.werealestate.backend.service.ReestructuracionVentaService;
 import com.werealestate.backend.service.EstadoCuentaService;
 import com.werealestate.backend.service.PausaMensualidadService;
 import com.werealestate.backend.service.BienvenidaClienteService;
+import com.werealestate.backend.service.LiquidacionAvisoService;
 import com.werealestate.backend.service.RecordatorioPagoService;
 import com.werealestate.backend.service.VentaService;
 import jakarta.validation.Valid;
@@ -55,12 +57,13 @@ public class VentaController {
     private final PausaMensualidadService pausaService;
     private final RecordatorioPagoService recordatorioPagoService;
     private final BienvenidaClienteService bienvenidaService;
+    private final LiquidacionAvisoService liquidacionService;
 
     public VentaController(VentaService ventaService, ReciboVentaService reciboVentaService,
             ContratoVentaService contratoVentaService, NumeracionVentaService numeracionVentaService,
             ReestructuracionVentaService reestructuracionVentaService, EstadoCuentaService estadoCuentaService,
             PausaMensualidadService pausaService, RecordatorioPagoService recordatorioPagoService,
-            BienvenidaClienteService bienvenidaService) {
+            BienvenidaClienteService bienvenidaService, LiquidacionAvisoService liquidacionService) {
         this.ventaService = ventaService;
         this.reciboVentaService = reciboVentaService;
         this.contratoVentaService = contratoVentaService;
@@ -70,6 +73,19 @@ public class VentaController {
         this.pausaService = pausaService;
         this.recordatorioPagoService = recordatorioPagoService;
         this.bienvenidaService = bienvenidaService;
+        this.liquidacionService = liquidacionService;
+    }
+
+    /** Estado del botón "Enviar correos de liquidación": si aplica, si se puede y el último envío. */
+    @GetMapping("/{id}/liquidacion")
+    public LiquidacionAvisoDto liquidacion(@PathVariable Long id) {
+        return liquidacionService.consultar(id);
+    }
+
+    /** Manda ahora los correos de liquidación (cliente titular y finanzas, síncrono) y los registra. */
+    @PostMapping("/{id}/liquidacion")
+    public LiquidacionAvisoDto enviarLiquidacion(@PathVariable Long id) {
+        return liquidacionService.enviar(id);
     }
 
     /** Estado del botón "Enviar correo de bienvenida": si aplica, si se puede y la última enviada. */

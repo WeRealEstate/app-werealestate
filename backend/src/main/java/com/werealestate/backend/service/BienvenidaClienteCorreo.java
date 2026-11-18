@@ -39,16 +39,16 @@ final class BienvenidaClienteCorreo {
     }
 
     /** Redes: [cid, nombre, enlace]. Los enlaces son los de la plantilla original. */
-    private static final String[][] REDES = {
+    static final String[][] REDES = {
         {"bienvenida-facebook", "Facebook", "https://www.facebook.com/share/1Jak98kFTh/"},
         {"bienvenida-instagram", "Instagram", "https://www.instagram.com/we_real_estate?igsh=ZjNoMXRmeWt0NHFn"},
         {"bienvenida-tiktok", "TikTok", "https://www.tiktok.com/@we.realestate?_r=1&_t=ZS-98OD4lmvTFZ"},
         {"bienvenida-youtube", "YouTube", "https://youtube.com/@werealestatemx?si=itL90TcjCqXcgrnK"},
     };
 
-    private static final String AZUL_FONDO = "#224294";
-    private static final String AZUL_TEXTO = "#243FB8";
-    private static final String FUENTE = "font-family:'Open Sans','Helvetica Neue',Helvetica,Arial,sans-serif;";
+    static final String AZUL_FONDO = "#224294";
+    static final String AZUL_TEXTO = "#243FB8";
+    static final String FUENTE = "font-family:'Open Sans','Helvetica Neue',Helvetica,Arial,sans-serif;";
 
     private BienvenidaClienteCorreo() {
     }
@@ -68,12 +68,12 @@ final class BienvenidaClienteCorreo {
         "**Equipo We Real Estate.**",
     };
 
-    private static String e(String valor) {
+    static String e(String valor) {
         return HtmlUtils.htmlEscape(valor == null ? "" : valor);
     }
 
     /** Escapa y convierte **negritas** a <strong>. */
-    private static String conNegritas(String texto) {
+    static String conNegritas(String texto) {
         String[] partes = texto.split("\\*\\*", -1);
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < partes.length; i++) {
@@ -127,7 +127,15 @@ final class BienvenidaClienteCorreo {
         for (String p : PARRAFOS) sb.append("<p style=\"").append(parrafo).append("\">").append(conNegritas(p)).append("</p>");
         sb.append("</td></tr>").append(cierreFranja());
 
-        // Pie azul: lema, redes, línea divisoria y derechos.
+        sb.append(pie());
+
+        sb.append("</td></tr></table></body></html>");
+        return sb.toString();
+    }
+
+    /** Pie azul compartido con los demás correos de la marca: lema, redes, línea divisoria y derechos. */
+    static String pie() {
+        StringBuilder sb = new StringBuilder();
         String helv = "font-family:Helvetica,Arial,sans-serif;color:#FFFFFF;text-align:center;";
         sb.append(franja(AZUL_FONDO, "12px 0"))
                 .append("<tr><td align=\"center\" style=\"padding:9px 18px 9px;").append(helv)
@@ -146,18 +154,17 @@ final class BienvenidaClienteCorreo {
                 .append("font-size:12px;line-height:150%;\"><em>Copyright &copy; 2026<br>We real Estate, Todos los derechos reservados.</em></td></tr>")
                 .append(cierreFranja());
 
-        sb.append("</td></tr></table></body></html>");
         return sb.toString();
     }
 
     /** Abre una franja de ancho completo con su color de fondo y adentro el contenedor de 600 px. */
-    private static String franja(String fondo, String relleno) {
+    static String franja(String fondo, String relleno) {
         return "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"border-collapse:collapse;background-color:"
                 + fondo + ";\"><tr><td align=\"center\" valign=\"top\" style=\"padding:" + relleno + ";background-color:" + fondo
                 + ";\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"border-collapse:collapse;max-width:600px;\">";
     }
 
-    private static String cierreFranja() {
+    static String cierreFranja() {
         return "</table></td></tr></table>";
     }
 }

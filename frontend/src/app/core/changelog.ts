@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.7.0', fecha: '2026-11-18', cambios: [
+    "Detalle de la venta: nuevo botón «Enviar correos de liquidación», debajo de las tarjetas de inversión, abonado y saldo (solo Administración y Admin, ventas de SAMAI Campestre). Se habilita cuando la venta ya está pagada por completo y manda dos correos: una felicitación al cliente titular y el aviso «¡Es hora de realizar una carta finiquito!» a finanzas, con los datos del cliente, de los copropietarios, de la venta y un enlace directo a ella. Si el cliente no tiene correo, solo se avisa a finanzas (la confirmación lo dice). Queda registrado («Enviados el … por …») y se puede reenviar. Por ahora es manual.",
+  ] },
   { version: '12.6.0', fecha: '2026-11-18', cambios: [
     "Cotizador: ahora también puedes cotizar los lotes que tú mismo apartaste. En las sugerencias de manzana y lote salen junto a los disponibles marcados «(apartado)», y al elegir uno se autocompleta la superficie y el precio igual que un lote disponible, con una nota «Este lote está apartado a tu nombre». Cotizar no cambia el estado del lote. Administración y Admin ven y pueden cotizar cualquier apartado. También funciona desde «Cotizar este lote» del plano.",
     "Cotizador público: si en ese dispositivo ya está guardado tu PIN de asesor, además de los disponibles ves tus apartados; sin PIN todo sigue igual.",
