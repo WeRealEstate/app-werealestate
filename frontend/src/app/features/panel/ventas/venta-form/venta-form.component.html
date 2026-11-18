@@ -236,9 +236,12 @@
 
     <app-copropietarios-editor [(copropietarios)]="copropietarios" [principalId]="clienteElegido()?.id ?? null" />
 
-    <div class="max-w-md">
-      <app-numero-venta [(numero)]="numeroVenta" [desarrolloId]="desarrolloDeNumeracion()?.id ?? null" [prefijo]="prefijoNumeracion()" />
-    </div>
+    <!-- La cuenta con numeración propia (sin ventas en efectivo) no escribe el número: siempre es automático. -->
+    @if (!sinEfectivo()) {
+      <div class="max-w-md">
+        <app-numero-venta [(numero)]="numeroVenta" [desarrolloId]="desarrolloDeNumeracion()?.id ?? null" [prefijo]="prefijoNumeracion()" />
+      </div>
+    }
 
     <div class="grid grid-cols-2 gap-4">
       <div>

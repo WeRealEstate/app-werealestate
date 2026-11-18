@@ -243,6 +243,7 @@ class LoteVentaReglasTest {
         Venta venta = mock(Venta.class);
         when(venta.getId()).thenReturn(id);
         when(venta.getEtiqueta()).thenReturn("S-" + numero);
+        when(venta.getEtiquetaReal()).thenReturn("S-" + numero);
         when(venta.getCliente()).thenReturn("Mary Carmen González Sánchez");
         when(venta.getAsesorNombre()).thenReturn("Yeshu Hernández");
         when(venta.isContratoFirmado()).thenReturn(firmada);

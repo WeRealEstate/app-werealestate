@@ -85,7 +85,8 @@ public class VentaController {
     /** Manda ahora los correos de liquidación (cliente titular y finanzas, síncrono) y los registra. */
     @PostMapping("/{id}/liquidacion")
     public LiquidacionAvisoDto enviarLiquidacion(@PathVariable Long id) {
-        return liquidacionService.enviar(id);
+        // Los correos llevan el número oficial de la venta aunque los mande la cuenta con numeración propia.
+        return com.werealestate.backend.model.NumeracionVisible.sinRenumerar(() -> liquidacionService.enviar(id));
     }
 
     /** Estado del botón "Enviar correo de bienvenida": si aplica, si se puede y la última enviada. */
@@ -97,7 +98,7 @@ public class VentaController {
     /** Manda ahora el correo de bienvenida al cliente titular (síncrono) y lo registra. */
     @PostMapping("/{id}/bienvenida")
     public BienvenidaClienteDto enviarBienvenida(@PathVariable Long id) {
-        return bienvenidaService.enviar(id);
+        return com.werealestate.backend.model.NumeracionVisible.sinRenumerar(() -> bienvenidaService.enviar(id));
     }
 
     /** Estado del botón "Enviar recordatorio de pago": si se puede, el pago que se recordaría y el último enviado. */
@@ -109,7 +110,7 @@ public class VentaController {
     /** Manda ahora el recordatorio de pago al correo del cliente titular (síncrono) y lo registra. */
     @PostMapping("/{id}/recordatorio-pago")
     public RecordatorioPagoDto enviarRecordatorioPago(@PathVariable Long id) {
-        return recordatorioPagoService.enviar(id);
+        return com.werealestate.backend.model.NumeracionVisible.sinRenumerar(() -> recordatorioPagoService.enviar(id));
     }
 
     @PostMapping

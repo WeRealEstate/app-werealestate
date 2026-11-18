@@ -1,5 +1,6 @@
 package com.werealestate.backend.service;
 
+import com.werealestate.backend.model.NumeracionVisible;
 import com.werealestate.backend.model.ModalidadPago;
 import com.werealestate.backend.model.VisibilidadVentas;
 import com.werealestate.backend.dto.AplicarDepositoRequest;
@@ -126,7 +127,13 @@ public class VentaService {
 
     public VentaDto crear(VentaCreateRequest request) {
         autorizacion.exigirAdminOLider();
-        return dtoArmador.armar(crearVenta(request, currentUserProvider.getUsuarioActual(), false));
+        // La cuenta con numeración propia (NumeracionVisible) no escribe el número: siempre el siguiente automático.
+        if (NumeracionVisible.activa() && request.numero() != null) {
+            throw new ValidationException("El número de venta se asigna automáticamente");
+        }
+        Venta venta = crearVenta(request, currentUserProvider.getUsuarioActual(), false);
+        NumeracionVisible.olvidar();
+        return dtoArmador.armar(venta);
     }
 
     /** La venta que nace de un registro de venta de We Forms (ver WeFormPublicoService): sin sesión, a nombre
@@ -333,8 +340,12 @@ public class VentaService {
         autorizacion.exigirAdminOLider();
         EtiquetaVenta.Escrita escrita = EtiquetaVenta.leer(etiqueta)
                 .orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada"));
+        String desarrollo = EtiquetaVenta.nombreDe(escrita.prefijo());
+        // La cuenta con numeración propia escribe su número (NumeracionVisible): se traduce al real.
+        Long numeroReal = NumeracionVisible.realDe(desarrollo, escrita.numero());
+        if (numeroReal == null) throw new ResourceNotFoundException("Venta no encontrada");
         return dtoArmador.armar(ventaRepository
-                .findByDesarrolloNombreAndNumeroDesarrollo(EtiquetaVenta.nombreDe(escrita.prefijo()), escrita.numero())
+                .findByDesarrolloNombreAndNumeroDesarrollo(desarrollo, numeroReal)
                 .filter(VisibilidadVentas::visible)
                 .orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada")));
     }
@@ -395,11 +406,13 @@ public class VentaService {
         comisionService.sincronizar(venta);
         // Si se pidió otro número, se mueve (recorriendo las consecutivas si estaba ocupado) y se vuelve a
         // leer la venta con el número nuevo. La fecha ya no cambia el número.
-        if (request.numero() != null && venta.getDesarrollo() != null && venta.getNumeroDesarrollo() != null
+        // La cuenta con numeración propia no cambia el número (el formulario le muestra el suyo, no el real).
+        if (!NumeracionVisible.activa() && request.numero() != null && venta.getDesarrollo() != null && venta.getNumeroDesarrollo() != null
                 && !request.numero().equals(venta.getNumeroDesarrollo())) {
             long nuevo = numeracion.reservarNumero(request.numero(), venta.getDesarrollo().getId(), venta.getId(), venta.getNumeroDesarrollo());
             ventaRepository.fijarNumeroDesarrollo(venta.getId(), nuevo);
         }
+        NumeracionVisible.olvidar();
         return dtoArmador.armar(consultas.obtenerEntidad(id));
     }
 
@@ -497,6 +510,7 @@ public class VentaService {
         }
         // Las ventas con número mayor bajan 1 (el global y el de su desarrollo): la numeración no queda con hueco.
         numeracion.cerrarHuecoDeVentaEliminada(numeroEliminado, desarrolloEliminado, numeroDesarrolloEliminado);
+        NumeracionVisible.olvidar();
     }
 
     /** Para el ícono de "ver información de venta" en /panel/lotes: qué venta vendió este lote, si
@@ -542,12 +556,17 @@ public class VentaService {
                         cb.like(cb.lower(asesorExterno.get("nombre")), comodin)));
                 // El número de venta: "S-12" / "n5" (letra y número) o solo "12" (ese número en cualquier desarrollo).
                 String texto = busqueda.trim();
-                EtiquetaVenta.leer(texto).ifPresent(e -> opciones.add(cb.and(
-                        cb.equal(root.get("desarrollo").get("nombre"), EtiquetaVenta.nombreDe(e.prefijo())),
-                        cb.equal(root.get("numeroDesarrollo"), e.numero()))));
+                EtiquetaVenta.leer(texto).ifPresent(e -> opciones.add(numeroEn(cb, root, EtiquetaVenta.nombreDe(e.prefijo()), e.numero())));
                 String soloNumero = texto.startsWith("#") ? texto.substring(1) : texto;
                 if (!soloNumero.isEmpty() && soloNumero.length() <= 8 && soloNumero.chars().allMatch(Character::isDigit)) {
-                    opciones.add(cb.equal(root.get("numeroDesarrollo"), Long.parseLong(soloNumero)));
+                    long n = Long.parseLong(soloNumero);
+                    if (NumeracionVisible.activa()) {
+                        // Su número en cada desarrollo es otra venta real: se busca en ambos.
+                        opciones.add(numeroEn(cb, root, EtiquetaVenta.nombreDe("S"), n));
+                        opciones.add(numeroEn(cb, root, EtiquetaVenta.nombreDe("N"), n));
+                    } else {
+                        opciones.add(cb.equal(root.get("numeroDesarrollo"), n));
+                    }
                 }
                 return cb.or(opciones.toArray(Predicate[]::new));
             });
@@ -564,6 +583,14 @@ public class VentaService {
         Pageable pageable = PageRequest.of(Math.max(pagina, 0), Math.max(tamano, 1));
         Page<Venta> resultado = ventaRepository.findAll(spec, pageable);
         return new PaginaDto<>(dtoArmador.armarPagina(resultado.getContent()), resultado.hasNext());
+    }
+
+    /** La venta con ese número (como lo ve quien busca, ver NumeracionVisible) en ese desarrollo. */
+    private static Predicate numeroEn(jakarta.persistence.criteria.CriteriaBuilder cb,
+            jakarta.persistence.criteria.Root<Venta> root, String desarrollo, long numero) {
+        Long real = NumeracionVisible.realDe(desarrollo, numero);
+        if (real == null) return cb.disjunction();
+        return cb.and(cb.equal(root.get("desarrollo").get("nombre"), desarrollo), cb.equal(root.get("numeroDesarrollo"), real));
     }
 
     /** Para los contadores de /panel/ventas: lotes vendidos (cada lote cuenta una vez) y ventas

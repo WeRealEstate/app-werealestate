@@ -232,7 +232,7 @@ public class ComisionService {
     /** La venta se va a eliminar: su comisión se queda en el historial ("Venta eliminada"), con el
      * número de venta que tenía. Lo ya ganado sigue pudiéndose entregar; deja de acumular. */
     public void desvincularVenta(Venta venta) {
-        comisionRepository.findAllByVentaId(venta.getId()).forEach(c -> c.desvincularVenta(venta.getNumeroGlobal(), venta.getEtiqueta()));
+        comisionRepository.findAllByVentaId(venta.getId()).forEach(c -> c.desvincularVenta(venta.getNumeroGlobal(), venta.getEtiquetaReal()));
         comisionRepository.flush();
     }
 

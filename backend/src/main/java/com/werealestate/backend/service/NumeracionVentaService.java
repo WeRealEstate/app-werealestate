@@ -20,8 +20,11 @@ public class NumeracionVentaService {
 
     private final VentaRepository ventaRepository;
     private final AutorizacionVentas autorizacion;
+    private final com.werealestate.backend.repository.DesarrolloRepository desarrolloRepository;
 
-    public NumeracionVentaService(VentaRepository ventaRepository, AutorizacionVentas autorizacion) {
+    public NumeracionVentaService(VentaRepository ventaRepository, AutorizacionVentas autorizacion,
+            com.werealestate.backend.repository.DesarrolloRepository desarrolloRepository) {
+        this.desarrolloRepository = desarrolloRepository;
         this.ventaRepository = ventaRepository;
         this.autorizacion = autorizacion;
     }
@@ -75,6 +78,13 @@ public class NumeracionVentaService {
         autorizacion.exigirAdminOLider();
         if (desarrolloId == null) return new NumeracionVentaDto(1, null, null, null, 0);
         long siguiente = ventaRepository.maxNumeroDesarrollo(desarrolloId) + 1;
+        if (com.werealestate.backend.model.NumeracionVisible.activa()) {
+            // La cuenta con numeración propia solo ve su siguiente número (las suyas + 1) y no escribe números a mano.
+            String nombre = desarrolloRepository.findById(desarrolloId).map(d -> d.getNombre()).orElse(null);
+            return new NumeracionVentaDto(
+                    nombre == null ? siguiente : com.werealestate.backend.model.NumeracionVisible.siguienteVisible(nombre),
+                    null, null, null, 0);
+        }
         if (numero == null || numero < 1) {
             return new NumeracionVentaDto(siguiente, null, null, null, 0);
         }

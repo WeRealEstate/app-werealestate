@@ -86,7 +86,7 @@ class VentaLotesContratoTest {
                 ventaLotes, aportaciones, copropietarios, mock(PagoVentaRepository.class), consultas);
         ComisionService comisiones = mock(ComisionService.class);
         service = new VentaService(ventas, ventaLotes, aportaciones, lotes, loteService,
-                mock(ReciboVentaService.class), new NumeracionVentaService(ventas, autorizacion),
+                mock(ReciboVentaService.class), new NumeracionVentaService(ventas, autorizacion, mock(com.werealestate.backend.repository.DesarrolloRepository.class)),
                 comisiones, clientes, mock(ClienteNumeracionService.class),
                 copropietarios, mock(WeFormRespuestaRepository.class), usuarios,
                 mock(AsesorExternoRepository.class), provider, consultas, autorizacion, armador);

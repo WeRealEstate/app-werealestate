@@ -18,16 +18,20 @@ public class WebConfig implements WebMvcConfigurer {
 
     private final String uploadsDir;
     private final ModuloAccesoInterceptor moduloAccesoInterceptor;
+    private final NumeracionVisibleConfig numeracionVisible;
 
     public WebConfig(
-            @Value("${app.uploads.dir:uploads}") String uploadsDir, ModuloAccesoInterceptor moduloAccesoInterceptor) {
+            @Value("${app.uploads.dir:uploads}") String uploadsDir, ModuloAccesoInterceptor moduloAccesoInterceptor,
+            NumeracionVisibleConfig numeracionVisible) {
         this.uploadsDir = uploadsDir;
         this.moduloAccesoInterceptor = moduloAccesoInterceptor;
+        this.numeracionVisible = numeracionVisible;
     }
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(moduloAccesoInterceptor).addPathPatterns("/api/**");
+        registry.addInterceptor(numeracionVisible).addPathPatterns("/api/**");
     }
 
     @Override

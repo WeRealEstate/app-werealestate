@@ -391,7 +391,15 @@ public class Venta {
     }
 
     /** El número que ve la gente: "S-12" (ver {@link EtiquetaVenta}). */
+    /** El número como lo ve quien pregunta: el real, salvo para la cuenta que no ve ventas en efectivo, que lo ve
+     * consecutivo sin ellas (ver {@link NumeracionVisible}). Para lo que se guarda o sale hacia afuera, {@link #getEtiquetaReal()}. */
     public String getEtiqueta() {
+        Long visible = NumeracionVisible.visibleDe(this);
+        return EtiquetaVenta.de(desarrollo, visible != null ? visible : numeroDesarrollo, numero);
+    }
+
+    /** El número oficial de la venta ("S-12"), sin importar quién pregunta. */
+    public String getEtiquetaReal() {
         return EtiquetaVenta.de(desarrollo, numeroDesarrollo, numero);
     }
 

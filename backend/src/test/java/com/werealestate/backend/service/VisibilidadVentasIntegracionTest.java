@@ -43,6 +43,7 @@ class VisibilidadVentasIntegracionTest extends PruebaDeIntegracion {
     @Autowired EstadoCuentaService estadoCuentaService;
     @Autowired LoteConsultaService loteConsultaService;
     @Autowired NotificacionService notificacionService;
+    @Autowired com.werealestate.backend.repository.VentaRepository ventaRepository;
 
     private Usuario admin;
     private Usuario direccion;
@@ -54,6 +55,10 @@ class VisibilidadVentasIntegracionTest extends PruebaDeIntegracion {
 
     @BeforeEach
     void preparar() {
+        // NumeracionVisible guarda su cargador en un campo estático: en la suite conviven varios contextos de Spring y
+        // el último en arrancar lo deja apuntando a su propia conexión (que no ve los datos de esta transacción).
+        com.werealestate.backend.model.NumeracionVisible.usarCargador(ventaRepository::filasDeNumeracion);
+        com.werealestate.backend.model.NumeracionVisible.olvidar();
         admin = usuario(Role.ADMIN);
         direccion = usuarios.findByEmail(VisibilidadVentas.CORREO_SIN_EFECTIVO)
                 .orElseGet(() -> usuarios.save(new Usuario("We Real Estate (Dirección)", VisibilidadVentas.CORREO_SIN_EFECTIVO,
@@ -99,7 +104,12 @@ class VisibilidadVentasIntegracionTest extends PruebaDeIntegracion {
         assertFalse(ids.contains(efectivo.id()));
         assertTrue(ids.contains(transferencia.id()));
         assertThrows(ResourceNotFoundException.class, () -> ventaService.obtener(efectivo.id()));
-        assertThrows(ResourceNotFoundException.class, () -> ventaService.obtenerPorNumero(efectivo.etiqueta()));
+        // Con su numeración, el número real de la venta en efectivo es otra venta (o ninguna), nunca ella.
+        try {
+            assertFalse(efectivo.id().equals(ventaService.obtenerPorNumero(efectivo.etiqueta()).id()));
+        } catch (ResourceNotFoundException esperado) {
+            // tampoco existe con ese número
+        }
         assertThrows(ResourceNotFoundException.class, () -> estadoCuentaService.deVenta(efectivo.id()));
         assertThrows(ResourceNotFoundException.class, () -> ventaService.obtenerPorLote(loteEfectivo));
         assertEquals(transferencia.id(), ventaService.obtener(transferencia.id()).id());
@@ -180,5 +190,48 @@ class VisibilidadVentasIntegracionTest extends PruebaDeIntegracion {
                 LocalDate.now().getDayOfMonth(), true, null, null,
                 false, null, null, null, null, null, null, null, ModalidadPago.EFECTIVO);
         assertThrows(ValidationException.class, () -> ventaService.crear(request));
+    }
+
+    /** El número que ve Dirección: el real menos las ventas en efectivo del mismo desarrollo con número menor o igual. */
+    private long visibleDe(VentaDto v) {
+        long real = ((Number) em.createNativeQuery("select numero_desarrollo from venta where id = :v")
+                .setParameter("v", v.id()).getSingleResult()).longValue();
+        long efectivoAntes = ((Number) em.createNativeQuery("select count(*) from venta where desarrollo_id = "
+                + "(select desarrollo_id from venta where id = :v) and modalidad_pago = 'EFECTIVO' and numero_desarrollo <= :n")
+                .setParameter("v", v.id()).setParameter("n", real).getSingleResult()).longValue();
+        return real - efectivoAntes;
+    }
+
+    @Test
+    void direccionVeLosNumerosConsecutivosSinLasVentasEnEfectivo() {
+        iniciarSesionComo(admin);
+        VentaDto real = ventaService.obtener(transferencia.id());
+        long visible = visibleDe(transferencia);
+        assertTrue(visible < real.numero(), "la venta en efectivo anterior ya no cuenta");
+
+        iniciarSesionComo(direccion);
+        com.werealestate.backend.model.NumeracionVisible.olvidar();
+        VentaDto suya = ventaService.obtener(transferencia.id());
+        assertEquals("S-" + visible, suya.etiqueta());
+        assertEquals(visible, suya.numero());
+        // Su dirección y su buscador usan su número.
+        assertEquals(transferencia.id(), ventaService.obtenerPorNumero("S-" + visible).id());
+        assertTrue(ventaService.buscarPaginado("S-" + visible, false, 0, 50, null).contenido().stream()
+                .anyMatch(v -> v.id().equals(transferencia.id())));
+        // No escribe números a mano.
+        var lote = lote(samai(), etiqueta(), "4", "200", EstadoLote.DISPONIBLE);
+        var cliente = cliente("Comprador " + etiqueta());
+        var conNumero = new VentaCreateRequest(
+                List.of(new VentaLoteItemRequest(lote.getId(), new BigDecimal("90000"))),
+                cliente.getId(), 7L, null, asesor.getId(), null,
+                "Contado", LocalDate.now(), null, null, null, null,
+                LocalDate.now().getDayOfMonth(), true, null, null,
+                false, null, null, null, null, null, null, null, ModalidadPago.TRANSFERENCIA);
+        assertThrows(ValidationException.class, () -> ventaService.crear(conNumero));
+
+        // Los demás siguen viendo el número real.
+        iniciarSesionComo(admin);
+        com.werealestate.backend.model.NumeracionVisible.olvidar();
+        assertEquals(real.etiqueta(), ventaService.obtener(transferencia.id()).etiqueta());
     }
 }

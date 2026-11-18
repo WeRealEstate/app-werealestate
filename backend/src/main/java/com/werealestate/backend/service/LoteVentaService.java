@@ -141,7 +141,7 @@ public class LoteVentaService {
                         .orElseThrow());
         EstadoLote estado = venta.isContratoFirmado() ? EstadoLote.VENDIDO : EstadoLote.EN_PROCESO_DE_FIRMA;
         historial.cambiarEstadoConHistorial(lote, estado, actual, venta.getAsesorNombre(), venta.getCliente(), null,
-                "Alineado con la venta " + venta.getEtiqueta());
+                "Alineado con la venta " + venta.getEtiquetaReal());
         lote.setFechaExpiraApartado(null);
         lote.setMontoApartado(null);
         return consulta.conVentas(lote);

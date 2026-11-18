@@ -95,6 +95,11 @@ public class NotificacionService {
 
     /** Las notificaciones pendientes de un usuario concreto (también las usa el envío push, sin sesión). */
     public List<NotificacionDto> listarPara(Usuario actual) {
+        // Los números de venta de los avisos, como los ve ese usuario (también en segundo plano, para el push).
+        return com.werealestate.backend.model.NumeracionVisible.comoLoVe(actual, () -> armarPara(actual));
+    }
+
+    private List<NotificacionDto> armarPara(Usuario actual) {
 
         Set<String> leidas = new HashSet<>();
         for (NotificacionLeida l : notificacionLeidaRepository.findByUsuarioId(actual.getId())) {

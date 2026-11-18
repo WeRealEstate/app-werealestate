@@ -1,6 +1,7 @@
 package com.werealestate.backend.repository;
 
 import com.werealestate.backend.model.Venta;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -113,4 +114,9 @@ public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecific
      * traer en la misma consulta). */
     @Query("select v from Venta v left join fetch v.reestructuraciones")
     java.util.List<Venta> findAllConReestructuraciones();
+
+    /** Para NumeracionVisible: id, desarrollo de numeración, número en él y modalidad de pago de todas las ventas. */
+    @Query("select v.id, d.nombre, v.numeroDesarrollo, v.modalidadPago from Venta v left join v.desarrollo d "
+            + "order by d.id, v.numeroDesarrollo, v.id")
+    List<Object[]> filasDeNumeracion();
 }

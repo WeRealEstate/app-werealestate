@@ -60,7 +60,10 @@ public record VentaDto(
         BigDecimal precioVenta = lotes.stream().map(VentaLoteDto::precio).reduce(BigDecimal.ZERO, BigDecimal::add);
         return new VentaDto(
                 venta.getId(),
-                venta.getNumeroDesarrollo() != null ? venta.getNumeroDesarrollo() : venta.getNumeroGlobal(),
+                // El número como lo ve quien pregunta (NumeracionVisible), igual que la etiqueta.
+                com.werealestate.backend.model.NumeracionVisible.visibleDe(venta) != null
+                        ? com.werealestate.backend.model.NumeracionVisible.visibleDe(venta)
+                        : venta.getNumeroDesarrollo() != null ? venta.getNumeroDesarrollo() : venta.getNumeroGlobal(),
                 venta.getEtiqueta(),
                 venta.getDesarrollo() != null ? venta.getDesarrollo().getId() : null,
                 lotes,
