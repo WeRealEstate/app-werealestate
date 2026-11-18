@@ -1,5 +1,6 @@
 package com.werealestate.backend.service;
 
+import com.werealestate.backend.model.VisibilidadVentas;
 import com.werealestate.backend.dto.NotificacionDto;
 import com.werealestate.backend.dto.NotificacionMarcarLeidaRequest;
 import com.werealestate.backend.model.EstadoLead;
@@ -162,7 +163,7 @@ public class NotificacionService {
         }
         agregarAvisosDeRegistrosDeVenta(actual, leidas, notificaciones);
         if (actual.getRol() == Role.ADMIN || actual.getRol() == Role.LIDER_AREA) {
-            agregarAvisosDeLotesDesincronizados(notificaciones);
+            agregarAvisosDeLotesDesincronizados(actual, notificaciones);
         }
 
         return notificaciones;
@@ -175,7 +176,7 @@ public class NotificacionService {
      * descartan ni cuentan como leídos; desaparecen solos al corregir el lote. La firma es la fecha del último cambio de
      * estado del lote, para que el push se mande una sola vez por ocurrencia.
      */
-    private void agregarAvisosDeLotesDesincronizados(List<NotificacionDto> notificaciones) {
+    private void agregarAvisosDeLotesDesincronizados(Usuario actual, List<NotificacionDto> notificaciones) {
         for (Lote lote : loteRepository.findVendidosSinVenta()) {
             notificaciones.add(NotificacionDto.loteSinVenta(
                     nombreLote(lote) + " está marcado como Vendido sin una venta registrada. Registra su venta o, si la "
@@ -184,6 +185,7 @@ public class NotificacionService {
                     String.valueOf(lote.getFechaCambioEstado())));
         }
         for (VentaLote vl : ventaLoteRepository.findConLoteFueraDeEstadoDeVenta()) {
+            if (!VisibilidadVentas.visiblePara(actual, vl.getVenta())) continue;
             Lote lote = vl.getLote();
             notificaciones.add(NotificacionDto.loteVentaDesalineada(
                     nombreLote(lote) + " está en la venta " + vl.getVenta().getEtiqueta() + " pero aparece como "
@@ -271,7 +273,9 @@ public class NotificacionService {
             return;
         }
         LocalDateTime desde = LocalDateTime.now().minusDays(DIAS_AVISOS_LOTES);
-        List<Venta> recientes = ventaRepository.recientesDeOtros(desde, actual.getId());
+        List<Venta> recientes = ventaRepository.recientesDeOtros(desde, actual.getId()).stream()
+                .filter(v -> VisibilidadVentas.visiblePara(actual, v))
+                .toList();
         if (recientes.isEmpty()) return;
 
         List<Long> ventaIds = recientes.stream().map(Venta::getId).toList();
@@ -309,7 +313,9 @@ public class NotificacionService {
             return;
         }
         LocalDateTime desde = LocalDateTime.now().minusDays(DIAS_AVISOS_LOTES);
-        List<WeFormRespuesta> recientes = respuestaRepository.recientes(desde);
+        List<WeFormRespuesta> recientes = respuestaRepository.recientes(desde).stream()
+                .filter(r -> VisibilidadVentas.visiblePara(actual, r.getVenta()))
+                .toList();
         if (recientes.isEmpty()) return;
 
         List<Long> ventaIds = recientes.stream()

@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.8.0', fecha: '2026-11-18', cambios: [
+    "La cuenta «We Real Estate (Dirección)» ya no ve las ventas en efectivo en ninguna parte: Ventas, Clientes, Finanzas, Comisiones, egresos de comisión, Score, Lotes, Plano, avisos ni We Forms. Tampoco puede registrar ventas en efectivo.",
+  ] },
   { version: '12.7.1', fecha: '2026-11-18', cambios: [
     "Recordatorio de pago de SAMAI Campestre: el banner ahora ocupa todo el ancho del correo.",
   ] },

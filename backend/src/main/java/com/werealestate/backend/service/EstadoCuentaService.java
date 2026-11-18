@@ -72,7 +72,7 @@ public class EstadoCuentaService {
     /** La tabla de amortización de una venta. */
     public AmortizacionDto deVenta(Long ventaId) {
         exigirAdminOLider();
-        Venta venta = ventaRepository.findById(ventaId).orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada"));
+        Venta venta = ventaRepository.findById(ventaId).filter(com.werealestate.backend.model.VisibilidadVentas::visible).orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada"));
         return amortizacion(venta, false, LocalDate.now());
     }
 
@@ -96,6 +96,7 @@ public class EstadoCuentaService {
         }
         LocalDate hoy = LocalDate.now();
         return ventas.values().stream()
+                .filter(com.werealestate.backend.model.VisibilidadVentas::visible)
                 .sorted(Comparator.comparing(Venta::getFechaVenta).reversed().thenComparing(Venta::getId, Comparator.reverseOrder()))
                 .map(v -> amortizacion(v, comoCopropietario.contains(v.getId()), hoy))
                 .toList();

@@ -1,5 +1,6 @@
 package com.werealestate.backend.service;
 
+import com.werealestate.backend.model.VisibilidadVentas;
 import com.werealestate.backend.dto.FinanzasIngresosDto;
 import com.werealestate.backend.dto.FinanzasValorDto;
 import com.werealestate.backend.exception.ForbiddenOperationException;
@@ -71,7 +72,10 @@ public class FinanzasService {
 
     public FinanzasValorDto valorVendido() {
         exigirAdminOLider();
-        List<VentaLote> lotes = ventaLoteRepository.findAllConLoteYDesarrollo();
+        boolean ocultaEfectivo = VisibilidadVentas.ocultaEfectivo();
+        List<VentaLote> lotes = ventaLoteRepository.findAllConLoteYDesarrollo().stream()
+                .filter(vl -> !ocultaEfectivo || VisibilidadVentas.visible(vl.getVenta()))
+                .toList();
 
         BigDecimal total = BigDecimal.ZERO;
         Map<Long, long[]> conteo = new LinkedHashMap<>();
@@ -104,7 +108,13 @@ public class FinanzasService {
                 .thenComparing(FinanzasValorDto.Lote::manzana)
                 .thenComparing(FinanzasValorDto.Lote::numeroLote));
 
-        BigDecimal cobrado = pagoVentaRepository.totalVigente();
+        // Sin ventas ocultas para quien pregunta, la suma se hace en la base como siempre; con ellas, solo lo de las visibles.
+        BigDecimal cobrado = ocultaEfectivo
+                ? pagoVentaRepository.findAllVigentes().stream()
+                        .filter(p -> VisibilidadVentas.visible(p.getVenta()))
+                        .map(PagoVenta::getMonto)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add)
+                : pagoVentaRepository.totalVigente();
         return new FinanzasValorDto(
                 total, lotes.size(), cobrado, total.subtract(cobrado).max(BigDecimal.ZERO), porDesarrollo, detalle);
     }
@@ -390,7 +400,7 @@ public class FinanzasService {
      * conservan su consulta y su orden de siempre; las consultas extra solo dejan llenas las colecciones de esas
      * mismas entidades en la sesión. */
     private final class Datos {
-        final List<Venta> ventas = ventaRepository.findAll();
+        final List<Venta> ventas;
         final List<VentaLote> lotes = ventaLoteRepository.findAllConLoteYDesarrollo();
         /** Solo los abonos vigentes (recibo no anulado): lo que cuenta para saldos y atrasos. */
         final List<PagoVenta> pagos;
@@ -404,12 +414,21 @@ public class FinanzasService {
         private final Map<Long, List<Movimiento>> movimientosPorVenta = new HashMap<>();
 
         Datos(boolean incluirLibroIngresos) {
+            // El libro de ingresos (lo que ve quien pregunta) deja fuera las ventas que no puede ver (VisibilidadVentas);
+            // cobroPorVenta (uso interno de Comisiones) siempre las calcula todas.
+            List<Venta> todas = ventaRepository.findAll();
+            this.ventas = incluirLibroIngresos && VisibilidadVentas.ocultaEfectivo()
+                    ? todas.stream().filter(VisibilidadVentas::visible).toList()
+                    : todas;
             ventaRepository.findAllConPausas();
             ventaRepository.findAllConReestructuraciones();
             if (incluirLibroIngresos) {
                 this.pagosConAnulados = pagoVentaRepository.findAllConRecibo();
                 this.pagos = pagosConAnulados.stream().filter(p -> !p.getRecibo().isAnulado()).toList();
-                this.devoluciones = devolucionRepository.findAll().stream().map(Devolucion::de).toList();
+                this.devoluciones = devolucionRepository.findAll().stream()
+                        .filter(d -> VisibilidadVentas.visible(d.getComision().getVenta()))
+                        .map(Devolucion::de)
+                        .toList();
             } else {
                 this.pagos = pagoVentaRepository.findAllVigentes();
                 pagoVentaRepository.findAllVigentesConMeses();

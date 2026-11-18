@@ -1,5 +1,6 @@
 package com.werealestate.backend.service;
 
+import com.werealestate.backend.model.VisibilidadVentas;
 import com.werealestate.backend.dto.WeFormDtos;
 import com.werealestate.backend.dto.PaginaDto;
 import com.werealestate.backend.exception.ForbiddenOperationException;
@@ -123,6 +124,8 @@ public class WeFormService {
     private List<WeFormRespuesta> respuestasFiltradas(Long formId, LocalDate desde, LocalDate hasta, String asesor) {
         String buscado = asesor == null ? "" : asesor.trim().toLowerCase(Locale.ROOT);
         return respuestaRepository.findByFormIdOrderByFechaEnvioDesc(formId).stream()
+                // Un registro cuya venta quien pregunta no puede ver (VisibilidadVentas) tampoco se muestra.
+                .filter(r -> VisibilidadVentas.visible(r.getVenta()))
                 .filter(r -> desde == null || !r.getFechaEnvio().toLocalDate().isBefore(desde))
                 .filter(r -> hasta == null || !r.getFechaEnvio().toLocalDate().isAfter(hasta))
                 .filter(r -> buscado.isEmpty() || r.getAsesorNombre().toLowerCase(Locale.ROOT).contains(buscado))

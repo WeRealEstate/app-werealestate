@@ -1,5 +1,6 @@
 package com.werealestate.backend.service;
 
+import com.werealestate.backend.model.VisibilidadVentas;
 import com.werealestate.backend.dto.NumeracionVentaDto;
 import com.werealestate.backend.model.Venta;
 import com.werealestate.backend.repository.VentaRepository;
@@ -83,7 +84,11 @@ public class NumeracionVentaService {
         }
         Long ignorado = excluirId == null ? null : ventaRepository.findById(excluirId).map(Venta::getNumeroDesarrollo).orElse(null);
         long fin = finDeLaRacha(desarrolloId, numero, ignorado == null ? -1L : ignorado);
+        // El número sí está ocupado (no se puede repetir), pero de una venta que quien pregunta no puede ver
+        // (VisibilidadVentas): se avisa sin decir de quién es.
+        boolean oculta = !VisibilidadVentas.visible(ocupante);
         return new NumeracionVentaDto(
-                siguiente, ocupante.getId(), ocupante.getCliente(), ocupante.getFechaVenta(), (int) (fin - numero + 1));
+                siguiente, oculta ? null : ocupante.getId(), oculta ? "otra venta" : ocupante.getCliente(),
+                oculta ? null : ocupante.getFechaVenta(), (int) (fin - numero + 1));
     }
 }

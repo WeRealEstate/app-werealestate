@@ -1,5 +1,7 @@
 package com.werealestate.backend.service;
 
+import com.werealestate.backend.model.ModalidadPago;
+import com.werealestate.backend.model.VisibilidadVentas;
 import com.werealestate.backend.dto.AplicarDepositoRequest;
 import com.werealestate.backend.dto.ContadoresVentasDto;
 import com.werealestate.backend.dto.PaginaDto;
@@ -175,6 +177,7 @@ public class VentaService {
                 Textos.opcional(request.notas()));
         venta.setNumero(numeroVenta);
         venta.numerar(desarrolloDeNumeracion, numeroEnDesarrollo);
+        exigirModalidadPermitida(request.modalidadPago());
         venta.setModalidadPago(request.modalidadPago());
         venta.ligarCliente(clienteRef);
         venta.setRegistradaPor(registradaPor);
@@ -332,6 +335,7 @@ public class VentaService {
                 .orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada"));
         return dtoArmador.armar(ventaRepository
                 .findByDesarrolloNombreAndNumeroDesarrollo(EtiquetaVenta.nombreDe(escrita.prefijo()), escrita.numero())
+                .filter(VisibilidadVentas::visible)
                 .orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada")));
     }
 
@@ -352,6 +356,7 @@ public class VentaService {
         }
 
         LocalDate fechaAnterior = venta.getFechaVenta();
+        exigirModalidadPermitida(request.modalidadPago());
         venta.setModalidadPago(request.modalidadPago());
         venta.actualizar(
                 venta.getCliente(),
@@ -501,6 +506,7 @@ public class VentaService {
         autorizacion.exigirAdminOLider();
         VentaLote ventaLote = ventaLoteRepository
                 .findFirstByLoteIdOrderByIdDesc(loteId)
+                .filter(vl -> VisibilidadVentas.visible(vl.getVenta()))
                 .orElseThrow(() -> new ResourceNotFoundException("Este lote no tiene una venta registrada"));
         return dtoArmador.armar(ventaLote.getVenta());
     }
@@ -516,6 +522,10 @@ public class VentaService {
 
         if (desarrolloId != null) {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("desarrollo").get("id"), desarrolloId));
+        }
+        if (VisibilidadVentas.ocultaEfectivo()) {
+            spec = spec.and((root, query, cb) -> cb.or(
+                    cb.isNull(root.get("modalidadPago")), cb.notEqual(root.get("modalidadPago"), ModalidadPago.EFECTIVO)));
         }
 
         if (busqueda != null && !busqueda.isBlank()) {
@@ -560,6 +570,15 @@ public class VentaService {
      * registradas (una por operación, aunque incluya varios lotes). */
     public ContadoresVentasDto contadores(Long desarrolloId) {
         autorizacion.exigirAdminOLider();
+        if (VisibilidadVentas.ocultaEfectivo()) {
+            return desarrolloId != null
+                    ? new ContadoresVentasDto(
+                            ventaLoteRepository.countLotesVendidosByDesarrolloIdSinModalidad(desarrolloId, ModalidadPago.EFECTIVO),
+                            ventaLoteRepository.countVentasByDesarrolloIdSinModalidad(desarrolloId, ModalidadPago.EFECTIVO))
+                    : new ContadoresVentasDto(
+                            ventaLoteRepository.countLotesVendidosSinModalidad(ModalidadPago.EFECTIVO),
+                            ventaLoteRepository.countVentasSinModalidad(ModalidadPago.EFECTIVO));
+        }
         if (desarrolloId != null) {
             return new ContadoresVentasDto(
                     ventaLoteRepository.countLotesVendidosByDesarrolloId(desarrolloId),
@@ -570,7 +589,19 @@ public class VentaService {
 
     public long contarLotesVendidosSamaiCampestre() {
         autorizacion.exigirAdminOLider();
+        if (VisibilidadVentas.ocultaEfectivo()) {
+            return ventaLoteRepository.countLotesVendidosByDesarrolloNombreSinModalidad(
+                    DESARROLLO_SAMAI_CAMPESTRE, ModalidadPago.EFECTIVO);
+        }
         return ventaLoteRepository.countLotesVendidosByDesarrolloNombre(DESARROLLO_SAMAI_CAMPESTRE);
+    }
+
+    /** La cuenta que no ve ventas en efectivo (VisibilidadVentas) tampoco puede registrar ni cambiar una a efectivo:
+     * desaparecería de su vista al guardarla. */
+    private static void exigirModalidadPermitida(ModalidadPago modalidad) {
+        if (modalidad == ModalidadPago.EFECTIVO && VisibilidadVentas.ocultaEfectivo()) {
+            throw new ValidationException("No puedes registrar ventas en efectivo");
+        }
     }
 
     /** Reemplaza los copropietarios de la venta: hasta 4 clientes distintos, activos y distintos del principal. */

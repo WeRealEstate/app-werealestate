@@ -1,5 +1,6 @@
 package com.werealestate.backend.service;
 
+import com.werealestate.backend.model.VisibilidadVentas;
 import com.werealestate.backend.dto.LoteDto;
 import com.werealestate.backend.dto.PaginaDto;
 import com.werealestate.backend.dto.PlanoDesarrolloDto;
@@ -178,12 +179,21 @@ public class LoteConsultaService {
             return lotes;
         }
         Map<Long, String> numeroPorLote = new HashMap<>();
+        // Lotes cuya venta quien pregunta no puede ver (VisibilidadVentas): van sin el chip de la venta, pero tampoco
+        // como "sin venta registrada" (sí la tienen).
+        java.util.Set<Long> conVentaOculta = new java.util.HashSet<>();
         for (Object[] fila : ventaLoteRepository.numeroDeVentaPorLote(lotes.stream().map(LoteDto::id).toList())) {
-            numeroPorLote.put((Long) fila[0], ((Venta) fila[1]).getEtiqueta());
+            Venta venta = (Venta) fila[1];
+            if (VisibilidadVentas.visible(venta)) {
+                numeroPorLote.put((Long) fila[0], venta.getEtiqueta());
+            } else {
+                conVentaOculta.add((Long) fila[0]);
+            }
         }
         return lotes.stream()
                 .map(l -> {
                     String numero = numeroPorLote.get(l.id());
+                    if (numero == null && conVentaOculta.contains(l.id())) return l;
                     boolean sinVenta = l.estado() == EstadoLote.VENDIDO && numero == null;
                     return numero == null && !sinVenta ? l : l.conVenta(sinVenta, numero);
                 })

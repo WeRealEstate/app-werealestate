@@ -46,6 +46,27 @@ public interface VentaLoteRepository extends JpaRepository<VentaLote, Long> {
     @Query("select count(distinct vl.venta.id) from VentaLote vl where vl.lote.desarrollo.id = :desarrolloId")
     long countVentasByDesarrolloId(@Param("desarrolloId") Long desarrolloId);
 
+    // Variantes sin las ventas de una modalidad (VisibilidadVentas: una cuenta no ve las ventas en efectivo).
+    String SIN_MODALIDAD = " (vl.venta.modalidadPago is null or vl.venta.modalidadPago <> :excluida)";
+
+    @Query("select count(distinct vl.lote.id) from VentaLote vl where" + SIN_MODALIDAD)
+    long countLotesVendidosSinModalidad(@Param("excluida") com.werealestate.backend.model.ModalidadPago excluida);
+
+    @Query("select count(distinct vl.venta.id) from VentaLote vl where" + SIN_MODALIDAD)
+    long countVentasSinModalidad(@Param("excluida") com.werealestate.backend.model.ModalidadPago excluida);
+
+    @Query("select count(distinct vl.lote.id) from VentaLote vl where vl.lote.desarrollo.id = :desarrolloId and" + SIN_MODALIDAD)
+    long countLotesVendidosByDesarrolloIdSinModalidad(
+            @Param("desarrolloId") Long desarrolloId, @Param("excluida") com.werealestate.backend.model.ModalidadPago excluida);
+
+    @Query("select count(distinct vl.venta.id) from VentaLote vl where vl.lote.desarrollo.id = :desarrolloId and" + SIN_MODALIDAD)
+    long countVentasByDesarrolloIdSinModalidad(
+            @Param("desarrolloId") Long desarrolloId, @Param("excluida") com.werealestate.backend.model.ModalidadPago excluida);
+
+    @Query("select count(distinct vl.lote.id) from VentaLote vl where vl.lote.desarrollo.nombre = :desarrolloNombre and" + SIN_MODALIDAD)
+    long countLotesVendidosByDesarrolloNombreSinModalidad(
+            @Param("desarrolloNombre") String desarrolloNombre, @Param("excluida") com.werealestate.backend.model.ModalidadPago excluida);
+
     @Query("select count(distinct vl.lote.id) from VentaLote vl where vl.lote.desarrollo.nombre = :desarrolloNombre")
     long countLotesVendidosByDesarrolloNombre(@Param("desarrolloNombre") String desarrolloNombre);
 

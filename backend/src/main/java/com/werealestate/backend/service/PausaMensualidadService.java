@@ -177,7 +177,7 @@ public class PausaMensualidadService {
     }
 
     private Venta venta(Long id) {
-        return ventaRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada"));
+        return ventaRepository.findById(id).filter(com.werealestate.backend.model.VisibilidadVentas::visible).orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada"));
     }
 
     /** El calendario de la venta hoy y su tabla mes con mes (la misma que se muestra), para ubicar renglones y pagos. */

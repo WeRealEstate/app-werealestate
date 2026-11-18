@@ -11,7 +11,8 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Desarrollo, UsuarioResumen } from '../../../../core/models/lead.model';
 import { ESTADO_LOTE_LABELS, Lote } from '../../../../core/models/lote.model';
 import { AsesorExterno } from '../../../../core/models/asesor-externo.model';
-import { MedioFirma, ModalidadPago } from '../../../../core/models/venta.model';
+import { MedioFirma, ModalidadPago, ocultaEfectivo } from '../../../../core/models/venta.model';
+import { AuthService } from '../../../../core/services/auth.service';
 import { AsesoresExternosService } from '../../../../core/services/asesores-externos.service';
 import { LeadsService } from '../../../../core/services/leads.service';
 import { LotesService } from '../../../../core/services/lotes.service';
@@ -104,6 +105,9 @@ export class VentaFormComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly clientesService = inject(ClientesService);
+  private readonly auth = inject(AuthService);
+  /** Esta cuenta no ve ventas en efectivo: tampoco se le ofrece esa modalidad (ver VisibilidadVentas). */
+  readonly sinEfectivo = computed(() => ocultaEfectivo(this.auth.currentUser()?.email));
 
   /** El cliente elegido (o registrado) para esta venta; obligatorio. */
   readonly clienteElegido = signal<ClienteLista | null>(null);

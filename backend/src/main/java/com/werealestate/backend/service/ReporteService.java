@@ -1,5 +1,6 @@
 package com.werealestate.backend.service;
 
+import com.werealestate.backend.model.VisibilidadVentas;
 import com.werealestate.backend.dto.ReporteAsesorEstrellaDto;
 import com.werealestate.backend.dto.ReporteConteoDto;
 import com.werealestate.backend.dto.ReporteCotizacionesDto;
@@ -91,7 +92,10 @@ public class ReporteService {
         // Las ventas son las registradas en el módulo Ventas (por su fecha de venta): el estado de un
         // lead es solo informativo y no cuenta como venta. "Ganados"/"perdidos" siguen siendo de leads.
         List<Venta> ventas = ventaRepository.findByFechaVentaBetween(
-                desde != null ? desde : LocalDate.of(2000, 1, 1), hasta != null ? hasta : LocalDate.now().plusDays(1));
+                        desde != null ? desde : LocalDate.of(2000, 1, 1), hasta != null ? hasta : LocalDate.now().plusDays(1))
+                .stream()
+                .filter(VisibilidadVentas::visible)
+                .toList();
         long ventasCerradas = ventas.size();
         long perdidosCerrados = leadsCerrados.stream().filter(l -> l.getEstado() == EstadoLead.CERRADO_PERDIDO).count();
 

@@ -1,5 +1,6 @@
 package com.werealestate.backend.service;
 
+import com.werealestate.backend.model.VisibilidadVentas;
 import com.werealestate.backend.dto.ComisionDesgloseDto;
 import com.werealestate.backend.dto.ComisionDetalleDto;
 import com.werealestate.backend.dto.ComisionDto;
@@ -902,8 +903,12 @@ public class ComisionService {
     // ---------------------------------------------------------------- DTOs
 
     private ComisionTotales totales() {
+        // Solo lo consultan pantallas (listar, resumen, por entregar, desglose): las comisiones de ventas que quien
+        // pregunta no puede ver (VisibilidadVentas) quedan fuera, también de los totales.
         return ComisionTotales.deTodas(
-                comisionRepository.findAllByOrderByIdDesc(),
+                comisionRepository.findAllByOrderByIdDesc().stream()
+                        .filter(c -> VisibilidadVentas.visible(c.getVenta()))
+                        .toList(),
                 finanzasService.cobroPorVenta(),
                 devengoRepository.findAllConPagoOrdenados(),
                 entregaRepository.findAll(),
@@ -1047,7 +1052,9 @@ public class ComisionService {
     }
 
     private VentaComision obtenerEntidad(Long id) {
-        return comisionRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Comisión no encontrada"));
+        return comisionRepository.findById(id)
+                .filter(c -> VisibilidadVentas.visible(c.getVenta()))
+                .orElseThrow(() -> new ResourceNotFoundException("Comisión no encontrada"));
     }
 
     private Usuario exigirAdminOLider() {

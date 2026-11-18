@@ -32,7 +32,8 @@ public class ConsultasVenta {
     }
 
     public Venta obtenerEntidad(Long id) {
-        return ventaRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada"));
+        // Una venta oculta para quien pregunta (VisibilidadVentas) responde igual que una que no existe.
+        return ventaRepository.findById(id).filter(com.werealestate.backend.model.VisibilidadVentas::visible).orElseThrow(() -> new ResourceNotFoundException("Venta no encontrada"));
     }
 
     public BigDecimal precioVenta(Long ventaId) {

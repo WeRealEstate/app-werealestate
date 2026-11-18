@@ -17,7 +17,7 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { VentasService } from '../../../../core/services/ventas.service';
 import { UsuariosService } from '../../../../core/services/usuarios.service';
 import { AsesoresExternosService } from '../../../../core/services/asesores-externos.service';
-import { BienvenidaCliente, LiquidacionAviso, MODALIDAD_PAGO_LABELS, ModalidadPago, PagoVenta, ReciboHistorial, RecordatorioPago, Venta } from '../../../../core/models/venta.model';
+import { BienvenidaCliente, LiquidacionAviso, MODALIDAD_PAGO_LABELS, ModalidadPago, ocultaEfectivo, PagoVenta, ReciboHistorial, RecordatorioPago, Venta } from '../../../../core/models/venta.model';
 import { ReciboFormComponent } from '../../../../shared/recibo-form/recibo-form.component';
 import { ContratoVentaComponent } from '../../../../shared/contrato-venta/contrato-venta.component';
 import { RecibosVentaComponent } from '../../../../shared/recibos-venta/recibos-venta.component';
@@ -80,6 +80,8 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
   /** Temporal: permite modificar los datos capturados de la venta (no sus lotes/precios). Se va a
    * quitar más adelante — avisan cuándo. */
   readonly modalidadLabels = MODALIDAD_PAGO_LABELS;
+  /** Esta cuenta no ve ventas en efectivo: tampoco se le ofrece esa modalidad (ver VisibilidadVentas). */
+  readonly sinEfectivo = computed(() => ocultaEfectivo(this.auth.currentUser()?.email));
   readonly editando = signal(false);
   readonly isSavingEdicion = signal(false);
   readonly errorEdicion = signal<string | null>(null);

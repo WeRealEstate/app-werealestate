@@ -1,5 +1,6 @@
 package com.werealestate.backend.service;
 
+import com.werealestate.backend.model.VisibilidadVentas;
 import com.werealestate.backend.dto.ScoreDtos;
 import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ValidationException;
@@ -86,7 +87,9 @@ public class ScoreService {
             throw new ValidationException("La fecha inicial no puede ser posterior a la final");
         }
         List<Venta> ventas = ventaRepository.findByFechaVentaBetween(
-                desde != null ? desde : SIN_INICIO, hasta != null ? hasta : SIN_FIN);
+                        desde != null ? desde : SIN_INICIO, hasta != null ? hasta : SIN_FIN).stream()
+                .filter(VisibilidadVentas::visible)
+                .toList();
         if (ventas.isEmpty()) return new ScoreDtos.Ranking(desde, hasta, 0, List.of());
 
         List<Long> ids = ventas.stream().map(Venta::getId).toList();

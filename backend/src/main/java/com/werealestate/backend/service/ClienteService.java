@@ -1,5 +1,6 @@
 package com.werealestate.backend.service;
 
+import com.werealestate.backend.model.VisibilidadVentas;
 import com.werealestate.backend.dto.ClienteDto;
 import com.werealestate.backend.dto.ClienteListaDto;
 import com.werealestate.backend.dto.ClienteRequest;
@@ -111,7 +112,10 @@ public class ClienteService {
     public List<ClienteListaDto> listar() {
         exigirAdminOLider();
         Resumenes r = new Resumenes();
-        return clienteRepository.findAllByOrderByNombreAscApellidoPaternoAsc().stream().map(r::lista).toList();
+        return clienteRepository.findAllByOrderByNombreAscApellidoPaternoAsc().stream()
+                .filter(c -> !r.oculto(c.getId()))
+                .map(r::lista)
+                .toList();
     }
 
     /** Hasta 20 clientes activos que coinciden con el texto (número "S-40"/"N-12"/"40", nombre, teléfono o CURP):
@@ -135,7 +139,7 @@ public class ClienteService {
                 .toList();
         if (encontrados.isEmpty()) return List.of();
         Resumenes r = new Resumenes(encontrados.stream().map(Cliente::getId).toList(), numeros);
-        return encontrados.stream().map(r::lista).toList();
+        return encontrados.stream().filter(c -> !r.oculto(c.getId())).map(r::lista).toList();
     }
 
     @Transactional(readOnly = true)
@@ -451,6 +455,23 @@ public class ClienteService {
         private final Set<String> copropiedades = new HashSet<>();
         /** Número de cada cliente en cada desarrollo (S-40, N-12). */
         private final Map<Long, List<NumeroClienteDto>> numeros;
+        /** Clientes con alguna venta que quien pregunta no puede ver (VisibilidadVentas: ventas en efectivo). */
+        private final Set<Long> conVentaOculta = new HashSet<>();
+
+        /** true si el cliente solo tiene ventas ocultas para quien pregunta: para él, ese cliente no existe. */
+        boolean oculto(Long clienteId) {
+            return conVentaOculta.contains(clienteId) && !ventasPorCliente.containsKey(clienteId);
+        }
+
+        /** Agrega la venta al cliente, salvo que quien pregunta no deba verla (entonces solo lo anota). */
+        private boolean agregar(Long clienteId, Venta v) {
+            if (!VisibilidadVentas.visible(v)) {
+                conVentaOculta.add(clienteId);
+                return false;
+            }
+            ventasPorCliente.computeIfAbsent(clienteId, k -> new ArrayList<>()).add(v);
+            return true;
+        }
 
         List<NumeroClienteDto> numerosDe(Long clienteId) {
             return numeros.getOrDefault(clienteId, List.of());
@@ -460,12 +481,13 @@ public class ClienteService {
             this.numeros = numeracion.todos();
             for (Venta v : ventaRepository.findAll()) {
                 if (v.getClienteRef() != null) {
-                    ventasPorCliente.computeIfAbsent(v.getClienteRef().getId(), k -> new ArrayList<>()).add(v);
+                    agregar(v.getClienteRef().getId(), v);
                 }
             }
             for (VentaCopropietario cp : copropietarioRepository.findAll()) {
-                ventasPorCliente.computeIfAbsent(cp.getCliente().getId(), k -> new ArrayList<>()).add(cp.getVenta());
-                copropiedades.add(cp.getCliente().getId() + ":" + cp.getVenta().getId());
+                if (agregar(cp.getCliente().getId(), cp.getVenta())) {
+                    copropiedades.add(cp.getCliente().getId() + ":" + cp.getVenta().getId());
+                }
             }
             for (VentaLote vl : ventaLoteRepository.findAllConLoteYDesarrollo()) {
                 lotesPorVenta.computeIfAbsent(vl.getVenta().getId(), k -> new ArrayList<>()).add(vl);
@@ -485,15 +507,15 @@ public class ClienteService {
             if (clienteIds.isEmpty()) return;
             Set<Long> ventaIds = new HashSet<>();
             for (Venta v : ventaRepository.findByClienteRefIdIn(clienteIds)) {
-                if (v.getClienteRef() != null) {
-                    ventasPorCliente.computeIfAbsent(v.getClienteRef().getId(), k -> new ArrayList<>()).add(v);
+                if (v.getClienteRef() != null && agregar(v.getClienteRef().getId(), v)) {
                     ventaIds.add(v.getId());
                 }
             }
             for (VentaCopropietario cp : copropietarioRepository.findByClienteIdIn(clienteIds)) {
-                ventasPorCliente.computeIfAbsent(cp.getCliente().getId(), k -> new ArrayList<>()).add(cp.getVenta());
-                copropiedades.add(cp.getCliente().getId() + ":" + cp.getVenta().getId());
-                ventaIds.add(cp.getVenta().getId());
+                if (agregar(cp.getCliente().getId(), cp.getVenta())) {
+                    copropiedades.add(cp.getCliente().getId() + ":" + cp.getVenta().getId());
+                    ventaIds.add(cp.getVenta().getId());
+                }
             }
             if (ventaIds.isEmpty()) return;
             for (VentaLote vl : ventaLoteRepository.findByVentaIdInOrderByIdAsc(ventaIds)) {
@@ -573,6 +595,7 @@ public class ClienteService {
     private ClienteDto detalle(Cliente c) {
         List<NumeroClienteDto> nums = numeracion.numerosDe(c.getId());
         Resumenes r = new Resumenes(List.of(c.getId()), Map.of(c.getId(), nums));
+        if (r.oculto(c.getId())) throw new ResourceNotFoundException("Cliente no encontrado");
         return ClienteDto.from(c, r.ventasDe(c.getId()), nums);
     }
 

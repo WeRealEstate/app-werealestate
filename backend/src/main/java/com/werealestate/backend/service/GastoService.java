@@ -1,5 +1,6 @@
 package com.werealestate.backend.service;
 
+import com.werealestate.backend.model.VisibilidadVentas;
 import com.werealestate.backend.dto.GastoDto;
 import com.werealestate.backend.exception.ConflictException;
 import com.werealestate.backend.exception.ForbiddenOperationException;
@@ -73,7 +74,24 @@ public class GastoService {
 
     public List<GastoDto> listar() {
         exigirAdminOLider();
-        return gastoRepository.findAllByOrderByFechaDescIdDesc().stream().map(GastoDto::from).toList();
+        java.util.Set<Long> ocultos = gastosOcultos();
+        return gastoRepository.findAllByOrderByFechaDescIdDesc().stream()
+                .filter(g -> !ocultos.contains(g.getId()))
+                .map(GastoDto::from)
+                .toList();
+    }
+
+    /** Egresos que quien pregunta no debe ver: los pagos de comisión de ventas que tiene ocultas (VisibilidadVentas).
+     * Vacío para todos los demás. */
+    public java.util.Set<Long> gastosOcultos() {
+        if (!VisibilidadVentas.ocultaEfectivo()) return java.util.Set.of();
+        java.util.Set<Long> ocultos = new java.util.HashSet<>();
+        for (var entrega : entregaComisionRepository.findAll()) {
+            if (entrega.getGasto() != null && !VisibilidadVentas.visible(entrega.getComision().getVenta())) {
+                ocultos.add(entrega.getGasto().getId());
+            }
+        }
+        return ocultos;
     }
 
     /** Gasto de una sola vez (papelería, insumos...): concepto, fecha y monto; el comprobante es
@@ -183,6 +201,7 @@ public class GastoService {
     }
 
     private Gasto obtenerEntidad(Long id) {
+        if (gastosOcultos().contains(id)) throw new ResourceNotFoundException("Gasto no encontrado");
         return gastoRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Gasto no encontrado"));
     }
 

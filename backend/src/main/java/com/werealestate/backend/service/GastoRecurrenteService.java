@@ -1,5 +1,6 @@
 package com.werealestate.backend.service;
 
+import com.werealestate.backend.model.VisibilidadVentas;
 import com.werealestate.backend.dto.GastoDto;
 import com.werealestate.backend.dto.NominaPagadaDto;
 import com.werealestate.backend.dto.GastoRecurrenteDto;
@@ -305,8 +306,25 @@ public class GastoRecurrenteService {
         LocalDate hasta = ym.atEndOfMonth();
         BigDecimal ingresos = ingresosDelMes(desde, hasta);
         // Lo que los asesores devolvieron de comisiones ya entregadas: ingreso aparte.
-        BigDecimal devoluciones = devolucionRepository.sumarEntre(desde, hasta);
-        BigDecimal gastado = gastoRepository.sumarEntre(desde, hasta);
+        BigDecimal devoluciones;
+        BigDecimal gastado;
+        if (VisibilidadVentas.ocultaEfectivo()) {
+            // Sin lo de las ventas que quien pregunta no puede ver (VisibilidadVentas): se suma aquí, no en la base.
+            Set<Long> gastosOcultos = gastoService.gastosOcultos();
+            devoluciones = devolucionRepository.findAll().stream()
+                    .filter(d -> !d.getFecha().isBefore(desde) && !d.getFecha().isAfter(hasta))
+                    .filter(d -> VisibilidadVentas.visible(d.getComision().getVenta()))
+                    .map(d -> d.getMonto())
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            gastado = gastoRepository.findAllByOrderByFechaDescIdDesc().stream()
+                    .filter(g -> !g.getFecha().isBefore(desde) && !g.getFecha().isAfter(hasta))
+                    .filter(g -> !gastosOcultos.contains(g.getId()))
+                    .map(g -> g.getMonto())
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+        } else {
+            devoluciones = devolucionRepository.sumarEntre(desde, hasta);
+            gastado = gastoRepository.sumarEntre(desde, hasta);
+        }
 
         LocalDate hoy = LocalDate.now();
         BigDecimal pendiente = BigDecimal.ZERO;
@@ -336,6 +354,7 @@ public class GastoRecurrenteService {
     private BigDecimal ingresosDelMes(LocalDate desde, LocalDate hasta) {
         BigDecimal ingresos = BigDecimal.ZERO;
         for (PagoVenta p : pagoVentaRepository.findEnRangoConRecibo(desde, hasta)) {
+            if (!VisibilidadVentas.visible(p.getVenta())) continue;
             if (!p.getFecha().isBefore(desde) && !p.getFecha().isAfter(hasta)) ingresos = ingresos.add(p.getMonto());
             if (p.getRecibo().isAnulado() && p.getRecibo().getAnuladoFecha() != null
                     && !p.getRecibo().getAnuladoFecha().isBefore(desde)

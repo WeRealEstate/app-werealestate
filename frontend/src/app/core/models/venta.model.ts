@@ -58,6 +58,14 @@ export const MEDIO_FIRMA_LABELS: Record<MedioFirma, string> = {
  * pago", que describe el esquema (p. ej. "Sin enganche · 60 MSI"). */
 export type ModalidadPago = 'EFECTIVO' | 'TRANSFERENCIA' | 'DEPOSITO';
 
+/** La cuenta a la que no se le muestran las ventas en efectivo (el servidor las oculta: VisibilidadVentas). Aquí solo
+ * sirve para no ofrecerle la opción «Efectivo» al capturar o modificar una venta. */
+export const CORREO_SIN_EFECTIVO = 'ventas.weinmobiliaria@gmail.com';
+
+export function ocultaEfectivo(correo: string | null | undefined): boolean {
+  return (correo ?? '').trim().toLowerCase() === CORREO_SIN_EFECTIVO;
+}
+
 export const MODALIDAD_PAGO_LABELS: Record<ModalidadPago, string> = {
   EFECTIVO: 'Efectivo',
   TRANSFERENCIA: 'Transferencia',
