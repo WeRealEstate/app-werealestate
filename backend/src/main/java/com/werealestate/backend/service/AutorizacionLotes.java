@@ -20,6 +20,11 @@ public class AutorizacionLotes {
         return usuario.getRol() == Role.ADMIN || usuario.getRol() == Role.LIDER_AREA;
     }
 
+    /** El usuario que hace la petición. */
+    public Usuario usuarioActual() {
+        return currentUserProvider.getUsuarioActual();
+    }
+
     /** Quién puede saber que un lote "vendido" en realidad lo reservó la empresa: admin y administración. */
     public boolean puedeVerReservadosWe() {
         return esAdminOLider(currentUserProvider.getUsuarioActual());

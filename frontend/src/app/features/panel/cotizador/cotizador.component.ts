@@ -10,6 +10,7 @@ import { LeadsService } from '../../../core/services/leads.service';
 import { LotesService } from '../../../core/services/lotes.service';
 import { PromocionesService } from '../../../core/services/promociones.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { WeFormsPublicoService } from '../../../core/services/we-forms-publico.service';
 import { Desarrollo } from '../../../core/models/lead.model';
 import { Lote } from '../../../core/models/lote.model';
 import { Promocion, TipoPrecioPromocion } from '../../../core/models/promocion.model';
@@ -93,6 +94,7 @@ export class CotizadorComponent implements OnInit {
   private readonly promocionesService = inject(PromocionesService);
   private readonly toast = inject(ToastService);
   private readonly route = inject(ActivatedRoute);
+  private readonly weFormsPublico = inject(WeFormsPublicoService);
 
   readonly desarrollos = signal<Desarrollo[]>([]);
   readonly lotesDisponibles = signal<Lote[]>([]);
@@ -107,6 +109,12 @@ export class CotizadorComponent implements OnInit {
   readonly esPublico = this.route.snapshot.data['publico'] === true;
 
   readonly esAdmin = computed(() => !this.esPublico && this.auth.currentUser()?.rol === 'ADMIN');
+
+  /** Admin y Administración ven (y pueden cotizar) cualquier lote apartado, no solo los suyos. */
+  private readonly veTodosLosApartados = computed(() => {
+    const rol = this.auth.currentUser()?.rol;
+    return !this.esPublico && (rol === 'ADMIN' || rol === 'LIDER_AREA');
+  });
 
   showQuoteErrors = false;
 
@@ -174,15 +182,21 @@ export class CotizadorComponent implements OnInit {
     return PROYECTOS_COTIZADOR[this.selectedProject].nombre;
   }
 
-  /** Lotes disponibles del desarrollo actual: alimentan las sugerencias de manzana/lote de abajo.
-   * En /cotizador-publico no hay sesión, así que usa el mismo endpoint público que alimenta los
-   * planos públicos (que trae cualquier estado) y aquí se filtra a solo disponibles. */
+  /** Lotes que se pueden cotizar del desarrollo actual (alimentan las sugerencias de manzana/lote de abajo): los
+   * disponibles y los apartados que el asesor puede cotizar, porque a veces se aparta primero para que no se lo ganen y
+   * se cotiza después (cotizar NO cambia el estado del lote). En el panel, los apartados son los suyos (admin y
+   * Administración, todos). En /cotizador-publico no hay sesión: se usa el endpoint público de los planos (que trae
+   * cualquier estado y aquí se filtra a disponibles) y, si el dispositivo tiene guardado el PIN de un asesor, se suman
+   * sus apartados; si el PIN ya no sirve, simplemente no se muestran. */
   private async cargarLotesDisponibles(): Promise<void> {
     this.isCargandoLotes.set(true);
     try {
       if (this.esPublico) {
         const lotes = await this.lotesService.listarPublicoPorProyecto(this.selectedProject);
-        this.lotesDisponibles.set(lotes.filter((l) => l.estado === 'DISPONIBLE'));
+        const disponibles = lotes.filter((l) => l.estado === 'DISPONIBLE');
+        this.lotesDisponibles.set(disponibles);
+        const apartados = await this.cargarMisApartadosPublicos();
+        if (apartados.length > 0) this.lotesDisponibles.set([...disponibles, ...apartados]);
         return;
       }
 
@@ -191,7 +205,7 @@ export class CotizadorComponent implements OnInit {
         this.lotesDisponibles.set([]);
         return;
       }
-      this.lotesDisponibles.set(await this.lotesService.listarDisponibles(desarrollo.id));
+      this.lotesDisponibles.set(await this.lotesService.listarCotizables(desarrollo.id));
     } catch {
       this.lotesDisponibles.set([]);
     } finally {
@@ -199,7 +213,48 @@ export class CotizadorComponent implements OnInit {
     }
   }
 
-  /** Manzanas del inventario disponibles del desarrollo actual, en orden numérico, para sugerirlas
+  /** Apartados del asesor del PIN guardado en este dispositivo (vacío sin PIN o si no sirve). Un PIN que el servidor
+   * dice que no existe (404) se olvida, igual que en el plano público, para no volver a probarlo. */
+  private async cargarMisApartadosPublicos(): Promise<Lote[]> {
+    const pin = this.weFormsPublico.pin();
+    if (!pin) return [];
+    try {
+      return await this.lotesService.listarMisApartadosPublico(this.selectedProject, pin);
+    } catch (error) {
+      if ((error as { status?: number }).status === 404) this.weFormsPublico.guardarPin(null);
+      return [];
+    }
+  }
+
+  /** Un lote en cualquiera de las variantes de apartado. */
+  esApartado(lote: Lote): boolean {
+    return lote.estado === 'APARTADO' || lote.estado === 'APARTADO_A_PLAZO' || lote.estado === 'APARTADO_CON_DINERO';
+  }
+
+  /** Una manzana se marca "(apartado)" en la sugerencia solo si todos sus lotes cotizables están apartados. */
+  manzanaSoloApartados(manzana: string): boolean {
+    const clave = manzana.trim().toLowerCase();
+    const delaManzana = this.lotesDisponibles().filter((l) => l.manzana.trim().toLowerCase() === clave);
+    return delaManzana.length > 0 && delaManzana.every((l) => this.esApartado(l));
+  }
+
+  /** El lote real que coincide con lo capturado (solo cuando ya quedó enlazado al inventario), para avisar si está
+   * apartado. */
+  get loteElegidoDelInventario(): Lote | null {
+    if (!this.loteBloqueado) return null;
+    const numeroLote = this.lotNumber.trim().toLowerCase();
+    return this.lotesDeManzanaActual.find((l) => l.numeroLote.trim().toLowerCase() === numeroLote) ?? null;
+  }
+
+  /** Nota bajo el campo Lote cuando el lote elegido está apartado: a nombre de quien cotiza (asesor o PIN) o, para
+   * Admin y Administración, que ven todos los apartados, solo que está apartado. */
+  get notaLoteApartado(): string | null {
+    const lote = this.loteElegidoDelInventario;
+    if (!lote || !this.esApartado(lote)) return null;
+    return this.veTodosLosApartados() ? 'Este lote está apartado' : 'Este lote está apartado a tu nombre';
+  }
+
+  /** Manzanas del inventario cotizable del desarrollo actual, en orden numérico, para sugerirlas
    * mientras el asesor escribe en el campo Manzana. */
   get manzanasDisponibles(): string[] {
     const unicas = new Set(this.lotesDisponibles().map((l) => l.manzana.trim()));

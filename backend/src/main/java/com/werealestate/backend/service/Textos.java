@@ -15,4 +15,12 @@ final class Textos {
     static String comodinMinusculas(String texto) {
         return "%" + texto.trim().toLowerCase() + "%";
     }
+
+    /** Texto para comparar nombres: sin mayúsculas, acentos ni espacios de más ("  José  PÉREZ " = "jose perez"). */
+    static String normalizar(String texto) {
+        if (texto == null) return "";
+        String sinAcentos = java.text.Normalizer.normalize(texto, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "");
+        return sinAcentos.trim().replaceAll("\\s+", " ").toLowerCase(java.util.Locale.ROOT);
+    }
 }

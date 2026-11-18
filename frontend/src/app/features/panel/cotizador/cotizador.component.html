@@ -233,7 +233,7 @@
             />
             <datalist id="manzanas-cotizador">
               @for (m of manzanasDisponibles; track m) {
-                <option [value]="m"></option>
+                <option [value]="m">{{ manzanaSoloApartados(m) ? 'Mz ' + m + ' (apartado)' : '' }}</option>
               }
             </datalist>
             @if (blockNumberInvalid) {
@@ -257,11 +257,13 @@
             />
             <datalist id="lotes-cotizador">
               @for (l of lotesDeManzanaActual; track l.id) {
-                <option [value]="l.numeroLote">Lote {{ l.numeroLote }} ({{ l.superficie }} m²)</option>
+                <option [value]="l.numeroLote">Lote {{ l.numeroLote }} ({{ l.superficie }} m²){{ esApartado(l) ? ' (apartado)' : '' }}</option>
               }
             </datalist>
             @if (lotNumberInvalid) {
               <p class="mt-1.5 text-xs text-red-500">Campo obligatorio</p>
+            } @else if (notaLoteApartado) {
+              <p class="mt-1.5 text-xs text-ink-muted">{{ notaLoteApartado }}</p>
             }
           </div>
         </div>

@@ -15,6 +15,11 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.6.0', fecha: '2026-11-18', cambios: [
+    "Cotizador: ahora también puedes cotizar los lotes que tú mismo apartaste. En las sugerencias de manzana y lote salen junto a los disponibles marcados «(apartado)», y al elegir uno se autocompleta la superficie y el precio igual que un lote disponible, con una nota «Este lote está apartado a tu nombre». Cotizar no cambia el estado del lote. Administración y Admin ven y pueden cotizar cualquier apartado. También funciona desde «Cotizar este lote» del plano.",
+    "Cotizador público: si en ese dispositivo ya está guardado tu PIN de asesor, además de los disponibles ves tus apartados; sin PIN todo sigue igual.",
+    "Desde ahora el sistema guarda quién apartó cada lote (en el panel, el asesor al que se le aparta; en el plano público, el asesor del PIN guardado en el dispositivo). Los apartados anteriores se reconocen por el nombre del asesor en el historial del lote.",
+  ] },
   { version: '12.5.1', fecha: '2026-11-17', cambios: [
     "Leads: el filtro de etiquetas ahora tiene la opción «Sin etiquetas» para ver los leads que no tienen ninguna, y el selector se muestra siempre.",
   ] },

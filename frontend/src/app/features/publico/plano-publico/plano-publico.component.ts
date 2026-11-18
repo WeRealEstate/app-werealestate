@@ -254,6 +254,7 @@ export class PlanoPublicoComponent implements OnDestroy {
         this.nombreAsesorInput().trim(),
         this.nombreClienteInput().trim(),
         this.notaInput().trim() || undefined,
+        this.weFormsPublico.pin(),
       );
       this.lotes.update((lista) => lista.map((l) => apartados.find((a) => a.id === l.id) ?? l));
       this.toast.success(apartados.length === 1 ? 'Lote apartado.' : `${apartados.length} lotes apartados.`);
@@ -598,6 +599,7 @@ export class PlanoPublicoComponent implements OnDestroy {
         this.nombreAsesorInput().trim(),
         this.nombreClienteInput().trim(),
         this.notaInput().trim() || undefined,
+        this.weFormsPublico.pin(),
       );
       this.lotes.update((lista) => lista.map((l) => (l.id === lote.id ? actualizado : l)));
       this.loteActivo.set(actualizado);

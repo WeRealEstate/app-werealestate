@@ -102,6 +102,13 @@ public class LoteService {
      * apartado no está permitido desde aquí (solo desde /panel/lotes o /panel/plano) — evita que
      * cualquiera con el link pueda dejar disponible un lote que un asesor ya comprometió. */
     public LoteDto cambiarEstadoPublico(Long id, CambiarEstadoLotePublicoRequest request) {
+        return cambiarEstadoPublico(id, request, null);
+    }
+
+    /** Lo mismo, y si el visitante mandó el PIN de un asesor ({@code claveAsesor}, ya resuelta por el controlador con
+     * ClaveAsesor) el apartado queda a su nombre para que luego pueda cotizar ese lote. Sin PIN (null) funciona igual
+     * que siempre y la clave queda vacía. */
+    public LoteDto cambiarEstadoPublico(Long id, CambiarEstadoLotePublicoRequest request, String claveAsesor) {
         Lote lote = consulta.obtenerEntidad(id);
 
         boolean tocaEstadoRestringido =
@@ -132,6 +139,9 @@ public class LoteService {
                         "Falta el usuario de sistema del cotizador público (migración V17)"));
 
         historial.cambiarEstadoConHistorial(lote, request.estado(), sistema, nombreAsesor, nombreCliente, null, nota);
+        if (EstadosDeLote.APARTADO.contains(request.estado())) {
+            lote.setApartadoPorClave(claveAsesor);
+        }
         return LoteDto.paraPublico(lote);
     }
 
@@ -161,13 +171,19 @@ public class LoteService {
 
     /** Lo mismo desde el plano público (sin sesión): cada lote pasa por {@link #cambiarEstadoPublico}. */
     public List<LoteDto> apartarVariosPublico(ApartarVariosPublicoRequest request) {
+        return apartarVariosPublico(request, null);
+    }
+
+    /** Igual, con la clave del asesor del PIN si vino (ver {@link #cambiarEstadoPublico(Long, CambiarEstadoLotePublicoRequest, String)}). */
+    public List<LoteDto> apartarVariosPublico(ApartarVariosPublicoRequest request, String claveAsesor) {
         List<Lote> lotes = lotesDisponiblesParaApartar(request.loteIds());
         List<LoteDto> apartados = new ArrayList<>();
         for (Lote lote : lotes) {
             apartados.add(cambiarEstadoPublico(
                     lote.getId(),
                     new CambiarEstadoLotePublicoRequest(
-                            EstadoLote.APARTADO, request.nombreAsesor(), request.nombreCliente(), request.nota())));
+                            EstadoLote.APARTADO, request.nombreAsesor(), request.nombreCliente(), request.nota()),
+                    claveAsesor));
         }
         return apartados;
     }
@@ -273,11 +289,20 @@ public class LoteService {
         // Un apartado que pone administración debe quedar a nombre del asesor al que pertenece: así
         // ese asesor lo ve (y solo él) al armar un registro de venta en We Forms.
         String nombreAsesor = null;
-        if (EstadosDeLote.APARTADO.contains(request.estado())
-                && AutorizacionLotes.esAdminOLider(actual)) {
-            nombreAsesor = resolverAsesor(request.usuarioAsesorId(), request.asesorExternoId());
+        // Quién apartó (para que ese asesor pueda cotizar el lote): el asesor elegido si administración aparta para
+        // alguien; si no, quien hace el cambio.
+        String claveApartado = null;
+        if (EstadosDeLote.APARTADO.contains(request.estado())) {
+            if (AutorizacionLotes.esAdminOLider(actual)) {
+                AsesorElegido elegido = resolverAsesor(request.usuarioAsesorId(), request.asesorExternoId());
+                nombreAsesor = elegido.nombre();
+                claveApartado = elegido.clave();
+            } else {
+                claveApartado = ClaveAsesor.de(actual, null);
+            }
         }
         historial.cambiarEstadoConHistorial(lote, request.estado(), actual, nombreAsesor, nombreCliente, montoApartado, nota);
+        lote.setApartadoPorClave(claveApartado);
         lote.setFechaExpiraApartado(
                 request.estado() == EstadoLote.APARTADO_A_PLAZO ? request.fechaExpiraApartado() : null);
         lote.setMontoApartado(montoApartado);
@@ -326,23 +351,27 @@ public class LoteService {
         }
     }
 
-    /** Nombre del asesor (interno o externo) elegido al apartar un lote desde el panel; exactamente uno. */
-    private String resolverAsesor(Long usuarioAsesorId, Long asesorExternoId) {
+    /** El asesor elegido al apartar desde el panel: su nombre (para el historial) y su clave (para saber de quién es). */
+    private record AsesorElegido(String nombre, String clave) {
+    }
+
+    /** Asesor (interno o externo) elegido al apartar un lote desde el panel; exactamente uno. */
+    private AsesorElegido resolverAsesor(Long usuarioAsesorId, Long asesorExternoId) {
         if ((usuarioAsesorId == null) == (asesorExternoId == null)) {
             throw new ValidationException("Elige a qué asesor pertenece este apartado");
         }
         if (usuarioAsesorId != null) {
-            return usuarioRepository
+            Usuario u = usuarioRepository
                     .findById(usuarioAsesorId)
                     .filter(Usuario::isActivo)
-                    .map(Usuario::getNombre)
                     .orElseThrow(() -> new ValidationException("El asesor elegido no existe o está inactivo"));
+            return new AsesorElegido(u.getNombre(), ClaveAsesor.de(u, null));
         }
-        return asesorExternoRepository
+        AsesorExterno e = asesorExternoRepository
                 .findById(asesorExternoId)
                 .filter(AsesorExterno::isActivo)
-                .map(AsesorExterno::getNombre)
                 .orElseThrow(() -> new ValidationException("El asesor elegido no existe o está inactivo"));
+        return new AsesorElegido(e.getNombre(), ClaveAsesor.de(null, e));
     }
 
     private void validarUnico(Long desarrolloId, String manzana, String numeroLote, Long idAExcluir) {

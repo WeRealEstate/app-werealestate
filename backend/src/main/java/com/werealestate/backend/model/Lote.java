@@ -65,6 +65,13 @@ public class Lote {
     @Column(name = "monto_apartado", precision = 14, scale = 2)
     private BigDecimal montoApartado;
 
+    /** Clave del asesor que apartó el lote ("U-12" interno, "E-5" externo; la misma del Score y las comisiones), solo
+     * mientras el lote está en un estado de apartado: {@link #cambiarEstado} la borra en cada cambio de estado. null = no se
+     * sabe (apartados anteriores a V90 o hechos sin PIN en el plano público); en ese caso el cotizador se apoya en el
+     * nombre del último movimiento. Ver LoteConsultaService.listarCotizables. */
+    @Column(name = "apartado_por_clave", length = 20)
+    private String apartadoPorClave;
+
     /** Precio por m² de este lote en particular (ej. hectáreas); null = el precio por m² del desarrollo. */
     @Column(name = "precio_m2", precision = 12, scale = 2)
     private BigDecimal precioM2;
@@ -161,6 +168,14 @@ public class Lote {
         this.montoApartado = montoApartado;
     }
 
+    public String getApartadoPorClave() {
+        return apartadoPorClave;
+    }
+
+    public void setApartadoPorClave(String apartadoPorClave) {
+        this.apartadoPorClave = apartadoPorClave;
+    }
+
     /** Fija (o borra, pasando null) el polígono que delimita este lote en el plano. */
     public void actualizarPoligonoMapa(String mapaPoligonoJson) {
         this.mapaPoligonoJson = mapaPoligonoJson;
@@ -170,6 +185,9 @@ public class Lote {
      * que el contador de 3 días y la bitácora estén siempre consistentes. */
     public void cambiarEstado(EstadoLote nuevoEstado, Usuario usuario) {
         this.estado = nuevoEstado;
+        // Quién lo apartó se borra en CUALQUIER cambio (salir del apartado, o pasar de un apartado a otro): quien aparta
+        // lo vuelve a poner justo después (ver LoteService), así nunca queda la clave de un apartado anterior.
+        this.apartadoPorClave = null;
         this.fechaCambioEstado = LocalDateTime.now();
         this.cambiadoPor = usuario;
     }

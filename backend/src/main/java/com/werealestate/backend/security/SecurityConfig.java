@@ -87,6 +87,8 @@ public class SecurityConfig {
                         // apartar un lote sin sesión, con las mismas restricciones que un asesor
                         // (ver LoteService). /uploads/** tiene su propia cadena arriba.
                         .requestMatchers(HttpMethod.GET, "/api/lotes/publico").permitAll()
+                        // Los apartados del asesor del PIN (X-Asesor-Pin) en el cotizador público.
+                        .requestMatchers(HttpMethod.GET, "/api/lotes/publico/mis-apartados").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/lotes/publico/*/estado").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/lotes/publico/apartar-varios").permitAll()
                         // Botón "Asesor" de /samai y /aldea-nanuu: confirma que el nombre existe.

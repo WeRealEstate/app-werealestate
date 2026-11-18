@@ -21,6 +21,10 @@ public interface LoteRepository extends JpaRepository<Lote, Long>, JpaSpecificat
     @EntityGraph(attributePaths = {"desarrollo", "cambiadoPor"})
     List<Lote> findByDesarrolloIdAndEstadoOrderByManzanaAscNumeroLoteAsc(Long desarrolloId, EstadoLote estado);
 
+    /** Los lotes de un desarrollo en alguno de esos estados (los apartados, para el cotizador). */
+    @EntityGraph(attributePaths = {"desarrollo", "cambiadoPor"})
+    List<Lote> findByDesarrolloIdAndEstadoIn(Long desarrolloId, java.util.Collection<EstadoLote> estados);
+
     @EntityGraph(attributePaths = {"desarrollo", "cambiadoPor"})
     List<Lote> findByDesarrolloId(Long desarrolloId);
 

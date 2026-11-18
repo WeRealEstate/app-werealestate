@@ -15,10 +15,16 @@ import com.werealestate.backend.dto.MovimientoLoteDto;
 import com.werealestate.backend.dto.PaginaDto;
 import com.werealestate.backend.dto.PlanoDesarrolloDto;
 import com.werealestate.backend.dto.ResumenLotesDto;
+import com.werealestate.backend.exception.ValidationException;
+import com.werealestate.backend.service.AsesorPublicoService;
+import com.werealestate.backend.service.ClaveAsesor;
 import com.werealestate.backend.service.HistorialLoteService;
+import com.werealestate.backend.service.LimitadorPinPublico;
+import com.werealestate.backend.service.LoteApartadoService;
 import com.werealestate.backend.service.LoteConsultaService;
 import com.werealestate.backend.service.LoteVentaService;
 import com.werealestate.backend.service.LoteService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
 import java.util.List;
@@ -30,6 +36,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -42,13 +49,18 @@ public class LoteController {
     private final LoteConsultaService consultaService;
     private final HistorialLoteService historialService;
     private final LoteVentaService loteVentaService;
+    private final LoteApartadoService apartadoService;
+    private final LimitadorPinPublico limitadorPin;
 
     public LoteController(LoteService loteService, LoteConsultaService consultaService,
-            HistorialLoteService historialService, LoteVentaService loteVentaService) {
+            HistorialLoteService historialService, LoteVentaService loteVentaService,
+            LoteApartadoService apartadoService, LimitadorPinPublico limitadorPin) {
         this.loteService = loteService;
         this.consultaService = consultaService;
         this.historialService = historialService;
         this.loteVentaService = loteVentaService;
+        this.apartadoService = apartadoService;
+        this.limitadorPin = limitadorPin;
     }
 
     @GetMapping("/buscar")
@@ -77,8 +89,16 @@ public class LoteController {
         return consultaService.listarDisponibles(desarrolloId);
     }
 
-    /** Únicos dos endpoints públicos de este controlador, sin sesión (ver SecurityConfig): la
-     * disponibilidad de lotes en los planos públicos y el cotizador público. */
+    /** Para el cotizador del panel: los lotes disponibles del desarrollo más los apartados que el asesor puede cotizar
+     * (los suyos; admin y administración, todos). Los habilita el módulo Cotizador (ver ModuloAccesoInterceptor). */
+    @GetMapping("/cotizables")
+    public List<LoteDto> listarCotizables(@RequestParam Long desarrolloId) {
+        return apartadoService.listarCotizables(desarrolloId);
+    }
+
+    /** Endpoints públicos de este controlador de este controlador, sin sesión (ver SecurityConfig): la
+     * disponibilidad de lotes en los planos públicos y el cotizador público, y apartar desde ahí (con el PIN del asesor, si lo
+     * tiene guardado, en X-Asesor-Pin: así el apartado queda a su nombre). */
     @GetMapping("/publico")
     public List<LoteDto> listarPublico(@RequestParam String proyecto) {
         return consultaService.listarPublicoPorProyecto(proyecto);
@@ -86,14 +106,41 @@ public class LoteController {
 
     /** Apartar varios lotes a la vez desde el plano público (todo o nada, máximo 5). */
     @PutMapping("/publico/apartar-varios")
-    public List<LoteDto> apartarVariosPublico(@Valid @RequestBody ApartarVariosPublicoRequest request) {
-        return loteService.apartarVariosPublico(request);
+    public List<LoteDto> apartarVariosPublico(
+            @Valid @RequestBody ApartarVariosPublicoRequest request,
+            @RequestHeader(value = "X-Asesor-Pin", required = false) String pin,
+            HttpServletRequest http) {
+        return loteService.apartarVariosPublico(request, claveDelPin(http, pin));
     }
 
     @PutMapping("/publico/{id}/estado")
     public LoteDto cambiarEstadoPublico(
-            @PathVariable Long id, @Valid @RequestBody CambiarEstadoLotePublicoRequest request) {
-        return loteService.cambiarEstadoPublico(id, request);
+            @PathVariable Long id,
+            @Valid @RequestBody CambiarEstadoLotePublicoRequest request,
+            @RequestHeader(value = "X-Asesor-Pin", required = false) String pin,
+            HttpServletRequest http) {
+        return loteService.cambiarEstadoPublico(id, request, claveDelPin(http, pin));
+    }
+
+    /** Los apartados del asesor dueño del PIN (X-Asesor-Pin, nunca en la URL) en un plano, para que los cotice en el
+     * cotizador público además de los disponibles. Sin PIN, 400; con uno que no sirve, el mismo error que el resto de los
+     * endpoints con PIN (404 / 403 / 429) y cuenta contra el tope de intentos por IP: la página simplemente no los muestra. */
+    @GetMapping("/publico/mis-apartados")
+    public List<LoteDto> misApartadosPublico(
+            @RequestParam String proyecto,
+            @RequestHeader(value = "X-Asesor-Pin", required = false) String pin,
+            HttpServletRequest http) {
+        if (pin == null || pin.isBlank()) throw new ValidationException("Falta el PIN del asesor");
+        AsesorPublicoService.Identificado asesor = limitadorPin.exigir(http, pin, proyecto);
+        return apartadoService.listarApartadosPublicos(
+                proyecto, ClaveAsesor.de(asesor.usuario(), asesor.externo()), asesor.nombre());
+    }
+
+    /** Clave del asesor del PIN que vino al apartar, o null (sin PIN o uno que no sirve: el apartado sigue como siempre,
+     * solo que sin dueño; un PIN malo cuenta contra el tope de intentos igual que en el Score). */
+    private String claveDelPin(HttpServletRequest http, String pin) {
+        AsesorPublicoService.Identificado asesor = limitadorPin.identificarSiViene(http, pin).asesor();
+        return asesor == null ? null : ClaveAsesor.de(asesor.usuario(), asesor.externo());
     }
 
     /** Historial de movimientos de todos los lotes (no solo uno), para /panel/lotes/historial. */

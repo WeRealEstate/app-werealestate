@@ -52,6 +52,11 @@ declare global {
 /** Pasado este tiempo la respuesta precargada ya no se usa (los estados de los lotes cambian). */
 const LOTES_PRECARGADOS_VIGENCIA_MS = 60_000;
 
+/** El PIN del asesor viaja en la cabecera X-Asesor-Pin (nunca en la URL); sin PIN no se manda nada. */
+function cabeceraPin(pin: string | null | undefined): HttpHeaders {
+  return pin ? new HttpHeaders({ 'X-Asesor-Pin': pin }) : new HttpHeaders();
+}
+
 @Injectable({ providedIn: 'root' })
 export class LotesService {
   private readonly http = inject(HttpClient);
@@ -78,6 +83,22 @@ export class LotesService {
   listarDisponibles(desarrolloId: number): Promise<Lote[]> {
     return firstValueFrom(
       this.http.get<Lote[]>(`${this.baseUrl}/disponibles`, { params: { desarrolloId } }),
+    );
+  }
+
+  /** Para el cotizador del panel: los disponibles del desarrollo más los apartados que el asesor puede cotizar (los
+   * suyos; admin y administración, todos). */
+  listarCotizables(desarrolloId: number): Promise<Lote[]> {
+    return firstValueFrom(
+      this.http.get<Lote[]>(`${this.baseUrl}/cotizables`, { params: { desarrolloId } }),
+    );
+  }
+
+  /** Para el cotizador público con el PIN guardado en el dispositivo: los lotes que ese asesor tiene apartados en el
+   * plano (el PIN va en la cabecera, nunca en la URL). Falla si el PIN no sirve; quien lo llama simplemente no los muestra. */
+  listarMisApartadosPublico(proyecto: 'samai' | 'nanuu', pin: string): Promise<Lote[]> {
+    return firstValueFrom(
+      this.http.get<Lote[]>(`${this.baseUrl}/publico/mis-apartados`, { params: { proyecto }, headers: cabeceraPin(pin) }),
     );
   }
 
@@ -108,15 +129,15 @@ export class LotesService {
 
   /** Apartar un lote desde un plano público: nombreAsesor y nombreCliente son
    * obligatorios, nota es opcional — ver LoteService.cambiarEstadoPublico. Liberar un lote ya
-   * apartado no está permitido desde aquí. */
-  apartarLotePublico(id: number, nombreAsesor: string, nombreCliente: string, nota?: string): Promise<Lote> {
+   * apartado no está permitido desde aquí. Con el PIN del asesor (el guardado en el dispositivo), el apartado queda a
+   * su nombre y luego puede cotizar ese lote; sin PIN todo funciona igual. */
+  apartarLotePublico(id: number, nombreAsesor: string, nombreCliente: string, nota?: string, pin?: string | null): Promise<Lote> {
     return firstValueFrom(
-      this.http.put<Lote>(`${this.baseUrl}/publico/${id}/estado`, {
-        estado: 'APARTADO',
-        nombreAsesor,
-        nombreCliente,
-        nota: nota ?? null,
-      }),
+      this.http.put<Lote>(
+        `${this.baseUrl}/publico/${id}/estado`,
+        { estado: 'APARTADO', nombreAsesor, nombreCliente, nota: nota ?? null },
+        { headers: cabeceraPin(pin) },
+      ),
     );
   }
 
@@ -140,9 +161,19 @@ export class LotesService {
   }
 
   /** Lo mismo desde el plano público (sin sesión): nombreAsesor y nombreCliente obligatorios. */
-  apartarVariosPublico(loteIds: number[], nombreAsesor: string, nombreCliente: string, nota?: string): Promise<Lote[]> {
+  apartarVariosPublico(
+    loteIds: number[],
+    nombreAsesor: string,
+    nombreCliente: string,
+    nota?: string,
+    pin?: string | null,
+  ): Promise<Lote[]> {
     return firstValueFrom(
-      this.http.put<Lote[]>(`${this.baseUrl}/publico/apartar-varios`, { loteIds, nombreAsesor, nombreCliente, nota: nota ?? null }),
+      this.http.put<Lote[]>(
+        `${this.baseUrl}/publico/apartar-varios`,
+        { loteIds, nombreAsesor, nombreCliente, nota: nota ?? null },
+        { headers: cabeceraPin(pin) },
+      ),
     );
   }
 
