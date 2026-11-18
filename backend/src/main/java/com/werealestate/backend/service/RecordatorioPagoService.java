@@ -116,6 +116,7 @@ public class RecordatorioPagoService {
                 : new RecordatorioPagoCorreo.ProximoPago(a.proximaFecha(), a.proximoMonto(), conceptoDelPago(a), arrastreDelPago(a));
         RecordatorioPagoCorreo.Contenido contenido = new RecordatorioPagoCorreo.Contenido(
                 titular != null ? titular.nombreCompleto() : a.cliente(),
+                a.clienteNumeros() == null || a.clienteNumeros().isEmpty() ? null : String.join(", ", a.clienteNumeros()),
                 a.ventaNumero(),
                 a.desarrollos(),
                 a.lotes(),
@@ -171,11 +172,9 @@ public class RecordatorioPagoService {
             helper.setTo(p.correo());
             helper.setSubject(RecordatorioPagoCorreo.asunto(p.contenido()));
             helper.setText(RecordatorioPagoCorreo.texto(p.contenido()), RecordatorioPagoCorreo.html(p.contenido()));
-            // El banner va dentro del correo (cid:), sin depender de un servidor de imágenes (Mailchimp, etc.).
-            String banner = RecordatorioPagoCorreo.banner(p.contenido());
-            if (banner != null) {
-                helper.addInline(RecordatorioPagoCorreo.CID_BANNER,
-                        new org.springframework.core.io.ClassPathResource(banner), "image/jpeg");
+            // Logo y círculo van dentro del correo (cid:), sin depender de un servidor de imágenes.
+            for (RecordatorioPagoCorreo.Imagen img : RecordatorioPagoCorreo.IMAGENES) {
+                helper.addInline(img.cid(), new org.springframework.core.io.ClassPathResource(img.archivo()), img.tipo());
             }
             sender.send(mensaje);
         } catch (Exception e) {

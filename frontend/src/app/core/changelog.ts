@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.8.2', fecha: '2026-11-18', cambios: [
+    "Recordatorio de pago con diseño nuevo de We para todas las ventas (SAMAI y Aldea Nanuu): logo, banda azul con el saludo, tarjeta con número de cliente, mensualidad, monto a pagar y fecha límite, recuadro de pagos atrasados solo cuando hay atraso y los datos de la compra.",
+  ] },
   { version: '12.8.1', fecha: '2026-11-18', cambios: [
     "Para la cuenta «We Real Estate (Dirección)» los números de venta se ven consecutivos sin las ventas en efectivo (después de S-4 sigue S-5), en toda la app, en la dirección de la venta y en el buscador; su número de venta siempre es automático. Los demás siguen viendo el número oficial y los correos al cliente y a finanzas llevan siempre el oficial.",
   ] },
