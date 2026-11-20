@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.8.3', fecha: '2026-11-20', cambios: [
+    "Plano público de Aldea Nanuu: ya no arranca con franjas negras. La vista rápida guardada era de un plano anterior; el servidor la vuelve a generar sola al arrancar y el plano se reencuadra cuando termina de cargar la imagen completa.",
+  ] },
   { version: '12.8.2', fecha: '2026-11-18', cambios: [
     "Recordatorio de pago con diseño nuevo de We para todas las ventas (SAMAI y Aldea Nanuu): logo, banda azul con el saludo, tarjeta con número de cliente, mensualidad, monto a pagar y fecha límite, recuadro de pagos atrasados solo cuando hay atraso y los datos de la compra.",
   ] },

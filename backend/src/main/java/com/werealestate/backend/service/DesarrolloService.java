@@ -150,8 +150,13 @@ public class DesarrolloService {
             if (bytesPreview == null) {
                 bytesPreview = generarPreviewDesdeArchivo(destino);
             }
+            Path rutaPreview = carpeta.resolve("desarrollo-" + id + "-preview.jpg");
             if (bytesPreview != null) {
-                Files.write(carpeta.resolve("desarrollo-" + id + "-preview.jpg"), bytesPreview);
+                Files.write(rutaPreview, bytesPreview);
+            } else {
+                // Sin vista rápida nueva, la anterior (de otro plano) no debe quedarse: el visor cargaría el HD directo.
+                Files.deleteIfExists(rutaPreview);
+                log.warn("No se pudo generar la vista rápida del plano del desarrollo {}", id);
             }
 
             // El PDF original (vectorial) se guarda aparte y en carpeta privada: de él se arma el PDF de descarga
@@ -202,8 +207,12 @@ public class DesarrolloService {
                 String ext = m.group(2).toLowerCase();
                 Path preview = carpeta.resolve("desarrollo-" + id + "-preview.jpg");
                 try {
+                    // También se rehace si su proporción no es la del plano: una vista rápida de un plano anterior
+                    // (Nanuu tenía una de 1920×2400 con un plano casi cuadrado) hacía que el plano público
+                    // arrancara mal encuadrado, con franjas negras.
                     boolean faltaPreview = !Files.exists(preview)
-                            || Files.getLastModifiedTime(preview).compareTo(Files.getLastModifiedTime(archivo)) < 0;
+                            || Files.getLastModifiedTime(preview).compareTo(Files.getLastModifiedTime(archivo)) < 0
+                            || !mismaProporcion(preview, archivo);
                     if (faltaPreview) {
                         byte[] bytesPreview = generarPreviewDesdeArchivo(archivo);
                         if (bytesPreview != null) {
@@ -211,6 +220,9 @@ public class DesarrolloService {
                             Files.write(tmp, bytesPreview);
                             Files.move(tmp, preview, StandardCopyOption.REPLACE_EXISTING);
                             log.info("Vista rápida generada para {} ({} KB)", nombre, bytesPreview.length / 1024);
+                        } else if (Files.deleteIfExists(preview)) {
+                            // Mejor sin vista rápida (el visor carga directo el HD) que con una que no corresponde.
+                            log.warn("No se pudo generar la vista rápida de {}: se borró la anterior", nombre);
                         }
                     }
                     if (("jpg".equals(ext) || "jpeg".equals(ext)) && Files.size(archivo) > UMBRAL_RECOMPRIMIR_HD_BYTES) {
@@ -267,7 +279,37 @@ public class DesarrolloService {
 
     /** Genera la vista rápida desde un archivo de imagen en disco usando subsampling del lector para no cargar los
      * 150 MP completos en memoria solo para sacar una vista de 2400 px. */
-    private static byte[] generarPreviewDesdeArchivo(Path archivo) {
+    /** true si las dos imágenes tienen la misma proporción (±1 %), leyendo solo sus encabezados. Si no se pueden leer,
+     * se da por buena (no se rehace nada por una duda). */
+    static boolean mismaProporcion(Path a, Path b) {
+        double[] pa = medidas(a);
+        double[] pb = medidas(b);
+        if (pa == null || pb == null) return true;
+        double ra = pa[0] / pa[1];
+        double rb = pb[0] / pb[1];
+        return Math.abs(ra - rb) / rb <= 0.01;
+    }
+
+    private static double[] medidas(Path archivo) {
+        try (ImageInputStream in = ImageIO.createImageInputStream(archivo.toFile())) {
+            if (in == null) return null;
+            Iterator<ImageReader> lectores = ImageIO.getImageReaders(in);
+            if (!lectores.hasNext()) return null;
+            ImageReader lector = lectores.next();
+            try {
+                lector.setInput(in);
+                int ancho = lector.getWidth(0);
+                int alto = lector.getHeight(0);
+                return ancho > 0 && alto > 0 ? new double[] {ancho, alto} : null;
+            } finally {
+                lector.dispose();
+            }
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    static byte[] generarPreviewDesdeArchivo(Path archivo) {
         try (ImageInputStream in = ImageIO.createImageInputStream(archivo.toFile())) {
             if (in == null) return null;
             Iterator<ImageReader> lectores = ImageIO.getImageReaders(in);

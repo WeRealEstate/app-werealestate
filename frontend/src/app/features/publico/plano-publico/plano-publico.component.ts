@@ -672,11 +672,19 @@ export class PlanoPublicoComponent implements OnDestroy {
   private procesarImagenCargada(img: HTMLImageElement): void {
     if (!img || img.naturalWidth === 0) return;
     const primeraVez = !this.imagenLista();
+    // Si la imagen que llega (el HD tras la vista rápida) tiene otra proporción, el encuadre calculado ya no sirve:
+    // así quedaban franjas negras en Nanuu, cuya vista rápida guardada era de un plano anterior.
+    const cambioProporcion =
+      !primeraVez &&
+      this.naturalWidth > 0 &&
+      Math.abs(img.naturalWidth / img.naturalHeight - this.naturalWidth / this.naturalHeight) > 0.005;
     this.naturalWidth = img.naturalWidth;
     this.naturalHeight = img.naturalHeight;
     if (primeraVez) {
       this.ajustarZoomParaVerCompleto();
       this.terminarCarga();
+    } else if (cambioProporcion) {
+      this.ajustarZoomParaVerCompleto();
     }
     if (this.usandoPreview() && !this.hdLista()) {
       this.cargarHdEnSegundoPlano();
