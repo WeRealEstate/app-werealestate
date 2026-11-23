@@ -1,5 +1,9 @@
 package com.werealestate.backend.service;
 
+import java.util.Map;
+import java.util.List;
+import java.util.HashMap;
+import java.util.ArrayList;
 import com.werealestate.backend.dto.DesarrolloDto;
 import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
@@ -146,6 +150,10 @@ public class DesarrolloService {
             Files.createDirectories(carpeta);
             Path destino = carpeta.resolve("desarrollo-" + id + "." + extension);
             Files.write(destino, bytes);
+            // Un plano anterior con otra extensión ya no sirve y confundía a la vista rápida (ver planosVigentes).
+            for (String otra : List.of("jpg", "jpeg", "png", "webp")) {
+                if (!otra.equals(extension)) Files.deleteIfExists(carpeta.resolve("desarrollo-" + id + "." + otra));
+            }
 
             if (bytesPreview == null) {
                 bytesPreview = generarPreviewDesdeArchivo(destino);
@@ -199,7 +207,7 @@ public class DesarrolloService {
         Path carpeta = Path.of(uploadsDir, "planos");
         if (!Files.isDirectory(carpeta)) return;
         try (Stream<Path> archivos = Files.list(carpeta)) {
-            for (Path archivo : archivos.toList()) {
+            for (Path archivo : planosVigentes(archivos.toList())) {
                 String nombre = archivo.getFileName().toString();
                 Matcher m = PATRON_PLANO_BASE.matcher(nombre);
                 if (!m.matches()) continue;
@@ -279,6 +287,42 @@ public class DesarrolloService {
 
     /** Genera la vista rápida desde un archivo de imagen en disco usando subsampling del lector para no cargar los
      * 150 MP completos en memoria solo para sacar una vista de 2400 px. */
+    /**
+     * De todos los archivos de la carpeta, solo el plano vigente de cada desarrollo: el de su {@code planoUrl}. En la
+     * carpeta pueden quedar planos anteriores con otra extensión (SAMAI tenía un .png cuadrado viejo junto al .jpg
+     * actual) y, si se recorrían todos, la vista rápida terminaba saliendo del viejo: el plano público arrancaba
+     * mostrando otro plano. Un desarrollo sin planoUrl conocido usa su archivo más reciente.
+     */
+    List<Path> planosVigentes(List<Path> archivos) {
+        Map<String, String> vigentePorId = new HashMap<>();
+        for (Desarrollo d : desarrolloRepository.findAll()) {
+            String url = d.getPlanoUrl();
+            if (url == null || d.getId() == null) continue;
+            String sinQuery = url.contains("?") ? url.substring(0, url.indexOf('?')) : url;
+            vigentePorId.put(String.valueOf(d.getId()), sinQuery.substring(sinQuery.lastIndexOf('/') + 1));
+        }
+        Map<String, Path> elegido = new HashMap<>();
+        for (Path archivo : archivos) {
+            Matcher m = PATRON_PLANO_BASE.matcher(archivo.getFileName().toString());
+            if (!m.matches()) continue;
+            String id = m.group(1);
+            String vigente = vigentePorId.get(id);
+            if (vigente != null) {
+                if (vigente.equals(archivo.getFileName().toString())) elegido.put(id, archivo);
+                continue;
+            }
+            Path actual = elegido.get(id);
+            try {
+                if (actual == null || Files.getLastModifiedTime(archivo).compareTo(Files.getLastModifiedTime(actual)) > 0) {
+                    elegido.put(id, archivo);
+                }
+            } catch (IOException e) {
+                elegido.putIfAbsent(id, archivo);
+            }
+        }
+        return new ArrayList<>(elegido.values());
+    }
+
     /** true si las dos imágenes tienen la misma proporción (±1 %), leyendo solo sus encabezados. Si no se pueden leer,
      * se da por buena (no se rehace nada por una duda). */
     static boolean mismaProporcion(Path a, Path b) {

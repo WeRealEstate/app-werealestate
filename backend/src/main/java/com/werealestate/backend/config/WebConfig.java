@@ -41,6 +41,12 @@ public class WebConfig implements WebMvcConfigurer {
         // cache-busting (?v=timestamp) que cambia junto con él — así que un caché "para siempre"
         // en el navegador es seguro y evita volver a descargar varios MB en cada visita al link
         // público, que antes tardaba 20-30s por venir siempre con "no-cache".
+        // La vista rápida del plano conserva su URL (lleva el ?v= del plano) aunque el servidor la vuelva a generar
+        // (ver DesarrolloService.asegurarPreviewsYOptimizarPlanosExistentes): con el caché de un año el navegador seguía
+        // mostrando la vieja. Pesa ~1 MB y se revalida (304 si no cambió).
+        registry.addResourceHandler("/uploads/planos/*-preview.jpg")
+                .addResourceLocations(ubicacion + "planos/")
+                .setCacheControl(CacheControl.noCache().cachePublic());
         registry.addResourceHandler("/uploads/**")
                 .addResourceLocations(ubicacion)
                 .setCacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePublic().immutable());

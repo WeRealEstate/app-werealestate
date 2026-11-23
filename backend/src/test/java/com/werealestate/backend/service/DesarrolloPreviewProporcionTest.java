@@ -61,4 +61,31 @@ class DesarrolloPreviewProporcionTest {
 
         assertEquals(despues, Files.getLastModifiedTime(preview));
     }
+
+    @Test
+    void usaSoloElPlanoVigenteAunqueQuedeUnoViejoConOtraExtension() throws Exception {
+        // SAMAI: el .jpg vigente (3:2) y un .png viejo cuadrado en la misma carpeta.
+        Path planos = Files.createDirectories(uploads.resolve("planos"));
+        Path vigente = planos.resolve("desarrollo-1.jpg");
+        Path viejo = planos.resolve("desarrollo-1.png");
+        Path preview = planos.resolve("desarrollo-1-preview.jpg");
+        jpg(vigente, 1500, 1000);
+        ImageIO.write(new BufferedImage(800, 800, BufferedImage.TYPE_INT_RGB), "png", viejo.toFile());
+        Files.setLastModifiedTime(vigente, FileTime.fromMillis(1_000_000_000_000L));
+        Files.setLastModifiedTime(viejo, FileTime.fromMillis(1_500_000_000_000L));
+
+        com.werealestate.backend.model.Desarrollo samai = org.mockito.Mockito.mock(com.werealestate.backend.model.Desarrollo.class);
+        org.mockito.Mockito.when(samai.getId()).thenReturn(1L);
+        org.mockito.Mockito.when(samai.getPlanoUrl()).thenReturn("/uploads/planos/desarrollo-1.jpg?v=123");
+        DesarrolloRepository repo = mock(DesarrolloRepository.class);
+        org.mockito.Mockito.when(repo.findAll()).thenReturn(java.util.List.of(samai));
+
+        DesarrolloService servicio = new DesarrolloService(repo, mock(CurrentUserProvider.class), uploads.toString(),
+                uploads.resolve("privados").toString());
+        servicio.asegurarPreviewsYOptimizarPlanosExistentes();
+        assertTrue(DesarrolloService.mismaProporcion(preview, vigente), "la vista rápida sale del plano vigente");
+        // Correrlo otra vez no la cambia por la del viejo.
+        servicio.asegurarPreviewsYOptimizarPlanosExistentes();
+        assertTrue(DesarrolloService.mismaProporcion(preview, vigente));
+    }
 }

@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.8.5', fecha: '2026-11-23', cambios: [
+    "Planos públicos: al abrir ya no aparece primero un plano anterior. El servidor arma la vista rápida solo con el plano vigente (ignora imágenes viejas que quedaban guardadas) y el navegador ya no la guarda por un año, así que toma la nueva en cuanto se genera.",
+  ] },
   { version: '12.8.4', fecha: '2026-11-23', cambios: [
     "Inicio de sesión: diagnóstico y tolerancia mejorados en la verificación del captcha (Cloudflare Turnstile) con timeouts controlados para evitar bloqueos y mensajes de error específicos en pantalla.",
   ] },
