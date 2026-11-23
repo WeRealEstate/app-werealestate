@@ -162,7 +162,11 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
   private messageFor(error: unknown): string {
     if (error instanceof HttpErrorResponse) {
       if (error.status === 401) return 'Correo o contraseña incorrectos.';
-      if (error.status === 400) return 'Completa el captcha para continuar.';
+      if (error.status === 400) {
+        return typeof error.error?.message === 'string' && error.error.message.trim()
+          ? error.error.message
+          : 'Completa el captcha para continuar.';
+      }
       if (error.status === 0) return 'No se pudo conectar con el servidor. Verifica tu conexión.';
     }
     return 'Ocurrió un error al iniciar sesión. Intenta de nuevo.';

@@ -1,9 +1,15 @@
 package com.werealestate.backend.service;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.werealestate.backend.exception.ValidationException;
+import java.time.Duration;
+import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -19,6 +25,7 @@ import org.springframework.web.client.RestClientException;
 @Service
 public class TurnstileService {
 
+    private static final Logger log = LoggerFactory.getLogger(TurnstileService.class);
     private static final String VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
     private final boolean habilitado;
@@ -30,7 +37,11 @@ public class TurnstileService {
             @Value("${app.turnstile.secret-key}") String secretKey) {
         this.habilitado = habilitado;
         this.secretKey = secretKey;
-        this.restClient = RestClient.create();
+
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(5));
+        factory.setReadTimeout(Duration.ofSeconds(5));
+        this.restClient = RestClient.builder().requestFactory(factory).build();
     }
 
     public void verificar(String token) {
@@ -55,18 +66,22 @@ public class TurnstileService {
                     .retrieve()
                     .body(TurnstileResponse.class);
         } catch (RestClientException e) {
-            // Cloudflare no responde o responde con error: se rechaza el login en vez de dejarlo
-            // pasar sin validar (fail-closed), para no anular la protección justo cuando más podría
-            // estar bajo ataque.
+            log.error("Error al contactar a Cloudflare Turnstile: {}", e.getMessage(), e);
             throw new ValidationException("No se pudo validar el captcha en este momento. Intenta de nuevo.");
         }
 
         if (respuesta == null || !respuesta.success()) {
+            log.warn("Turnstile rechazado por Cloudflare: errorCodes={}, hostname={}",
+                    respuesta != null ? respuesta.errorCodes() : null,
+                    respuesta != null ? respuesta.hostname() : null);
             throw new ValidationException("Captcha inválido o expirado, intenta de nuevo.");
         }
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private record TurnstileResponse(boolean success) {
-    }
+    private record TurnstileResponse(
+            boolean success,
+            @JsonProperty("error-codes") List<String> errorCodes,
+            String hostname
+    ) {}
 }

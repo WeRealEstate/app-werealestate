@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.8.4', fecha: '2026-11-23', cambios: [
+    "Inicio de sesión: diagnóstico y tolerancia mejorados en la verificación del captcha (Cloudflare Turnstile) con timeouts controlados para evitar bloqueos y mensajes de error específicos en pantalla.",
+  ] },
   { version: '12.8.3', fecha: '2026-11-20', cambios: [
     "Plano público de Aldea Nanuu: ya no arranca con franjas negras. La vista rápida guardada era de un plano anterior; el servidor la vuelve a generar sola al arrancar y el plano se reencuadra cuando termina de cargar la imagen completa.",
   ] },
