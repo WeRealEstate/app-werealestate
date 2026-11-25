@@ -173,6 +173,18 @@ public class ComisionService {
         sincronizarSecundaria(venta, ventaNueva, coasesorUsuario, coasesorExterno, coasesorPorcentaje);
     }
 
+    /** Cambiaron los lotes y con ellos el precio de la venta: cada comisión vigente toma el valor nuevo con su mismo %
+     * (decisión del usuario) y se reconstruye lo ganado; lo ya entregado se respeta (si pasa del monto nuevo, queda como
+     * entregado de más). Una comisión cancelada no se toca. */
+    public void recalcularPorCambioDePrecio(Venta venta) {
+        BigDecimal base = valorDeVenta(venta.getId());
+        for (VentaComision c : comisionRepository.findAllByVentaId(venta.getId())) {
+            if (c.isCancelada()) continue;
+            c.cambiarBase(base, porcentajeDe(base, c.getPorcentaje()));
+        }
+        sincronizar(venta);
+    }
+
     private void sincronizarPrincipal(Venta venta, boolean ventaNueva, BigDecimal porcentaje) {
         VentaComision comision = comisionRepository.findByVentaIdAndSecundariaFalse(venta.getId()).orElse(null);
         if (comision == null) {

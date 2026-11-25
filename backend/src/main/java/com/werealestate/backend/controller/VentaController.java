@@ -15,6 +15,7 @@ import com.werealestate.backend.dto.ReciboHistorialDto;
 import com.werealestate.backend.dto.BienvenidaClienteDto;
 import com.werealestate.backend.dto.LiquidacionAvisoDto;
 import com.werealestate.backend.dto.RecordatorioPagoDto;
+import com.werealestate.backend.dto.VentaCambiarLotesRequest;
 import com.werealestate.backend.dto.VentaCreateRequest;
 import com.werealestate.backend.dto.VentaEliminarRequest;
 import com.werealestate.backend.dto.VentaDeshacerPausaRequest;
@@ -58,12 +59,15 @@ public class VentaController {
     private final RecordatorioPagoService recordatorioPagoService;
     private final BienvenidaClienteService bienvenidaService;
     private final LiquidacionAvisoService liquidacionService;
+    private final com.werealestate.backend.service.CambioLotesVentaService cambioLotesVentaService;
 
     public VentaController(VentaService ventaService, ReciboVentaService reciboVentaService,
             ContratoVentaService contratoVentaService, NumeracionVentaService numeracionVentaService,
             ReestructuracionVentaService reestructuracionVentaService, EstadoCuentaService estadoCuentaService,
             PausaMensualidadService pausaService, RecordatorioPagoService recordatorioPagoService,
-            BienvenidaClienteService bienvenidaService, LiquidacionAvisoService liquidacionService) {
+            BienvenidaClienteService bienvenidaService, LiquidacionAvisoService liquidacionService,
+            com.werealestate.backend.service.CambioLotesVentaService cambioLotesVentaService) {
+        this.cambioLotesVentaService = cambioLotesVentaService;
         this.ventaService = ventaService;
         this.reciboVentaService = reciboVentaService;
         this.contratoVentaService = contratoVentaService;
@@ -206,6 +210,12 @@ public class VentaController {
     }
 
     /** Cambia el plan de pagos de la venta: lo pagado se respeta y el plan nuevo reparte el saldo de hoy. */
+    /** Sustituir, agregar o quitar los lotes de una venta registrada (pide contraseña). */
+    @PutMapping("/{id}/lotes")
+    public VentaDto cambiarLotes(@PathVariable Long id, @Valid @RequestBody VentaCambiarLotesRequest request) {
+        return cambioLotesVentaService.cambiar(id, request);
+    }
+
     @PostMapping("/{id}/reestructurar")
     public VentaDto reestructurar(
             @PathVariable Long id, @Valid @RequestBody VentaReestructurarRequest request) {

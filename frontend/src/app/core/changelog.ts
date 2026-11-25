@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.10.0', fecha: '2026-11-25', cambios: [
+    "Venta registrada: nuevo botón «Cambiar lotes» (admin y administración, con contraseña) para sustituir, agregar o quitar lotes y corregir sus precios. Muestra el precio, saldo y mensualidad nuevos antes de guardar; los lotes que salen vuelven a Disponible y la comisión se recalcula.",
+  ] },
   { version: '12.9.0', fecha: '2026-11-25', cambios: [
     "Nueva venta: ahora se puede elegir la promoción con la que se vendió. Descuenta el bono repartido entre los lotes, deja la venta sin enganche y al plazo de la promoción (todo editable) y muestra la promoción en el detalle de la venta. Aparecen las promociones de bono vigentes en la fecha de venta, aunque ya hayan terminado.",
   ] },

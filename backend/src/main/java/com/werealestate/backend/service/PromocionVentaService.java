@@ -49,12 +49,19 @@ public class PromocionVentaService {
     /** Valida que la promoción aplique a esta venta y devuelve su nombre y bono. */
     @Transactional(readOnly = true)
     public Aplicada aplicar(Long promocionId, LocalDate fechaVenta, List<Lote> lotes) {
+        return aplicar(promocionId, fechaVenta, lotes, null);
+    }
+
+    /** Igual; {@code promocionActual} es la que ya tiene la venta (por nombre): conservarla al cambiar los lotes no
+     * exige que siga vigente. */
+    @Transactional(readOnly = true)
+    public Aplicada aplicar(Long promocionId, LocalDate fechaVenta, List<Lote> lotes, String promocionActual) {
         Promocion p = promocionRepository.findById(promocionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Promoción no encontrada"));
         if (p.getModalidad() != ModalidadPromocion.BONO_LOTES) {
             throw new ValidationException("Solo se pueden registrar ventas con promociones de bono por lotes");
         }
-        if (!vigenteEn(p, fechaVenta)) {
+        if (!p.getNombre().equals(promocionActual) && !vigenteEn(p, fechaVenta)) {
             throw new ValidationException("La promoción " + p.getNombre() + " no estaba vigente en la fecha de la venta");
         }
         String proyecto = "nanuu".equals(p.getProyecto()) ? "Aldea Nanuu" : "SAMAI Campestre";

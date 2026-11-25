@@ -57,6 +57,11 @@ public class VentaLote {
         return lote;
     }
 
+    /** Solo al cambiar los lotes de una venta (CambioLotesVentaService). */
+    public void setPrecio(BigDecimal precio) {
+        this.precio = precio;
+    }
+
     public BigDecimal getPrecio() {
         return precio;
     }

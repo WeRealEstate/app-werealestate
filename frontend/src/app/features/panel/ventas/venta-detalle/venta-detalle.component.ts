@@ -6,6 +6,7 @@ import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular
 import { LucideCircleAlert, LucideMail, LucidePencil, LucideTrash2 } from '@lucide/angular';
 import { Amortizacion, cuentaAtraso, fechaCorta } from '../../../../core/models/amortizacion.model';
 import { ReestructurarVentaComponent } from '../../../../shared/reestructurar-venta/reestructurar-venta.component';
+import { CambiarLotesVentaComponent } from '../../../../shared/cambiar-lotes-venta/cambiar-lotes-venta.component';
 import { TablaAmortizacionComponent } from '../../../../shared/tabla-amortizacion/tabla-amortizacion.component';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Location } from '@angular/common';
@@ -35,7 +36,7 @@ const SEGUNDOS_ESPERA_ELIMINAR = 10;
 @Component({
   selector: 'app-venta-detalle',
   standalone: true,
-  imports: [MonedaInputDirective, WeLoaderComponent, ReciboFormComponent, RecibosVentaComponent, ContratoVentaComponent, TablaAmortizacionComponent, ReestructurarVentaComponent, ReactiveFormsModule, RouterLink, ClienteSelectorComponent, CopropietariosEditorComponent, NumeroVentaComponent, LucideCircleAlert, LucideMail, LucidePencil, LucideTrash2],
+  imports: [MonedaInputDirective, WeLoaderComponent, ReciboFormComponent, RecibosVentaComponent, ContratoVentaComponent, TablaAmortizacionComponent, ReestructurarVentaComponent, CambiarLotesVentaComponent, ReactiveFormsModule, RouterLink, ClienteSelectorComponent, CopropietariosEditorComponent, NumeroVentaComponent, LucideCircleAlert, LucideMail, LucidePencil, LucideTrash2],
   templateUrl: './venta-detalle.component.html',
 })
 export class VentaDetalleComponent implements OnInit, OnDestroy {
@@ -80,6 +81,7 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
   /** Temporal: permite modificar los datos capturados de la venta (no sus lotes/precios). Se va a
    * quitar más adelante — avisan cuándo. */
   readonly modalidadLabels = MODALIDAD_PAGO_LABELS;
+  readonly cambiandoLotes = signal(false);
   /** Esta cuenta no ve ventas en efectivo: tampoco se le ofrece esa modalidad (ver VisibilidadVentas). */
   readonly sinEfectivo = computed(() => ocultaEfectivo(this.auth.currentUser()?.email));
   readonly editando = signal(false);

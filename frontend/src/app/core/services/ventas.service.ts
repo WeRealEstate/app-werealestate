@@ -19,6 +19,7 @@ import {
   VentaCreateRequest,
   VentaUpdateRequest,
   VentaReestructurarRequest,
+  VentaCambiarLotesRequest,
 } from '../models/venta.model';
 
 export interface BuscarVentasParams {
@@ -139,6 +140,11 @@ export class VentasService {
 
   /** Cambia el plan de pagos de la venta (admin y administración, con contraseña y motivo): lo pagado se respeta y
    * el plan nuevo reparte el saldo de hoy. */
+  /** Sustituir, agregar o quitar los lotes de una venta registrada (con contraseña). */
+  cambiarLotes(id: number, request: VentaCambiarLotesRequest): Promise<Venta> {
+    return firstValueFrom(this.http.put<Venta>(`${this.baseUrl}/${id}/lotes`, request));
+  }
+
   reestructurar(id: number, request: VentaReestructurarRequest): Promise<Venta> {
     return firstValueFrom(this.http.post<Venta>(`${this.baseUrl}/${id}/reestructurar`, request));
   }

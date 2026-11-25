@@ -93,7 +93,8 @@ public record VentaDto(
                 venta.getFechaCreacion(),
                 precioVenta,
                 totalAbonado,
-                precioVenta.subtract(totalAbonado),
+                // Al cambiar de lotes el precio puede quedar por debajo de lo abonado: el saldo no es negativo.
+                precioVenta.subtract(totalAbonado).max(BigDecimal.ZERO),
                 venta.isFechaProvisional(),
                 venta.getDepositoPendiente(),
                 venta.getPromocionNombre(),

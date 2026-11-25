@@ -56,7 +56,7 @@ public class ConsultasVenta {
     }
 
     public BigDecimal saldoPendiente(Long ventaId) {
-        return precioVenta(ventaId).subtract(totalAbonado(ventaId));
+        return precioVenta(ventaId).subtract(totalAbonado(ventaId)).max(BigDecimal.ZERO);
     }
 
     /** La venta solo muestra (y ofrece para cobrar) las aportaciones de su plan vigente; las de un plan reemplazado

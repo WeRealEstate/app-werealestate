@@ -1,0 +1,141 @@
+<div class="mt-4 rounded-xl border border-we-primary/30 bg-surface-2 p-4" data-testid="cambiar-lotes">
+  <p class="text-sm font-semibold text-ink">Cambiar lotes</p>
+  <p class="mt-0.5 text-xs text-ink-muted">
+    Quita o agrega lotes y ajusta sus precios. Los pagos registrados se conservan.
+    @if (promocion()) {
+      Captura precios de lista: el bono se descuenta solo.
+    }
+  </p>
+
+  @if (cargando()) {
+    <p class="mt-3 text-sm text-ink-muted">Cargando…</p>
+  } @else {
+    <div class="mt-3 space-y-2">
+      @for (r of renglones(); track r.lote.id) {
+        <div class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface px-3 py-2">
+          <span class="text-sm text-ink">{{ r.lote.manzana }} / {{ r.lote.numeroLote }} · {{ r.lote.superficie }} m²</span>
+          <div class="flex items-center gap-2">
+            <input
+              appMoneda
+              [attr.aria-label]="'Precio del lote ' + r.lote.manzana + ' / ' + r.lote.numeroLote"
+              [ngModel]="r.precio"
+              [ngModelOptions]="{ standalone: true }"
+              (ngModelChange)="cambiarPrecio(r.lote.id, $event)"
+              class="w-36 rounded-lg border border-border px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+            />
+            <button type="button" (click)="quitar(r.lote.id)" [disabled]="renglones().length === 1" aria-label="Quitar lote"
+              class="flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-red-50 hover:text-red-600 disabled:opacity-30 dark:hover:bg-red-500/10">
+              <svg lucideX [size]="14" aria-hidden="true"></svg>
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="mt-2 flex gap-2">
+      <select
+        aria-label="Lote a agregar"
+        [ngModel]="loteNuevoId()"
+        [ngModelOptions]="{ standalone: true }"
+        (ngModelChange)="loteNuevoId.set($event)"
+        class="block min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+      >
+        <option [ngValue]="null">Selecciona un lote para agregar</option>
+        @for (l of disponibles(); track l.id) {
+          <option [ngValue]="l.id">{{ l.manzana }} / {{ l.numeroLote }} · {{ l.superficie }} m²</option>
+        }
+      </select>
+      <button type="button" (click)="agregar()" [disabled]="loteNuevoId() === null"
+        class="rounded-lg border border-we-primary px-4 py-2 text-sm font-semibold text-we-primary hover:bg-we-primary/10 disabled:opacity-40">
+        + Agregar
+      </button>
+    </div>
+
+    @if (promociones().length > 0) {
+      <label class="mt-3 block text-sm font-medium text-ink" for="cl-promo">Promoción</label>
+      <select id="cl-promo" [ngModel]="promocionId()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="promocionId.set($event)"
+        class="mt-1 block w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50">
+        <option [ngValue]="null">Sin promoción</option>
+        @for (p of promociones(); track p.id) {
+          <option [ngValue]="p.id">{{ p.nombre }}</option>
+        }
+      </select>
+      @if (promocionError(); as motivo) {
+        <p class="mt-1 text-xs text-red-600">{{ motivo }}</p>
+      } @else if (bono() > 0) {
+        <p class="mt-1 text-xs text-ink-muted">Bono de ${{ money(bono()) }} ya descontado en el precio total.</p>
+      }
+    }
+    @if (promocionPerdida()) {
+      <p class="mt-2 text-xs text-amber-700 dark:text-amber-300">
+        La promoción «{{ venta().promocionNombre }}» ya no está disponible: al guardar la venta queda sin promoción (los precios de arriba
+        son los que tiene hoy).
+      </p>
+    }
+
+    <dl class="mt-3 grid grid-cols-2 gap-3 rounded-lg border border-border bg-surface p-3 sm:grid-cols-4">
+      <div>
+        <dt class="text-xs text-ink-muted">Precio nuevo</dt>
+        <dd class="text-sm font-semibold text-ink" data-testid="cl-total">${{ money(total()) }}</dd>
+        <dd class="text-xs text-ink-muted">antes ${{ money(venta().precioVenta) }}</dd>
+      </div>
+      <div>
+        <dt class="text-xs text-ink-muted">Abonado</dt>
+        <dd class="text-sm font-semibold text-ink">${{ money(venta().totalAbonado) }}</dd>
+      </div>
+      <div>
+        <dt class="text-xs text-ink-muted">Saldo nuevo</dt>
+        <dd class="text-sm font-semibold text-ink" data-testid="cl-saldo">${{ money(saldo()) }}</dd>
+      </div>
+      @if (venta().plazoMeses) {
+        <div>
+          <dt class="text-xs text-ink-muted">Mensualidad ({{ venta().plazoMeses }} meses)</dt>
+          <dd>
+            <input
+              appMoneda
+              aria-label="Mensualidad nueva"
+              [ngModel]="mensualidad()"
+              [ngModelOptions]="{ standalone: true }"
+              (ngModelChange)="mensualidadManual.set($event)"
+              class="mt-1 w-full rounded-lg border border-border px-2.5 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50"
+            />
+          </dd>
+          <dd class="text-xs text-ink-muted">antes ${{ money(venta().mensualidad ?? 0) }}</dd>
+        </div>
+      }
+    </dl>
+
+    <ul class="mt-3 space-y-1 text-xs text-amber-700 dark:text-amber-300">
+      @if (venta().contratoFirmado) {
+        <li>El contrato se conserva como firmado: revísalo, los lotes nuevos quedan Vendidos.</li>
+      }
+      @if (reestructurada()) {
+        <li>Esta venta tiene el plan reestructurado: revisa la tabla de amortización o vuelve a reestructurar.</li>
+      }
+      @if (bajoLoAbonado()) {
+        <li>El precio queda por debajo de lo abonado: el saldo queda en $0 y la devolución no se registra.</li>
+      }
+      @if (apartadoNuevo() > 0) {
+        <li>${{ money(apartadoNuevo()) }} apartados en los lotes nuevos quedan como depósito pendiente de aplicar.</li>
+      }
+      <li>Los lotes que salen vuelven a Disponible y la comisión se recalcula sobre el precio nuevo.</li>
+    </ul>
+
+    <label class="mt-3 block text-sm font-medium text-ink" for="cl-password">Tu contraseña</label>
+    <input id="cl-password" type="password" autocomplete="current-password" [value]="password()"
+      (input)="password.set($any($event.target).value); error.set(null)"
+      class="mt-1 block w-full max-w-xs rounded-lg border border-border px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+  }
+
+  @if (error()) {
+    <p class="mt-2 text-sm text-red-600" role="alert">{{ error() }}</p>
+  }
+
+  <div class="mt-4 flex justify-end gap-2">
+    <button type="button" (click)="cerrar.emit()" class="boton-secundario rounded-lg px-4 py-2 text-sm font-semibold text-ink">Cancelar</button>
+    <button type="button" (click)="guardar()" [disabled]="!puedeGuardar()"
+      class="rounded-lg bg-we-primary px-4 py-2 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:opacity-50">
+      {{ guardando() ? 'Guardando…' : 'Guardar cambios' }}
+    </button>
+  </div>
+</div>

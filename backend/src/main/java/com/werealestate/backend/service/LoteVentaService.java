@@ -57,10 +57,29 @@ public class LoteVentaService {
      * no puede seguir así. Se limpian el vencimiento y el dinero apartado, que ya no aplican. Si estaba en otro estado
      * (datos de antes de que lo mandara la venta) se deja como está. */
     public void liberarPorVentaEliminada(Long id) {
+        liberar(id, "Venta eliminada");
+    }
+
+    private void liberar(Long id, String nota) {
         Lote lote = consulta.obtenerEntidad(id);
         if (!EstadosDeLote.DE_VENTA.contains(lote.getEstado())) return;
         Usuario actual = currentUserProvider.getUsuarioActual();
-        historial.cambiarEstadoConHistorial(lote, EstadoLote.DISPONIBLE, actual, null, null, null, "Venta eliminada");
+        historial.cambiarEstadoConHistorial(lote, EstadoLote.DISPONIBLE, actual, null, null, null, nota);
+        lote.setFechaExpiraApartado(null);
+        lote.setMontoApartado(null);
+    }
+
+    /** El lote salió de una venta que sigue existiendo (cambio de lotes): vuelve a DISPONIBLE como al eliminarla. */
+    public void liberarPorSalirDeVenta(Long id, String etiquetaVenta) {
+        liberar(id, "Se quitó de la venta " + etiquetaVenta);
+    }
+
+    /** El lote entra a una venta ya registrada (cambio de lotes): estado según su contrato. */
+    public void marcarPorCambioDeVenta(Long id, boolean contratoFirmado, String cliente, String asesor, String etiquetaVenta) {
+        Lote lote = consulta.obtenerEntidad(id);
+        EstadoLote estado = contratoFirmado ? EstadoLote.VENDIDO : EstadoLote.EN_PROCESO_DE_FIRMA;
+        historial.cambiarEstadoConHistorial(lote, estado, currentUserProvider.getUsuarioActual(), asesor, cliente, null,
+                "Agregado a la venta " + etiquetaVenta);
         lote.setFechaExpiraApartado(null);
         lote.setMontoApartado(null);
     }

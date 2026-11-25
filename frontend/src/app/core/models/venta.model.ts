@@ -127,6 +127,15 @@ export interface Venta {
   promocionBono: number | null;
 }
 
+export interface VentaCambiarLotesRequest {
+  /** La lista completa como debe quedar, con el bono de la promoción ya descontado en cada precio. */
+  lotes: VentaLoteItemRequest[];
+  /** null = se queda la mensualidad actual. */
+  mensualidad: number | null;
+  promocionId: number | null;
+  password: string;
+}
+
 export interface VentaLoteItemRequest {
   loteId: number;
   precio: number;

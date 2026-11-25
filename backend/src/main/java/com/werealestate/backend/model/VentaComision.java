@@ -175,6 +175,12 @@ public class VentaComision {
         return monto;
     }
 
+    /** El precio de la venta cambió: nuevo valor base y su monto (el porcentaje se conserva). */
+    public void cambiarBase(BigDecimal base, BigDecimal monto) {
+        this.base = base;
+        this.monto = monto;
+    }
+
     public void setMontoYPorcentaje(BigDecimal monto, BigDecimal porcentaje, boolean manual) {
         this.monto = monto;
         this.porcentaje = porcentaje;

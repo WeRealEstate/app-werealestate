@@ -48,7 +48,7 @@ import {
   maximoAnualidades,
   unidadPlazo,
 } from '../../../../core/utils/formas-pago';
-import { SUPERFICIE_MACROLOTE_M2 } from '../../cotizador/cotizador-datos';
+import { bonoDe, motivoNoAplica, partesDelBono } from '../../../../core/utils/promocion';
 import { NumeroVentaComponent } from '../../../../shared/numero-venta/numero-venta.component';
 import { dinero } from '../../../../core/utils/formato-pantalla';
 
@@ -144,17 +144,9 @@ export class VentaFormComponent {
   /** Por qué la promoción elegida no aplica a los lotes agregados (null = aplica). */
   readonly promocionError = computed<string | null>(() => {
     const promo = this.promocion();
-    if (!promo) return null;
-    const lotes = this.lotesAgregados();
-    if (lotes.length === 0) return 'Agrega los lotes para calcular el bono.';
-    const proyecto = promo.proyecto === 'nanuu' ? 'Aldea Nanuu' : 'SAMAI Campestre';
-    if (lotes.some((l) => l.lote.desarrollo.nombre !== proyecto)) return `Esta promoción solo aplica a lotes de ${proyecto}.`;
-    const hectarea = promo.tipoPrecio === 'HECTAREA';
-    if (lotes.some((l) => l.lote.superficie > SUPERFICIE_MACROLOTE_M2 !== hectarea)) {
-      return `Esta promoción solo aplica a ${hectarea ? 'hectáreas' : 'lotes (no hectáreas)'}.`;
-    }
-    if (!(bonoDe(promo, lotes.length) > 0)) return `Esta promoción no aplica a ${lotes.length} lote(s).`;
-    return null;
+    return promo
+      ? motivoNoAplica(promo, this.lotesAgregados().map((l) => ({ superficie: l.lote.superficie, desarrollo: l.lote.desarrollo.nombre })))
+      : null;
   });
   readonly bonoPromocion = computed(() => {
     const promo = this.promocion();
@@ -166,12 +158,8 @@ export class VentaFormComponent {
     const lotes = this.lotesAgregados();
     const bono = this.bonoPromocion();
     if (!bono) return lotes;
-    const centavos = Math.round(bono * 100);
-    const parte = Math.floor(centavos / lotes.length);
-    return lotes.map((l, i) => {
-      const descuento = (i === lotes.length - 1 ? centavos - parte * (lotes.length - 1) : parte) / 100;
-      return { ...l, precio: Math.max(0, Math.round((l.precio - descuento) * 100) / 100) };
-    });
+    const partes = partesDelBono(bono, lotes.length);
+    return lotes.map((l, i) => ({ ...l, precio: Math.max(0, Math.round((l.precio - partes[i]) * 100) / 100) }));
   });
   /** Total de la venta: lo capturado menos el bono. */
   readonly precioTotal = computed(() => this.lotesConDescuento().reduce((sum, l) => sum + l.precio, 0));
@@ -769,12 +757,6 @@ export class VentaFormComponent {
   money(valor: number): string {
     return dinero(valor);
   }
-}
-
-function bonoDe(promo: Promocion, lotes: number): number {
-  if (lotes >= 3) return promo.bonoTresLotes ?? 0;
-  if (lotes === 2) return promo.bonoDosLotes ?? 0;
-  return promo.bonoUnLote ?? 0;
 }
 
 /** "28/11/2026". */
