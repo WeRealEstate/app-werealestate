@@ -174,6 +174,66 @@ export class WeFormsListComponent {
     }
   }
 
+  // --- Eliminar un formulario para siempre (solo admin, con contraseña) ---
+  readonly eliminando = signal<WeFormLista | null>(null);
+  readonly passwordEliminar = signal('');
+  readonly errorEliminar = signal<string | null>(null);
+  readonly borrando = signal(false);
+  /** Con respuestas, el botón espera 10 s (como al eliminar una venta). */
+  readonly segundos = signal(0);
+  private temporizador: ReturnType<typeof setInterval> | null = null;
+
+  abrirEliminar(f: WeFormLista): void {
+    this.detenerCuenta();
+    this.eliminando.set(f);
+    this.passwordEliminar.set('');
+    this.errorEliminar.set(null);
+    this.segundos.set(f.totalRespuestas > 0 ? 10 : 0);
+    if (this.segundos() > 0) {
+      this.temporizador = setInterval(() => {
+        this.segundos.update((s) => Math.max(0, s - 1));
+        if (this.segundos() === 0) this.detenerCuenta();
+      }, 1000);
+    }
+  }
+
+  cerrarEliminar(): void {
+    if (this.borrando()) return;
+    this.detenerCuenta();
+    this.eliminando.set(null);
+  }
+
+  private detenerCuenta(): void {
+    if (this.temporizador) clearInterval(this.temporizador);
+    this.temporizador = null;
+  }
+
+  ngOnDestroy(): void {
+    this.detenerCuenta();
+  }
+
+  async eliminar(): Promise<void> {
+    const f = this.eliminando();
+    if (!f || this.borrando() || this.segundos() > 0 || !this.passwordEliminar()) return;
+    this.borrando.set(true);
+    this.errorEliminar.set(null);
+    try {
+      await this.service.eliminar(f.id, this.passwordEliminar());
+      this.toast.success('Formulario eliminado.');
+      this.formularios.update((lista) => lista.filter((x) => x.id !== f.id));
+      this.eliminando.set(null);
+      this.resumen.set(await this.service.resumen().catch(() => this.resumen()!));
+    } catch (error) {
+      this.errorEliminar.set(
+        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+          ? error.error.message
+          : 'No se pudo eliminar el formulario.',
+      );
+    } finally {
+      this.borrando.set(false);
+    }
+  }
+
   async abrirNuevo(): Promise<void> {
     this.nuevoNombre.set('');
     this.nuevoDescripcion.set('');

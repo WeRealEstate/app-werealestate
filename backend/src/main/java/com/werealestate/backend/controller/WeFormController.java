@@ -40,6 +40,13 @@ public class WeFormController {
     }
 
     /** Copia las preguntas de un formulario a uno nuevo (con su propio link), por ejemplo para otro desarrollo. */
+    /** Eliminación permanente (solo admin, con su contraseña). */
+    @PostMapping("/{id}/eliminar")
+    public ResponseEntity<Void> eliminar(@PathVariable Long id, @Valid @RequestBody WeFormDtos.EliminarRequest request) {
+        service.eliminar(id, request.password());
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/{id}/duplicar")
     public WeFormDtos.Detalle duplicar(@PathVariable Long id, @Valid @RequestBody WeFormDtos.DuplicarRequest request) {
         return service.duplicar(id, request);

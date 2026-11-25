@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.11.0', fecha: '2026-11-25', cambios: [
+    "We Forms: el administrador ya puede eliminar un formulario para siempre (con su contraseña). Borra también sus respuestas y archivos del servidor; las ventas, clientes y lo subido a Google Drive se conservan. Con respuestas, el botón espera 10 segundos.",
+  ] },
   { version: '12.10.0', fecha: '2026-11-25', cambios: [
     "Venta registrada: nuevo botón «Cambiar lotes» (admin y administración, con contraseña) para sustituir, agregar o quitar lotes y corregir sus precios. Muestra el precio, saldo y mensualidad nuevos antes de guardar; los lotes que salen vuelven a Disponible y la comisión se recalcula.",
   ] },

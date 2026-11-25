@@ -57,7 +57,7 @@ class WeFormServiceDuplicarTest {
         when(actual.getUsuarioActual()).thenReturn(admin);
         service = new WeFormService(
                 formRepo, preguntaRepo, mock(WeFormRespuestaRepository.class), mock(WeFormRespuestaItemRepository.class),
-                desarrolloRepo, actual, mock(DriveService.class), "uploads-privados");
+                desarrolloRepo, actual, mock(DriveService.class), mock(org.springframework.security.crypto.password.PasswordEncoder.class), "uploads-privados");
 
         samai = desarrollo(1L, "SAMAI Campestre");
         nanuu = desarrollo(2L, "Aldea Nanuu");

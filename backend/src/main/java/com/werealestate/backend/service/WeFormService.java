@@ -1,5 +1,8 @@
 package com.werealestate.backend.service;
 
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import com.werealestate.backend.model.VisibilidadVentas;
 import com.werealestate.backend.dto.WeFormDtos;
 import com.werealestate.backend.dto.PaginaDto;
@@ -66,6 +69,7 @@ public class WeFormService {
     private final DesarrolloRepository desarrolloRepository;
     private final CurrentUserProvider currentUserProvider;
     private final DriveService driveService;
+    private final PasswordEncoder passwordEncoder;
     private final String uploadsPrivadosDir;
 
     public WeFormService(
@@ -76,7 +80,9 @@ public class WeFormService {
             DesarrolloRepository desarrolloRepository,
             CurrentUserProvider currentUserProvider,
             DriveService driveService,
+            PasswordEncoder passwordEncoder,
             @Value("${app.uploads-privados.dir:uploads-privados}") String uploadsPrivadosDir) {
+        this.passwordEncoder = passwordEncoder;
         this.formRepository = formRepository;
         this.preguntaRepository = preguntaRepository;
         this.respuestaRepository = respuestaRepository;
@@ -360,6 +366,60 @@ public class WeFormService {
         WeForm form = obtenerEntidad(id);
         form.setAvisoFinanzas(Boolean.TRUE.equals(request.activo()));
         return detalle(formRepository.save(form));
+    }
+
+    /**
+     * Elimina el formulario para siempre, con sus preguntas, respuestas y los archivos que aún estén en el servidor
+     * (decisión del usuario: solo el admin, con su contraseña). Las ventas y los clientes que creó, y lo ya subido a
+     * Google Drive, se conservan.
+     */
+    public void eliminar(Long id, String password) {
+        Usuario actual = currentUserProvider.getUsuarioActual();
+        if (actual.getRol() != Role.ADMIN) {
+            throw new ForbiddenOperationException("Solo un administrador puede eliminar un formulario");
+        }
+        if (!passwordEncoder.matches(password, actual.getPassword())) {
+            throw new ForbiddenOperationException("Contraseña incorrecta");
+        }
+        WeForm form = obtenerEntidad(id);
+        List<WeFormRespuesta> respuestas = respuestaRepository.findByFormIdOrderByFechaEnvioDesc(id);
+        List<WeFormRespuestaItem> items = respuestas.isEmpty() ? List.of()
+                : itemRepository.findByRespuestaIdInOrderByOrdenAsc(respuestas.stream().map(WeFormRespuesta::getId).toList());
+        List<Path> archivos = items.stream()
+                .filter(i -> i.getArchivoExtension() != null)
+                .map(i -> rutaArchivo(i.getRespuesta().getId(), i.getId(), i.getArchivoExtension()))
+                .toList();
+
+        itemRepository.deleteAll(items);
+        itemRepository.flush();
+        respuestaRepository.deleteAll(respuestas);
+        respuestaRepository.flush();
+        preguntaRepository.deleteAll(preguntaRepository.findByFormIdOrderByOrdenAsc(id));
+        preguntaRepository.flush();
+        formRepository.delete(form);
+        borrarDespuesDeGuardar(archivos);
+    }
+
+    /** Los archivos se borran solo si la eliminación quedó guardada; si no se pueden borrar, no pasa nada grave. */
+    private static void borrarDespuesDeGuardar(List<Path> archivos) {
+        if (archivos.isEmpty()) return;
+        Runnable borrar = () -> archivos.forEach(a -> {
+            try {
+                Files.deleteIfExists(a);
+            } catch (IOException e) {
+                org.slf4j.LoggerFactory.getLogger(WeFormService.class).warn("No se pudo borrar {}: {}", a, e.toString());
+            }
+        });
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            borrar.run();
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                borrar.run();
+            }
+        });
     }
 
     // ---------------------------------------------------------------- preguntas

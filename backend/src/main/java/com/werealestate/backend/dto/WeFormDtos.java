@@ -134,4 +134,7 @@ public final class WeFormDtos {
 
     public record EnvioResultado(Long respuestaId, String ventaNumero, String clienteNombre, boolean clienteNuevo) {
     }
+
+    /** La contraseña de quien elimina el formulario. */
+    public record EliminarRequest(@jakarta.validation.constraints.NotBlank String password) {}
 }

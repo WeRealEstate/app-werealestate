@@ -42,6 +42,11 @@ export class WeFormsService {
     return firstValueFrom(this.http.post<WeFormDetalle>(`${this.baseUrl}/${id}/duplicar`, request));
   }
 
+  /** Eliminación permanente (solo admin, con su contraseña): borra el formulario y sus respuestas. */
+  eliminar(id: number, password: string): Promise<void> {
+    return firstValueFrom(this.http.post<void>(`${this.baseUrl}/${id}/eliminar`, { password }));
+  }
+
   /** Enciende o apaga el aviso por correo a finanzas de un formulario. */
   cambiarAvisoFinanzas(id: number, activo: boolean): Promise<WeFormDetalle> {
     return firstValueFrom(this.http.put<WeFormDetalle>(`${this.baseUrl}/${id}/aviso-finanzas`, { activo }));
