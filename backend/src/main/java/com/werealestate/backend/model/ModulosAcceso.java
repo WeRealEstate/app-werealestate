@@ -24,7 +24,8 @@ public final class ModulosAcceso {
         return switch (rol) {
             case ADMIN -> EnumSet.allOf(Modulo.class);
             case ASESOR -> EnumSet.of(
-                    Modulo.LEADS, Modulo.PIPELINE, Modulo.COTIZADOR, Modulo.LOTES, Modulo.PLANO, Modulo.CALENDARIO);
+                    Modulo.LEADS, Modulo.PIPELINE, Modulo.COTIZADOR, Modulo.LOTES, Modulo.PLANO, Modulo.CALENDARIO,
+                    Modulo.REGISTRAR_VENTA);
             case LIDER_AREA -> EnumSet.of(
                     Modulo.LEADS,
                     Modulo.LOTES,

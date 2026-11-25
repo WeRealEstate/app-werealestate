@@ -137,4 +137,7 @@ public final class WeFormDtos {
 
     /** La contraseña de quien elimina el formulario. */
     public record EliminarRequest(@jakarta.validation.constraints.NotBlank String password) {}
+
+    /** Un formulario activo en el panel del asesor, con su plano ("samai" / "nanuu"). */
+    public record PanelLista(String slug, String nombre, String descripcion, String proyecto) {}
 }

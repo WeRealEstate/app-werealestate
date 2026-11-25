@@ -19,7 +19,9 @@ public enum Modulo {
     ASESORES_EXTERNOS("Asesores externos"),
     COMUNIDADES("Comunidades We"),
     WE_FORMS("We Forms"),
-    MATERIAL("Material");
+    MATERIAL("Material"),
+    /** Registrar ventas con los formularios de We Forms desde el panel del asesor. */
+    REGISTRAR_VENTA("Registrar venta");
 
     private final String etiqueta;
 

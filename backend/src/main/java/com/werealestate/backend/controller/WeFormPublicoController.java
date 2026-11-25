@@ -61,6 +61,15 @@ public class WeFormPublicoController {
             MultipartHttpServletRequest multipart,
             HttpServletRequest http) {
         AsesorPublicoService.Identificado asesor = limitador.exigir(http, pin, service.proyectoDe(slug));
+        Envio envio = leerEnvio(objectMapper, datos, multipart);
+        return service.enviar(slug, asesor, envio.datos(), envio.archivos());
+    }
+
+    record Envio(WeFormDtos.EnvioRequest datos, Map<Long, MultipartFile> archivos) {
+    }
+
+    /** La parte "datos" (JSON) y los archivos "archivo-{preguntaId}" de un envío (también desde el panel). */
+    static Envio leerEnvio(ObjectMapper objectMapper, String datos, MultipartHttpServletRequest multipart) {
         WeFormDtos.EnvioRequest envio;
         try {
             envio = objectMapper.readValue(datos, WeFormDtos.EnvioRequest.class);
@@ -77,6 +86,6 @@ public class WeFormPublicoController {
                 }
             }
         });
-        return service.enviar(slug, asesor, envio, archivos);
+        return new Envio(envio, archivos);
     }
 }

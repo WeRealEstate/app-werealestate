@@ -59,6 +59,8 @@ public class ModuloAccesoInterceptor implements HandlerInterceptor {
         MODULOS_POR_PREFIJO.put("/api/eventos-calendario", EnumSet.of(Modulo.CALENDARIO));
         // We Forms (panel). El link público de los asesores vive en /api/forms-publico, fuera de este prefijo.
         MODULOS_POR_PREFIJO.put("/api/we-forms", EnumSet.of(Modulo.WE_FORMS));
+        // Registrar venta desde el panel del asesor (con su sesión, sin PIN).
+        MODULOS_POR_PREFIJO.put("/api/registro-venta", EnumSet.of(Modulo.REGISTRAR_VENTA));
         // Material de venta (panel). El plano público lo consulta en /api/material-publico, con PIN.
         MODULOS_POR_PREFIJO.put("/api/material", EnumSet.of(Modulo.MATERIAL));
     }
