@@ -2,7 +2,9 @@ package com.werealestate.backend.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -15,6 +17,8 @@ import com.werealestate.backend.dto.ContratoRequest;
 import com.werealestate.backend.dto.CorreosVentaDto;
 import com.werealestate.backend.dto.PagoVentaCreateRequest;
 import com.werealestate.backend.dto.VentaDto;
+import com.werealestate.backend.exception.ConflictException;
+import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.integracion.PruebaDeIntegracion;
 import com.werealestate.backend.model.EstadoLote;
 import com.werealestate.backend.model.MedioFirma;
@@ -245,5 +249,36 @@ class CorreoAutomaticoIntegracionTest extends PruebaDeIntegracion {
         verify(sender, times(1)).send(any(MimeMessage.class));
         assertEquals(proximo, recordatorios.findByVentaId(v.id()).get(0).getProximoPagoFecha());
         assertTrue(recordatorios.findByVentaId(excluida.id()).isEmpty());
+    }
+
+    @Test
+    void unoQueNoSalioSeReintentaUnaSolaVez() {
+        VentaDto v = venta("300000", "60000", "4000", 60, LocalDate.now());
+        assertTrue(v.correosAutomaticos());
+        firmar(v, true);
+        servicio.ciclo(LocalDate.now().atTime(10, 0)); // interruptor apagado: queda como no enviado
+        Long correoId = registro(v).envios().get(0).reintentarId();
+        assertNotNull(correoId);
+
+        servicio.reintentar(v.id(), correoId);
+
+        verify(sender, times(1)).send(any(MimeMessage.class));
+        var envios = registro(v).envios();
+        assertTrue(envios.stream().anyMatch(e -> e.enviado() && admin.getNombre().equals(e.usuario())));
+        assertTrue(envios.stream().allMatch(e -> e.reintentarId() == null));
+        assertThrows(ConflictException.class, () -> servicio.reintentar(v.id(), correoId));
+        verify(sender, times(1)).send(any(MimeMessage.class));
+    }
+
+    @Test
+    void noSeReintentaElCorreoDeOtraVenta() {
+        VentaDto v = venta("300000", "60000", "4000", 60, LocalDate.now());
+        VentaDto otra = venta("300000", "60000", "4000", 60, LocalDate.now());
+        firmar(v, true);
+        servicio.ciclo(LocalDate.now().atTime(10, 0));
+        Long correoId = registro(v).envios().get(0).reintentarId();
+
+        assertThrows(ResourceNotFoundException.class, () -> servicio.reintentar(otra.id(), correoId));
+        verify(sender, never()).send(any(MimeMessage.class));
     }
 }

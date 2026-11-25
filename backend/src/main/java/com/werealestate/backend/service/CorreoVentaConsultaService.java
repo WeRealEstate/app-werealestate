@@ -32,6 +32,7 @@ public class CorreoVentaConsultaService {
     private final BienvenidaClienteRepository bienvenidas;
     private final LiquidacionAvisoRepository liquidaciones;
     private final RecordatorioPagoRepository recordatorios;
+    private final CorreoAutomaticoService envioAutomatico;
 
     public CorreoVentaConsultaService(
             AutorizacionVentas autorizacion,
@@ -40,7 +41,8 @@ public class CorreoVentaConsultaService {
             CorreoAutomaticoConfigRepository config,
             BienvenidaClienteRepository bienvenidas,
             LiquidacionAvisoRepository liquidaciones,
-            RecordatorioPagoRepository recordatorios) {
+            RecordatorioPagoRepository recordatorios,
+            CorreoAutomaticoService envioAutomatico) {
         this.autorizacion = autorizacion;
         this.consultas = consultas;
         this.automaticos = automaticos;
@@ -48,6 +50,7 @@ public class CorreoVentaConsultaService {
         this.bienvenidas = bienvenidas;
         this.liquidaciones = liquidaciones;
         this.recordatorios = recordatorios;
+        this.envioAutomatico = envioAutomatico;
     }
 
     public ConfigCorreosDto configuracion() {
@@ -102,7 +105,8 @@ public class CorreoVentaConsultaService {
             if (c.getEstado() == EstadoCorreoAutomatico.PENDIENTE) {
                 pendientes.add(new CorreosVentaDto.Pendiente(c.getTipo(), c.getEnviarDesde()));
             } else if (c.getEstado() == EstadoCorreoAutomatico.FALLIDO || c.getEstado() == EstadoCorreoAutomatico.NO_ENVIADO) {
-                envios.add(new CorreosVentaDto.Envio(c.getResueltoEn(), c.getTipo(), false, true, null, c.getDetalle()));
+                envios.add(new CorreosVentaDto.Envio(c.getResueltoEn(), c.getTipo(), false, true, null, c.getDetalle(),
+                        envioAutomatico.reintentable(c) ? c.getId() : null));
             }
         }
         envios.sort(Comparator.comparing(CorreosVentaDto.Envio::fecha).reversed());
@@ -112,6 +116,6 @@ public class CorreoVentaConsultaService {
     private static CorreosVentaDto.Envio enviado(java.time.LocalDateTime fecha, TipoCorreoAutomatico tipo, Usuario usuario,
             String detalle) {
         return new CorreosVentaDto.Envio(fecha, tipo, true, usuario == null,
-                usuario == null ? null : usuario.getNombre(), detalle);
+                usuario == null ? null : usuario.getNombre(), detalle, null);
     }
 }

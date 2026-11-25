@@ -14,7 +14,6 @@ import com.werealestate.backend.dto.ReciboEditarRequest;
 import com.werealestate.backend.dto.ReciboHistorialDto;
 import com.werealestate.backend.dto.BienvenidaClienteDto;
 import com.werealestate.backend.dto.LiquidacionAvisoDto;
-import com.werealestate.backend.dto.RecordatorioPagoDto;
 import com.werealestate.backend.dto.VentaCambiarLotesRequest;
 import com.werealestate.backend.dto.VentaCreateRequest;
 import com.werealestate.backend.dto.VentaEliminarRequest;
@@ -31,7 +30,6 @@ import com.werealestate.backend.service.EstadoCuentaService;
 import com.werealestate.backend.service.PausaMensualidadService;
 import com.werealestate.backend.service.BienvenidaClienteService;
 import com.werealestate.backend.service.LiquidacionAvisoService;
-import com.werealestate.backend.service.RecordatorioPagoService;
 import com.werealestate.backend.service.VentaService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -56,7 +54,6 @@ public class VentaController {
     private final ReestructuracionVentaService reestructuracionVentaService;
     private final EstadoCuentaService estadoCuentaService;
     private final PausaMensualidadService pausaService;
-    private final RecordatorioPagoService recordatorioPagoService;
     private final BienvenidaClienteService bienvenidaService;
     private final LiquidacionAvisoService liquidacionService;
     private final com.werealestate.backend.service.CambioLotesVentaService cambioLotesVentaService;
@@ -64,7 +61,7 @@ public class VentaController {
     public VentaController(VentaService ventaService, ReciboVentaService reciboVentaService,
             ContratoVentaService contratoVentaService, NumeracionVentaService numeracionVentaService,
             ReestructuracionVentaService reestructuracionVentaService, EstadoCuentaService estadoCuentaService,
-            PausaMensualidadService pausaService, RecordatorioPagoService recordatorioPagoService,
+            PausaMensualidadService pausaService,
             BienvenidaClienteService bienvenidaService, LiquidacionAvisoService liquidacionService,
             com.werealestate.backend.service.CambioLotesVentaService cambioLotesVentaService) {
         this.cambioLotesVentaService = cambioLotesVentaService;
@@ -75,7 +72,6 @@ public class VentaController {
         this.reestructuracionVentaService = reestructuracionVentaService;
         this.estadoCuentaService = estadoCuentaService;
         this.pausaService = pausaService;
-        this.recordatorioPagoService = recordatorioPagoService;
         this.bienvenidaService = bienvenidaService;
         this.liquidacionService = liquidacionService;
     }
@@ -103,18 +99,6 @@ public class VentaController {
     @PostMapping("/{id}/bienvenida")
     public BienvenidaClienteDto enviarBienvenida(@PathVariable Long id) {
         return com.werealestate.backend.model.NumeracionVisible.sinRenumerar(() -> bienvenidaService.enviar(id));
-    }
-
-    /** Estado del botón "Enviar recordatorio de pago": si se puede, el pago que se recordaría y el último enviado. */
-    @GetMapping("/{id}/recordatorio-pago")
-    public RecordatorioPagoDto recordatorioPago(@PathVariable Long id) {
-        return recordatorioPagoService.consultar(id);
-    }
-
-    /** Manda ahora el recordatorio de pago al correo del cliente titular (síncrono) y lo registra. */
-    @PostMapping("/{id}/recordatorio-pago")
-    public RecordatorioPagoDto enviarRecordatorioPago(@PathVariable Long id) {
-        return com.werealestate.backend.model.NumeracionVisible.sinRenumerar(() -> recordatorioPagoService.enviar(id));
     }
 
     @PostMapping

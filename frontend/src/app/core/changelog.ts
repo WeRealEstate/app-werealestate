@@ -15,6 +15,10 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.15.0', fecha: '2026-11-25', cambios: [
+    "Detalle de la venta: se quitó el botón «Enviar recordatorio de pago» (sale solo). En las ventas registradas desde los correos automáticos tampoco están los de bienvenida y liquidación; las ventas anteriores los conservan.",
+    "Registro de correos: «Reintentar» en un correo automático que no salió.",
+  ] },
   { version: '12.14.0', fecha: '2026-11-25', cambios: [
     "Correos automáticos, apagados hasta que se enciendan arriba de Ventas (admin y administración): bienvenida al firmar el contrato (SAMAI) y aviso de liquidación al quedar pagada la venta (10 minutos después, solo ventas registradas de ahora en adelante), y recordatorio de pago a las 6:00 p. m. del día anterior (todas las ventas con mensualidades).",
     "Detalle de la venta: registro de los correos enviados, programados y no enviados, y casilla para no mandarle recordatorios automáticos a esa venta.",

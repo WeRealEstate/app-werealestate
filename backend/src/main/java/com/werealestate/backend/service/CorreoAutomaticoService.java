@@ -1,5 +1,7 @@
 package com.werealestate.backend.service;
 
+import com.werealestate.backend.exception.ConflictException;
+import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.model.BienvenidaCliente;
 import com.werealestate.backend.model.CorreoAutomatico;
 import com.werealestate.backend.model.CorreoAutomaticoConfig;
@@ -33,7 +35,8 @@ import org.springframework.web.server.ResponseStatusException;
  *       mensualidades (también las anteriores) salvo las excluidas.</li>
  * </ul>
  * Cada correo tiene su interruptor (apagado de origen). Lo que se decide queda en {@code correo_automatico}, así nunca
- * se manda dos veces; lo que sí sale se guarda además donde se guardan los envíos a mano, sin usuario.
+ * se manda dos veces; lo que sí sale se guarda además donde se guardan los envíos a mano, sin usuario. Lo que no sale
+ * se puede mandar desde el registro de la venta ({@link #reintentar}).
  */
 @Service
 public class CorreoAutomaticoService {
@@ -103,6 +106,44 @@ public class CorreoAutomaticoService {
                 // Uno que falle no debe detener a los demás.
                 log.error("Correo automático {}: {}", id, e.toString(), e);
             }
+        }
+    }
+
+    // ------------------------------------------------------------------ reintento desde la pantalla
+
+    /** Si un correo que no salió todavía se puede mandar con «Reintentar»: mientras no se haya enviado después y, en
+     * los recordatorios, solo el más reciente (los anteriores ya quedaron superados). */
+    public boolean reintentable(CorreoAutomatico c) {
+        if (c.getEstado() != EstadoCorreoAutomatico.FALLIDO && c.getEstado() != EstadoCorreoAutomatico.NO_ENVIADO) {
+            return false;
+        }
+        Long ventaId = c.getVenta().getId();
+        return switch (c.getTipo()) {
+            case BIENVENIDA -> bienvenidas.findFirstByVentaIdOrderByEnviadoEnDescIdDesc(ventaId).isEmpty();
+            case LIQUIDACION -> liquidaciones.findFirstByVentaIdOrderByEnviadoEnDescIdDesc(ventaId).isEmpty();
+            case RECORDATORIO -> repositorio.findByVentaIdOrderByCreadoEnDescIdDesc(ventaId).stream()
+                    .filter(o -> o.getTipo() == TipoCorreoAutomatico.RECORDATORIO)
+                    .findFirst().map(o -> o.getId().equals(c.getId())).orElse(false)
+                    && recordatorios.findByVentaId(ventaId).stream()
+                            .noneMatch(r -> !r.getEnviadoEn().isBefore(c.getCreadoEn()));
+        };
+    }
+
+    /** Manda ahora, a nombre de quien da clic, un correo automático que no salió. Usa el mismo envío que los botones a
+     * mano: revisa el rol, que todavía aplique (400), y avisa si el correo falla (502/503). */
+    public void reintentar(Long ventaId, Long correoId) {
+        TipoCorreoAutomatico tipo = tx.execute(s -> {
+            consultas.obtenerEntidad(ventaId); // 404 también para quien no puede ver esa venta
+            CorreoAutomatico c = repositorio.findById(correoId)
+                    .filter(o -> o.getVenta().getId().equals(ventaId))
+                    .orElseThrow(() -> new ResourceNotFoundException("Correo no encontrado"));
+            if (!reintentable(c)) throw new ConflictException("Ese correo ya no se puede reintentar");
+            return c.getTipo();
+        });
+        switch (tipo) {
+            case BIENVENIDA -> bienvenida.enviar(ventaId);
+            case LIQUIDACION -> liquidacion.enviar(ventaId);
+            case RECORDATORIO -> recordatorio.enviar(ventaId);
         }
     }
 
@@ -219,7 +260,7 @@ public class CorreoAutomaticoService {
         };
     }
 
-    /** Alguien lo mandó con el botón mientras estaba en cola. */
+    /** Alguien lo mandó a mano mientras estaba en cola. */
     private boolean yaSeMandoAMano(CorreoAutomatico c) {
         Long ventaId = c.getVenta().getId();
         return switch (c.getTipo()) {

@@ -52,7 +52,9 @@ public record VentaDto(
         BigDecimal depositoPendiente,
         // Promoción con la que se vendió y su bono (null = sin promoción).
         String promocionNombre,
-        BigDecimal promocionBono) {
+        BigDecimal promocionBono,
+        // true = la bienvenida y la liquidación le salen solas (sin botón para mandarlas a mano).
+        boolean correosAutomaticos) {
 
     public static VentaDto from(
             Venta venta,
@@ -98,6 +100,7 @@ public record VentaDto(
                 venta.isFechaProvisional(),
                 venta.getDepositoPendiente(),
                 venta.getPromocionNombre(),
-                venta.getPromocionBono());
+                venta.getPromocionBono(),
+                venta.isCorreosAutomaticos());
     }
 }

@@ -18,7 +18,7 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { VentasService } from '../../../../core/services/ventas.service';
 import { UsuariosService } from '../../../../core/services/usuarios.service';
 import { AsesoresExternosService } from '../../../../core/services/asesores-externos.service';
-import { BienvenidaCliente, LiquidacionAviso, MODALIDAD_PAGO_LABELS, ModalidadPago, ocultaEfectivo, PagoVenta, ReciboHistorial, RecordatorioPago, Venta } from '../../../../core/models/venta.model';
+import { BienvenidaCliente, LiquidacionAviso, MODALIDAD_PAGO_LABELS, ModalidadPago, ocultaEfectivo, PagoVenta, ReciboHistorial, Venta } from '../../../../core/models/venta.model';
 import { CorreosVentaComponent } from '../../../../shared/correos-venta/correos-venta.component';
 import { ReciboFormComponent } from '../../../../shared/recibo-form/recibo-form.component';
 import { ContratoVentaComponent } from '../../../../shared/contrato-venta/contrato-venta.component';
@@ -61,17 +61,15 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
   readonly amortizacion = signal<Amortizacion | null>(null);
   /** Se queda como la dejó la persona aunque la venta se recargue (p. ej. al registrar un abono). */
   readonly amortizacionAbierta = signal(true);
-  /** Estado del recordatorio de pago por correo (solo admin y administración; null si no se pudo consultar). */
-  readonly recordatorio = signal<RecordatorioPago | null>(null);
-  readonly enviandoRecordatorio = signal(false);
-  /** Estado del correo de bienvenida (solo admin y administración; null si no se pudo consultar). */
+  /** Botón de bienvenida: solo admin y administración, y solo en ventas anteriores a los envíos automáticos
+   * (null en las demás o si no se pudo consultar). */
   readonly bienvenida = signal<BienvenidaCliente | null>(null);
   readonly enviandoBienvenida = signal(false);
-  /** Estado de los correos de liquidación (solo admin y administración; null si no se pudo consultar). */
+  /** Botón de aviso de liquidación a finanzas: mismas condiciones que el de bienvenida. */
   readonly liquidacion = signal<LiquidacionAviso | null>(null);
   readonly enviandoLiquidacion = signal(false);
   /** Cambia al recargar la venta o al mandar un correo a mano: el registro de correos se vuelve a pedir. */
-  readonly marcaCorreos = computed(() => [this.venta(), this.recordatorio(), this.bienvenida(), this.liquidacion()]);
+  readonly marcaCorreos = computed(() => [this.venta(), this.bienvenida(), this.liquidacion()]);
   readonly cuentaAtraso = cuentaAtraso;
   readonly fechaCorta = fechaCorta;
   readonly isLoading = signal(true);
@@ -206,19 +204,19 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
           ? await this.ventasService.obtenerPorNumero(this.numeroEnUrl)
           : await this.ventasService.obtener(this.ventaId);
       this.ventaId = venta.id;
-      const [pagos, historial, amortizacion, recordatorio, bienvenida, liquidacion] = await Promise.all([
+      // En las ventas con envíos automáticos no hay botones para mandar esos correos a mano.
+      const aMano = this.puedeEliminar() && !venta.correosAutomaticos;
+      const [pagos, historial, amortizacion, bienvenida, liquidacion] = await Promise.all([
         this.ventasService.listarPagos(venta.id),
         this.ventasService.historialRecibos(venta.id),
         this.ventasService.amortizacion(venta.id).catch(() => null),
-        this.puedeEliminar() ? this.ventasService.recordatorioPago(venta.id).catch(() => null) : Promise.resolve(null),
-        this.puedeEliminar() ? this.ventasService.bienvenida(venta.id).catch(() => null) : Promise.resolve(null),
-        this.puedeEliminar() ? this.ventasService.liquidacion(venta.id).catch(() => null) : Promise.resolve(null),
+        aMano ? this.ventasService.bienvenida(venta.id).catch(() => null) : Promise.resolve(null),
+        aMano ? this.ventasService.liquidacion(venta.id).catch(() => null) : Promise.resolve(null),
       ]);
       this.venta.set(venta);
       this.pagos.set(pagos);
       this.historialRecibos.set(historial);
       this.amortizacion.set(amortizacion);
-      this.recordatorio.set(recordatorio);
       this.bienvenida.set(bienvenida);
       this.liquidacion.set(liquidacion);
       this.sincronizarDireccion(venta.etiqueta);
@@ -226,43 +224,6 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
       this.errorMessage.set('No se pudo cargar la venta.');
     } finally {
       this.isLoading.set(false);
-    }
-  }
-
-  /** Pide confirmación (a qué correo y qué pago se recordará), manda el correo y refresca el estado. */
-  async enviarRecordatorio(): Promise<void> {
-    const r = this.recordatorio();
-    const v = this.venta();
-    if (!r || !v || !r.puedeEnviar || this.enviandoRecordatorio()) return;
-    const pago = r.proximoPago
-      ? `el pago de ${r.proximoPago.concepto} del ${fechaCorta(r.proximoPago.fecha)} por $${this.money(r.proximoPago.monto)}`
-      : 'su saldo vencido';
-    // Igual que el correo: si el monto ya trae lo vencido, se dice que va incluido para no sumarlo dos veces.
-    const incluido = !!r.proximoPago && r.proximoPago.arrastre > 0.01 && r.proximoPago.arrastre >= r.atrasoMonto - 0.01;
-    const atraso =
-      r.atrasoMonto <= 0.01
-        ? ''
-        : incluido
-          ? ` Ese monto ya incluye $${this.money(r.proximoPago!.arrastre)} pendientes de pagos anteriores; el correo lo desglosa y avisa del atraso.`
-          : ` Incluye el aviso de atraso por $${this.money(r.atrasoMonto)}.`;
-    const confirmado = await this.confirmService.confirm({
-      titulo: 'Enviar recordatorio de pago',
-      mensaje: `Se enviará un correo a ${r.correoDestino} recordándole ${pago}.${atraso}`,
-      textoConfirmar: 'Enviar',
-    });
-    if (!confirmado) return;
-    this.enviandoRecordatorio.set(true);
-    try {
-      this.recordatorio.set(await this.ventasService.enviarRecordatorioPago(v.id));
-      this.toast.success(`Recordatorio enviado a ${r.correoDestino}.`);
-    } catch (error) {
-      this.toast.error(
-        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
-          ? error.error.message
-          : 'No se pudo enviar el recordatorio.',
-      );
-    } finally {
-      this.enviandoRecordatorio.set(false);
     }
   }
 

@@ -27,6 +27,8 @@ public record CorreosVentaDto(
             boolean enviado,
             boolean automatico,
             String usuario,
-            String detalle) {
+            String detalle,
+            // Solo en uno automático que no salió y todavía se puede mandar con «Reintentar».
+            Long reintentarId) {
     }
 }

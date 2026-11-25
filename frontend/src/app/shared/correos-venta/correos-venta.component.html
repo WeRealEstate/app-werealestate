@@ -13,6 +13,18 @@
             {{ etiquetas[e.tipo] }} {{ e.enviado ? 'enviado' : 'no enviado' }}
           </span>
           · {{ e.automatico ? 'automático' : 'por ' + e.usuario }}@if (e.detalle) { · {{ e.detalle }}}
+          @if (e.reintentarId; as correoId) {
+            <button
+              type="button"
+              (click)="reintentar(correoId, e.tipo)"
+              [disabled]="reintentando() !== null"
+              class="boton-secundario ml-2 inline-flex min-h-[32px] items-center rounded-lg px-2.5 text-xs font-semibold text-ink
+                     active:scale-[0.97] transition duration-150 disabled:opacity-60"
+              data-testid="reintentar-correo"
+            >
+              {{ reintentando() === correoId ? 'Enviando…' : 'Reintentar' }}
+            </button>
+          }
         </li>
       }
       @if (r.pendientes.length === 0 && r.envios.length === 0) {
@@ -22,7 +34,7 @@
 
     @if (!r.ventaNueva) {
       <p class="mt-2 text-xs text-ink-muted">
-        Venta registrada antes de los envíos automáticos: la bienvenida y la liquidación solo salen con sus botones.
+        Venta registrada antes de los envíos automáticos: la bienvenida y la liquidación solo se mandan con sus botones.
       </p>
     }
     @if (conMensualidades()) {

@@ -8,7 +8,6 @@ import {
   PagoVenta,
   BienvenidaCliente,
   LiquidacionAviso,
-  RecordatorioPago,
   MedioFirma,
   AplicarDepositoRequest,
   NumeracionVenta,
@@ -86,7 +85,7 @@ export class VentasService {
     return firstValueFrom(this.http.get<Amortizacion>(`${this.baseUrl}/${id}/amortizacion`));
   }
 
-  /** Estado del botón "Enviar correos de liquidación": si aplica, si ya está liquidada y el último envío. */
+  /** Estado del botón "Avisar a finanzas la liquidación": si aplica, si ya está liquidada y el último envío. */
   liquidacion(id: number): Promise<LiquidacionAviso> {
     return firstValueFrom(this.http.get<LiquidacionAviso>(`${this.baseUrl}/${id}/liquidacion`));
   }
@@ -103,6 +102,11 @@ export class VentasService {
   /** Enciende o apaga un correo automático y devuelve los tres interruptores. */
   cambiarConfigCorreo(tipo: TipoCorreo, activo: boolean): Promise<ConfigCorreos> {
     return firstValueFrom(this.http.put<ConfigCorreos>(`${this.baseUrl}/correos-automaticos/${tipo}`, { activo }));
+  }
+
+  /** Manda ahora un correo automático que no salió y devuelve el registro actualizado. */
+  reintentarCorreo(id: number, correoId: number): Promise<CorreosVenta> {
+    return firstValueFrom(this.http.post<CorreosVenta>(`${this.baseUrl}/${id}/correos/${correoId}/reintentar`, {}));
   }
 
   /** Registro de correos de la venta: lo enviado, lo que está en cola y lo que no salió. */
@@ -122,16 +126,6 @@ export class VentasService {
   /** Manda ahora la bienvenida al correo del cliente titular y devuelve el estado ya actualizado. */
   enviarBienvenida(id: number): Promise<BienvenidaCliente> {
     return firstValueFrom(this.http.post<BienvenidaCliente>(`${this.baseUrl}/${id}/bienvenida`, {}));
-  }
-
-  /** Estado del botón "Enviar recordatorio de pago": si se puede, el pago que se recordaría y el último enviado. */
-  recordatorioPago(id: number): Promise<RecordatorioPago> {
-    return firstValueFrom(this.http.get<RecordatorioPago>(`${this.baseUrl}/${id}/recordatorio-pago`));
-  }
-
-  /** Manda ahora el recordatorio al correo del cliente titular y devuelve el estado ya actualizado. */
-  enviarRecordatorioPago(id: number): Promise<RecordatorioPago> {
-    return firstValueFrom(this.http.post<RecordatorioPago>(`${this.baseUrl}/${id}/recordatorio-pago`, {}));
   }
 
   /** Para el ícono de "ver información de venta" en /panel/lotes. Rechaza (404) si el lote no
