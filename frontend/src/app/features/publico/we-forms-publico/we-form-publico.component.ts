@@ -11,6 +11,8 @@ import {
   WeFormPublico,
 } from '../../../core/models/we-form.model';
 import { WeFormsPublicoService } from '../../../core/services/we-forms-publico.service';
+import { RegistroVentaPanelService } from '../../../core/services/registro-venta-panel.service';
+import { RouterLink } from '@angular/router';
 import { Aportacion, MESES_ABREVIADO, MESES_NOMBRE, mensualidadConAportaciones, totalAportaciones } from '../../../core/utils/aportaciones';
 import {
   SIN_FORMA_PAGO,
@@ -42,16 +44,21 @@ const MAX_ARCHIVO_BYTES = 2 * 1024 * 1024;
 
 type Etapa = 'pin' | 'cargando' | 'listo' | 'cerrado' | 'error' | 'enviado';
 
-/** /we-forms/:slug: el registro de venta que llena el asesor (con su PIN). Al enviarlo se crea el cliente y la venta. */
+/** /we-forms/:slug: el registro de venta que llena el asesor (con su PIN). Al enviarlo se crea el cliente y la venta.
+ * El mismo formulario sirve en /panel/registrar-venta/:slug (asesor interno, con su sesión y sin PIN). */
 @Component({
   selector: 'app-we-form-publico',
   standalone: true,
-  imports: [FormsModule, DecimalPipe, ListaSelectorComponent, MonedaInputDirective, CorreoInputDirective, AportacionesSelectorComponent, PinPublicoComponent, DesarrolloLoaderComponent],
+  imports: [FormsModule, DecimalPipe, RouterLink, ListaSelectorComponent, MonedaInputDirective, CorreoInputDirective, AportacionesSelectorComponent, PinPublicoComponent, DesarrolloLoaderComponent],
   templateUrl: './we-form-publico.component.html',
 })
 export class WeFormPublicoComponent {
   private readonly route = inject(ActivatedRoute);
-  private readonly service = inject(WeFormsPublicoService);
+  /** true en el panel del asesor: sin PIN, sin logotipo ni "Cambiar de asesor". */
+  readonly enPanel: boolean = this.route.snapshot.data['enPanel'] === true;
+  private readonly service: Pick<WeFormsPublicoService, 'pin' | 'guardarPin' | 'obtener' | 'enviar'> = this.enPanel
+    ? inject(RegistroVentaPanelService)
+    : inject(WeFormsPublicoService);
 
   readonly slug = this.route.snapshot.paramMap.get('slug') ?? '';
   readonly tiposPago = TIPOS_PAGO_FORM;
@@ -137,6 +144,10 @@ export class WeFormPublicoComponent {
       if (status === 409) {
         this.mensajeError.set(mensaje);
         this.etapa.set('cerrado');
+      } else if (this.enPanel) {
+        // Con sesión no hay PIN que volver a pedir: se muestra el motivo.
+        this.mensajeError.set(mensaje);
+        this.etapa.set('error');
       } else if (status === 404 && !/PIN/i.test(mensaje)) {
         this.mensajeError.set(mensaje);
         this.etapa.set('error');

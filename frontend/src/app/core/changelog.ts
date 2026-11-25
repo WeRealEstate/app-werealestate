@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.12.0', fecha: '2026-11-25', cambios: [
+    "Asesores internos: nueva opción «Registrar venta» en su panel, con los formularios activos de SAMAI y Aldea Nanuu, sin pedir PIN (la venta queda a su nombre). El admin la puede quitar por usuario desde Usuarios.",
+  ] },
   { version: '12.11.0', fecha: '2026-11-25', cambios: [
     "We Forms: el administrador ya puede eliminar un formulario para siempre (con su contraseña). Borra también sus respuestas y archivos del servidor; las ventas, clientes y lo subido a Google Drive se conservan. Con respuestas, el botón espera 10 segundos.",
   ] },

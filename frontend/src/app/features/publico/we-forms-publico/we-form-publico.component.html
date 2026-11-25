@@ -1,8 +1,12 @@
-<div class="flex min-h-dvh flex-col items-center bg-canvas px-4 py-8">
-  <img src="/images/we-logo-color.png" alt="We Real Estate" class="mb-5 h-11 w-auto dark:hidden" />
-  <img src="/images/we-logo.png" alt="" aria-hidden="true" class="mb-5 hidden h-11 w-auto dark:block" />
+<div class="flex flex-col items-center" [class]="enPanel ? 'page-enter' : 'min-h-dvh bg-canvas px-4 py-8'">
+  @if (enPanel) {
+    <a routerLink="/panel/registrar-venta" class="mb-4 self-start text-sm text-we-primary hover:underline">← Volver a los formularios</a>
+  } @else {
+    <img src="/images/we-logo-color.png" alt="We Real Estate" class="mb-5 h-11 w-auto dark:hidden" />
+    <img src="/images/we-logo.png" alt="" aria-hidden="true" class="mb-5 hidden h-11 w-auto dark:block" />
+  }
 
-  @if (etapa() !== 'pin' && etapa() !== 'cargando') {
+  @if (!enPanel && etapa() !== 'pin' && etapa() !== 'cargando') {
     <button type="button" (click)="salir()" data-testid="cambiar-asesor" class="-mt-2 mb-4 text-xs text-ink-muted underline underline-offset-2 hover:text-ink">Cambiar de asesor</button>
   }
 

@@ -56,6 +56,7 @@ const COMERCIALIZADORAS_NAV_ITEM: NavItem = {
 const TEAMS_NAV_ITEM: NavItem = { label: 'Comunidades We', route: '/panel/teams', modulo: 'COMUNIDADES', icon: 'comunidades' };
 const WE_FORMS_NAV_ITEM: NavItem = { label: 'We Forms', route: '/panel/we-forms', modulo: 'WE_FORMS', icon: 'forms' };
 const MATERIAL_NAV_ITEM: NavItem = { label: 'Material', route: '/panel/material', modulo: 'MATERIAL', icon: 'material' };
+const REGISTRAR_VENTA_ITEM: NavItem = { label: 'Registrar venta', route: '/panel/registrar-venta', modulo: 'REGISTRAR_VENTA', icon: 'forms' };
 
 /** {@code label: null} agrupa items sin encabezado visible (Inicio, siempre arriba y suelto). */
 interface NavSection {
@@ -76,7 +77,7 @@ const FINANZAS_ITEM: NavItem = { label: 'Finanzas', route: '/panel/finanzas', mo
 const CALENDARIO_ITEM: NavItem = { label: 'Calendario', route: '/panel/calendario', modulo: 'CALENDARIO', icon: 'calendario' };
 
 /** Dos grupos desplegables (Ventas e Inventario); lo demás va suelto, sin encabezado, debajo de ellos. */
-const GRUPO_VENTAS_ASESOR: NavSection = { label: 'Ventas', items: [LEADS_ITEM, PIPELINE_ITEM, COTIZADOR_ITEM] };
+const GRUPO_VENTAS_ASESOR: NavSection = { label: 'Ventas', items: [LEADS_ITEM, PIPELINE_ITEM, COTIZADOR_ITEM, REGISTRAR_VENTA_ITEM] };
 const GRUPO_VENTAS_ADMIN: NavSection = {
   label: 'Ventas',
   items: [LEADS_ITEM, PIPELINE_ITEM, COTIZADOR_ITEM, SCORE_ITEM, VENTAS_ITEM, CLIENTES_ITEM],

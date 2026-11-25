@@ -172,6 +172,19 @@ export const routes: Routes = [
           import('./features/panel/versiones/versiones.component').then((m) => m.VersionesComponent),
       },
       {
+        path: 'registrar-venta',
+        canActivate: [roleGuard(['ASESOR']), moduloGuard(['REGISTRAR_VENTA'])],
+        loadComponent: () =>
+          import('./features/panel/registrar-venta/registrar-venta.component').then((m) => m.RegistrarVentaComponent),
+      },
+      {
+        path: 'registrar-venta/:slug',
+        canActivate: [roleGuard(['ASESOR']), moduloGuard(['REGISTRAR_VENTA'])],
+        data: { enPanel: true },
+        loadComponent: () =>
+          import('./features/publico/we-forms-publico/we-form-publico.component').then((m) => m.WeFormPublicoComponent),
+      },
+      {
         path: 'asesor',
         canActivate: [roleGuard(['ASESOR'])],
         loadComponent: () =>
