@@ -6,6 +6,7 @@ import { LineaReciboRequest, PagoVenta, TIPO_ABONO_LABELS, TipoAbono, Venta, esT
 import { ToastService } from '../../core/services/toast.service';
 import { VentasService } from '../../core/services/ventas.service';
 import { MesPlan, claveMes as clave, etiquetaMes, mesesDelPlan } from '../../core/utils/plan-mensualidades';
+import { mensualidadesPorCobrar, montoPorMeses } from '../../core/utils/meses-por-cobrar';
 import { MonedaInputDirective } from '../moneda-input/moneda-input.directive';
 
 interface LineaForm {
@@ -99,27 +100,14 @@ export class ReciboFormComponent {
     });
   }
 
-  /** Lo que aún falta de cada mensualidad según la tabla (clave 'yyyy-MM' → monto): las que no salen Pagadas.
-   * null si la tabla no está disponible. Un mes que un recibo ya marcó puede seguir faltando si se pagó de menos. */
-  private readonly faltantePorMes = computed<Map<string, number> | null>(() => {
-    const a = this.amortizacion();
-    if (!a) return null;
-    const faltante = new Map<string, number>();
-    for (const f of a.filas) {
-      if (f.numero === null || f.fecha === null || f.concepto !== 'Mensualidad' || f.estado === 'PAGADO' || f.estado === 'PAGADO_CON_RETRASO') continue;
-      faltante.set(f.fecha.slice(0, 7), Math.max(0, Math.round((f.monto - f.pagado) * 100) / 100));
-    }
-    return faltante;
-  });
-
-  /** Meses que se pueden cobrar: los que la tabla de amortización aún muestra sin cubrir del todo. Si la tabla no está
-   * disponible, los que ningún recibo ha marcado como cubiertos. */
+  /** Meses que se pueden cobrar: las mensualidades que la tabla de amortización (la que se ve en el detalle) muestra
+   * que aún se deben. Si la tabla no está disponible, los que ningún recibo ha marcado como cubiertos. */
   readonly mesesPendientes = computed(() => {
-    const faltante = this.faltantePorMes();
+    const a = this.amortizacion();
     // Con la tabla, sus meses tal cual: si hubo una pausa de mensualidades ya vienen recorridos (el plan calculado aquí
     // con los datos de la venta no la conoce).
-    if (faltante) {
-      return [...faltante.keys()].sort().map((k) => {
+    if (a) {
+      return mensualidadesPorCobrar(a.detalleMensual, a.corte, a.saldo).map((k) => {
         const [anio, mes] = k.split('-').map(Number);
         return { clave: k, anio, mes, etiqueta: etiquetaMes(anio, mes) } satisfies MesPlan;
       });
@@ -318,12 +306,17 @@ export class ReciboFormComponent {
   /** Sugiere mensualidad × meses elegidos mientras el monto no se haya escrito a mano. */
   private sugerirMonto(l: LineaForm): void {
     if (l.montoManual || l.tipo === 'APARTADO') return;
-    const mensualidad = this.venta().mensualidad ?? 0;
-    const faltante = this.faltantePorMes();
-    // Con la tabla disponible se sugiere lo que falta de cada mes elegido (puede ser menos o más que la mensualidad).
-    const porMes = (c: string) => faltante?.get(c) ?? mensualidad;
-    const suma = l.meses.reduce((total, c) => total + porMes(c), 0);
-    l.monto = l.meses.length > 0 ? Math.round(suma * 100) / 100 : null;
+    const a = this.amortizacion();
+    // Con la tabla disponible se sugiere lo que falta de los meses elegidos (puede ser menos o más que la mensualidad).
+    const suma = a
+      ? montoPorMeses(
+          a.detalleMensual,
+          a.corte,
+          l.meses,
+          this.lineas().filter((x) => x.uid !== l.uid && this.pideMeses(x)).flatMap((x) => x.meses),
+        )
+      : Math.round((this.venta().mensualidad ?? 0) * l.meses.length * 100) / 100;
+    l.monto = l.meses.length > 0 ? suma : null;
   }
 
   private actualizarLinea(indice: number, cambio: (l: LineaForm) => void): void {

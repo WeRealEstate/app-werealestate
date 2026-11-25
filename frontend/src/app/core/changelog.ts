@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.13.1', fecha: '2026-11-25', cambios: [
+    "Registrar abono: ya se pueden marcar los meses que la tabla de amortización muestra sin pagar. Antes, si el cliente había pagado de más en meses anteriores, el formulario daba por cubiertos los siguientes y no dejaba elegirlos.",
+  ] },
   { version: '12.13.0', fecha: '2026-11-25', cambios: [
     "Cotizador público: nuevo acceso «Registrar venta» en la portada y en la barra superior, sin pasar por el plano. Pide el PIN y muestra los formularios de SAMAI y Aldea Nanuu a los que tenga acceso (con uno solo entra directo).",
   ] },

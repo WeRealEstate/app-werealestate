@@ -110,7 +110,7 @@ export interface Amortizacion {
   atrasadoDesde: string | null;
   proximaFecha: string | null;
   proximoMonto: number | null;
-  /** Reparto del dinero del más antiguo al más nuevo (lo usa el formulario de abonos). */
+  /** Reparto del dinero del más antiguo al más nuevo (de él salen los meses del plan al editar un recibo). */
   filas: FilaAmortizacion[];
   /** La tabla mes con mes (la que se muestra y va al PDF): mensualidad esperada más lo atrasado, y los abonos de cada mes. */
   detalleMensual: FilaAmortizacion[];
