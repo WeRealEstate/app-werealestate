@@ -7,6 +7,7 @@ import { VentasService } from '../../../../core/services/ventas.service';
 import { LeadsService } from '../../../../core/services/leads.service';
 import { Desarrollo } from '../../../../core/models/lead.model';
 import { Venta } from '../../../../core/models/venta.model';
+import { CorreosAutomaticosComponent } from '../../../../shared/correos-automaticos/correos-automaticos.component';
 import { WeLoaderComponent } from '../../../../shared/we-loader/we-loader.component';
 import { dinero } from '../../../../core/utils/formato-pantalla';
 
@@ -36,7 +37,7 @@ function ordenDesarrollo(d: Desarrollo): number {
 @Component({
   selector: 'app-ventas-list',
   standalone: true,
-  imports: [WeLoaderComponent, DatePipe, RouterLink, LucideEye, LucideArrowUp, LucideArrowDown],
+  imports: [CorreosAutomaticosComponent, WeLoaderComponent, DatePipe, RouterLink, LucideEye, LucideArrowUp, LucideArrowDown],
   templateUrl: './ventas-list.component.html',
 })
 export class VentasListComponent {

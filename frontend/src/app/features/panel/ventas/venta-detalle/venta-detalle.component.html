@@ -440,34 +440,30 @@
       </div>
     </div>
 
-    <!-- CORREOS DE LIQUIDACIÓN (venta pagada por completo) -->
+    <!-- AVISO DE LIQUIDACIÓN A FINANZAS (venta pagada por completo) -->
     @if (liquidacion(); as l) {
-      @if (l.disponible) {
-        <div class="mt-2 flex flex-wrap items-center justify-end gap-x-4 gap-y-2" data-testid="liquidacion-venta">
-          @if (l.ultimo; as u) {
-            <p class="text-xs text-ink-muted" data-testid="ultima-liquidacion">
-              Enviados el {{ fechaHora(u.enviadoEn) }}@if (u.usuario) { por {{ u.usuario }}}
-              @if (!u.correoCliente) { · el cliente no tenía correo: solo se avisó a finanzas }
-              @else if (!u.clienteEnviado) { · el correo al cliente no salió }
-            </p>
-          }
-          <button
-            type="button"
-            (click)="enviarLiquidacion()"
-            [disabled]="!l.puedeEnviar || enviandoLiquidacion()"
-            [attr.title]="l.puedeEnviar ? null : l.motivoNoDisponible"
-            class="boton-secundario inline-flex min-h-[44px] items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-semibold text-ink
-                   active:scale-[0.97] transition duration-150 disabled:opacity-60"
-            data-testid="enviar-liquidacion"
-          >
-            <svg lucideMail [size]="15" aria-hidden="true"></svg>
-            {{ enviandoLiquidacion() ? 'Enviando…' : l.ultimo ? 'Reenviar correos de liquidación' : 'Enviar correos de liquidación' }}
-          </button>
-          @if (!l.puedeEnviar && l.motivoNoDisponible) {
-            <p class="w-full text-right text-xs text-ink-muted" data-testid="motivo-liquidacion">{{ l.motivoNoDisponible }}</p>
-          }
-        </div>
-      }
+      <div class="mt-2 flex flex-wrap items-center justify-end gap-x-4 gap-y-2" data-testid="liquidacion-venta">
+        @if (l.ultimo; as u) {
+          <p class="text-xs text-ink-muted" data-testid="ultima-liquidacion">
+            Finanzas avisado el {{ fechaHora(u.enviadoEn) }}@if (u.usuario) { por {{ u.usuario }}}
+          </p>
+        }
+        <button
+          type="button"
+          (click)="enviarLiquidacion()"
+          [disabled]="!l.puedeEnviar || enviandoLiquidacion()"
+          [attr.title]="l.puedeEnviar ? null : l.motivoNoDisponible"
+          class="boton-secundario inline-flex min-h-[44px] items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-semibold text-ink
+                 active:scale-[0.97] transition duration-150 disabled:opacity-60"
+          data-testid="enviar-liquidacion"
+        >
+          <svg lucideMail [size]="15" aria-hidden="true"></svg>
+          {{ enviandoLiquidacion() ? 'Enviando…' : l.ultimo ? 'Volver a avisar a finanzas' : 'Avisar a finanzas la liquidación' }}
+        </button>
+        @if (!l.puedeEnviar && l.motivoNoDisponible) {
+          <p class="w-full text-right text-xs text-ink-muted" data-testid="motivo-liquidacion">{{ l.motivoNoDisponible }}</p>
+        }
+      </div>
     }
 
     <!-- ATRASO Y TABLA DE AMORTIZACIÓN -->
@@ -544,6 +540,11 @@
           }
         </div>
       }
+    }
+
+    <!-- REGISTRO DE CORREOS -->
+    @if (puedeEliminar()) {
+      <app-correos-venta [ventaId]="v.id" [conMensualidades]="!!v.plazoMeses" [refresco]="marcaCorreos()" />
     }
 
     <!-- REGISTRAR ABONO -->

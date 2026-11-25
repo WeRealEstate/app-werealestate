@@ -1,0 +1,22 @@
+@if (config(); as c) {
+  <details class="mt-4 rounded-xl border border-border bg-surface" data-testid="correos-automaticos">
+    <summary class="flex min-h-[44px] cursor-pointer items-center justify-between gap-3 px-4 py-2 text-sm font-semibold text-ink">
+      Correos automáticos
+      <span class="text-xs font-normal text-ink-muted">{{ encendidos() === 0 ? 'Todos apagados' : encendidos() + ' de 3 encendidos' }}</span>
+    </summary>
+    <ul class="divide-y divide-border border-t border-border">
+      @for (i of interruptores; track i.tipo) {
+        <li>
+          <label class="flex cursor-pointer items-start gap-3 px-4 py-3">
+            <input type="checkbox" role="switch" class="mt-0.5 h-5 w-5 shrink-0 accent-we-primary" [checked]="c[i.campo]"
+                   [disabled]="guardando()" (change)="cambiar(i, $any($event.target))" [attr.data-testid]="'correo-auto-' + i.campo" />
+            <span>
+              <span class="block text-sm font-semibold text-ink">{{ i.nombre }}</span>
+              <span class="block text-xs text-ink-muted">{{ i.explicacion }}</span>
+            </span>
+          </label>
+        </li>
+      }
+    </ul>
+  </details>
+}

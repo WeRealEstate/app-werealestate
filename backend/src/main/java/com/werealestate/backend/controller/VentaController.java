@@ -80,13 +80,13 @@ public class VentaController {
         this.liquidacionService = liquidacionService;
     }
 
-    /** Estado del botón "Enviar correos de liquidación": si aplica, si se puede y el último envío. */
+    /** Estado del botón "Avisar a finanzas la liquidación": si se puede y el último envío. */
     @GetMapping("/{id}/liquidacion")
     public LiquidacionAvisoDto liquidacion(@PathVariable Long id) {
         return liquidacionService.consultar(id);
     }
 
-    /** Manda ahora los correos de liquidación (cliente titular y finanzas, síncrono) y los registra. */
+    /** Manda ahora el aviso de liquidación a finanzas (síncrono) y lo registra. Al cliente no se le escribe. */
     @PostMapping("/{id}/liquidacion")
     public LiquidacionAvisoDto enviarLiquidacion(@PathVariable Long id) {
         // Los correos llevan el número oficial de la venta aunque los mande la cuenta con numeración propia.

@@ -75,7 +75,7 @@
             <a
               [routerLink]="item.route"
               routerLinkActive="bg-[var(--sb-active)] text-[var(--sb-active-fg)]"
-              [routerLinkActiveOptions]="{ exact: item.route === '/panel/leads' ? false : true }"
+              [routerLinkActiveOptions]="{ exact: item.route !== '/panel/leads' && item.route !== '/panel/registrar-venta' }"
               (click)="closeSidebar()"
               class="flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-medium text-[var(--sb-fg-dim)]
                      hover:bg-[var(--sb-hover)] hover:text-[var(--sb-fg)] transition-[color,background-color,transform] duration-150 active:scale-[0.98]

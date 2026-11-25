@@ -214,6 +214,27 @@ public class Venta {
         this.inicioPlan = fechaVenta;
     }
 
+    /** true en las ventas registradas desde que existen los correos automáticos (V94): solo a ellas les salen solos la
+     * bienvenida y los de liquidación. Las anteriores quedaron en false y no se cambia. */
+    @jakarta.persistence.Column(name = "correos_automaticos", nullable = false, updatable = false)
+    private boolean correosAutomaticos = true;
+
+    /** true si se pidió no mandarle a esta venta el recordatorio de pago automático. */
+    @jakarta.persistence.Column(name = "sin_recordatorio_automatico", nullable = false)
+    private boolean sinRecordatorioAutomatico;
+
+    public boolean isCorreosAutomaticos() {
+        return correosAutomaticos;
+    }
+
+    public boolean isSinRecordatorioAutomatico() {
+        return sinRecordatorioAutomatico;
+    }
+
+    public void setSinRecordatorioAutomatico(boolean sinRecordatorioAutomatico) {
+        this.sinRecordatorioAutomatico = sinRecordatorioAutomatico;
+    }
+
     /** Contrato firmado: la comisión de la venta solo se puede entregar con el contrato firmado
      * (ver ComisionService, regla nueva). La fecha de firma es obligatoria cuando está firmado. */
     @jakarta.persistence.Column(name = "contrato_firmado", nullable = false)

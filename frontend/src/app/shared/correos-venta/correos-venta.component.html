@@ -1,0 +1,36 @@
+@if (registro(); as r) {
+  <section class="mt-4 rounded-xl border border-border bg-surface px-4 py-3" data-testid="registro-correos">
+    <h2 class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Registro de correos</h2>
+
+    <ul class="mt-2 space-y-1 text-xs text-ink-muted">
+      @for (p of r.pendientes; track p.tipo + p.enviarDesde) {
+        <li data-testid="correo-pendiente">{{ etiquetas[p.tipo] }}: sale solo el {{ p.enviarDesde | date: 'd MMM y, h:mm a' }}</li>
+      }
+      @for (e of r.envios; track $index) {
+        <li data-testid="correo-registrado">
+          {{ e.fecha | date: 'd MMM y, h:mm a' }} ·
+          <span class="font-semibold" [class]="e.enviado ? 'text-ink' : 'text-red-600 dark:text-red-300'">
+            {{ etiquetas[e.tipo] }} {{ e.enviado ? 'enviado' : 'no enviado' }}
+          </span>
+          · {{ e.automatico ? 'automático' : 'por ' + e.usuario }}@if (e.detalle) { · {{ e.detalle }}}
+        </li>
+      }
+      @if (r.pendientes.length === 0 && r.envios.length === 0) {
+        <li>Aún no se ha enviado ningún correo.</li>
+      }
+    </ul>
+
+    @if (!r.ventaNueva) {
+      <p class="mt-2 text-xs text-ink-muted">
+        Venta registrada antes de los envíos automáticos: la bienvenida y la liquidación solo salen con sus botones.
+      </p>
+    }
+    @if (conMensualidades()) {
+      <label class="mt-2 flex min-h-[32px] items-center gap-2 text-xs text-ink">
+        <input type="checkbox" class="h-4 w-4 accent-we-primary" [checked]="r.recordatorioExcluido" [disabled]="guardando()"
+               (change)="excluir($any($event.target))" data-testid="excluir-recordatorio" />
+        No enviar a esta venta el recordatorio de pago automático
+      </label>
+    }
+  </section>
+}

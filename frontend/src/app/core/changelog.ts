@@ -15,6 +15,12 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.14.0', fecha: '2026-11-25', cambios: [
+    "Correos automáticos, apagados hasta que se enciendan arriba de Ventas (admin y administración): bienvenida al firmar el contrato (SAMAI) y aviso de liquidación al quedar pagada la venta (10 minutos después, solo ventas registradas de ahora en adelante), y recordatorio de pago a las 6:00 p. m. del día anterior (todas las ventas con mensualidades).",
+    "Detalle de la venta: registro de los correos enviados, programados y no enviados, y casilla para no mandarle recordatorios automáticos a esa venta.",
+    "Liquidación: ahora solo se avisa a finanzas (SAMAI y Aldea Nanuu); al cliente ya no se le manda correo, ni con el botón ni en automático.",
+    "Panel del asesor: «Registrar venta» sigue marcado en el menú mientras llena el formulario.",
+  ] },
   { version: '12.13.1', fecha: '2026-11-25', cambios: [
     "Registrar abono: ya se pueden marcar los meses que la tabla de amortización muestra sin pagar. Antes, si el cliente había pagado de más en meses anteriores, el formulario daba por cubiertos los siguientes y no dejaba elegirlos.",
   ] },

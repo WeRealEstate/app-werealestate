@@ -2,7 +2,6 @@ package com.werealestate.backend.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
@@ -10,7 +9,7 @@ import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-/** Redacción de los dos correos de liquidación: escapado de datos, textos fijos, enlace e imágenes incrustadas. */
+/** Redacción del aviso de liquidación a finanzas: escapado de datos, textos fijos y enlace. */
 class LiquidacionAvisoCorreoTest {
 
     private static LiquidacionAvisoCorreo.ContenidoFinanzas finanzas(String nombre) {
@@ -20,36 +19,6 @@ class LiquidacionAvisoCorreoTest {
                 List.of(new LiquidacionAvisoCorreo.Persona("Luis Pérez", null, "luis@ejemplo.com")),
                 new BigDecimal("350000"), new BigDecimal("350000.00"), LocalDate.of(2026, 11, 5),
                 "https://app.weinversiones.com/panel/ventas/S-12");
-    }
-
-    @Test
-    void elClienteLlevaNombreEscapadoLotesVentaYTextosFijos() {
-        var c = new LiquidacionAvisoCorreo.ContenidoCliente("Ana <b>&\"Ñ\"", "S-12", List.of("Mz 3 / Lote 7"));
-        String html = LiquidacionAvisoCorreo.htmlCliente(c);
-        assertFalse(html.contains("<b>&"), "no deja pasar HTML del nombre");
-        assertTrue(html.contains("Ana &lt;b&gt;&amp;&quot;"), html);
-        assertTrue(html.contains("<strong>S-12</strong>"));
-        assertTrue(html.contains("Mz 3 / Lote 7"));
-        assertTrue(html.contains("<strong>carta finiquito</strong>"));
-        assertTrue(html.contains("ha liquidado por completo su terreno en <strong>SAMAI CAMPESTRE</strong>"));
-        assertTrue(html.contains("Atentamente,"));
-        assertTrue(html.contains("https://www.facebook.com/share/1Jak98kFTh/"));
-        assertTrue(html.contains(LiquidacionAvisoCorreo.VISTA_PREVIA_CLIENTE));
-        String texto = LiquidacionAvisoCorreo.textoCliente(c);
-        assertTrue(texto.contains("Estimado(a) Ana <b>&\"Ñ\":"));
-        assertTrue(texto.contains("carta finiquito"));
-        assertFalse(texto.contains("**"));
-        assertEquals("¡Felicidades! Ha liquidado su terreno en SAMAI Campestre 🌴", LiquidacionAvisoCorreo.ASUNTO_CLIENTE);
-    }
-
-    @Test
-    void todasLasImagenesDelClienteSeUsanConSuCidYExisten() {
-        String html = LiquidacionAvisoCorreo.htmlCliente(
-                new LiquidacionAvisoCorreo.ContenidoCliente("Laura", "S-1", List.of("Mz 1 / Lote 1")));
-        for (var i : BienvenidaClienteCorreo.IMAGENES) {
-            assertNotNull(LiquidacionAvisoCorreoTest.class.getClassLoader().getResource(i.recurso()), i.recurso());
-            assertTrue(html.contains("cid:" + i.cid()), i.cid());
-        }
     }
 
     @Test

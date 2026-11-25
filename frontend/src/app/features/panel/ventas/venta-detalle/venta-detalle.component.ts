@@ -19,6 +19,7 @@ import { VentasService } from '../../../../core/services/ventas.service';
 import { UsuariosService } from '../../../../core/services/usuarios.service';
 import { AsesoresExternosService } from '../../../../core/services/asesores-externos.service';
 import { BienvenidaCliente, LiquidacionAviso, MODALIDAD_PAGO_LABELS, ModalidadPago, ocultaEfectivo, PagoVenta, ReciboHistorial, RecordatorioPago, Venta } from '../../../../core/models/venta.model';
+import { CorreosVentaComponent } from '../../../../shared/correos-venta/correos-venta.component';
 import { ReciboFormComponent } from '../../../../shared/recibo-form/recibo-form.component';
 import { ContratoVentaComponent } from '../../../../shared/contrato-venta/contrato-venta.component';
 import { RecibosVentaComponent } from '../../../../shared/recibos-venta/recibos-venta.component';
@@ -36,7 +37,7 @@ const SEGUNDOS_ESPERA_ELIMINAR = 10;
 @Component({
   selector: 'app-venta-detalle',
   standalone: true,
-  imports: [MonedaInputDirective, WeLoaderComponent, ReciboFormComponent, RecibosVentaComponent, ContratoVentaComponent, TablaAmortizacionComponent, ReestructurarVentaComponent, CambiarLotesVentaComponent, ReactiveFormsModule, RouterLink, ClienteSelectorComponent, CopropietariosEditorComponent, NumeroVentaComponent, LucideCircleAlert, LucideMail, LucidePencil, LucideTrash2],
+  imports: [CorreosVentaComponent, MonedaInputDirective, WeLoaderComponent, ReciboFormComponent, RecibosVentaComponent, ContratoVentaComponent, TablaAmortizacionComponent, ReestructurarVentaComponent, CambiarLotesVentaComponent, ReactiveFormsModule, RouterLink, ClienteSelectorComponent, CopropietariosEditorComponent, NumeroVentaComponent, LucideCircleAlert, LucideMail, LucidePencil, LucideTrash2],
   templateUrl: './venta-detalle.component.html',
 })
 export class VentaDetalleComponent implements OnInit, OnDestroy {
@@ -69,6 +70,8 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
   /** Estado de los correos de liquidación (solo admin y administración; null si no se pudo consultar). */
   readonly liquidacion = signal<LiquidacionAviso | null>(null);
   readonly enviandoLiquidacion = signal(false);
+  /** Cambia al recargar la venta o al mandar un correo a mano: el registro de correos se vuelve a pedir. */
+  readonly marcaCorreos = computed(() => [this.venta(), this.recordatorio(), this.bienvenida(), this.liquidacion()]);
   readonly cuentaAtraso = cuentaAtraso;
   readonly fechaCorta = fechaCorta;
   readonly isLoading = signal(true);
@@ -297,32 +300,25 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
     const l = this.liquidacion();
     const v = this.venta();
     if (!l || !v || !l.puedeEnviar || this.enviandoLiquidacion()) return;
-    const destinos = l.correoCliente
-      ? `Se enviará la felicitación al cliente (${l.correoCliente}) y el aviso «¡Es hora de realizar una carta finiquito!» a finanzas.`
-      : 'El cliente no tiene correo: solo se avisará a finanzas («¡Es hora de realizar una carta finiquito!»).';
-    const yaEnviados = l.ultimo
-      ? ` Ya se enviaron antes el ${this.fechaHora(l.ultimo.enviadoEn)}${l.ultimo.usuario ? ` (por ${l.ultimo.usuario})` : ''}; finanzas recibirá el aviso otra vez.`
+    const yaEnviado = l.ultimo
+      ? ` Ya se envió antes el ${this.fechaHora(l.ultimo.enviadoEn)}${l.ultimo.usuario ? ` (por ${l.ultimo.usuario})` : ''}; finanzas lo recibirá otra vez.`
       : '';
     const confirmado = await this.confirmService.confirm({
-      titulo: l.ultimo ? 'Reenviar correos de liquidación' : 'Enviar correos de liquidación',
-      mensaje: `${destinos}${yaEnviados}`,
+      titulo: l.ultimo ? 'Volver a avisar a finanzas' : 'Avisar a finanzas',
+      mensaje: `Se enviará a finanzas el aviso «¡Es hora de realizar una carta finiquito!». Al cliente no se le envía nada.${yaEnviado}`,
       textoConfirmar: l.ultimo ? 'Reenviar' : 'Enviar',
     });
     if (!confirmado) return;
     this.enviandoLiquidacion.set(true);
     try {
       this.liquidacion.set(await this.ventasService.enviarLiquidacion(v.id));
-      this.toast.success(
-        l.correoCliente ? 'Correos de liquidación enviados al cliente y a finanzas.' : 'Aviso de liquidación enviado a finanzas.',
-      );
+      this.toast.success('Aviso de liquidación enviado a finanzas.');
     } catch (error) {
       this.toast.error(
         error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
           ? error.error.message
-          : 'No se pudieron enviar los correos de liquidación.',
+          : 'No se pudo enviar el aviso de liquidación.',
       );
-      // Si el de finanzas salió y el del cliente no, el envío quedó registrado: refresca para mostrarlo.
-      this.liquidacion.set(await this.ventasService.liquidacion(v.id).catch(() => l));
     } finally {
       this.enviandoLiquidacion.set(false);
     }

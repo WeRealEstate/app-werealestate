@@ -44,7 +44,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * Los correos de liquidación contra la BD local (transacción que se revierte). El servicio se arma a mano con un
+ * El aviso de liquidación a finanzas contra la BD local (transacción que se revierte). El servicio se arma a mano con un
  * JavaMailSender simulado: ninguna prueba manda correo de verdad.
  */
 class LiquidacionAvisoIntegracionTest extends PruebaDeIntegracion {
@@ -102,7 +102,7 @@ class LiquidacionAvisoIntegracionTest extends PruebaDeIntegracion {
     }
 
     @Test
-    void liquidadaConCorreoMandaDosCorreosYLosRegistra() throws Exception {
+    void liquidadaAvisaSoloAFinanzasYLoRegistra() throws Exception {
         VentaDto v = venta(samai(), "cliente@ejemplo.com", true);
         var entidad = consultas.obtenerEntidad(v.id());
         em.persist(new VentaCopropietario(entidad, cliente("Copropietaria Uno"), 1));
@@ -112,35 +112,21 @@ class LiquidacionAvisoIntegracionTest extends PruebaDeIntegracion {
 
         LiquidacionAvisoDto dto = servicio("avisos.we@gmail.com").enviar(v.id());
 
-        var mensajes = enviados(2);
-        MimeMessage finanzas = mensajes.get(0);
+        MimeMessage finanzas = enviados(1).get(0);
         finanzas.saveChanges();
+        assertEquals(1, finanzas.getAllRecipients().length);
         assertEquals("finanzas.weinmobiliaria@gmail.com", finanzas.getAllRecipients()[0].toString());
         assertEquals("¡Es hora de realizar una carta finiquito! – Venta " + etiqueta, finanzas.getSubject());
-        StringBuilder cuerpoF = new StringBuilder();
-        int[] imgF = {0};
-        recoger(finanzas.getContent(), cuerpoF, imgF);
-        assertTrue(cuerpoF.toString().contains("https://app.prueba.test/panel/ventas/" + etiqueta), "enlace sin doble barra");
-        assertTrue(cuerpoF.toString().contains(nombre));
-        assertTrue(cuerpoF.toString().contains("Copropietaria Uno"));
-        assertTrue(cuerpoF.toString().contains("$50,000.00"));
-        assertEquals(0, imgF[0]);
-
-        MimeMessage cliente = mensajes.get(1);
-        cliente.saveChanges();
-        assertEquals("cliente@ejemplo.com", cliente.getAllRecipients()[0].toString());
-        assertEquals("¡Felicidades! Ha liquidado su terreno en SAMAI Campestre 🌴", cliente.getSubject());
-        assertTrue(cliente.getHeader("Subject", null).contains("=?UTF-8?"));
-        StringBuilder cuerpoC = new StringBuilder();
-        int[] imgC = {0};
-        recoger(cliente.getContent(), cuerpoC, imgC);
-        assertTrue(cuerpoC.toString().contains(nombre));
-        assertTrue(cuerpoC.toString().contains("carta finiquito"));
-        assertEquals(6, imgC[0], "foto, logo y 4 íconos incrustados");
+        StringBuilder cuerpo = new StringBuilder();
+        recoger(finanzas.getContent(), cuerpo);
+        assertTrue(cuerpo.toString().contains("https://app.prueba.test/panel/ventas/" + etiqueta), "enlace sin doble barra");
+        assertTrue(cuerpo.toString().contains(nombre));
+        assertTrue(cuerpo.toString().contains("Copropietaria Uno"));
+        assertTrue(cuerpo.toString().contains("$50,000.00"));
 
         var guardado = repositorio.findFirstByVentaIdOrderByEnviadoEnDescIdDesc(v.id()).orElseThrow();
-        assertEquals("cliente@ejemplo.com", guardado.getCorreoCliente());
-        assertTrue(guardado.isClienteEnviado());
+        assertNull(guardado.getCorreoCliente());
+        assertFalse(guardado.isClienteEnviado());
         assertTrue(guardado.isFinanzasEnviado());
         assertEquals(admin.getId(), guardado.getUsuario().getId());
         assertNotNull(dto.ultimo());
@@ -149,21 +135,13 @@ class LiquidacionAvisoIntegracionTest extends PruebaDeIntegracion {
     }
 
     @Test
-    void sinCorreoDelClienteSoloAvisaAFinanzasYLoRegistra() throws Exception {
-        VentaDto v = venta(samai(), null, true);
+    void tambienAvisaDeUnaVentaDeNanuu() {
+        VentaDto v = venta(nanuu(), null, true);
 
-        LiquidacionAvisoDto estado = servicio("avisos.we@gmail.com").consultar(v.id());
-        assertTrue(estado.puedeEnviar());
-        assertNull(estado.correoCliente());
         servicio("avisos.we@gmail.com").enviar(v.id());
 
-        var mensajes = enviados(1);
-        mensajes.get(0).saveChanges();
-        assertEquals("finanzas.weinmobiliaria@gmail.com", mensajes.get(0).getAllRecipients()[0].toString());
-        var guardado = repositorio.findFirstByVentaIdOrderByEnviadoEnDescIdDesc(v.id()).orElseThrow();
-        assertNull(guardado.getCorreoCliente());
-        assertFalse(guardado.isClienteEnviado());
-        assertTrue(guardado.isFinanzasEnviado());
+        enviados(1);
+        assertTrue(repositorio.findFirstByVentaIdOrderByEnviadoEnDescIdDesc(v.id()).isPresent());
     }
 
     @Test
@@ -175,7 +153,7 @@ class LiquidacionAvisoIntegracionTest extends PruebaDeIntegracion {
         em.flush();
         assertEquals(2L, ((Number) em.createNativeQuery("select count(*) from liquidacion_aviso where venta_id = :v")
                 .setParameter("v", v.id()).getSingleResult()).longValue());
-        verify(sender, times(4)).send(any(MimeMessage.class));
+        verify(sender, times(2)).send(any(MimeMessage.class));
     }
 
     @Test
@@ -184,24 +162,10 @@ class LiquidacionAvisoIntegracionTest extends PruebaDeIntegracion {
         var servicio = servicio("avisos.we@gmail.com");
 
         LiquidacionAvisoDto estado = servicio.consultar(v.id());
-        assertTrue(estado.disponible());
         assertFalse(estado.puedeEnviar());
         assertEquals("La venta aún no está liquidada: todavía tiene saldo pendiente", estado.motivoNoDisponible());
         var e = assertThrows(ValidationException.class, () -> servicio.enviar(v.id()));
         assertEquals("La venta aún no está liquidada: todavía tiene saldo pendiente", e.getMessage());
-        verify(sender, never()).send(any(MimeMessage.class));
-    }
-
-    @Test
-    void unaVentaDeNanuuNoEstaDisponibleYResponde400() {
-        VentaDto v = venta(nanuu(), "cliente@ejemplo.com", true);
-        var servicio = servicio("avisos.we@gmail.com");
-
-        LiquidacionAvisoDto estado = servicio.consultar(v.id());
-        assertFalse(estado.disponible());
-        assertFalse(estado.puedeEnviar());
-        var e = assertThrows(ValidationException.class, () -> servicio.enviar(v.id()));
-        assertEquals("Este desarrollo aún no tiene correos de liquidación", e.getMessage());
         verify(sender, never()).send(any(MimeMessage.class));
     }
 
@@ -215,7 +179,7 @@ class LiquidacionAvisoIntegracionTest extends PruebaDeIntegracion {
     }
 
     @Test
-    void siFallaElDeFinanzasResponde502YNoSaleNadaNiQuedaRegistro() {
+    void siFallaElCorreoResponde502YNoQuedaRegistro() {
         VentaDto v = venta(samai(), "cliente@ejemplo.com", true);
         org.mockito.Mockito.doThrow(new org.springframework.mail.MailSendException("SMTP caído"))
                 .when(sender).send(any(MimeMessage.class));
@@ -224,21 +188,6 @@ class LiquidacionAvisoIntegracionTest extends PruebaDeIntegracion {
         assertEquals(502, e.getStatusCode().value());
         verify(sender, times(1)).send(any(MimeMessage.class));
         assertTrue(repositorio.findFirstByVentaIdOrderByEnviadoEnDescIdDesc(v.id()).isEmpty());
-    }
-
-    @Test
-    void siSaleElDeFinanzasYFallaElDelClienteResponde502PeroRegistraLoQueSalio() {
-        VentaDto v = venta(samai(), "cliente@ejemplo.com", true);
-        org.mockito.Mockito.doNothing().doThrow(new org.springframework.mail.MailSendException("SMTP caído"))
-                .when(sender).send(any(MimeMessage.class));
-
-        var e = assertThrows(ResponseStatusException.class, () -> servicio("avisos.we@gmail.com").enviar(v.id()));
-        assertEquals(502, e.getStatusCode().value());
-        assertTrue(e.getReason().startsWith("Se avisó a finanzas"));
-        var guardado = repositorio.findFirstByVentaIdOrderByEnviadoEnDescIdDesc(v.id()).orElseThrow();
-        assertTrue(guardado.isFinanzasEnviado());
-        assertFalse(guardado.isClienteEnviado());
-        assertEquals("cliente@ejemplo.com", guardado.getCorreoCliente());
     }
 
     @Test
@@ -267,13 +216,9 @@ class LiquidacionAvisoIntegracionTest extends PruebaDeIntegracion {
                 .setParameter("v", v.id()).getSingleResult()).longValue());
     }
 
-    private static void recoger(Object parte, StringBuilder sb, int[] imagenes) throws Exception {
+    private static void recoger(Object parte, StringBuilder sb) throws Exception {
         if (parte instanceof jakarta.mail.Multipart mp) {
-            for (int i = 0; i < mp.getCount(); i++) {
-                var bp = mp.getBodyPart(i);
-                if (bp.getContentType().toLowerCase().startsWith("image/")) imagenes[0]++;
-                else recoger(bp.getContent(), sb, imagenes);
-            }
+            for (int i = 0; i < mp.getCount(); i++) recoger(mp.getBodyPart(i).getContent(), sb);
         } else {
             sb.append(parte);
         }

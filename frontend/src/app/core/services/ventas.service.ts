@@ -19,8 +19,7 @@ import {
   VentaCreateRequest,
   VentaUpdateRequest,
   VentaReestructurarRequest,
-  VentaCambiarLotesRequest,
-} from '../models/venta.model';
+  VentaCambiarLotesRequest, ConfigCorreos, CorreosVenta, TipoCorreo } from '../models/venta.model';
 
 export interface BuscarVentasParams {
   busqueda?: string;
@@ -92,9 +91,27 @@ export class VentasService {
     return firstValueFrom(this.http.get<LiquidacionAviso>(`${this.baseUrl}/${id}/liquidacion`));
   }
 
-  /** Manda ahora los correos de liquidación (cliente y finanzas) y devuelve el estado ya actualizado. */
+  /** Manda ahora el aviso de liquidación a finanzas y devuelve el estado ya actualizado. */
   enviarLiquidacion(id: number): Promise<LiquidacionAviso> {
     return firstValueFrom(this.http.post<LiquidacionAviso>(`${this.baseUrl}/${id}/liquidacion`, {}));
+  }
+
+  configCorreos(): Promise<ConfigCorreos> {
+    return firstValueFrom(this.http.get<ConfigCorreos>(`${this.baseUrl}/correos-automaticos`));
+  }
+
+  /** Enciende o apaga un correo automático y devuelve los tres interruptores. */
+  cambiarConfigCorreo(tipo: TipoCorreo, activo: boolean): Promise<ConfigCorreos> {
+    return firstValueFrom(this.http.put<ConfigCorreos>(`${this.baseUrl}/correos-automaticos/${tipo}`, { activo }));
+  }
+
+  /** Registro de correos de la venta: lo enviado, lo que está en cola y lo que no salió. */
+  correos(id: number): Promise<CorreosVenta> {
+    return firstValueFrom(this.http.get<CorreosVenta>(`${this.baseUrl}/${id}/correos`));
+  }
+
+  excluirRecordatorio(id: number, excluido: boolean): Promise<CorreosVenta> {
+    return firstValueFrom(this.http.put<CorreosVenta>(`${this.baseUrl}/${id}/correos/recordatorio-automatico`, { excluido }));
   }
 
   /** Estado del botón "Enviar correo de bienvenida": si aplica, si se puede y la última enviada. */

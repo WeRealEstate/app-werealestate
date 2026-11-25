@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface LiquidacionAvisoRepository extends JpaRepository<LiquidacionAviso, Long> {
 
     Optional<LiquidacionAviso> findFirstByVentaIdOrderByEnviadoEnDescIdDesc(Long ventaId);
+
+    java.util.List<LiquidacionAviso> findByVentaId(Long ventaId);
 }

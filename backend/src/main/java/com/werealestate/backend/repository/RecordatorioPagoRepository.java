@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface RecordatorioPagoRepository extends JpaRepository<RecordatorioPago, Long> {
 
     Optional<RecordatorioPago> findFirstByVentaIdOrderByEnviadoEnDescIdDesc(Long ventaId);
+
+    java.util.List<RecordatorioPago> findByVentaId(Long ventaId);
 }

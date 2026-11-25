@@ -22,7 +22,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -49,7 +48,6 @@ public class LiquidacionAvisoService {
 
     private static final Logger log = LoggerFactory.getLogger(LiquidacionAvisoService.class);
 
-    static final String SIN_PLANTILLA = "Este desarrollo aún no tiene correos de liquidación";
     static final String NO_LIQUIDADA = "La venta aún no está liquidada: todavía tiene saldo pendiente";
     private static final BigDecimal TOLERANCIA = new BigDecimal("0.01");
     private static final String NOMBRE_REMITENTE = "We Real Estate";
@@ -83,22 +81,12 @@ public class LiquidacionAvisoService {
         this.urlBase = base.endsWith("/") ? base.substring(0, base.length() - 1) : base;
     }
 
-    /** Lo que se diría en los dos correos de una venta, con el motivo si no se pueden mandar. */
-    record Preparado(
-            Venta venta,
-            String correoCliente,
-            LiquidacionAvisoCorreo.ContenidoCliente cliente,
-            LiquidacionAvisoCorreo.ContenidoFinanzas finanzas,
-            boolean disponible,
-            String motivoNoDisponible) {
+    /** Lo que se le diría a finanzas de una venta, con el motivo si no se puede mandar. */
+    record Preparado(Venta venta, LiquidacionAvisoCorreo.ContenidoFinanzas finanzas, String motivoNoDisponible) {
 
         boolean puedeEnviar() {
             return motivoNoDisponible == null;
         }
-    }
-
-    /** Qué salió: finanzas siempre (si no, es 502), el cliente solo si tenía correo y no falló. */
-    record Resultado(boolean finanzasEnviado, boolean clienteEnviado, ResponseStatusException falloCliente) {
     }
 
     /** Estado del botón en el detalle de la venta. */
@@ -107,47 +95,29 @@ public class LiquidacionAvisoService {
         return aDto(preparar(consultas.obtenerEntidad(ventaId)));
     }
 
-    /**
-     * Envía los correos ahora y registra el envío. 400 si el desarrollo no tiene plantilla o la venta aún no está
-     * liquidada; 503 si la app no tiene correo configurado; 502 si el servidor de correo falla (si ya había salido el de
-     * finanzas y falló el del cliente, el envío queda registrado). {@code noRollbackFor}: ese registro parcial debe
-     * guardarse aunque se responda con error.
-     */
-    @Transactional(noRollbackFor = ResponseStatusException.class)
+    /** Avisa ahora a finanzas y lo registra. 400 si la venta aún no está liquidada; 503 si la app no tiene correo
+     * configurado; 502 si el servidor de correo falla (entonces no se registra nada). */
+    @Transactional
     public LiquidacionAvisoDto enviar(Long ventaId) {
         Usuario actual = autorizacion.exigirAdminOLider();
         Preparado p = preparar(consultas.obtenerEntidad(ventaId));
         if (!p.puedeEnviar()) throw new ValidationException(p.motivoNoDisponible());
-        Resultado r = enviarCorreos(p);
-        repositorio.save(new LiquidacionAviso(p.venta(), actual, p.correoCliente(), r.clienteEnviado(), r.finanzasEnviado()));
-        log.info("Correos de liquidación de la venta {}: finanzas {}, cliente {} (por {})",
-                p.venta().getEtiqueta(), r.finanzasEnviado(), p.correoCliente() == null ? "sin correo" : r.clienteEnviado(),
-                actual.getEmail());
-        if (r.falloCliente() != null) {
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
-                    "Se avisó a finanzas, pero no se pudo enviar el correo al cliente. Al reenviar, finanzas recibirá "
-                            + "el aviso otra vez");
-        }
+        enviarCorreo(p);
+        repositorio.save(new LiquidacionAviso(p.venta(), actual, null, false, true));
+        log.info("Aviso de liquidación de la venta {} enviado a finanzas por {}", p.venta().getEtiqueta(), actual.getEmail());
         return aDto(preparar(p.venta()));
     }
 
-    /** Arma lo que se diría (sin revisar rol: lo comparte el botón manual y, más adelante, el registro del recibo que liquida). */
+    /** Arma lo que se diría (sin revisar rol: lo comparten el botón manual y el envío automático). */
     Preparado preparar(Venta venta) {
         Cliente titular = venta.getClienteRef();
-        String correo = titular == null || titular.getCorreo() == null || titular.getCorreo().isBlank()
-                ? null
-                : titular.getCorreo().trim();
         List<VentaLote> ventaLotes = ventaLoteRepository.findByVentaId(venta.getId());
         Set<String> desarrollos = new LinkedHashSet<>();
         for (VentaLote vl : ventaLotes) desarrollos.add(vl.getLote().getDesarrollo().getNombre().trim());
-        boolean disponible = desarrollos.size() == 1
-                && BienvenidaClienteCorreo.SAMAI.equalsIgnoreCase(desarrollos.iterator().next());
         BigDecimal precio = consultas.precioVenta(venta.getId());
         List<PagoVenta> pagos = consultas.pagosVigentes(venta.getId());
         BigDecimal pagado = pagos.stream().map(PagoVenta::getMonto).reduce(BigDecimal.ZERO, BigDecimal::add);
-        String motivo = null;
-        if (!disponible) motivo = SIN_PLANTILLA;
-        else if (precio.subtract(pagado).compareTo(TOLERANCIA) > 0) motivo = NO_LIQUIDADA;
+        String motivo = precio.subtract(pagado).compareTo(TOLERANCIA) > 0 ? NO_LIQUIDADA : null;
 
         String etiqueta = venta.getEtiqueta();
         List<String> lotes = ventaLotes.stream()
@@ -171,19 +141,15 @@ public class LiquidacionAvisoService {
                 pagado,
                 ultimoPago,
                 urlBase + "/panel/ventas/" + etiqueta);
-        var cliente = new LiquidacionAvisoCorreo.ContenidoCliente(nombre, etiqueta, lotes);
-        return new Preparado(venta, correo, cliente, finanzas, disponible, motivo);
+        return new Preparado(venta, finanzas, motivo);
     }
 
     private static LiquidacionAvisoCorreo.Persona persona(Cliente c) {
         return new LiquidacionAvisoCorreo.Persona(c.nombreCompleto(), c.getTelefono(), c.getCorreo());
     }
 
-    /**
-     * Manda los correos: primero el de finanzas (si falla, 502 y no sale ninguno) y luego, si el titular tiene correo, el
-     * del cliente (si falla, queda en el resultado para que el llamador decida). 503 si no hay correo configurado.
-     */
-    Resultado enviarCorreos(Preparado p) {
+    /** Un solo intento, síncrono: 503 si no hay correo configurado, 502 si falla. */
+    void enviarCorreo(Preparado p) {
         JavaMailSender sender = mailSender.getIfAvailable();
         if (sender == null || remitente.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "El correo de la app no está configurado");
@@ -202,32 +168,13 @@ public class LiquidacionAvisoService {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
                     "No se pudo enviar el correo. Inténtalo de nuevo en unos minutos");
         }
-        if (p.correoCliente() == null) return new Resultado(true, false, null);
-        try {
-            MimeMessage mensaje = sender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(mensaje, true, "UTF-8");
-            helper.setFrom(remitente, NOMBRE_REMITENTE);
-            helper.setTo(p.correoCliente());
-            helper.setSubject(LiquidacionAvisoCorreo.ASUNTO_CLIENTE);
-            helper.setText(LiquidacionAvisoCorreo.textoCliente(p.cliente()), LiquidacionAvisoCorreo.htmlCliente(p.cliente()));
-            // Las imágenes van dentro del correo (cid:), las mismas de la bienvenida.
-            for (BienvenidaClienteCorreo.Imagen i : BienvenidaClienteCorreo.IMAGENES) {
-                helper.addInline(i.cid(), new ClassPathResource(i.recurso()), i.tipo());
-            }
-            sender.send(mensaje);
-            return new Resultado(true, true, null);
-        } catch (Exception e) {
-            log.warn("No se pudo enviar la felicitación de liquidación de la venta {}: {}", etiqueta, e.toString());
-            return new Resultado(true, false, new ResponseStatusException(HttpStatus.BAD_GATEWAY, "No se pudo enviar el correo al cliente"));
-        }
     }
 
     private LiquidacionAvisoDto aDto(Preparado p) {
         var ultimo = repositorio.findFirstByVentaIdOrderByEnviadoEnDescIdDesc(p.venta().getId())
                 .map(r -> new LiquidacionAvisoDto.Ultimo(
-                        r.getEnviadoEn(), r.getUsuario() != null ? r.getUsuario().getNombre() : null,
-                        r.getCorreoCliente(), r.isClienteEnviado(), r.isFinanzasEnviado()))
+                        r.getEnviadoEn(), r.getUsuario() != null ? r.getUsuario().getNombre() : null))
                 .orElse(null);
-        return new LiquidacionAvisoDto(p.disponible(), p.puedeEnviar(), p.motivoNoDisponible(), p.correoCliente(), ultimo);
+        return new LiquidacionAvisoDto(p.puedeEnviar(), p.motivoNoDisponible(), ultimo);
     }
 }

@@ -346,21 +346,43 @@ export interface BienvenidaCliente {
   ultimo: { enviadoEn: string; usuario: string | null; correo: string } | null;
 }
 
-/** Estado del botón "Enviar correos de liquidación" del detalle de la venta (GET /api/ventas/{id}/liquidacion). */
+/** Estado del botón "Avisar a finanzas la liquidación" del detalle de la venta (GET /api/ventas/{id}/liquidacion). */
 export interface LiquidacionAviso {
-  /** false si la venta no es solo de SAMAI Campestre: el botón no se muestra. */
-  disponible: boolean;
   puedeEnviar: boolean;
   /** Por qué no se puede enviar (null si se puede): aún tiene saldo pendiente. */
   motivoNoDisponible: string | null;
-  /** Correo del cliente titular (null si no tiene: entonces solo se avisa a finanzas). */
-  correoCliente: string | null;
-  /** El último envío; null si nunca se ha enviado. correoCliente null = el titular no tenía correo. */
-  ultimo: {
-    enviadoEn: string;
+  /** El último envío; null si nunca se ha enviado. */
+  ultimo: { enviadoEn: string; usuario: string | null } | null;
+}
+
+export type TipoCorreo = 'BIENVENIDA' | 'LIQUIDACION' | 'RECORDATORIO';
+
+export const TIPO_CORREO_LABELS: Record<TipoCorreo, string> = {
+  BIENVENIDA: 'Bienvenida',
+  LIQUIDACION: 'Liquidación',
+  RECORDATORIO: 'Recordatorio de pago',
+};
+
+/** Interruptores de los correos automáticos (GET /api/ventas/correos-automaticos). */
+export interface ConfigCorreos {
+  bienvenida: boolean;
+  liquidacion: boolean;
+  recordatorio: boolean;
+}
+
+/** Registro de correos de una venta (GET /api/ventas/{id}/correos). */
+export interface CorreosVenta {
+  /** true si a esta venta le salen solas la bienvenida y la liquidación. */
+  ventaNueva: boolean;
+  recordatorioExcluido: boolean;
+  pendientes: { tipo: TipoCorreo; enviarDesde: string }[];
+  envios: {
+    fecha: string;
+    tipo: TipoCorreo;
+    /** false = no salió; el motivo va en detalle. */
+    enviado: boolean;
+    automatico: boolean;
     usuario: string | null;
-    correoCliente: string | null;
-    clienteEnviado: boolean;
-    finanzasEnviado: boolean;
-  } | null;
+    detalle: string | null;
+  }[];
 }
