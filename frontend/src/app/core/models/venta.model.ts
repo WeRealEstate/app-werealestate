@@ -122,6 +122,9 @@ export interface Venta {
   fechaProvisional: boolean;
   /** Dinero con el que ya estaba apartado el lote y que aún no se aplica a la venta (null = nada pendiente). */
   depositoPendiente: number | null;
+  /** Promoción con la que se vendió y su bono (null = sin promoción). El bono ya va descontado en el precio. */
+  promocionNombre: string | null;
+  promocionBono: number | null;
 }
 
 export interface VentaLoteItemRequest {
@@ -159,6 +162,8 @@ export interface VentaCreateRequest {
   contratoDriveUrl?: string | null;
   /** Efectivo o transferencia (omitido o null = sin definir). */
   modalidadPago?: ModalidadPago | null;
+  /** Promoción con la que se vendió; el precio de cada lote ya viene con el bono descontado. */
+  promocionId?: number | null;
   /** Comisión del asesor en % del valor de la venta (omitido = 5; máximo 10). */
   comisionPorcentaje?: number | null;
   /** Copropietario de la venta (un segundo asesor, interno o externo) con su propia comisión en % (omitido = 5; máximo 10). */

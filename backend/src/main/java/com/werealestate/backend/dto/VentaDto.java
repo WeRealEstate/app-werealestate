@@ -49,7 +49,10 @@ public record VentaDto(
         // Venta que nació de un registro de venta: su fecha es la del envío y administración la confirma.
         boolean fechaProvisional,
         // Dinero apartado del lote que aún no se aplica a la venta (null = nada pendiente).
-        BigDecimal depositoPendiente) {
+        BigDecimal depositoPendiente,
+        // Promoción con la que se vendió y su bono (null = sin promoción).
+        String promocionNombre,
+        BigDecimal promocionBono) {
 
     public static VentaDto from(
             Venta venta,
@@ -92,6 +95,8 @@ public record VentaDto(
                 totalAbonado,
                 precioVenta.subtract(totalAbonado),
                 venta.isFechaProvisional(),
-                venta.getDepositoPendiente());
+                venta.getDepositoPendiente(),
+                venta.getPromocionNombre(),
+                venta.getPromocionBono());
     }
 }

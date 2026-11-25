@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.9.0', fecha: '2026-11-25', cambios: [
+    "Nueva venta: ahora se puede elegir la promoción con la que se vendió. Descuenta el bono repartido entre los lotes, deja la venta sin enganche y al plazo de la promoción (todo editable) y muestra la promoción en el detalle de la venta. Aparecen las promociones de bono vigentes en la fecha de venta, aunque ya hayan terminado.",
+  ] },
   { version: '12.8.5', fecha: '2026-11-23', cambios: [
     "Planos públicos: al abrir ya no aparece primero un plano anterior. El servidor arma la vista rápida solo con el plano vigente (ignora imágenes viejas que quedaban guardadas) y el navegador ya no la guarda por un año, así que toma la nueva en cuanto se genera.",
   ] },

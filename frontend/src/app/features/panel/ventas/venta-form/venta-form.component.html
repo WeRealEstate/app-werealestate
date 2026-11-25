@@ -107,6 +107,38 @@
       }
     </div>
 
+    @if (promocionesVenta().length > 0) {
+      <div data-testid="promocion-venta">
+        <label for="promocionVenta" class="block text-sm font-medium text-ink mb-1.5">Promoción</label>
+        <select
+          id="promocionVenta"
+          [ngModel]="promocionId()"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="onPromocionChange($event)"
+          class="block w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink
+                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+        >
+          <option [ngValue]="null">Sin promoción</option>
+          @for (p of promocionesVenta(); track p.id) {
+            <option [ngValue]="p.id">{{ etiquetaPromocion(p) }}</option>
+          }
+        </select>
+        @if (promocion()) {
+          @if (promocionError(); as motivo) {
+            <p class="mt-1.5 text-xs text-red-600">{{ motivo }}</p>
+          } @else {
+            <p class="mt-1.5 text-xs text-ink-muted">
+              Bono de ${{ money(bonoPromocion()) }}: precio de lista ${{ money(precioLista()) }}, con promoción
+              <span class="font-semibold text-ink">${{ money(precioTotal()) }}</span>. Sin enganche y a
+              {{ promocion()!.plazoFijo ?? 60 }} meses; puedes ajustarlo abajo.
+            </p>
+          }
+        } @else {
+          <p class="mt-1.5 text-xs text-ink-muted">Aparecen las promociones vigentes en la fecha de venta. Captura el precio de lista: el bono se descuenta solo.</p>
+        }
+      </div>
+    }
+
     <div class="grid grid-cols-2 gap-4">
       <div>
         <label for="cliente" class="block text-sm font-medium text-ink mb-1.5">Cliente *</label>

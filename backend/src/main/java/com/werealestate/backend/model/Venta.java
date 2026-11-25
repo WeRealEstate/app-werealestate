@@ -246,6 +246,27 @@ public class Venta {
         return contratoDriveUrl;
     }
 
+    /** Promoción con la que se vendió y su bono (null = sin promoción, ver V92). El bono ya viene descontado en el
+     * precio de cada lote: esto es solo el dato de qué promoción fue. */
+    @Column(name = "promocion_nombre", length = 150)
+    private String promocionNombre;
+
+    @Column(name = "promocion_bono", precision = 14, scale = 2)
+    private BigDecimal promocionBono;
+
+    public String getPromocionNombre() {
+        return promocionNombre;
+    }
+
+    public BigDecimal getPromocionBono() {
+        return promocionBono;
+    }
+
+    public void registrarPromocion(String nombre, BigDecimal bono) {
+        this.promocionNombre = nombre;
+        this.promocionBono = bono;
+    }
+
     /** Modalidad de pago: efectivo o transferencia, una sola (null = sin definir, ver V66). */
     @jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
     @jakarta.persistence.Column(name = "modalidad_pago", length = 20)

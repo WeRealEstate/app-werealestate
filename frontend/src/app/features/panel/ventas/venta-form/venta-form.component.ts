@@ -12,6 +12,8 @@ import { Desarrollo, UsuarioResumen } from '../../../../core/models/lead.model';
 import { ESTADO_LOTE_LABELS, Lote } from '../../../../core/models/lote.model';
 import { AsesorExterno } from '../../../../core/models/asesor-externo.model';
 import { MedioFirma, ModalidadPago, ocultaEfectivo } from '../../../../core/models/venta.model';
+import { Promocion } from '../../../../core/models/promocion.model';
+import { PromocionesService } from '../../../../core/services/promociones.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { AsesoresExternosService } from '../../../../core/services/asesores-externos.service';
 import { LeadsService } from '../../../../core/services/leads.service';
@@ -46,6 +48,7 @@ import {
   maximoAnualidades,
   unidadPlazo,
 } from '../../../../core/utils/formas-pago';
+import { SUPERFICIE_MACROLOTE_M2 } from '../../cotizador/cotizador-datos';
 import { NumeroVentaComponent } from '../../../../shared/numero-venta/numero-venta.component';
 import { dinero } from '../../../../core/utils/formato-pantalla';
 
@@ -105,6 +108,7 @@ export class VentaFormComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly clientesService = inject(ClientesService);
+  private readonly promocionesService = inject(PromocionesService);
   private readonly auth = inject(AuthService);
   /** Esta cuenta no ve ventas en efectivo: tampoco se le ofrece esa modalidad (ver VisibilidadVentas). */
   readonly sinEfectivo = computed(() => ocultaEfectivo(this.auth.currentUser()?.email));
@@ -131,7 +135,46 @@ export class VentaFormComponent {
   /** Lotes que ya se agregaron a esta venta (un cliente puede comprar varios en la misma
    * operación, con una sola mensualidad/plazo/saldo combinado). */
   readonly lotesAgregados = signal<LoteAgregado[]>([]);
-  readonly precioTotal = computed(() => this.lotesAgregados().reduce((sum, l) => sum + l.precio, 0));
+  /** Suma de los precios capturados, sin el bono de la promoción. */
+  readonly precioLista = computed(() => this.lotesAgregados().reduce((sum, l) => sum + l.precio, 0));
+  /** Promociones de bono que se pueden elegir según la fecha de venta. */
+  readonly promocionesVenta = signal<Promocion[]>([]);
+  readonly promocionId = signal<number | null>(null);
+  readonly promocion = computed(() => this.promocionesVenta().find((p) => p.id === this.promocionId()) ?? null);
+  /** Por qué la promoción elegida no aplica a los lotes agregados (null = aplica). */
+  readonly promocionError = computed<string | null>(() => {
+    const promo = this.promocion();
+    if (!promo) return null;
+    const lotes = this.lotesAgregados();
+    if (lotes.length === 0) return 'Agrega los lotes para calcular el bono.';
+    const proyecto = promo.proyecto === 'nanuu' ? 'Aldea Nanuu' : 'SAMAI Campestre';
+    if (lotes.some((l) => l.lote.desarrollo.nombre !== proyecto)) return `Esta promoción solo aplica a lotes de ${proyecto}.`;
+    const hectarea = promo.tipoPrecio === 'HECTAREA';
+    if (lotes.some((l) => l.lote.superficie > SUPERFICIE_MACROLOTE_M2 !== hectarea)) {
+      return `Esta promoción solo aplica a ${hectarea ? 'hectáreas' : 'lotes (no hectáreas)'}.`;
+    }
+    if (!(bonoDe(promo, lotes.length) > 0)) return `Esta promoción no aplica a ${lotes.length} lote(s).`;
+    return null;
+  });
+  readonly bonoPromocion = computed(() => {
+    const promo = this.promocion();
+    return promo && !this.promocionError() ? bonoDe(promo, this.lotesAgregados().length) : 0;
+  });
+  /** El precio de cada lote ya con su parte del bono (partes iguales; los centavos sobrantes, al último). Es lo que se
+   * guarda como precio de la venta. */
+  readonly lotesConDescuento = computed(() => {
+    const lotes = this.lotesAgregados();
+    const bono = this.bonoPromocion();
+    if (!bono) return lotes;
+    const centavos = Math.round(bono * 100);
+    const parte = Math.floor(centavos / lotes.length);
+    return lotes.map((l, i) => {
+      const descuento = (i === lotes.length - 1 ? centavos - parte * (lotes.length - 1) : parte) / 100;
+      return { ...l, precio: Math.max(0, Math.round((l.precio - descuento) * 100) / 100) };
+    });
+  });
+  /** Total de la venta: lo capturado menos el bono. */
+  readonly precioTotal = computed(() => this.lotesConDescuento().reduce((sum, l) => sum + l.precio, 0));
 
   /** Suma de lo que ya se había apartado con dinero en los lotes agregados (ver
    * Lote.montoApartado); 0 si ninguno tenía. */
@@ -330,6 +373,7 @@ export class VentaFormComponent {
     this.usuariosService.paraVenta().then((u) => this.asesoresInternos.set(u));
     this.asesoresExternosService.listarActivos().then((a) => this.asesoresExternos.set(a));
     this.actualizarFormaPago();
+    void this.cargarPromociones(this.fechaVentaIso());
     // Cualquier cambio en plazo regenera el texto de forma de pago Y recalcula la mensualidad
     // (mismo cálculo que ya usa el Cotizador: saldo a financiar ÷ meses); ambos siguen editables
     // a mano por si el trato real fue distinto.
@@ -342,6 +386,7 @@ export class VentaFormComponent {
     // que queden fuera y avisa por onAportacionesChange).
     this.form.controls.fechaVenta.valueChanges.subscribe((fecha) => {
       this.fechaVentaIso.set(fecha);
+      void this.cargarPromociones(fecha);
       if (!this.diaPagoEditado && fecha) this.form.controls.diaPago.setValue(Number(fecha.slice(8, 10)));
       this.actualizarMensualidad();
     });
@@ -350,6 +395,45 @@ export class VentaFormComponent {
       // Solo cuenta como edición a mano si ya no coincide con el día de la fecha de venta.
       this.diaPagoEditado = this.form.controls.diaPago.value !== Number(this.fechaVentaIso().slice(8, 10));
     });
+  }
+
+  /** Vuelve a pedir las promociones cuando cambia la fecha de venta; si la elegida ya no aplica, la quita. */
+  private async cargarPromociones(fecha: string): Promise<void> {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return;
+    try {
+      const lista = await this.promocionesService.paraVenta(fecha);
+      if (fecha !== this.fechaVentaIso()) return;
+      this.promocionesVenta.set(lista);
+      if (this.promocionId() !== null && !lista.some((p) => p.id === this.promocionId())) {
+        this.promocionId.set(null);
+        this.actualizarMensualidad();
+        this.toast.error('La promoción elegida no estaba vigente en esa fecha: se quitó.');
+      }
+    } catch {
+      // Sin promociones se registra la venta como siempre.
+      this.promocionesVenta.set([]);
+    }
+  }
+
+  /** Elegir una promoción deja la venta como la promoción: sin enganche y a su plazo (todo se puede cambiar después). */
+  onPromocionChange(id: number | null): void {
+    this.promocionId.set(id);
+    const promo = this.promocion();
+    if (promo) {
+      this.formaPagoSel.set({ base: 'msi', extra: null });
+      this.montoEnganche.set(null);
+      this.aportaciones.set([]);
+      this.montoAnualidad.set(null);
+      this.numeroAnualidades.set(null);
+      this.actualizarFormaPago();
+      this.form.controls.plazoMeses.setValue(promo.plazoFijo ?? 60);
+    }
+    this.actualizarMensualidad();
+  }
+
+  /** Bono de una promoción para esa cantidad de lotes, para mostrarlo en la lista. */
+  etiquetaPromocion(p: Promocion): string {
+    return p.fechaFin && p.fechaFin.slice(0, 10) < this.hoyIso ? `${p.nombre} (terminó ${fechaCorta(p.fechaFin)})` : p.nombre;
   }
 
   alternarPrimeraMensualidad(): void {
@@ -569,6 +653,7 @@ export class VentaFormComponent {
     const faltaFechaContrato = this.contratoFirmado() && (!this.contratoFecha() || !this.contratoMedio());
     const faltaFolioDeposito = !faltaElegirDeposito && this.registraDepositoComoAbono() && !this.folioDeposito().trim();
     const errorAportaciones = this.errorAportaciones();
+    const errorPromocion = this.promocionError();
     if (
       this.clienteElegido() === null ||
       hayCopropietariosRepetidos(this.copropietarios(), this.clienteElegido()?.id ?? null) ||
@@ -582,6 +667,7 @@ export class VentaFormComponent {
       faltaCoasesor ||
       comisionInvalida ||
       errorAportaciones !== null ||
+      errorPromocion !== null ||
       this.isLoading()
     ) {
       this.form.markAllAsTouched();
@@ -603,6 +689,8 @@ export class VentaFormComponent {
         this.errorMessage.set('Ingresa el folio del dinero recibido al apartar el lote.');
       } else if (errorAportaciones !== null) {
         this.errorMessage.set(errorAportaciones);
+      } else if (errorPromocion !== null) {
+        this.errorMessage.set(errorPromocion);
       }
       return;
     }
@@ -615,7 +703,8 @@ export class VentaFormComponent {
 
     try {
       const venta = await this.ventasService.crear({
-        lotes: this.lotesAgregados().map((l) => ({ loteId: l.lote.id, precio: l.precio })),
+        lotes: this.lotesConDescuento().map((l) => ({ loteId: l.lote.id, precio: l.precio })),
+        promocionId: this.promocionId(),
         clienteId: this.clienteElegido()!.id,
         numero: this.numeroVenta(),
         copropietariosIds: idsCopropietarios(this.copropietarios()),
@@ -680,6 +769,18 @@ export class VentaFormComponent {
   money(valor: number): string {
     return dinero(valor);
   }
+}
+
+function bonoDe(promo: Promocion, lotes: number): number {
+  if (lotes >= 3) return promo.bonoTresLotes ?? 0;
+  if (lotes === 2) return promo.bonoDosLotes ?? 0;
+  return promo.bonoUnLote ?? 0;
+}
+
+/** "28/11/2026". */
+function fechaCorta(iso: string): string {
+  const [anio, mes, dia] = iso.slice(0, 10).split('-');
+  return `${dia}/${mes}/${anio}`;
 }
 
 /** true si el porcentaje es negativo o pasa del máximo (vacío cuenta como 0). */

@@ -15,6 +15,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.format.annotation.DateTimeFormat;
+import java.time.LocalDate;
+import com.werealestate.backend.service.PromocionVentaService;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -22,14 +26,22 @@ import org.springframework.web.bind.annotation.RestController;
 public class PromocionController {
 
     private final PromocionService promocionService;
+    private final PromocionVentaService promocionVentaService;
 
-    public PromocionController(PromocionService promocionService) {
+    public PromocionController(PromocionService promocionService, PromocionVentaService promocionVentaService) {
         this.promocionService = promocionService;
+        this.promocionVentaService = promocionVentaService;
     }
 
     @GetMapping("/activas")
     public List<PromocionDto> listarActivas() {
         return promocionService.listarActivas();
+    }
+
+    /** Las promociones que se pueden elegir al registrar una venta de esa fecha. */
+    @GetMapping("/para-venta")
+    public List<PromocionDto> paraVenta(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
+        return promocionVentaService.paraVenta(fecha);
     }
 
     @GetMapping

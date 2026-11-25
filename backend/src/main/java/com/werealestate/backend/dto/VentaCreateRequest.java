@@ -60,5 +60,22 @@ public record VentaCreateRequest(
         Long coasesorExternoId,
         BigDecimal coasesorComisionPorcentaje,
         // Efectivo o transferencia (opcional; null = sin definir).
-        com.werealestate.backend.model.ModalidadPago modalidadPago) {
+        com.werealestate.backend.model.ModalidadPago modalidadPago,
+        // Promoción con la que se vendió (null = sin promoción); el precio de cada lote ya viene con el bono descontado.
+        Long promocionId) {
+
+    /** Sin promoción (registro de venta de We Forms y pruebas). */
+    public VentaCreateRequest(
+            List<VentaLoteItemRequest> lotes, Long clienteId, Long numero, List<Long> copropietariosIds,
+            Long usuarioAsesorId, Long asesorExternoId, String formaPago, LocalDate fechaVenta, BigDecimal mensualidad,
+            Integer plazoMeses, String engancheLabel, BigDecimal enganche, Integer diaPago,
+            Boolean primeraMensualidadMesVenta, String notas, List<VentaAportacionItemRequest> aportaciones,
+            Boolean contratoFirmado, LocalDate contratoFechaFirma, com.werealestate.backend.model.MedioFirma contratoMedio,
+            String contratoDriveUrl, BigDecimal comisionPorcentaje, Long coasesorUsuarioId, Long coasesorExternoId,
+            BigDecimal coasesorComisionPorcentaje, com.werealestate.backend.model.ModalidadPago modalidadPago) {
+        this(lotes, clienteId, numero, copropietariosIds, usuarioAsesorId, asesorExternoId, formaPago, fechaVenta,
+                mensualidad, plazoMeses, engancheLabel, enganche, diaPago, primeraMensualidadMesVenta, notas, aportaciones,
+                contratoFirmado, contratoFechaFirma, contratoMedio, contratoDriveUrl, comisionPorcentaje, coasesorUsuarioId,
+                coasesorExternoId, coasesorComisionPorcentaje, modalidadPago, null);
+    }
 }

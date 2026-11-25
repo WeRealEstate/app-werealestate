@@ -85,6 +85,7 @@ public class VentaService {
     private final ConsultasVenta consultas;
     private final AutorizacionVentas autorizacion;
     private final VentaDtoArmador dtoArmador;
+    private final PromocionVentaService promocionVenta;
 
     public VentaService(
             VentaRepository ventaRepository,
@@ -104,7 +105,9 @@ public class VentaService {
             CurrentUserProvider currentUserProvider,
             ConsultasVenta consultas,
             AutorizacionVentas autorizacion,
-            VentaDtoArmador dtoArmador) {
+            VentaDtoArmador dtoArmador,
+            PromocionVentaService promocionVenta) {
+        this.promocionVenta = promocionVenta;
         this.ventaRepository = ventaRepository;
         this.ventaLoteRepository = ventaLoteRepository;
         this.ventaAportacionRepository = ventaAportacionRepository;
@@ -188,6 +191,14 @@ public class VentaService {
         venta.setModalidadPago(request.modalidadPago());
         venta.ligarCliente(clienteRef);
         venta.setRegistradaPor(registradaPor);
+        if (request.promocionId() != null) {
+            List<Lote> lotesDeLaPromocion = request.lotes().stream()
+                    .map(i -> loteRepository.findById(i.loteId())
+                            .orElseThrow(() -> new ResourceNotFoundException("Lote no encontrado")))
+                    .toList();
+            var promocion = promocionVenta.aplicar(request.promocionId(), request.fechaVenta(), lotesDeLaPromocion);
+            venta.registrarPromocion(promocion.nombre(), promocion.bono());
+        }
         String driveUrl = ContratoVentaService.validarContrato(
                 contratoFirmado, request.contratoFechaFirma(), request.contratoMedio(), request.contratoDriveUrl());
         venta.registrarContrato(contratoFirmado, request.contratoFechaFirma(), request.contratoMedio(), driveUrl);

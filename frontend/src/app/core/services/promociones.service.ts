@@ -14,6 +14,11 @@ export class PromocionesService {
     return firstValueFrom(this.http.get<Promocion[]>(`${this.baseUrl}/activas`));
   }
 
+  /** Las que se pueden elegir al registrar una venta de esa fecha (yyyy-MM-dd). */
+  paraVenta(fecha: string): Promise<Promocion[]> {
+    return firstValueFrom(this.http.get<Promocion[]>(`${this.baseUrl}/para-venta`, { params: { fecha } }));
+  }
+
   /** Catálogo completo (activas e inactivas), solo para la pantalla de administración. */
   listar(): Promise<Promocion[]> {
     return firstValueFrom(this.http.get<Promocion[]>(this.baseUrl));

@@ -164,6 +164,15 @@
           <p class="text-xs text-ink-muted">Precio total</p>
           <p class="mt-1 text-sm font-medium text-ink">${{ money(v.precioVenta) }}</p>
         </div>
+        @if (v.promocionNombre) {
+          <div>
+            <p class="text-xs text-ink-muted">Promoción</p>
+            <p class="mt-1 text-sm font-medium text-ink" data-testid="promocion-venta">{{ v.promocionNombre }}</p>
+            @if (v.promocionBono) {
+              <p class="text-xs text-ink-muted">Bono de ${{ money(v.promocionBono) }} ya descontado</p>
+            }
+          </div>
+        }
         @if (v.engancheLabel && v.enganche) {
           <div>
             <p class="text-xs text-ink-muted">{{ v.engancheLabel }}</p>
