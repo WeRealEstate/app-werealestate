@@ -1,7 +1,7 @@
 import { Component, HostListener, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
-import { LucideMap, LucideTrophy } from '@lucide/angular';
+import { LucideClipboardList, LucideMap, LucideTrophy } from '@lucide/angular';
 import { filter } from 'rxjs';
 import { HeroPublicoComponent } from '../hero-publico/hero-publico.component';
 import { ScoreResumenComponent } from '../score-resumen/score-resumen.component';
@@ -15,7 +15,7 @@ import { ToastContainerComponent } from '../../../shared/toast-container/toast-c
 @Component({
   selector: 'app-cotizador-publico-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, LucideMap, LucideTrophy, HeroPublicoComponent, ScoreResumenComponent, ConfirmDialogComponent, ToastContainerComponent],
+  imports: [RouterOutlet, RouterLink, LucideClipboardList, LucideMap, LucideTrophy, HeroPublicoComponent, ScoreResumenComponent, ConfirmDialogComponent, ToastContainerComponent],
   templateUrl: './cotizador-publico-layout.component.html',
 })
 export class CotizadorPublicoLayoutComponent {

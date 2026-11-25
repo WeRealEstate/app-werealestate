@@ -4,27 +4,36 @@
 
   @if (formularios(); as lista) {
     <div class="w-full max-w-lg">
-      <h1 class="font-heading text-xl font-semibold text-ink">Registrar venta · {{ nombreProyecto }}</h1>
+      <h1 class="font-heading text-xl font-semibold text-ink">{{ titulo }}</h1>
       <p class="mt-1 text-sm text-ink-muted">Elige el formulario que vas a llenar.</p>
       <button type="button" (click)="salir()" data-testid="cambiar-asesor" class="mt-1 text-xs text-ink-muted underline underline-offset-2 hover:text-ink">Cambiar de asesor</button>
       @if (lista.length === 0) {
         <div class="mt-6 rounded-xl border border-dashed border-border p-8 text-center text-sm text-ink-muted">
-          No hay formularios activos para este desarrollo por ahora.
+          No hay formularios activos por ahora.
         </div>
       } @else {
-        <div class="mt-5 space-y-3">
-          @for (f of lista; track f.slug) {
-            <a [routerLink]="['/we-forms', f.slug]" [queryParams]="{ proyecto: proyecto }" data-testid="formulario-publico"
-              class="block rounded-xl border border-border bg-surface p-4 shadow-sm hover:border-we-primary active:scale-[0.99] transition-all duration-150">
-              <p class="font-heading text-base font-semibold text-ink">{{ f.nombre }}</p>
-              @if (f.descripcion) { <p class="mt-0.5 text-sm text-ink-muted">{{ f.descripcion }}</p> }
-            </a>
+        @for (g of grupos(); track g.proyecto) {
+          @if (!proyecto) {
+            <h2 class="mt-5 font-heading text-sm font-semibold uppercase tracking-wide text-ink">{{ g.nombre }}</h2>
           }
-        </div>
+          <div class="space-y-3" [class]="proyecto ? 'mt-5' : 'mt-2'">
+            @for (f of g.formularios; track f.slug) {
+              <a [routerLink]="['/we-forms', f.slug]" [queryParams]="{ proyecto: f.proyecto }" data-testid="formulario-publico"
+                class="block rounded-xl border border-border bg-surface p-4 shadow-sm hover:border-we-primary active:scale-[0.99] transition-all duration-150">
+                <p class="font-heading text-base font-semibold text-ink">{{ f.nombre }}</p>
+                @if (f.descripcion) { <p class="mt-0.5 text-sm text-ink-muted">{{ f.descripcion }}</p> }
+              </a>
+            }
+          </div>
+        }
       }
     </div>
   } @else if (entrandoSolo()) {
-    <app-desarrollo-loader [desarrollo]="proyecto" modo="bloque" texto="Cargando formularios" />
+    @if (proyecto) {
+      <app-desarrollo-loader [desarrollo]="proyecto" modo="bloque" texto="Cargando formularios" />
+    } @else {
+      <p class="mt-10 text-sm text-ink-muted">Cargando formularios…</p>
+    }
   } @else {
     <app-pin-publico [error]="error()" [cargando]="verificando()" texto="Escribe tu PIN de asesor para registrar una venta." (entrar)="entrar($event)" />
   }

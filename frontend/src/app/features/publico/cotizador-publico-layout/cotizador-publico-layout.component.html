@@ -39,7 +39,7 @@
         </span>
       </a>
 
-      <nav aria-label="Planos y score de ventas" class="-mr-2.5 flex items-center text-[13px] font-medium sm:text-sm">
+      <nav aria-label="Planos, registrar venta y score de ventas" class="-mr-2.5 flex items-center text-[13px] font-medium sm:text-sm">
         <a
           routerLink="/samai"
           class="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg px-2.5 transition-colors duration-300
@@ -49,7 +49,7 @@
           [class.text-ink-muted]="!sobreHero()"
           [class.hover:text-ink]="!sobreHero()"
         >
-          <svg lucideMap [size]="15" aria-hidden="true"></svg>
+          <svg lucideMap [size]="15" class="hidden sm:block" aria-hidden="true"></svg>
           <span class="sm:hidden">Samai</span><span class="hidden sm:inline">Plano Samai</span>
         </a>
         <a
@@ -61,8 +61,21 @@
           [class.text-ink-muted]="!sobreHero()"
           [class.hover:text-ink]="!sobreHero()"
         >
-          <svg lucideMap [size]="15" aria-hidden="true"></svg>
+          <svg lucideMap [size]="15" class="hidden sm:block" aria-hidden="true"></svg>
           <span class="sm:hidden">Nanuu</span><span class="hidden sm:inline">Plano Aldea Nanuu</span>
+        </a>
+        <a
+          routerLink="/we-forms"
+          data-testid="enlace-registrar-venta"
+          class="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg px-2.5 transition-colors duration-300
+                 focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary/50"
+          [class.text-white/85]="sobreHero()"
+          [class.hover:text-white]="sobreHero()"
+          [class.text-ink-muted]="!sobreHero()"
+          [class.hover:text-ink]="!sobreHero()"
+        >
+          <svg lucideClipboardList [size]="15" class="hidden sm:block" aria-hidden="true"></svg>
+          <span class="sm:hidden">Venta</span><span class="hidden sm:inline">Registrar venta</span>
         </a>
         <a
           routerLink="/cotizador-publico/score"
@@ -74,7 +87,7 @@
           [class.text-ink-muted]="!sobreHero()"
           [class.hover:text-ink]="!sobreHero()"
         >
-          <svg lucideTrophy [size]="15" aria-hidden="true"></svg>
+          <svg lucideTrophy [size]="15" class="hidden sm:block" aria-hidden="true"></svg>
           <span class="sm:hidden">Score</span><span class="hidden sm:inline">Score de ventas</span>
         </a>
       </nav>
