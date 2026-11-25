@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.13.0', fecha: '2026-11-25', cambios: [
+    "Cotizador público: nuevo acceso «Registrar venta» en la portada y en la barra superior, sin pasar por el plano. Pide el PIN y muestra los formularios de SAMAI y Aldea Nanuu a los que tenga acceso (con uno solo entra directo).",
+  ] },
   { version: '12.12.0', fecha: '2026-11-25', cambios: [
     "Asesores internos: nueva opción «Registrar venta» en su panel, con los formularios activos de SAMAI y Aldea Nanuu, sin pedir PIN (la venta queda a su nombre). El admin la puede quitar por usuario desde Usuarios.",
   ] },
