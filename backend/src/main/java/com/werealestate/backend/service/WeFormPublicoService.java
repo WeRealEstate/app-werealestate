@@ -14,6 +14,7 @@ import com.werealestate.backend.exception.ValidationException;
 import com.werealestate.backend.model.CampoCliente;
 import com.werealestate.backend.model.DestinoPregunta;
 import com.werealestate.backend.model.EstadoCivil;
+import com.werealestate.backend.model.Gentilicios;
 import com.werealestate.backend.model.EstadoWeForm;
 import com.werealestate.backend.model.Lote;
 import com.werealestate.backend.model.EstadosMexico;
@@ -168,7 +169,7 @@ public class WeFormPublicoService {
                 .map(p -> new WeFormDtos.PreguntaPublica(
                         p.getId(), p.getTipo(), p.getTitulo(), p.getDescripcion(),
                         p.isObligatoria() || (p.getDestino() != null && p.getDestino().siempreObligatoria()),
-                        p.opcionesLista(), p.getDestino()))
+                        p.opcionesLista(), p.getDestino(), p.getCampoCliente()))
                 .toList();
         Long usuarioId = asesor.usuario() != null ? asesor.usuario().getId() : null;
         List<WeFormDtos.LotePublico> lotes = loteService
@@ -232,10 +233,24 @@ public class WeFormPublicoService {
                 formaDePago = leerFormaPago(respuestas.get(p.getId()));
             }
         }
+        // Lugar de nacimiento (12.21.0): «Estado, México» o «Lugar, País» (o solo el país); con él, la nacionalidad sale
+        // sola del país de nacimiento y no se toma la que se mande.
+        WeFormPregunta preguntaLugar = preguntas.stream()
+                .filter(p -> p.getCampoCliente() == CampoCliente.LUGAR_NACIMIENTO).findFirst().orElse(null);
+        String paisNacimiento = null;
         for (WeFormPregunta p : preguntas) {
             if (p.getTipo() == TipoPreguntaForm.TITULO) continue;
             JsonNode valor = respuestas.get(p.getId());
             boolean obligatoria = esObligatoria(p, formaDePago);
+            if (p == preguntaLugar) {
+                LugarNacimiento lugar = lugarNacimiento(p, valor, obligatoria);
+                if (lugar != null) {
+                    paisNacimiento = lugar.pais();
+                    textoPorPregunta.put(p.getId(), lugar.texto());
+                }
+                continue;
+            }
+            if (preguntaLugar != null && p.getCampoCliente() == CampoCliente.NACIONALIDAD) continue;
             if (p.getTipo() == TipoPreguntaForm.ASESOR) {
                 textoPorPregunta.put(p.getId(), asesor.nombre());
                 continue;
@@ -256,6 +271,16 @@ public class WeFormPublicoService {
             }
             if (p.getDestino() != null) porDestino.put(p.getDestino(), valor);
             textoPorPregunta.put(p.getId(), validarYTexto(p, valor));
+        }
+
+        for (WeFormPregunta p : preguntas) {
+            if (preguntaLugar == null || p.getCampoCliente() != CampoCliente.NACIONALIDAD) continue;
+            String nacionalidad = Gentilicios.de(paisNacimiento);
+            if (nacionalidad != null) {
+                textoPorPregunta.put(p.getId(), nacionalidad);
+            } else if (esObligatoria(p, formaDePago)) {
+                throw new ValidationException("Falta: " + p.getTitulo() + " (elige el país de nacimiento)");
+            }
         }
 
         // 2) Lotes elegidos: del desarrollo del formulario, que el asesor pueda tomar y que sigan libres.
@@ -720,6 +745,34 @@ public class WeFormPublicoService {
             lista.add(new VentaAportacionItemRequest(anio, mes, monto));
         }
         return lista;
+    }
+
+    /** Lugar de nacimiento ya validado: el país de la lista y el texto que se guarda («Oaxaca, México»). */
+    record LugarNacimiento(String pais, String texto) {
+    }
+
+    /**
+     * Lee «Lugar, País» (el país va después de la última coma) o solo «País». Con México el lugar debe ser uno de los 32
+     * estados (lista); con otro país es texto libre, obligatorio solo si la pregunta lo es. null si no se contestó.
+     */
+    static LugarNacimiento lugarNacimiento(WeFormPregunta p, JsonNode valor, boolean obligatoria) {
+        String texto = valor == null || valor.isNull() ? "" : valor.asText().trim();
+        if (texto.isEmpty()) {
+            if (obligatoria) throw new ValidationException("Falta: " + p.getTitulo());
+            return null;
+        }
+        int coma = texto.lastIndexOf(',');
+        String pais = Paises.canonico(coma < 0 ? texto : texto.substring(coma + 1));
+        String lugar = coma < 0 ? "" : texto.substring(0, coma).trim();
+        if (pais == null) throw new ValidationException(p.getTitulo() + ": elige el país de la lista");
+        if (Paises.MEXICO.equals(pais)) {
+            String estado = EstadosMexico.canonico(lugar);
+            if (estado == null) throw new ValidationException(p.getTitulo() + ": elige el estado de la lista");
+            lugar = estado;
+        } else if (lugar.isEmpty() && obligatoria) {
+            throw new ValidationException(p.getTitulo() + ": escribe la ciudad o el lugar donde nació");
+        }
+        return new LugarNacimiento(pais, lugar.isEmpty() ? pais : lugar + ", " + pais);
     }
 
     /** Las respuestas de las preguntas propias vinculadas a un dato del cliente (CampoCliente), ya validadas. */

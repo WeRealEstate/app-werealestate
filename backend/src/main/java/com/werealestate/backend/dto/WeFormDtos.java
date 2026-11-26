@@ -120,7 +120,9 @@ public final class WeFormDtos {
 
     public record PreguntaPublica(
             Long id, TipoPreguntaForm tipo, String titulo, String descripcion, boolean obligatoria,
-            List<String> opciones, DestinoPregunta destino) {
+            List<String> opciones, DestinoPregunta destino,
+            // Dato del cliente que llena (lugar de nacimiento y nacionalidad se contestan distinto, ver el formulario).
+            com.werealestate.backend.model.CampoCliente campoCliente) {
     }
 
     public record Publico(

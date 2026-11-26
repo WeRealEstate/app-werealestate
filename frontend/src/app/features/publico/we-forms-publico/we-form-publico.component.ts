@@ -36,6 +36,7 @@ import { DesarrolloLoaderComponent, DesarrolloLoader } from '../../../shared/des
 import { ListaSelectorComponent } from '../../../shared/lista-selector/lista-selector.component';
 import { ESTADOS_MX, estadoCanonico } from '../../../core/data/estados-mx';
 import { PAISES, PAIS_PRINCIPAL } from '../../../core/data/paises';
+import { gentilicioDe } from '../../../core/data/gentilicios';
 import { PinPublicoComponent } from '../../../shared/pin-publico/pin-publico.component';
 
 const ETIQUETA_ENGANCHE: Record<string, string> = {
@@ -124,6 +125,56 @@ export class WeFormPublicoComponent {
       const oficial = estadoCanonico(actual);
       if (actual && oficial !== actual) untracked(() => this.setValor(q.id, oficial ?? ''));
     });
+  }
+
+  // ------------------------------------------------------------------ lugar de nacimiento y nacionalidad (12.21.0)
+
+  /** La pregunta vinculada al lugar de nacimiento: se contesta con el país (lista) y, con México, el estado (lista) o,
+   * con otro país, un texto libre. Se guarda «Oaxaca, México». */
+  readonly preguntaLugar = computed(() => this.form()?.preguntas.find((p) => p.campoCliente === 'LUGAR_NACIMIENTO') ?? null);
+  readonly lugarPais = signal('');
+  readonly lugarEstado = signal('');
+  readonly lugarTexto = signal('');
+  readonly lugarEnMexico = computed(() => this.lugarPais() === PAIS_PRINCIPAL);
+  /** Con lugar de nacimiento la nacionalidad sale sola de su país (bloqueada); sin él, la pregunta queda libre. */
+  readonly nacionalidadAuto = computed(() => gentilicioDe(this.lugarPais()));
+
+  esLugarNacimiento(p: PreguntaPublica): boolean {
+    return p.campoCliente === 'LUGAR_NACIMIENTO';
+  }
+
+  esNacionalidadAuto(p: PreguntaPublica): boolean {
+    return p.campoCliente === 'NACIONALIDAD' && this.preguntaLugar() !== null;
+  }
+
+  /** Cambiar de país borra el estado y el texto: el lugar ya no corresponde. */
+  elegirPaisNacimiento(pais: string): void {
+    if (pais === this.lugarPais()) return;
+    this.lugarPais.set(pais);
+    this.lugarEstado.set('');
+    this.lugarTexto.set('');
+    this.actualizarLugar();
+  }
+
+  elegirEstadoNacimiento(estado: string): void {
+    this.lugarEstado.set(estado);
+    this.actualizarLugar();
+  }
+
+  escribirLugarNacimiento(texto: string): void {
+    this.lugarTexto.set(texto);
+    this.actualizarLugar();
+  }
+
+  /** Arma la respuesta («Lugar, País» o solo el país) y llena la nacionalidad. */
+  private actualizarLugar(): void {
+    const q = this.preguntaLugar();
+    if (!q) return;
+    const pais = this.lugarPais();
+    const lugar = (this.lugarEnMexico() ? this.lugarEstado() : this.lugarTexto()).trim();
+    this.setValor(q.id, pais ? (lugar ? `${lugar}, ${pais}` : pais) : '');
+    const nac = this.form()?.preguntas.find((p) => p.campoCliente === 'NACIONALIDAD');
+    if (nac) this.setValor(nac.id, this.nacionalidadAuto());
   }
 
   /** La pregunta Estado se contesta con la lista de estados (solo si el país es México). */
@@ -561,6 +612,13 @@ export class WeFormPublicoComponent {
       const v = String(this.valor(estadoQ.id) ?? '');
       if (v && !estadoCanonico(v)) errores[estadoQ.id] = 'Elige un estado de la lista.';
     }
+    const lugarQ = this.preguntaLugar();
+    if (lugarQ && !errores[lugarQ.id] && this.lugarPais()) {
+      if (this.lugarEnMexico() && !this.lugarEstado()) errores[lugarQ.id] = 'Elige el estado donde nació.';
+      else if (!this.lugarEnMexico() && this.obligatoria(lugarQ) && !this.lugarTexto().trim()) {
+        errores[lugarQ.id] = 'Escribe la ciudad o el lugar donde nació.';
+      }
+    }
     const tipoPagoQ = this.pregunta('TIPO_PAGO');
     const errorAnualidades = this.errorAnualidades();
     if (tipoPagoQ && errorAnualidades && !errores[tipoPagoQ.id]) errores[tipoPagoQ.id] = errorAnualidades;
@@ -659,6 +717,9 @@ export class WeFormPublicoComponent {
     this.mesAnualidad.set(12);
     this.numeroAnualidades.set(null);
     this.quitarCodigo();
+    this.lugarPais.set('');
+    this.lugarEstado.set('');
+    this.lugarTexto.set('');
     this.limpiarFiltrosLotes();
     this.errorEnvio.set(null);
     this.resultado.set(null);

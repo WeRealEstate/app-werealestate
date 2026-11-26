@@ -70,6 +70,26 @@
                   @if (p.descripcion) { <p class="mt-0.5 text-xs text-ink-muted">{{ p.descripcion }}</p> }
 
                   <div class="mt-2.5">
+                    @if (esLugarNacimiento(p)) {
+                      <div class="space-y-2.5" data-testid="lugar-nacimiento">
+                        <app-lista-selector [lista]="paises" placeholder="País donde nació…" [ngModel]="lugarPais()" (ngModelChange)="elegirPaisNacimiento($event)"
+                          [ngModelOptions]="{ standalone: true }" [invalido]="!!errores()[p.id]" />
+                        @if (lugarPais()) {
+                          @if (lugarEnMexico()) {
+                            <app-lista-selector [lista]="estadosMx" placeholder="Estado donde nació…" [ngModel]="lugarEstado()" (ngModelChange)="elegirEstadoNacimiento($event)"
+                              [ngModelOptions]="{ standalone: true }" [invalido]="!!errores()[p.id]" />
+                          } @else {
+                            <input type="text" maxlength="90" autocomplete="off" placeholder="Ciudad o lugar donde nació" [value]="lugarTexto()"
+                              (input)="escribirLugarNacimiento($any($event.target).value)"
+                              class="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+                          }
+                        }
+                      </div>
+                    } @else if (esNacionalidadAuto(p)) {
+                      <input type="text" disabled [value]="nacionalidadAuto()" placeholder="Se llena al elegir el país de nacimiento" data-testid="nacionalidad-auto"
+                        class="w-full cursor-not-allowed rounded-lg border border-border bg-surface-2/60 px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted" />
+                      <p class="mt-1 text-xs text-ink-muted">Sale sola del país de nacimiento.</p>
+                    } @else {
                     @switch (p.tipo) {
                       @case ('CORTA') {
                         @if (usaListaEstados(p)) {
@@ -258,6 +278,7 @@
                           <p class="mt-2 text-xs text-ink-muted">Con la mensualidad fija solo eliges los meses: lo que falta del precio se reparte en partes iguales.</p>
                         }
                       }
+                    }
                     }
                   </div>
                   @if (errores()[p.id]) { <p class="mt-1.5 text-xs text-red-600" role="alert">{{ errores()[p.id] }}</p> }

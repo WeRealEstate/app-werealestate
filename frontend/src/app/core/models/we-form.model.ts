@@ -244,6 +244,8 @@ export interface PreguntaPublica {
   obligatoria: boolean;
   opciones: string[];
   destino: DestinoPregunta | null;
+  /** Dato del cliente que llena (lugar de nacimiento y nacionalidad se contestan distinto). */
+  campoCliente?: CampoCliente | null;
 }
 
 export interface WeFormPublico {

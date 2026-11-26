@@ -128,4 +128,21 @@ class WeFormCampoClienteIntegracionTest extends PruebaDeIntegracion {
         assertThrows(ValidationException.class, () -> pregunta(TipoPreguntaForm.CORTA, "Civil", CampoCliente.ESTADO_CIVIL));
         assertThrows(ValidationException.class, () -> pregunta(TipoPreguntaForm.FECHA, "Nac.", CampoCliente.NACIONALIDAD));
     }
+
+    @Test
+    void elLugarDeNacimientoLlenaLaNacionalidad() {
+        var nacionalidad = pregunta(TipoPreguntaForm.CORTA, "Nacionalidad", CampoCliente.NACIONALIDAD);
+        var lugar = pregunta(TipoPreguntaForm.CORTA, "Lugar de nacimiento", CampoCliente.LUGAR_NACIMIENTO);
+        // La nacionalidad que se mande no cuenta: sale del país de nacimiento.
+        Cliente c = registrar(curp(), Map.of(lugar.id(), "oaxaca, mexico", nacionalidad.id(), "Otra"));
+        assertEquals("Oaxaca, México", c.getLugarNacimiento());
+        assertEquals("Mexicana", c.getNacionalidad());
+
+        Cliente otro = registrar(curp(), Map.of(lugar.id(), "Houston, Texas, Estados Unidos"));
+        assertEquals("Houston, Texas, Estados Unidos", otro.getLugarNacimiento());
+        assertEquals("Estadounidense", otro.getNacionalidad());
+
+        assertThrows(ValidationException.class, () -> registrar(curp(), Map.of(lugar.id(), "Houston, México")));
+        assertThrows(ValidationException.class, () -> registrar(curp(), Map.of(lugar.id(), "Oaxaca, Narnia")));
+    }
 }

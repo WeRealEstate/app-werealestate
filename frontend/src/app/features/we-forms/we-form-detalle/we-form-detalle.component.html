@@ -113,6 +113,8 @@
                     <p class="mt-1 text-xs text-ink-muted">
                       Al registrar la venta, la respuesta se guarda en la ficha del cliente (si el cliente ya existía, solo si no tenía ese dato).
                       @if (eCampoCliente() === 'ESTADO_CIVIL') { Las opciones quedan fijas: Soltero(a), Casado(a), Unión libre, Divorciado(a) y Viudo(a). }
+                      @if (eCampoCliente() === 'LUGAR_NACIMIENTO') { En el formulario se elige el país; con México, el estado de una lista; con otro país, se escribe la ciudad. También llena la nacionalidad. }
+                      @if (eCampoCliente() === 'NACIONALIDAD') { Si el formulario tiene una pregunta vinculada a Lugar de nacimiento, la nacionalidad se llena sola con el país de nacimiento y no se puede cambiar. }
                     </p>
                   </div>
                 }
