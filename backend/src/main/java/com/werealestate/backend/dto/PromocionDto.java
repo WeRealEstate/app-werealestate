@@ -24,9 +24,21 @@ public record PromocionDto(
         // null en las de antes de la fecha de inicio (valen desde siempre).
         LocalDateTime fechaInicio,
         // true = espera su fecha de inicio para activarse sola.
-        boolean programada
+        boolean programada,
+        // Código de 6 dígitos para el registro de venta: solo va en lo que ve el admin (ver conCodigo); null en todo lo demás.
+        String codigo
 ) {
+    /** Sin el código: es lo que reciben el cotizador (también el público), Nueva venta y cualquiera que no sea admin. */
     public static PromocionDto fromEntity(Promocion p) {
+        return armar(p, null);
+    }
+
+    /** Con el código: solo para el admin (pantalla Promociones). */
+    public static PromocionDto conCodigo(Promocion p) {
+        return armar(p, p.getCodigo());
+    }
+
+    private static PromocionDto armar(Promocion p, String codigo) {
         return new PromocionDto(
                 p.getId(),
                 p.getNombre(),
@@ -43,7 +55,8 @@ public record PromocionDto(
                 p.getFechaFin(),
                 p.getFechaCreacion(),
                 p.getFechaInicio(),
-                !p.isInicioAplicado()
+                !p.isInicioAplicado(),
+                codigo
         );
     }
 }

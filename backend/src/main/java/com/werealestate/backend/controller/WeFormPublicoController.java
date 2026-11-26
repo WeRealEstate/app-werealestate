@@ -1,9 +1,11 @@
 package com.werealestate.backend.controller;
 
 import tools.jackson.databind.ObjectMapper;
+import com.werealestate.backend.dto.PromocionCodigoDto;
 import com.werealestate.backend.dto.WeFormDtos;
 import com.werealestate.backend.exception.ValidationException;
 import com.werealestate.backend.service.AsesorPublicoService;
+import com.werealestate.backend.service.IpCliente;
 import com.werealestate.backend.service.LimitadorPinPublico;
 import com.werealestate.backend.service.WeFormPublicoService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,6 +15,7 @@ import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -62,7 +65,18 @@ public class WeFormPublicoController {
             HttpServletRequest http) {
         AsesorPublicoService.Identificado asesor = limitador.exigir(http, pin, service.proyectoDe(slug));
         Envio envio = leerEnvio(objectMapper, datos, multipart);
-        return service.enviar(slug, asesor, envio.datos(), envio.archivos());
+        return service.enviar(slug, asesor, envio.datos(), envio.archivos(), "IP:" + IpCliente.de(http));
+    }
+
+    /** La promoción de un código escrito en el formulario; los códigos equivocados se limitan por IP (10 por hora). */
+    @PostMapping("/{slug}/codigo-promocion")
+    public PromocionCodigoDto codigoPromocion(
+            @PathVariable String slug,
+            @RequestHeader("X-Asesor-Pin") String pin,
+            @RequestBody WeFormDtos.CodigoPromocionRequest body,
+            HttpServletRequest http) {
+        limitador.exigir(http, pin, service.proyectoDe(slug));
+        return service.validarCodigoPromocion(slug, body.codigo(), "IP:" + IpCliente.de(http));
     }
 
     record Envio(WeFormDtos.EnvioRequest datos, Map<Long, MultipartFile> archivos) {

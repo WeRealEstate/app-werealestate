@@ -54,6 +54,8 @@ export class PromocionesComponent {
   readonly bonoTresLotesDisplay = signal('30,000');
   readonly plazoFijo = signal(60);
   readonly descripcion = signal('');
+  /** Código de 6 dígitos que escribe el admin; vacío = al crear, uno al azar; al editar, el mismo. */
+  readonly codigo = signal('');
 
   /** Fecha y hora desde las que aplica; vacía = al crearla (al editar, vacía = la que ya tiene). Si es futura, la
    * promoción queda programada y se activa sola ese día. */
@@ -235,6 +237,7 @@ export class PromocionesComponent {
       this.mensualidadDisplay.set(mens > 0 ? formatearNumero(String(mens), 2) : '');
     }
     this.descripcion.set(promo.descripcion ?? '');
+    this.codigo.set(promo.codigo ?? '');
 
     if (promo.fechaInicio) {
       const [fecha, horaMinuto] = promo.fechaInicio.split('T');
@@ -277,6 +280,7 @@ export class PromocionesComponent {
     this.bonoTresLotesDisplay.set('30,000');
     this.plazoFijo.set(60);
     this.descripcion.set('');
+    this.codigo.set('');
     this.fechaInicio.set('');
     this.horaInicio.set(HORA_POR_DEFECTO);
     this.minutoInicio.set(MINUTO_POR_DEFECTO);
@@ -288,6 +292,11 @@ export class PromocionesComponent {
   async guardar(): Promise<void> {
     const nombre = this.nombre().trim();
     if (!this.formularioValido || this.isSaving()) return;
+    const codigo = this.codigo().trim();
+    if (codigo && !/^\d{6}$/.test(codigo)) {
+      this.toast.error('El código de promoción debe tener exactamente 6 dígitos.');
+      return;
+    }
 
     const mod = this.modalidad();
     const fechaFin = this.fechaFin() ? combinarFechaHora(this.fechaFin(), this.horaFin(), this.minutoFin()) : null;
@@ -311,6 +320,7 @@ export class PromocionesComponent {
           fechaFin,
           limpiarFechaFin: !fechaFin,
           fechaInicio,
+          codigo: codigo || null,
         });
         this.promociones.update((lista) => lista.map((p) => (p.id === id ? actualizada : p)));
         this.toast.success('Promoción actualizada.');
@@ -328,6 +338,7 @@ export class PromocionesComponent {
           descripcion: this.descripcion().trim() || null,
           fechaFin,
           fechaInicio,
+          codigo: codigo || null,
         });
         // Crear una promoción activa desactiva otra del mismo proyecto, tarifa y modalidad (una programada no, hasta
         // que llegue su fecha de inicio).
@@ -386,6 +397,44 @@ export class PromocionesComponent {
       );
     } catch {
       this.toast.error('No se pudo cambiar el estado de la promoción.');
+    }
+  }
+
+  /** Solo dígitos, máximo 6. */
+  escribirCodigo(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const limpio = input.value.replace(/\D/g, '').slice(0, 6);
+    input.value = limpio;
+    this.codigo.set(limpio);
+  }
+
+  async copiarCodigo(promo: Promocion): Promise<void> {
+    if (!promo.codigo) return;
+    try {
+      await navigator.clipboard.writeText(promo.codigo);
+      this.toast.success(`Código ${promo.codigo} copiado.`);
+    } catch {
+      this.toast.error('No se pudo copiar el código.');
+    }
+  }
+
+  /** «Generar otro»: el código anterior deja de servir (por si se filtró). */
+  async generarCodigo(promo: Promocion): Promise<void> {
+    if (promo.codigo) {
+      const confirmado = await this.confirmService.confirm({
+        titulo: 'Generar otro código',
+        mensaje: `El código ${promo.codigo} de "${promo.nombre}" dejará de servir y los asesores tendrán que usar el nuevo.`,
+        textoConfirmar: 'Generar otro',
+      });
+      if (!confirmado) return;
+    }
+    try {
+      const actualizada = await this.promocionesService.generarCodigo(promo.id);
+      this.promociones.update((lista) => lista.map((p) => (p.id === promo.id ? actualizada : p)));
+      if (this.editandoId() === promo.id) this.codigo.set(actualizada.codigo ?? '');
+      this.toast.success(`Nuevo código de "${promo.nombre}": ${actualizada.codigo}.`);
+    } catch {
+      this.toast.error('No se pudo generar el código.');
     }
   }
 

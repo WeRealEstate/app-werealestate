@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { WeFormEnvioResultado, WeFormPublico, WeFormPublicoLista } from '../models/we-form.model';
+import { PromocionCodigo, WeFormEnvioResultado, WeFormPublico, WeFormPublicoLista } from '../models/we-form.model';
 
 export interface WeFormPanelLista extends WeFormPublicoLista {
   proyecto: 'samai' | 'nanuu';
@@ -30,14 +30,19 @@ export class RegistroVentaPanelService {
     return firstValueFrom(this.http.get<WeFormPublico>(`${this.baseUrl}/${slug}`));
   }
 
+  codigoPromocion(slug: string, _pin: string, codigo: string): Promise<PromocionCodigo> {
+    return firstValueFrom(this.http.post<PromocionCodigo>(`${this.baseUrl}/${slug}/codigo-promocion`, { codigo }));
+  }
+
   enviar(
     slug: string,
     _pin: string,
     respuestas: { preguntaId: number; valor: unknown }[],
     archivos: Map<number, File>,
+    codigoPromocion: string | null = null,
   ): Promise<WeFormEnvioResultado> {
     const form = new FormData();
-    form.append('datos', JSON.stringify({ respuestas }));
+    form.append('datos', JSON.stringify({ respuestas, codigoPromocion }));
     archivos.forEach((archivo, preguntaId) => form.append(`archivo-${preguntaId}`, archivo));
     return firstValueFrom(this.http.post<WeFormEnvioResultado>(`${this.baseUrl}/${slug}/respuestas`, form));
   }

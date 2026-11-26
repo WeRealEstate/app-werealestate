@@ -24,6 +24,8 @@ export interface Promocion {
   fechaInicio: string | null;
   /** true = espera su fecha de inicio y se activa sola ese día. */
   programada: boolean;
+  /** Código de 6 dígitos para aplicarla en el registro de venta; solo lo recibe el admin (null para los demás o sin código). */
+  codigo: string | null;
 }
 
 export interface PromocionCreateRequest {
@@ -42,6 +44,8 @@ export interface PromocionCreateRequest {
   fechaFin?: string | null;
   /** null = empieza al crearla. */
   fechaInicio?: string | null;
+  /** 6 dígitos; vacío = al crear, uno al azar; al editar, el mismo. */
+  codigo?: string | null;
 }
 
 export interface PromocionUpdateRequest {
@@ -60,4 +64,6 @@ export interface PromocionUpdateRequest {
   fechaFin?: string | null;
   limpiarFechaFin?: boolean;
   fechaInicio?: string | null;
+  /** 6 dígitos; vacío = al crear, uno al azar; al editar, el mismo. */
+  codigo?: string | null;
 }

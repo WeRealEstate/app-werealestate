@@ -34,6 +34,11 @@ export class PromocionesService {
     return firstValueFrom(this.http.put<Promocion>(`${this.baseUrl}/${id}`, request));
   }
 
+  /** Código nuevo al azar (el anterior deja de servir). */
+  generarCodigo(id: number): Promise<Promocion> {
+    return firstValueFrom(this.http.post<Promocion>(`${this.baseUrl}/${id}/codigo`, {}));
+  }
+
   cambiarEstado(id: number, activa: boolean): Promise<Promocion> {
     return firstValueFrom(this.http.put<Promocion>(`${this.baseUrl}/${id}/estado`, { activa }));
   }

@@ -67,6 +67,18 @@ public class Promocion {
     @Column(name = "inicio_aplicado", nullable = false)
     private boolean inicioAplicado = true;
 
+    /** Código de 6 dígitos para aplicarla en el registro de venta (null = sin código). Único; solo lo ve el admin. */
+    @Column(name = "codigo", length = 6)
+    private String codigo;
+
+    public String getCodigo() {
+        return codigo;
+    }
+
+    public void setCodigo(String codigo) {
+        this.codigo = codigo;
+    }
+
     public LocalDateTime getFechaInicio() {
         return fechaInicio;
     }

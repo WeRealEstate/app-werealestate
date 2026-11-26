@@ -29,6 +29,8 @@ export class AportacionesSelectorComponent {
   readonly inicio = input.required<Date>();
   readonly meses = input.required<number>();
   readonly montoSugerido = input<number | null>(null);
+  /** true = los montos los reparte quien usa el selector (código de promoción con mensualidad fija): solo se eligen meses. */
+  readonly montosBloqueados = input(false);
   readonly valor = model<Aportacion[]>([]);
 
   readonly mesesAbreviados = MESES_ABREVIADO;

@@ -39,5 +39,17 @@ public record PromocionUpdateRequest(
         Boolean limpiarFechaFin,
 
         // null = sin cambios.
-        LocalDateTime fechaInicio
-) {}
+        LocalDateTime fechaInicio,
+
+        // 6 dígitos nuevos; null o vacío = el mismo (para uno al azar está POST /api/promociones/{id}/codigo).
+        String codigo
+) {
+    /** Sin cambiar el código. */
+    public PromocionUpdateRequest(String nombre, String proyecto, TipoPrecioPromocion tipoPrecio, ModalidadPromocion modalidad,
+            BigDecimal mensualidadFija, BigDecimal bonoUnLote, BigDecimal bonoDosLotes, BigDecimal bonoTresLotes,
+            Integer plazoFijo, String descripcion, Boolean activa, LocalDateTime fechaFin, Boolean limpiarFechaFin,
+            LocalDateTime fechaInicio) {
+        this(nombre, proyecto, tipoPrecio, modalidad, mensualidadFija, bonoUnLote, bonoDosLotes, bonoTresLotes, plazoFijo,
+                descripcion, activa, fechaFin, limpiarFechaFin, fechaInicio, null);
+    }
+}

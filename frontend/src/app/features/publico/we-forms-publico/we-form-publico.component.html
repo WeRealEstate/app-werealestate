@@ -99,8 +99,9 @@
                       }
                       @case ('NUMERO') {
                         <input appMoneda [decimales]="p.destino === 'PLAZO' || p.destino === 'DIA_PAGO' ? 0 : 2" [ngModel]="valor(p.id)" (ngModelChange)="setValor(p.id, $event)"
-                          [ngModelOptions]="{ standalone: true }" [attr.data-testid]="'numero-' + (p.destino ?? p.id)"
-                          class="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+                          [ngModelOptions]="{ standalone: true }" [attr.data-testid]="'numero-' + (p.destino ?? p.id)" [disabled]="plazoBloqueado(p)"
+                          class="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50 disabled:cursor-not-allowed disabled:opacity-60" />
+                        @if (plazoBloqueado(p)) { <p class="mt-1 text-xs text-ink-muted">Lo define la promoción.</p> }
                       }
                       @case ('PAIS') {
                         <app-lista-selector [lista]="paises" [ngModel]="valor(p.id) ?? ''" (ngModelChange)="setValor(p.id, $event)"
@@ -189,10 +190,14 @@
                         }
                       }
                       @case ('TIPO_PAGO') {
-                        <p class="mb-2 text-xs text-ink-muted">
-                          A Sin enganche, Con enganche o Pago inicial puedes sumar anualidades o aportaciones. Lo que no se
-                          combina se apaga hasta que desmarques lo que elegiste.
-                        </p>
+                        @if (promocion(); as promo) {
+                          <p class="mb-2 text-xs font-medium text-emerald-700 dark:text-emerald-300">Lo define la promoción «{{ promo.nombre }}»: para cambiarlo, quita el código de promoción.</p>
+                        } @else {
+                          <p class="mb-2 text-xs text-ink-muted">
+                            A Sin enganche, Con enganche o Pago inicial puedes sumar anualidades o aportaciones. Lo que no se
+                            combina se apaga hasta que desmarques lo que elegiste.
+                          </p>
+                        }
                         <div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3" role="group" [attr.aria-label]="p.titulo">
                           @for (t of tiposPago; track t.value) {
                             <button type="button" (click)="alternarTipoPago(p, t.value)" [attr.data-testid]="'pago-' + t.value"
@@ -247,12 +252,54 @@
                         }
                       }
                       @case ('APORTACIONES') {
-                        <app-aportaciones-selector [inicio]="inicioPlan" [meses]="plazo() ?? 1" [(valor)]="aportaciones" />
+                        <app-aportaciones-selector [inicio]="inicioPlan" [meses]="plazo() ?? 1" [(valor)]="aportaciones"
+                          [montoSugerido]="esMensualidadFija() ? montoAportacionPromocion() : null" [montosBloqueados]="esMensualidadFija()" />
+                        @if (esMensualidadFija()) {
+                          <p class="mt-2 text-xs text-ink-muted">Con la mensualidad fija solo eliges los meses: lo que falta del precio se reparte en partes iguales.</p>
+                        }
                       }
                     }
                   </div>
                   @if (errores()[p.id]) { <p class="mt-1.5 text-xs text-red-600" role="alert">{{ errores()[p.id] }}</p> }
                 </div>
+                @if (p.destino === 'TIPO_PAGO') {
+                  <div id="codigo-promocion" class="rounded-xl border bg-surface p-4 shadow-sm" [class]="errorCodigo() || motivoNoAplica() ? 'border-red-400' : 'border-border'" data-testid="pregunta-CODIGO_PROMOCION">
+                    <label for="codigo-promocion-input" class="block text-sm font-medium text-ink">Código de promoción</label>
+                    <p class="mt-0.5 text-xs text-ink-muted">Opcional. Si la venta lleva una promoción, escribe su código de 6 dígitos: llena y bloquea el tipo de pago y lo que la promoción define.</p>
+                    @if (promocion(); as promo) {
+                      <div class="mt-2.5 flex items-start justify-between gap-3 rounded-xl border border-emerald-300 bg-emerald-50 p-3.5 dark:border-emerald-500/30 dark:bg-emerald-500/10" data-testid="promocion-aplicada">
+                        <div class="min-w-0">
+                          <p class="text-sm font-semibold text-ink">{{ promo.nombre }} <span class="font-mono text-xs font-medium tracking-widest text-ink-muted">· {{ codigoAplicado() }}</span></p>
+                          @if (promo.descripcion) { <p class="mt-0.5 text-xs text-ink-muted">{{ promo.descripcion }}</p> }
+                          @if (promo.modalidad === 'BONO_LOTES') {
+                            <p class="mt-1 text-xs text-ink">
+                              Sin enganche · {{ promo.plazoFijo ?? 60 }} meses. Bono:
+                              @if (promo.bonoUnLote) { 1 lote ${{ promo.bonoUnLote | number: '1.0-2' }} · }
+                              2 lotes ${{ promo.bonoDosLotes ?? 0 | number: '1.0-2' }} · 3 o más ${{ promo.bonoTresLotes ?? 0 | number: '1.0-2' }}
+                            </p>
+                          } @else {
+                            <p class="mt-1 text-xs text-ink">
+                              Sin enganche · mensualidad fija de ${{ promo.mensualidadFija ?? 0 | number: '1.2-2' }} para un lote de 200 m² (se ajusta al tamaño del lote).
+                              Si no alcanza a cubrir el precio en el plazo, elige los meses de las aportaciones: su monto se reparte solo.
+                            </p>
+                          }
+                        </div>
+                        <button type="button" (click)="quitarCodigo()" class="shrink-0 text-xs font-semibold text-red-600 hover:underline" data-testid="quitar-codigo">Quitar</button>
+                      </div>
+                    } @else {
+                      <div class="mt-2.5 flex gap-2">
+                        <input id="codigo-promocion-input" type="text" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="000000"
+                          [value]="codigoEscrito()" (input)="escribirCodigo($event)" (keydown.enter)="aplicarCodigo()" data-testid="codigo-promocion"
+                          class="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 font-mono text-sm tracking-widest text-ink placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
+                        <button type="button" (click)="aplicarCodigo()" [disabled]="validandoCodigo() || codigoEscrito().length !== 6" data-testid="aplicar-codigo"
+                          class="shrink-0 rounded-lg bg-we-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-we-primary/90 disabled:cursor-not-allowed disabled:opacity-50">
+                          {{ validandoCodigo() ? 'Revisando…' : 'Aplicar' }}
+                        </button>
+                      </div>
+                    }
+                    @if (errorCodigo() ?? motivoNoAplica(); as e) { <p class="mt-1.5 text-xs text-red-600" role="alert">{{ e }}</p> }
+                  </div>
+                }
               }
             }
           </div>
@@ -261,6 +308,13 @@
             <div class="mt-4 rounded-xl border border-we-primary/30 bg-we-primary/5 p-4" data-testid="resumen-registro-venta">
               <p class="text-sm font-semibold text-ink">Resumen</p>
               <dl class="mt-2 grid gap-y-1.5 text-sm">
+                @if (promocion(); as promo) {
+                  <div class="flex justify-between gap-3"><dt class="text-ink-muted">Promoción</dt><dd class="font-medium text-ink">{{ promo.nombre }}</dd></div>
+                }
+                @if (bonoPromocion(); as bono) {
+                  <div class="flex justify-between gap-3"><dt class="text-ink-muted">Precio de lista</dt><dd class="font-medium text-ink">${{ precioLista() | number: '1.2-2' }}</dd></div>
+                  <div class="flex justify-between gap-3"><dt class="text-ink-muted">Bono</dt><dd class="font-medium text-emerald-600 dark:text-emerald-400" data-testid="bono">−${{ bono | number: '1.2-2' }}</dd></div>
+                }
                 <div class="flex justify-between gap-3"><dt class="text-ink-muted">Total de inversión</dt><dd class="font-semibold text-ink">${{ precioTotal() | number: '1.2-2' }}</dd></div>
                 @if (enganche() !== null && llevaEntrada()) {
                   <div class="flex justify-between gap-3"><dt class="text-ink-muted">{{ formaPago().base === 'initial' ? 'Pago inicial' : 'Enganche' }}</dt><dd class="font-medium text-ink">${{ enganche() | number: '1.2-2' }}</dd></div>
@@ -269,7 +323,7 @@
                   <div class="flex justify-between gap-3"><dt class="text-ink-muted">{{ formaPago().extra === 'annualities' ? 'Anualidades' : 'Aportaciones' }}</dt><dd class="font-medium text-ink">${{ totalExtras() | number: '1.2-2' }}</dd></div>
                 }
                 @if (mensualidad() !== null) {
-                  <div class="flex justify-between gap-3"><dt class="text-ink-muted">Mensualidad estimada</dt><dd class="font-semibold text-ink" data-testid="mensualidad">${{ mensualidad() | number: '1.2-2' }}</dd></div>
+                  <div class="flex justify-between gap-3"><dt class="text-ink-muted">{{ esMensualidadFija() ? 'Mensualidad fija' : 'Mensualidad estimada' }}</dt><dd class="font-semibold text-ink" data-testid="mensualidad">${{ mensualidad() | number: '1.2-2' }}</dd></div>
                 }
               </dl>
             </div>

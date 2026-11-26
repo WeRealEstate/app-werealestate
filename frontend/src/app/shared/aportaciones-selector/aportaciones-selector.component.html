@@ -45,10 +45,11 @@
                   [ngModel]="ap.monto"
                   [ngModelOptions]="{ standalone: true }"
                   (ngModelChange)="cambiarMonto(ap.anio, ap.mes, $event)"
+                  [disabled]="montosBloqueados()"
                   placeholder="Monto"
                   [attr.aria-label]="'Monto de la aportación de ' + mesesNombre[ap.mes - 1] + ' ' + ap.anio"
                   class="block w-full min-w-0 rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-ink
-                         focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+                         focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary disabled:opacity-70"
                 />
               </label>
             }
@@ -64,7 +65,7 @@
           Total ${{ total().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
         </span>
       </p>
-      @if (valor().length > 1) {
+      @if (valor().length > 1 && !montosBloqueados()) {
         <button
           type="button"
           (click)="igualar()"

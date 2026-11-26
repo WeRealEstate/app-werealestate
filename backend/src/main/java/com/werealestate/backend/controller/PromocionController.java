@@ -60,6 +60,12 @@ public class PromocionController {
         return promocionService.actualizar(id, request);
     }
 
+    /** Código nuevo al azar para el registro de venta (el anterior deja de servir). Solo admin. */
+    @PostMapping("/{id}/codigo")
+    public PromocionDto generarCodigo(@PathVariable Long id) {
+        return promocionService.generarCodigo(id);
+    }
+
     @PutMapping("/{id}/estado")
     public PromocionDto cambiarEstado(@PathVariable Long id, @Valid @RequestBody PromocionEstadoRequest request) {
         return promocionService.cambiarEstado(id, request.activa());

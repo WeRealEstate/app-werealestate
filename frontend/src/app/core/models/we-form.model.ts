@@ -233,6 +233,23 @@ export interface WeFormPublico {
   lotes: LotePublicoForm[];
 }
 
+/** La promoción de un código escrito en el registro de venta (sin el código). precioEstandar = precio del lote de
+ * 200 m² al que está calibrada la mensualidad fija: la mensualidad se escala por precio de la venta ÷ precioEstandar. */
+export interface PromocionCodigo {
+  id: number;
+  nombre: string;
+  descripcion: string | null;
+  modalidad: 'BONO_LOTES' | 'MENSUALIDAD_FIJA';
+  tipoPrecio: 'LOTE' | 'HECTAREA';
+  bonoUnLote: number | null;
+  bonoDosLotes: number | null;
+  bonoTresLotes: number | null;
+  plazoFijo: number | null;
+  mensualidadFija: number | null;
+  precioEstandar: number | null;
+  fechaFin: string | null;
+}
+
 export interface WeFormEnvioResultado {
   respuestaId: number;
   ventaNumero: string;

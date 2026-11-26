@@ -3,6 +3,7 @@ package com.werealestate.backend.service;
 import tools.jackson.databind.JsonNode;
 import com.werealestate.backend.dto.ClienteRequest;
 import com.werealestate.backend.dto.LoteDto;
+import com.werealestate.backend.dto.PromocionCodigoDto;
 import com.werealestate.backend.dto.VentaAportacionItemRequest;
 import com.werealestate.backend.dto.VentaCreateRequest;
 import com.werealestate.backend.dto.VentaLoteItemRequest;
@@ -15,6 +16,7 @@ import com.werealestate.backend.model.EstadoWeForm;
 import com.werealestate.backend.model.Lote;
 import com.werealestate.backend.model.EstadosMexico;
 import com.werealestate.backend.model.Paises;
+import com.werealestate.backend.model.Promocion;
 import com.werealestate.backend.model.TipoPreguntaForm;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.model.Venta;
@@ -92,6 +94,8 @@ public class WeFormPublicoService {
     private final VentaService ventaService;
     private final UsuarioRepository usuarioRepository;
     private final ApplicationEventPublisher eventos;
+    private final PromocionVentaService promocionVenta;
+    private final LimitadorCodigoPromocion limitadorCodigo;
 
     public WeFormPublicoService(
             WeFormService formService,
@@ -104,7 +108,11 @@ public class WeFormPublicoService {
             ClienteService clienteService,
             VentaService ventaService,
             UsuarioRepository usuarioRepository,
-            ApplicationEventPublisher eventos) {
+            ApplicationEventPublisher eventos,
+            PromocionVentaService promocionVenta,
+            LimitadorCodigoPromocion limitadorCodigo) {
+        this.promocionVenta = promocionVenta;
+        this.limitadorCodigo = limitadorCodigo;
         this.formService = formService;
         this.formRepository = formRepository;
         this.preguntaRepository = preguntaRepository;
@@ -171,16 +179,39 @@ public class WeFormPublicoService {
                 asesor.nombre(), preguntas, lotes);
     }
 
+    // ---------------------------------------------------------------- código de promoción
+
+    /**
+     * La promoción de un código escrito en el formulario (12.18.0), para que el formulario llene y bloquee los campos.
+     * claveIntentos: IP (enlace público) o usuario (panel); los códigos equivocados se limitan por ella.
+     */
+    @Transactional(readOnly = true)
+    public PromocionCodigoDto validarCodigoPromocion(String slug, String codigo, String claveIntentos) {
+        WeForm form = formularioPorSlug(slug);
+        if (form.getEstado() != EstadoWeForm.ACTIVO) {
+            throw new ConflictException("Este formulario está cerrado y ya no recibe respuestas");
+        }
+        Promocion p = limitadorCodigo.revisar(claveIntentos, () -> promocionVenta.porCodigo(codigo, form.getDesarrollo()));
+        return PromocionCodigoDto.de(p, PromocionVentaService.precioEstandar(p, form.getDesarrollo()));
+    }
+
     // ---------------------------------------------------------------- envío
 
     public WeFormDtos.EnvioResultado enviar(
             String slug,
             AsesorPublicoService.Identificado asesor,
             WeFormDtos.EnvioRequest envio,
-            Map<Long, MultipartFile> archivos) {
+            Map<Long, MultipartFile> archivos,
+            String claveIntentos) {
         WeForm form = formularioPorSlug(slug);
         if (form.getEstado() != EstadoWeForm.ACTIVO) {
             throw new ConflictException("Este formulario está cerrado y ya no recibe respuestas");
+        }
+        // Código de promoción (opcional): se revisa antes de todo, contando los equivocados.
+        Promocion promocion = null;
+        if (envio.codigoPromocion() != null && !envio.codigoPromocion().isBlank()) {
+            promocion = limitadorCodigo.revisar(claveIntentos,
+                    () -> promocionVenta.porCodigo(envio.codigoPromocion(), form.getDesarrollo()));
         }
         respuestaRepository.bloquearEnvios();
 
@@ -262,6 +293,34 @@ public class WeFormPublicoService {
         List<VentaAportacionItemRequest> aportaciones = aportaciones(porDestino.get(DestinoPregunta.APORTACIONES));
         if (formaDePago == null) throw new ValidationException("Elige el tipo de pago");
 
+        // Con código de promoción manda la promoción (decisión del usuario 12.18.0), diga lo que diga el tipo de pago:
+        // bono = sin enganche y el plazo de la promoción, con el bono restado en partes iguales del precio de los lotes;
+        // mensualidad fija = sin enganche, mensualidad escalada y lo que falte en aportaciones repartidas en partes iguales.
+        PromocionVentaService.Aplicada aplicada = null;
+        BigDecimal mensualidadFija = null;
+        if (promocion != null) {
+            aplicada = promocionVenta.aplicar(promocion.getId(), LocalDate.now(), lotes, null, true);
+            enganche = null;
+            if (aplicada.bono() != null) {
+                List<BigDecimal> partes = VentaService.partesDelBono(aplicada.bono(), lotesVenta.size());
+                List<VentaLoteItemRequest> conBono = new ArrayList<>();
+                for (int i = 0; i < lotesVenta.size(); i++) {
+                    BigDecimal precio = lotesVenta.get(i).precio().subtract(partes.get(i));
+                    if (precio.signum() <= 0) throw new ValidationException("El bono de la promoción es mayor al precio de un lote");
+                    conBono.add(new VentaLoteItemRequest(lotesVenta.get(i).loteId(), precio));
+                }
+                lotesVenta = conBono;
+                precioTotal = precioTotal.subtract(aplicada.bono());
+                plazo = promocion.getPlazoFijo();
+                aportaciones = List.of();
+                formaDePago = new FormaPago("msi", null, null, null, null);
+            } else {
+                mensualidadFija = PromocionVentaService.mensualidadEscalada(aplicada.mensualidadFija(), precioTotal,
+                        PromocionVentaService.precioEstandar(promocion, form.getDesarrollo()));
+                formaDePago = new FormaPago("msi", aportaciones.isEmpty() ? null : "aportaciones", null, null, null);
+            }
+        }
+
         BigDecimal mensualidad = null;
         String engancheLabel = null;
         if (formaDePago.contado()) {
@@ -282,32 +341,53 @@ public class WeFormPublicoService {
             }
             BigDecimal saldo = precioTotal.subtract(enganche == null ? BigDecimal.ZERO : enganche);
 
-            // Anualidades o aportaciones: en su mes se paga solo eso; las anualidades se guardan como aportaciones
-            // programadas, una por año, para que quepan junto al enganche.
-            if ("aportaciones".equals(formaDePago.extra())) {
-                if (aportaciones.isEmpty()) throw new ValidationException("Agrega al menos una aportación");
-            } else if ("annualities".equals(formaDePago.extra())) {
-                aportaciones = anualidadesComoAportaciones(YearMonth.now(), plazo, formaDePago.mesAnualidad(),
-                        formaDePago.montoAnualidad(), formaDePago.cantidadAnualidades());
-                if (aportaciones.isEmpty()) {
-                    throw new ValidationException("Con ese plazo no caben anualidades: debe ser de al menos 24 meses");
-                }
+            if (mensualidadFija != null) {
+                mensualidad = mensualidadFija;
+                aportaciones = aportacionesDeMensualidadFija(saldo, mensualidad, plazo, aportaciones);
             } else {
-                aportaciones = List.of();
-            }
+                // Anualidades o aportaciones: en su mes se paga solo eso; las anualidades se guardan como aportaciones
+                // programadas, una por año, para que quepan junto al enganche.
+                if ("aportaciones".equals(formaDePago.extra())) {
+                    if (aportaciones.isEmpty()) throw new ValidationException("Agrega al menos una aportación");
+                } else if ("annualities".equals(formaDePago.extra())) {
+                    aportaciones = anualidadesComoAportaciones(YearMonth.now(), plazo, formaDePago.mesAnualidad(),
+                            formaDePago.montoAnualidad(), formaDePago.cantidadAnualidades());
+                    if (aportaciones.isEmpty()) {
+                        throw new ValidationException("Con ese plazo no caben anualidades: debe ser de al menos 24 meses");
+                    }
+                } else {
+                    aportaciones = List.of();
+                }
 
-            if (aportaciones.isEmpty()) {
-                mensualidad = saldo.divide(BigDecimal.valueOf(plazo), 2, RoundingMode.HALF_UP);
-            } else {
-                BigDecimal aportado = aportaciones.stream().map(VentaAportacionItemRequest::monto).reduce(BigDecimal.ZERO, BigDecimal::add);
-                int regulares = plazo - aportaciones.size();
-                BigDecimal restante = saldo.subtract(aportado);
-                if (regulares <= 0 || restante.signum() <= 0) {
-                    throw new ValidationException("annualities".equals(formaDePago.extra())
-                            ? "Las anualidades no dejan saldo para las mensualidades regulares"
-                            : "Las aportaciones no dejan saldo para las mensualidades regulares");
+                if (aportaciones.isEmpty()) {
+                    mensualidad = saldo.divide(BigDecimal.valueOf(plazo), 2, RoundingMode.HALF_UP);
+                } else {
+                    BigDecimal aportado = aportaciones.stream().map(VentaAportacionItemRequest::monto).reduce(BigDecimal.ZERO, BigDecimal::add);
+                    int regulares = plazo - aportaciones.size();
+                    BigDecimal restante = saldo.subtract(aportado);
+                    if (regulares <= 0 || restante.signum() <= 0) {
+                        throw new ValidationException("annualities".equals(formaDePago.extra())
+                                ? "Las anualidades no dejan saldo para las mensualidades regulares"
+                                : "Las aportaciones no dejan saldo para las mensualidades regulares");
+                    }
+                    mensualidad = restante.divide(BigDecimal.valueOf(regulares), 2, RoundingMode.HALF_UP);
                 }
-                mensualidad = restante.divide(BigDecimal.valueOf(regulares), 2, RoundingMode.HALF_UP);
+            }
+        }
+
+        // Lo que quedó guardado manda también en el texto de la respuesta (con promoción pudo cambiar).
+        if (aplicada != null) {
+            for (WeFormPregunta p : preguntas) {
+                if (p.getDestino() == DestinoPregunta.TIPO_PAGO) {
+                    textoPorPregunta.put(p.getId(), etiquetaFormaPago(formaDePago, null) + " · Promoción «" + aplicada.nombre() + "»");
+                } else if (p.getDestino() == DestinoPregunta.PLAZO && plazo != null) {
+                    textoPorPregunta.put(p.getId(), String.valueOf(plazo));
+                } else if (p.getDestino() == DestinoPregunta.ENGANCHE) {
+                    textoPorPregunta.remove(p.getId());
+                } else if (p.getDestino() == DestinoPregunta.APORTACIONES) {
+                    if (aportaciones.isEmpty()) textoPorPregunta.remove(p.getId());
+                    else textoPorPregunta.put(p.getId(), textoAportaciones(aportaciones));
+                }
             }
         }
 
@@ -345,8 +425,9 @@ public class WeFormPublicoService {
                 asesor.usuario() != null ? asesor.usuario().getId() : null,
                 asesor.externo() != null ? asesor.externo().getId() : null,
                 formaPago, LocalDate.now(), mensualidad, plazo, engancheLabel, enganche, diaPago, false,
-                "Registrada desde el formulario «" + form.getNombre() + "» (We Forms).", aportaciones,
-                false, null, null, null, null, null, null, null, null);
+                "Registrada desde el formulario «" + form.getNombre() + "» (We Forms)."
+                        + (aplicada != null ? " Promoción «" + aplicada.nombre() + "» con código." : ""), aportaciones,
+                false, null, null, null, null, null, null, null, null, aplicada != null ? promocion.getId() : null);
         Venta venta = ventaService.crearDesdeRegistroDeVenta(ventaRequest, sistema);
 
         // 6) La respuesta, con cada pregunta tal como se contestó.
@@ -558,13 +639,7 @@ public class WeFormPublicoService {
                 if (f == null) throw new ValidationException("Elige el tipo de pago");
                 yield etiquetaFormaPago(f, null);
             }
-            case APORTACIONES -> {
-                List<String> partes = new ArrayList<>();
-                for (VentaAportacionItemRequest a : aportaciones(v)) {
-                    partes.add(String.format("%02d/%d: $%,.2f", a.mes(), a.anio(), a.monto()));
-                }
-                yield String.join("; ", partes);
-            }
+            case APORTACIONES -> textoAportaciones(aportaciones(v));
             default -> v.asText();
         };
     }
@@ -585,6 +660,42 @@ public class WeFormPublicoService {
         } catch (NumberFormatException e) {
             throw new ValidationException(campo + " debe ser un número");
         }
+    }
+
+    private static String textoAportaciones(List<VentaAportacionItemRequest> lista) {
+        List<String> partes = new ArrayList<>();
+        for (VentaAportacionItemRequest a : lista) {
+            partes.add(String.format("%02d/%d: $%,.2f", a.mes(), a.anio(), a.monto()));
+        }
+        return String.join("; ", partes);
+    }
+
+    /**
+     * Mensualidad fija: los meses sin aportación pagan la mensualidad y lo que falta del precio se reparte en partes
+     * iguales entre los meses de aportación elegidos (al centavo; lo que sobra, a la última). Si la mensualidad no cubre
+     * el precio, las aportaciones son obligatorias (decisión del usuario); si ya lo cubre, no caben.
+     */
+    static List<VentaAportacionItemRequest> aportacionesDeMensualidadFija(
+            BigDecimal saldo, BigDecimal mensualidad, int plazo, List<VentaAportacionItemRequest> elegidas) {
+        int n = elegidas.size();
+        if (n >= plazo) throw new ValidationException("Las aportaciones no dejan meses para la mensualidad fija");
+        BigDecimal resto = saldo.subtract(mensualidad.multiply(BigDecimal.valueOf(plazo - n)));
+        if (n == 0) {
+            if (resto.signum() > 0) {
+                throw new ValidationException(String.format(
+                        "Con la mensualidad fija de $%,.2f el plazo no cubre el precio: elige al menos un mes de aportación", mensualidad));
+            }
+            return List.of();
+        }
+        if (resto.signum() <= 0) {
+            throw new ValidationException("Con este plazo la mensualidad fija ya cubre el precio: quita las aportaciones");
+        }
+        List<BigDecimal> partes = VentaService.partesDelBono(resto, n);
+        List<VentaAportacionItemRequest> lista = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            lista.add(new VentaAportacionItemRequest(elegidas.get(i).anio(), elegidas.get(i).mes(), partes.get(i)));
+        }
+        return lista;
     }
 
     private static List<VentaAportacionItemRequest> aportaciones(JsonNode v) {

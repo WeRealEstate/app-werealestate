@@ -3,12 +3,14 @@ package com.werealestate.backend.service;
 import com.werealestate.backend.dto.PromocionDto;
 import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.exception.ValidationException;
+import com.werealestate.backend.model.Desarrollo;
 import com.werealestate.backend.model.Lote;
 import com.werealestate.backend.model.ModalidadPromocion;
 import com.werealestate.backend.model.Promocion;
 import com.werealestate.backend.model.TipoPrecioPromocion;
 import com.werealestate.backend.repository.PromocionRepository;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,6 +27,10 @@ public class PromocionVentaService {
 
     /** Arriba de esta superficie un lote de SAMAI usa la tarifa de hectárea (igual que el cotizador). */
     private static final BigDecimal SUPERFICIE_MACROLOTE = new BigDecimal("8000");
+    /** La mensualidad fija está calibrada para un lote de 200 m² (frontend SUPERFICIE_ESTANDAR_M2). */
+    private static final BigDecimal SUPERFICIE_ESTANDAR_M2 = new BigDecimal("200");
+    /** Precio por m² de la tarifa de hectárea (frontend PRECIO_M2_MACROLOTE en cotizador-datos; deben coincidir). */
+    private static final BigDecimal PRECIO_M2_MACROLOTE = new BigDecimal("170");
 
     /** La promoción de una venta: con el bono que le toca según su número de lotes (bono por lotes) o con su
      * mensualidad fija (mensualidad fija; ahí bono es null y el precio no cambia). */
@@ -100,6 +106,41 @@ public class PromocionVentaService {
             throw new ValidationException("La promoción " + p.getNombre() + " no aplica a " + lotes.size() + " lote(s)");
         }
         return new Aplicada(p.getNombre(), bono, null);
+    }
+
+    /**
+     * La promoción de un código del registro de venta (12.18.0): debe existir, estar activa ahora (ya empezó, no venció
+     * ni se apagó) y ser del desarrollo del formulario. Cualquier rechazo es ValidationException, que
+     * LimitadorCodigoPromocion cuenta como intento equivocado.
+     */
+    @Transactional(readOnly = true)
+    public Promocion porCodigo(String codigo, Desarrollo desarrollo) {
+        String limpio = codigo == null ? "" : codigo.trim();
+        if (!limpio.matches("\\d{6}")) throw new ValidationException("El código de promoción tiene 6 dígitos");
+        LocalDateTime ahora = LocalDateTime.now();
+        Promocion p = promocionRepository.findByCodigo(limpio)
+                .filter(x -> x.isActiva() && x.isInicioAplicado())
+                .filter(x -> x.getFechaInicio() == null || !x.getFechaInicio().isAfter(ahora))
+                .filter(x -> x.getFechaFin() == null || x.getFechaFin().isAfter(ahora))
+                .orElseThrow(() -> new ValidationException("Código de promoción no válido o la promoción ya no está vigente"));
+        String proyecto = "nanuu".equals(p.getProyecto()) ? "Aldea Nanuu" : "SAMAI Campestre";
+        if (!proyecto.equalsIgnoreCase(desarrollo.getNombre())) {
+            throw new ValidationException("Ese código es de una promoción de " + proyecto);
+        }
+        return p;
+    }
+
+    /** Precio del lote de 200 m² al que está calibrada la mensualidad fija: al precio por m² del desarrollo, o al de la
+     * tarifa de hectárea. Sin intereses, igual que en «Modificar venta» (decisión del usuario 12.17.0). */
+    public static BigDecimal precioEstandar(Promocion p, Desarrollo desarrollo) {
+        BigDecimal precioM2 = p.getTipoPrecio() == TipoPrecioPromocion.HECTAREA ? PRECIO_M2_MACROLOTE : desarrollo.getPrecioM2();
+        return precioM2 == null ? null : SUPERFICIE_ESTANDAR_M2.multiply(precioM2);
+    }
+
+    /** La mensualidad fija escalada por el tamaño de la venta (como el cotizador): fija × precio ÷ precio estándar. */
+    public static BigDecimal mensualidadEscalada(BigDecimal fija, BigDecimal precio, BigDecimal estandar) {
+        if (estandar == null || estandar.signum() <= 0) return fija.setScale(2, RoundingMode.HALF_UP);
+        return fija.multiply(precio).divide(estandar, 2, RoundingMode.HALF_UP);
     }
 
     /**

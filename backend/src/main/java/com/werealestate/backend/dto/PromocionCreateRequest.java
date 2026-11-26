@@ -40,5 +40,16 @@ public record PromocionCreateRequest(
         LocalDateTime fechaFin,
 
         // null = empieza al crearla.
-        LocalDateTime fechaInicio
-) {}
+        LocalDateTime fechaInicio,
+
+        // 6 dígitos escritos por el admin; vacío o null = uno al azar.
+        String codigo
+) {
+    /** Sin código (al azar). */
+    public PromocionCreateRequest(String nombre, String proyecto, TipoPrecioPromocion tipoPrecio, ModalidadPromocion modalidad,
+            BigDecimal mensualidadFija, BigDecimal bonoUnLote, BigDecimal bonoDosLotes, BigDecimal bonoTresLotes,
+            Integer plazoFijo, String descripcion, Boolean activa, LocalDateTime fechaFin, LocalDateTime fechaInicio) {
+        this(nombre, proyecto, tipoPrecio, modalidad, mensualidadFija, bonoUnLote, bonoDosLotes, bonoTresLotes, plazoFijo,
+                descripcion, activa, fechaFin, fechaInicio, null);
+    }
+}

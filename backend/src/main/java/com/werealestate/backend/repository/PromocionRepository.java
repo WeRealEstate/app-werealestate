@@ -11,6 +11,11 @@ public interface PromocionRepository extends JpaRepository<Promocion, Long> {
 
     List<Promocion> findByActivaTrue();
 
+    /** Por su código del registro de venta (único). */
+    java.util.Optional<Promocion> findByCodigo(String codigo);
+
+    boolean existsByCodigo(String codigo);
+
     /** Programadas: esperan su fecha de inicio. */
     List<Promocion> findByInicioAplicadoFalse();
 

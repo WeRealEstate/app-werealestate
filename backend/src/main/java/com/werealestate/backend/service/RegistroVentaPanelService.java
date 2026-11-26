@@ -1,5 +1,6 @@
 package com.werealestate.backend.service;
 
+import com.werealestate.backend.dto.PromocionCodigoDto;
 import com.werealestate.backend.dto.WeFormDtos;
 import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.model.Role;
@@ -40,7 +41,16 @@ public class RegistroVentaPanelService {
     }
 
     public WeFormDtos.EnvioResultado enviar(String slug, WeFormDtos.EnvioRequest envio, Map<Long, MultipartFile> archivos) {
-        return formularios.enviar(slug, identificado(), envio, archivos);
+        AsesorPublicoService.Identificado asesor = identificado();
+        return formularios.enviar(slug, asesor, envio, archivos, claveIntentos(asesor.usuario()));
+    }
+
+    public PromocionCodigoDto codigoPromocion(String slug, String codigo) {
+        return formularios.validarCodigoPromocion(slug, codigo, claveIntentos(exigirAsesor()));
+    }
+
+    private static String claveIntentos(Usuario asesor) {
+        return "U-" + asesor.getId();
     }
 
     private AsesorPublicoService.Identificado identificado() {

@@ -15,6 +15,11 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.18.0', fecha: '2026-11-26', cambios: [
+    "Promociones: cada promoción tiene un código de 6 dígitos (lo puedes escribir o dejar que se genere al azar), con botón para copiarlo y «Generar otro» si se filtró. Solo lo ve el administrador.",
+    "Registrar venta (enlace con PIN y panel del asesor): nuevo campo «Código de promoción» debajo de Tipo de pago. Con un código de bono queda sin enganche, con el plazo de la promoción y el bono restado del precio; con uno de mensualidad fija, la mensualidad queda fija (ajustada al tamaño del lote) y solo se eligen los meses de las aportaciones, que se reparten solas. Lo que define la promoción se bloquea, y si cambias los lotes se recalcula.",
+    "Registrar venta: después de 10 códigos de promoción equivocados en una hora se bloquea un rato, para que no se puedan adivinar.",
+  ] },
   { version: '12.17.0', fecha: '2026-11-26', cambios: [
     "Modificar venta: ahora se puede poner, cambiar o quitar la promoción (las de bono vigentes en la fecha de la venta). El bono se resta del precio de los lotes, así bajan el saldo y la comisión; la mensualidad se recalcula y se puede ajustar. Pide tu contraseña.",
     "Lotes: nueva columna «Precio vendido» con el precio al que se vendió cada lote (ya con el bono de su promoción). Solo admin y administración.",

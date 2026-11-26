@@ -126,7 +126,15 @@ public final class WeFormDtos {
 
     /** Lo que contestó el asesor, una entrada por pregunta (el valor depende del tipo: texto, número,
      * lista de opciones, lista de ids de lote o lista de aportaciones). Los archivos van aparte. */
-    public record EnvioRequest(@NotNull List<RespuestaEnvio> respuestas) {
+    public record EnvioRequest(@NotNull List<RespuestaEnvio> respuestas, String codigoPromocion) {
+        /** Sin código de promoción. */
+        public EnvioRequest(List<RespuestaEnvio> respuestas) {
+            this(respuestas, null);
+        }
+    }
+
+    /** El código de promoción que escribió el asesor (6 dígitos). */
+    public record CodigoPromocionRequest(String codigo) {
     }
 
     public record RespuestaEnvio(@NotNull Long preguntaId, JsonNode valor) {

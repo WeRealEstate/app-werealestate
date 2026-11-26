@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import {
   PreguntaPublica,
+  PromocionCodigo,
   TIPOS_PAGO_FORM,
   TipoPagoForm,
   WeFormEnvioResultado,
@@ -56,7 +57,7 @@ export class WeFormPublicoComponent {
   private readonly route = inject(ActivatedRoute);
   /** true en el panel del asesor: sin PIN, sin logotipo ni "Cambiar de asesor". */
   readonly enPanel: boolean = this.route.snapshot.data['enPanel'] === true;
-  private readonly service: Pick<WeFormsPublicoService, 'pin' | 'guardarPin' | 'obtener' | 'enviar'> = this.enPanel
+  private readonly service: Pick<WeFormsPublicoService, 'pin' | 'guardarPin' | 'obtener' | 'enviar' | 'codigoPromocion'> = this.enPanel
     ? inject(RegistroVentaPanelService)
     : inject(WeFormsPublicoService);
 
@@ -185,8 +186,125 @@ export class WeFormPublicoComponent {
     if (this.errorEnvio()) this.errorEnvio.set(null);
   }
 
-  /** La forma de pago marcada en la pregunta "Tipo de pago": una base y, opcional, anualidades o aportaciones. */
+  // ------------------------------------------------------------------ código de promoción (12.18.0)
+
+  /** Lo que el asesor escribe (solo dígitos) y la promoción que ese código aplicó (null = sin promoción). */
+  readonly codigoEscrito = signal('');
+  readonly codigoAplicado = signal<string | null>(null);
+  readonly promocion = signal<PromocionCodigo | null>(null);
+  readonly validandoCodigo = signal(false);
+  readonly errorCodigo = signal<string | null>(null);
+
+  readonly esBono = computed(() => this.promocion()?.modalidad === 'BONO_LOTES');
+  readonly esMensualidadFija = computed(() => this.promocion()?.modalidad === 'MENSUALIDAD_FIJA');
+
+  escribirCodigo(evento: Event): void {
+    const campo = evento.target as HTMLInputElement;
+    const limpio = campo.value.replace(/\D/g, '').slice(0, 6);
+    campo.value = limpio;
+    this.codigoEscrito.set(limpio);
+    this.errorCodigo.set(null);
+  }
+
+  /** Revisa el código con el servidor y, si sirve, la promoción manda: sin enganche y, con bono, el plazo de la
+   * promoción (bloqueado); con mensualidad fija, la mensualidad (bloqueada) y aportaciones repartidas solas. */
+  async aplicarCodigo(): Promise<void> {
+    const codigo = this.codigoEscrito();
+    const pin = this.service.pin();
+    if (!pin || this.validandoCodigo()) return;
+    if (!/^\d{6}$/.test(codigo)) {
+      this.errorCodigo.set('El código tiene 6 dígitos.');
+      return;
+    }
+    this.validandoCodigo.set(true);
+    this.errorCodigo.set(null);
+    try {
+      const promo = await this.service.codigoPromocion(this.slug, pin, codigo);
+      this.promocion.set(promo);
+      this.codigoAplicado.set(codigo);
+      this.aportaciones.set([]);
+      this.montoAnualidad.set(null);
+      this.numeroAnualidades.set(null);
+      const plazo = this.pregunta('PLAZO');
+      if (promo.modalidad === 'BONO_LOTES' && plazo) this.setValor(plazo.id, promo.plazoFijo ?? 60);
+      const tipo = this.pregunta('TIPO_PAGO');
+      if (tipo) this.setValor(tipo.id, { base: 'msi', extra: null });
+    } catch (e) {
+      this.errorCodigo.set(
+        e instanceof HttpErrorResponse && typeof e.error?.message === 'string' ? e.error.message : 'No se pudo revisar el código.',
+      );
+    } finally {
+      this.validandoCodigo.set(false);
+    }
+  }
+
+  /** Quita la promoción: el tipo de pago y el plazo se vuelven a elegir libremente. */
+  quitarCodigo(): void {
+    this.promocion.set(null);
+    this.codigoAplicado.set(null);
+    this.codigoEscrito.set('');
+    this.errorCodigo.set(null);
+    this.aportaciones.set([]);
+  }
+
+  /** Bono que le toca a la venta según cuántos lotes lleva (null = no aplica a ese número de lotes). */
+  readonly bonoPromocion = computed<number | null>(() => {
+    const promo = this.promocion();
+    const n = this.lotesElegidos().length;
+    if (!promo || promo.modalidad !== 'BONO_LOTES' || n === 0) return null;
+    const bono = n === 1 ? promo.bonoUnLote : n === 2 ? promo.bonoDosLotes : promo.bonoTresLotes;
+    return bono && bono > 0 ? bono : null;
+  });
+
+  /** Por qué la promoción no aplica a los lotes elegidos (se recalcula al cambiarlos); null = aplica o aún sin lotes. */
+  readonly motivoNoAplica = computed<string | null>(() => {
+    const promo = this.promocion();
+    const lotes = this.lotesElegidos();
+    if (!promo || lotes.length === 0) return null;
+    const hectarea = promo.tipoPrecio === 'HECTAREA';
+    if (lotes.some((l) => l.superficie > 8000 !== hectarea)) {
+      return `La promoción ${promo.nombre} solo aplica a ${hectarea ? 'hectáreas' : 'lotes (no hectáreas)'}.`;
+    }
+    if (promo.modalidad === 'BONO_LOTES' && this.bonoPromocion() === null) {
+      return `La promoción ${promo.nombre} no aplica a ${lotes.length} ${lotes.length === 1 ? 'lote' : 'lotes'}.`;
+    }
+    if (promo.modalidad === 'BONO_LOTES' && lotes.some((l) => l.precio <= (this.bonoPromocion() ?? 0) / lotes.length)) {
+      return 'El bono de la promoción es mayor al precio de un lote.';
+    }
+    return null;
+  });
+
+  /** Mensualidad fija escalada por el tamaño de la venta (como el cotizador y el servidor). */
+  readonly mensualidadFijaEscalada = computed<number | null>(() => {
+    const promo = this.promocion();
+    const precio = this.precioTotal();
+    if (!promo || promo.modalidad !== 'MENSUALIDAD_FIJA' || !promo.mensualidadFija || precio <= 0) return null;
+    const estandar = promo.precioEstandar ?? 0;
+    const m = estandar > 0 ? (promo.mensualidadFija * precio) / estandar : promo.mensualidadFija;
+    return Math.round(m * 100) / 100;
+  });
+
+  /** Con mensualidad fija: la mensualidad por el plazo no cubre el precio y hacen falta aportaciones (obligatorias). */
+  readonly aportacionesNecesarias = computed(() => {
+    const m = this.mensualidadFijaEscalada();
+    const plazo = this.plazo() ?? 0;
+    return m !== null && plazo >= 1 && m * plazo < this.precioTotal() - 0.005;
+  });
+
+  /** Monto de cada aportación con mensualidad fija: lo que falta, en partes iguales (el servidor lo reparte al centavo). */
+  readonly montoAportacionPromocion = computed<number | null>(() => {
+    const m = this.mensualidadFijaEscalada();
+    const plazo = this.plazo() ?? 0;
+    const n = this.aportaciones().length;
+    if (m === null || !this.aportacionesNecesarias() || n === 0 || n >= plazo) return null;
+    const resto = this.precioTotal() - m * (plazo - n);
+    return resto > 0 ? Math.round((resto / n) * 100) / 100 : null;
+  });
+
+  /** La forma de pago marcada en la pregunta "Tipo de pago": una base y, opcional, anualidades o aportaciones. Con
+   * código de promoción la define la promoción: sin enganche (y aportaciones si la mensualidad fija las necesita). */
   readonly formaPago = computed<SeleccionPago>(() => {
+    if (this.promocion()) return { base: 'msi', extra: this.aportacionesNecesarias() ? 'aportaciones' : null };
     const q = this.pregunta('TIPO_PAGO');
     return (q ? (this.valores()[q.id] as SeleccionPago | undefined) : undefined) ?? SIN_FORMA_PAGO;
   });
@@ -199,7 +317,7 @@ export class WeFormPublicoComponent {
   }
 
   tipoPagoBloqueado(tipo: TipoPagoForm): boolean {
-    return estaBloqueado(this.formaPago(), tipo);
+    return !!this.promocion() || estaBloqueado(this.formaPago(), tipo);
   }
 
   /** Marca o desmarca una forma de pago; lo que no se combina con lo ya marcado está bloqueado. */
@@ -278,7 +396,14 @@ export class WeFormPublicoComponent {
     this.filtroLote.set('');
   }
 
-  readonly precioTotal = computed(() => this.lotesElegidos().reduce((s, l) => s + l.precio, 0));
+  /** Precio de lista de los lotes elegidos y el de la venta (con el bono de la promoción ya restado). */
+  readonly precioLista = computed(() => this.lotesElegidos().reduce((s, l) => s + l.precio, 0));
+  readonly precioTotal = computed(() => this.precioLista() - (this.bonoPromocion() ?? 0));
+
+  /** Con bono el plazo es el de la promoción y no se cambia. */
+  plazoBloqueado(p: PreguntaPublica): boolean {
+    return p.destino === 'PLAZO' && this.esBono();
+  }
 
   private numeroDe(destino: string): number | null {
     const q = this.pregunta(destino);
@@ -296,6 +421,7 @@ export class WeFormPublicoComponent {
     const plazo = this.plazo();
     const precio = this.precioTotal();
     if (!this.hayFormaPago() || this.esContado() || !plazo || plazo < 1 || precio <= 0) return null;
+    if (this.esMensualidadFija()) return this.mensualidadFijaEscalada();
     const saldo = precio - (this.llevaEntrada() ? (this.enganche() ?? 0) : 0);
     if (this.formaPago().extra) {
       const m = mensualidadConAportaciones(saldo, this.extrasDelPlan(), plazo);
@@ -435,12 +561,24 @@ export class WeFormPublicoComponent {
     const tipoPagoQ = this.pregunta('TIPO_PAGO');
     const errorAnualidades = this.errorAnualidades();
     if (tipoPagoQ && errorAnualidades && !errores[tipoPagoQ.id]) errores[tipoPagoQ.id] = errorAnualidades;
+    // Un código escrito sin aplicar o una promoción que ya no aplica a los lotes elegidos no se envían.
+    const problemaCodigo =
+      this.codigoEscrito() && this.codigoEscrito() !== this.codigoAplicado()
+        ? 'Aplica el código o bórralo antes de registrar la venta.'
+        : this.motivoNoAplica();
+
     const dia = this.pregunta('DIA_PAGO');
     if (dia && this.visible(dia) && !errores[dia.id]) {
       const d = this.numeroDe('DIA_PAGO');
       if (d !== null && (d < 1 || d > 31)) errores[dia.id] = 'Un día del 1 al 31.';
     }
     this.errores.set(errores);
+    if (problemaCodigo) {
+      if (problemaCodigo !== this.motivoNoAplica()) this.errorCodigo.set(problemaCodigo);
+      document.getElementById('codigo-promocion')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      this.errorEnvio.set(problemaCodigo);
+      return;
+    }
     const primero = f.preguntas.find((p) => errores[p.id]);
     if (primero) {
       document.getElementById('q-' + primero.id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -477,7 +615,7 @@ export class WeFormPublicoComponent {
     this.enviando.set(true);
     this.errorEnvio.set(null);
     try {
-      this.resultado.set(await this.service.enviar(this.slug, pin, respuestas, this.archivos()));
+      this.resultado.set(await this.service.enviar(this.slug, pin, respuestas, this.archivos(), this.codigoAplicado()));
       this.etapa.set('enviado');
       window.scrollTo({ top: 0 });
     } catch (e) {
@@ -517,6 +655,7 @@ export class WeFormPublicoComponent {
     this.montoAnualidad.set(null);
     this.mesAnualidad.set(12);
     this.numeroAnualidades.set(null);
+    this.quitarCodigo();
     this.limpiarFiltrosLotes();
     this.errorEnvio.set(null);
     this.resultado.set(null);

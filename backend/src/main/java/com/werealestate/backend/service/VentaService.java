@@ -196,8 +196,10 @@ public class VentaService {
                     .map(i -> loteRepository.findById(i.loteId())
                             .orElseThrow(() -> new ResourceNotFoundException("Lote no encontrado")))
                     .toList();
-            var promocion = promocionVenta.aplicar(request.promocionId(), request.fechaVenta(), lotesDeLaPromocion);
-            venta.registrarPromocion(promocion.nombre(), promocion.bono());
+            // El registro de venta (código de promoción, 12.18.0) también acepta las de mensualidad fija; Nueva venta no.
+            var promocion = promocionVenta.aplicar(
+                    request.promocionId(), request.fechaVenta(), lotesDeLaPromocion, null, registroDeVenta);
+            venta.registrarPromocion(promocion.nombre(), promocion.bono(), promocion.mensualidadFija());
         }
         String driveUrl = ContratoVentaService.validarContrato(
                 contratoFirmado, request.contratoFechaFirma(), request.contratoMedio(), request.contratoDriveUrl());

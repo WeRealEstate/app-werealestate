@@ -3,6 +3,7 @@ package com.werealestate.backend.service;
 import com.werealestate.backend.dto.PromocionCreateRequest;
 import com.werealestate.backend.dto.PromocionDto;
 import com.werealestate.backend.dto.PromocionUpdateRequest;
+import com.werealestate.backend.exception.ConflictException;
 import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.exception.ValidationException;
@@ -13,6 +14,7 @@ import com.werealestate.backend.model.TipoPrecioPromocion;
 import com.werealestate.backend.repository.PromocionRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -20,6 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class PromocionService {
+
+    private static final SecureRandom AZAR = new SecureRandom();
 
     private final PromocionRepository promocionRepository;
 
@@ -41,9 +45,21 @@ public class PromocionService {
     @Transactional
     public List<PromocionDto> listar() {
         actualizarVigencias();
+        // El código solo lo ve el admin: cualquier sesión puede pedir esta lista por API.
+        boolean admin = esAdmin();
         return promocionRepository.findAllByOrderByFechaCreacionDesc().stream()
-                .map(PromocionDto::fromEntity)
+                .map(p -> admin ? PromocionDto.conCodigo(p) : PromocionDto.fromEntity(p))
                 .toList();
+    }
+
+    /** Pone a la promoción un código nuevo al azar (botón «Generar otro»): el anterior deja de servir. */
+    @Transactional
+    public PromocionDto generarCodigo(Long id) {
+        exigirAdmin();
+        Promocion p = promocionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Promoción no encontrada"));
+        p.setCodigo(codigoAlAzar());
+        return PromocionDto.conCodigo(promocionRepository.save(p));
     }
 
     @Transactional
@@ -71,13 +87,17 @@ public class PromocionService {
         // Sin fecha de inicio empieza al crearla (decisión del usuario).
         p.setFechaInicio(request.fechaInicio() != null ? request.fechaInicio() : LocalDateTime.now());
         validarFechas(p);
+        // Código: el que escribió el admin o uno al azar (decisión del usuario).
+        p.setCodigo(request.codigo() == null || request.codigo().isBlank()
+                ? codigoAlAzar()
+                : codigoLibre(request.codigo(), null));
 
         ajustarPorInicio(p, request.activa() == null || request.activa());
         if (p.isActiva()) {
             desactivarOtrasDelProyecto(p.getProyecto(), p.getTipoPrecio(), p.getModalidad(), null);
         }
 
-        return PromocionDto.fromEntity(promocionRepository.save(p));
+        return PromocionDto.conCodigo(promocionRepository.save(p));
     }
 
     @Transactional
@@ -120,6 +140,9 @@ public class PromocionService {
         if (request.fechaInicio() != null) {
             p.setFechaInicio(request.fechaInicio());
         }
+        if (request.codigo() != null && !request.codigo().isBlank()) {
+            p.setCodigo(codigoLibre(request.codigo(), p));
+        }
         validarFechas(p);
         // Una programada cuenta como «quiere estar activa».
         boolean quiereActiva = request.activa() != null ? request.activa() : (p.isActiva() || !p.isInicioAplicado());
@@ -129,7 +152,7 @@ public class PromocionService {
             desactivarOtrasDelProyecto(p.getProyecto(), p.getTipoPrecio(), p.getModalidad(), p.getId());
         }
 
-        return PromocionDto.fromEntity(promocionRepository.save(p));
+        return PromocionDto.conCodigo(promocionRepository.save(p));
     }
 
     @Transactional
@@ -149,7 +172,7 @@ public class PromocionService {
             desactivarOtrasDelProyecto(p.getProyecto(), p.getTipoPrecio(), modalidad, p.getId());
         }
 
-        return PromocionDto.fromEntity(promocionRepository.save(p));
+        return PromocionDto.conCodigo(promocionRepository.save(p));
     }
 
     @Transactional
@@ -242,9 +265,36 @@ public class PromocionService {
         }
     }
 
+    /** Un código escrito por el admin: exactamente 6 dígitos y que no lo tenga otra promoción. */
+    private String codigoLibre(String escrito, Promocion propia) {
+        String codigo = escrito.trim();
+        if (!codigo.matches("\\d{6}")) {
+            throw new ValidationException("El código de promoción debe tener exactamente 6 dígitos");
+        }
+        promocionRepository.findByCodigo(codigo)
+                .filter(otra -> propia == null || !otra.getId().equals(propia.getId()))
+                .ifPresent(otra -> {
+                    throw new ConflictException("Ese código ya lo usa la promoción «" + otra.getNombre() + "»");
+                });
+        return codigo;
+    }
+
+    /** 6 dígitos al azar (con ceros a la izquierda) que ninguna otra promoción tenga. */
+    private String codigoAlAzar() {
+        for (int intento = 0; intento < 50; intento++) {
+            String codigo = String.format("%06d", AZAR.nextInt(1_000_000));
+            if (!promocionRepository.existsByCodigo(codigo)) return codigo;
+        }
+        throw new IllegalStateException("No se encontró un código de promoción libre");
+    }
+
+    private boolean esAdmin() {
+        return currentUserProvider.getUsuarioActual().getRol() == Role.ADMIN;
+    }
+
     /** Crear, editar, activar o eliminar promociones: solo admin (decisión del usuario 12.17.0). */
     private void exigirAdmin() {
-        if (currentUserProvider.getUsuarioActual().getRol() != Role.ADMIN) {
+        if (!esAdmin()) {
             throw new ForbiddenOperationException("Solo un administrador puede crear o cambiar promociones");
         }
     }

@@ -172,6 +172,23 @@
       }
 
       <div>
+        <label class="mb-1.5 block text-sm font-medium text-ink">Código de promoción</label>
+        <input
+          type="text"
+          inputmode="numeric"
+          maxlength="6"
+          autocomplete="off"
+          [value]="codigo()"
+          (input)="escribirCodigo($event)"
+          [placeholder]="editandoId() === null ? 'Vacío = uno al azar' : 'Sin código'"
+          data-testid="codigo-promocion"
+          class="w-full rounded-lg border border-border px-3.5 py-2.5 font-mono text-sm tracking-widest text-ink placeholder:font-sans placeholder:tracking-normal placeholder:text-ink-muted
+                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+        />
+        <p class="mt-1.5 text-xs text-ink-muted">6 dígitos. Los asesores lo escriben al registrar la venta para aplicar la promoción.</p>
+      </div>
+
+      <div>
         <label class="mb-1.5 block text-sm font-medium text-ink">Descripción (opcional)</label>
         <input
           type="text"
@@ -408,6 +425,7 @@
             <th class="px-4 py-3">Proyecto</th>
             <th class="px-4 py-3">Aplica a</th>
             <th class="px-4 py-3">Beneficio</th>
+            <th class="px-4 py-3">Código</th>
             <th class="px-4 py-3">Inicia</th>
             <th class="px-4 py-3">Vence</th>
             <th class="px-4 py-3">Estado</th>
@@ -448,6 +466,27 @@
                 } @else {
                   ${{ (promo.mensualidadFija ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} / mes
                 }
+              </td>
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-1.5 whitespace-nowrap">
+                  @if (promo.codigo) {
+                    <button
+                      type="button"
+                      (click)="copiarCodigo(promo)"
+                      title="Copiar código"
+                      class="rounded-md bg-surface-2 px-2 py-1 font-mono text-sm font-semibold tracking-widest text-ink hover:bg-we-primary/10 transition-colors duration-150"
+                    >
+                      {{ promo.codigo }}
+                    </button>
+                  }
+                  <button
+                    type="button"
+                    (click)="generarCodigo(promo)"
+                    class="text-xs font-medium text-we-primary hover:underline"
+                  >
+                    {{ promo.codigo ? 'Generar otro' : 'Generar' }}
+                  </button>
+                </div>
               </td>
               <td class="px-4 py-3 text-ink-muted">
                 {{ promo.fechaInicio ? (promo.fechaInicio | date: 'dd/MM/yyyy HH:mm') : '—' }}

@@ -2,7 +2,7 @@ import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { WeFormEnvioResultado, WeFormPublico, WeFormPublicoLista } from '../models/we-form.model';
+import { WeFormEnvioResultado, PromocionCodigo, WeFormPublico, WeFormPublicoLista } from '../models/we-form.model';
 
 /** Link público de We Forms. Cada petición lleva el PIN del asesor en una cabecera (nunca en la URL). El PIN
  * se recuerda en este dispositivo (sin caducidad) hasta que el asesor pulse "Cambiar de asesor" o el
@@ -50,9 +50,22 @@ export class WeFormsPublicoService {
     return firstValueFrom(this.http.get<WeFormPublico>(`${this.baseUrl}/${slug}`, { headers: this.cabeceras(pin) }));
   }
 
-  enviar(slug: string, pin: string, respuestas: { preguntaId: number; valor: unknown }[], archivos: Map<number, File>): Promise<WeFormEnvioResultado> {
+  /** La promoción de un código de 6 dígitos (los equivocados se limitan: 10 por hora). */
+  codigoPromocion(slug: string, pin: string, codigo: string): Promise<PromocionCodigo> {
+    return firstValueFrom(
+      this.http.post<PromocionCodigo>(`${this.baseUrl}/${slug}/codigo-promocion`, { codigo }, { headers: this.cabeceras(pin) }),
+    );
+  }
+
+  enviar(
+    slug: string,
+    pin: string,
+    respuestas: { preguntaId: number; valor: unknown }[],
+    archivos: Map<number, File>,
+    codigoPromocion: string | null = null,
+  ): Promise<WeFormEnvioResultado> {
     const form = new FormData();
-    form.append('datos', JSON.stringify({ respuestas }));
+    form.append('datos', JSON.stringify({ respuestas, codigoPromocion }));
     archivos.forEach((archivo, preguntaId) => form.append(`archivo-${preguntaId}`, archivo));
     return firstValueFrom(
       this.http.post<WeFormEnvioResultado>(`${this.baseUrl}/${slug}/respuestas`, form, { headers: this.cabeceras(pin) }),
