@@ -1,11 +1,23 @@
 import { Promocion } from '../models/promocion.model';
 import { SUPERFICIE_MACROLOTE_M2 } from '../../features/panel/cotizador/cotizador-datos';
 
-/** Bono de una promoción de bono por lotes para esa cantidad de lotes (0 = no aplica). */
-export function bonoDe(promo: Promocion, lotes: number): number {
-  if (lotes >= 3) return promo.bonoTresLotes ?? 0;
-  if (lotes === 2) return promo.bonoDosLotes ?? 0;
-  return promo.bonoUnLote ?? 0;
+/** Bono de una promoción de bono por lotes para EXACTAMENTE esa cantidad de lotes (0 = no tiene nivel para ella). */
+export function bonoDe(promo: Pick<Promocion, 'bonos'>, lotes: number): number {
+  return promo.bonos?.find((n) => n.lotes === lotes)?.bono ?? 0;
+}
+
+/** «3 lotes: −$30,000 · 6 lotes: −$70,000» para mostrar los niveles de una promoción. */
+export function textoBonos(promo: Pick<Promocion, 'bonos'>): string {
+  return (promo.bonos ?? [])
+    .map((n) => `${n.lotes} ${n.lotes === 1 ? 'lote' : 'lotes'}: −$${n.bono.toLocaleString('en-US', { maximumFractionDigits: 2 })}`)
+    .join(' · ');
+}
+
+/** «3, 4 o 6 lotes»: los números de lotes a los que aplica. */
+export function lotesQueAplica(promo: Pick<Promocion, 'bonos'>): string {
+  const n = (promo.bonos ?? []).map((x) => String(x.lotes));
+  if (n.length <= 1) return `${n[0] ?? '—'} ${n[0] === '1' ? 'lote' : 'lotes'}`;
+  return `${n.slice(0, -1).join(', ')} o ${n[n.length - 1]} lotes`;
 }
 
 /** Parte del bono de cada lote: partes iguales al centavo; lo que sobra, al último. */

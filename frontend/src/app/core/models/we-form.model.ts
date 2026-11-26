@@ -76,6 +76,25 @@ export interface WeFormLista {
   avisoFinanzas: boolean;
 }
 
+/** Dato opcional del cliente que puede llenar una pregunta propia (espejo de CampoCliente del backend). */
+export type CampoCliente =
+  | 'NACIONALIDAD'
+  | 'LUGAR_NACIMIENTO'
+  | 'ESTADO_CIVIL'
+  | 'OCUPACION'
+  | 'BENEFICIARIO_NOMBRE'
+  | 'BENEFICIARIO_PARENTESCO';
+
+/** Cada dato con su nombre y los tipos de pregunta que le sirven (las mismas reglas que el servidor). */
+export const CAMPOS_CLIENTE: { campo: CampoCliente; etiqueta: string; tipos: TipoPreguntaForm[] }[] = [
+  { campo: 'NACIONALIDAD', etiqueta: 'Nacionalidad', tipos: ['CORTA', 'DESPLEGABLE', 'OPCION_MULTIPLE', 'PAIS'] },
+  { campo: 'LUGAR_NACIMIENTO', etiqueta: 'Lugar de nacimiento', tipos: ['CORTA', 'PARRAFO', 'DESPLEGABLE', 'OPCION_MULTIPLE', 'PAIS'] },
+  { campo: 'ESTADO_CIVIL', etiqueta: 'Estado civil', tipos: ['DESPLEGABLE', 'OPCION_MULTIPLE'] },
+  { campo: 'OCUPACION', etiqueta: 'Ocupación', tipos: ['CORTA', 'PARRAFO', 'DESPLEGABLE', 'OPCION_MULTIPLE'] },
+  { campo: 'BENEFICIARIO_NOMBRE', etiqueta: 'Nombre del beneficiario', tipos: ['CORTA'] },
+  { campo: 'BENEFICIARIO_PARENTESCO', etiqueta: 'Parentesco del beneficiario', tipos: ['CORTA', 'DESPLEGABLE', 'OPCION_MULTIPLE'] },
+];
+
 export interface WeFormPregunta {
   id: number;
   orden: number;
@@ -90,6 +109,8 @@ export interface WeFormPregunta {
   fija: boolean;
   /** Siempre visible y obligatoria. */
   siempreObligatoria: boolean;
+  /** Pregunta propia que llena un dato opcional del cliente (null = ninguno). */
+  campoCliente: CampoCliente | null;
   /** Se puede ocultar o cambiar si es obligatoria. */
   opcionalEditable: boolean;
 }
@@ -134,6 +155,8 @@ export interface WeFormPreguntaRequest {
   obligatoria: boolean;
   opciones: string[];
   visible: boolean;
+  /** Solo preguntas propias: el dato del cliente que llena (null = ninguno). */
+  campoCliente?: CampoCliente | null;
 }
 
 export interface WeFormItemRespuesta {
@@ -241,9 +264,8 @@ export interface PromocionCodigo {
   descripcion: string | null;
   modalidad: 'BONO_LOTES' | 'MENSUALIDAD_FIJA';
   tipoPrecio: 'LOTE' | 'HECTAREA';
-  bonoUnLote: number | null;
-  bonoDosLotes: number | null;
-  bonoTresLotes: number | null;
+  /** Bono por número exacto de lotes, de menos a más. */
+  bonos: { lotes: number; bono: number }[];
   plazoFijo: number | null;
   mensualidadFija: number | null;
   precioEstandar: number | null;

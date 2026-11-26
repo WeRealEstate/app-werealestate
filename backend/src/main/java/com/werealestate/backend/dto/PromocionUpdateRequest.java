@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record PromocionUpdateRequest(
         @Size(max = 150, message = "El nombre no puede exceder 150 caracteres")
@@ -20,12 +21,8 @@ public record PromocionUpdateRequest(
 
         BigDecimal mensualidadFija,
 
-        /** Opcional: vacío o 0 = la promoción no aplica a 1 lote. */
-        BigDecimal bonoUnLote,
-
-        BigDecimal bonoDosLotes,
-
-        BigDecimal bonoTresLotes,
+        /** Niveles del bono por lotes (null = los mismos). */
+        List<NivelBono> bonos,
 
         Integer plazoFijo,
 
@@ -41,15 +38,7 @@ public record PromocionUpdateRequest(
         // null = sin cambios.
         LocalDateTime fechaInicio,
 
-        // 6 dígitos nuevos; null o vacío = el mismo (para uno al azar está POST /api/promociones/{id}/codigo).
+        // 6 letras o números nuevos; null o vacío = el mismo (para uno al azar está POST /api/promociones/{id}/codigo).
         String codigo
 ) {
-    /** Sin cambiar el código. */
-    public PromocionUpdateRequest(String nombre, String proyecto, TipoPrecioPromocion tipoPrecio, ModalidadPromocion modalidad,
-            BigDecimal mensualidadFija, BigDecimal bonoUnLote, BigDecimal bonoDosLotes, BigDecimal bonoTresLotes,
-            Integer plazoFijo, String descripcion, Boolean activa, LocalDateTime fechaFin, Boolean limpiarFechaFin,
-            LocalDateTime fechaInicio) {
-        this(nombre, proyecto, tipoPrecio, modalidad, mensualidadFija, bonoUnLote, bonoDosLotes, bonoTresLotes, plazoFijo,
-                descripcion, activa, fechaFin, limpiarFechaFin, fechaInicio, null);
-    }
 }

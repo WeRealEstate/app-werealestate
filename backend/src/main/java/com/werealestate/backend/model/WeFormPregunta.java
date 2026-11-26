@@ -58,6 +58,11 @@ public class WeFormPregunta {
     @Column(nullable = false)
     private boolean archivada;
 
+    /** Pregunta propia vinculada a un dato opcional del cliente (null = no lo alimenta). Ver CampoCliente. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "campo_cliente", length = 40)
+    private CampoCliente campoCliente;
+
     protected WeFormPregunta() {
         // JPA
     }
@@ -91,6 +96,8 @@ public class WeFormPregunta {
     }
 
     public void setOrden(int orden) { this.orden = orden; }
+    public CampoCliente getCampoCliente() { return campoCliente; }
+    public void setCampoCliente(CampoCliente campoCliente) { this.campoCliente = campoCliente; }
     public void archivar() { this.archivada = true; }
 
     public Long getId() { return id; }

@@ -152,7 +152,8 @@
                   }
                   <p class="mt-1 text-sm text-ink">
                     <span class="text-ink-muted">Por:</span>
-                    {{ m.usuario?.nombre ?? m.nombreAsesor ?? 'Sistema (cotizador público)' }}
+                    <!-- Hecho desde el plano público: el usuario es el de sistema («Sesiones públicas»); quien lo hizo es el asesor. -->
+                    {{ m.viaPublico ? (m.nombreAsesor || 'Asesor sin identificar (plano público)') : (m.usuario?.nombre ?? m.nombreAsesor ?? 'Sistema (cotizador público)') }}
                   </p>
                   @if (m.nota) {
                     <p class="mt-1 text-sm text-ink-muted">{{ m.nota }}</p>

@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.werealestate.backend.dto.NivelBono;
 import com.werealestate.backend.dto.PromocionCreateRequest;
 import com.werealestate.backend.dto.PromocionDto;
 import com.werealestate.backend.dto.PromocionUpdateRequest;
@@ -18,6 +19,7 @@ import com.werealestate.backend.repository.PromocionRepository;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,7 +39,8 @@ class PromocionReglasIntegracionTest extends PruebaDeIntegracion {
 
     private PromocionCreateRequest bono(String nombre, LocalDateTime inicio, LocalDateTime fin) {
         return new PromocionCreateRequest(nombre, "nanuu", TipoPrecioPromocion.LOTE, ModalidadPromocion.BONO_LOTES, null,
-                null, new BigDecimal("20000"), new BigDecimal("30000"), 60, null, true, fin, inicio);
+                List.of(new NivelBono(2, new BigDecimal("20000")), new NivelBono(3, new BigDecimal("30000"))), 60, null, true,
+                fin, inicio, null);
     }
 
     @Test
@@ -49,17 +52,17 @@ class PromocionReglasIntegracionTest extends PruebaDeIntegracion {
         assertThrows(ForbiddenOperationException.class, () -> servicio.eliminar(p.id()));
         iniciarSesionComo(usuario(Role.ASESOR));
         assertThrows(ForbiddenOperationException.class, () -> servicio.actualizar(p.id(), new PromocionUpdateRequest(
-                null, null, null, null, null, null, null, null, null, "x", null, null, null, null)));
+                null, null, null, null, null, null, null, "x", null, null, null, null, null)));
     }
 
     @Test
     void elNombreNoSeCambia() {
         PromocionDto p = servicio.crear(bono("Promo " + etiqueta(), null, null));
         assertThrows(ValidationException.class, () -> servicio.actualizar(p.id(), new PromocionUpdateRequest(
-                "Otro nombre", null, null, null, null, null, null, null, null, null, null, null, null, null)));
+                "Otro nombre", null, null, null, null, null, null, null, null, null, null, null, null)));
         // Mandar el mismo nombre (el formulario lo manda siempre) sí se acepta.
         servicio.actualizar(p.id(), new PromocionUpdateRequest(
-                p.nombre(), null, null, null, null, null, null, null, null, "nueva", null, null, null, null));
+                p.nombre(), null, null, null, null, null, null, "nueva", null, null, null, null, null));
     }
 
     @Test

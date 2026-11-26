@@ -13,8 +13,7 @@ import {
   TipoPreguntaForm,
   WeFormDetalle,
   WeFormPregunta,
-  WeFormRespuesta,
-} from '../../../core/models/we-form.model';
+  WeFormRespuesta, CAMPOS_CLIENTE, CampoCliente } from '../../../core/models/we-form.model';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { WeFormsService } from '../../../core/services/we-forms.service';
@@ -69,6 +68,8 @@ export class WeFormDetalleComponent {
   readonly eObligatoria = signal(false);
   readonly eVisible = signal(true);
   readonly eOpciones = signal('');
+  /** Dato del cliente que llena la pregunta que se edita (null = ninguno). */
+  readonly eCampoCliente = signal<CampoCliente | null>(null);
   readonly guardandoPregunta = signal(false);
   readonly nuevoTipo = signal<TipoPreguntaForm>('CORTA');
 
@@ -180,6 +181,18 @@ export class WeFormDetalleComponent {
     this.eObligatoria.set(p.obligatoria || p.siempreObligatoria);
     this.eVisible.set(p.visible);
     this.eOpciones.set(p.opciones.join('\n'));
+    this.eCampoCliente.set(p.campoCliente ?? null);
+  }
+
+  /** Los datos del cliente que puede llenar esta pregunta: los que aceptan su tipo y que ninguna otra pregunta llena. */
+  camposDisponibles(p: WeFormPregunta): { campo: CampoCliente; etiqueta: string }[] {
+    if (p.fija) return [];
+    const usados = new Set((this.form()?.preguntas ?? []).filter((x) => x.id !== p.id && x.campoCliente).map((x) => x.campoCliente));
+    return CAMPOS_CLIENTE.filter((c) => c.tipos.includes(p.tipo) && !usados.has(c.campo));
+  }
+
+  etiquetaCampo(campo: CampoCliente): string {
+    return CAMPOS_CLIENTE.find((c) => c.campo === campo)?.etiqueta ?? campo;
   }
 
   cerrarEditor(): void {
@@ -206,6 +219,7 @@ export class WeFormDetalleComponent {
         obligatoria: this.eObligatoria(),
         opciones: this.eOpciones().split('\n').map((o) => o.trim()).filter((o) => o),
         visible: this.eVisible(),
+        campoCliente: p.fija ? null : this.eCampoCliente(),
       });
       this.reemplazar(actualizada);
       this.editandoId.set(null);

@@ -227,13 +227,16 @@ public class ClienteService {
                 vacio(existente.getCorreo(), limpio(r.correo())), existente.getCurp(),
                 vacio(existente.getRfc(), rfc),
                 vacio(existente.getLugarNacimiento(), limpio(r.lugarNacimiento())),
-                existente.getNacionalidad(), existente.getEstadoCivil(), existente.getOcupacion(),
+                vacio(existente.getNacionalidad(), limpio(r.nacionalidad())),
+                existente.getEstadoCivil() != null ? existente.getEstadoCivil() : r.estadoCivil(),
+                vacio(existente.getOcupacion(), limpio(r.ocupacion())),
                 vacio(existente.getCalle(), limpio(r.calle())),
                 vacio(existente.getColonia(), limpio(r.colonia())),
                 vacio(existente.getMunicipio(), limpio(r.municipio())),
                 vacio(existente.getEstado(), estado),
                 vacio(existente.getCodigoPostal(), limpio(r.codigoPostal())),
-                existente.getBeneficiarioNombre(), existente.getBeneficiarioParentesco(),
+                vacio(existente.getBeneficiarioNombre(), limpio(r.beneficiarioNombre())),
+                vacio(existente.getBeneficiarioParentesco(), limpio(r.beneficiarioParentesco())),
                 existente.getFuente(), existente.getFuenteDetalle(),
                 existente.getCaptadoPorUsuario(), existente.getCaptadoPorAsesor(), existente.getNotas(),
                 existente.getExpedienteUbicacion(), existente.getExpedienteDriveUrl());
@@ -251,9 +254,9 @@ public class ClienteService {
         c.setNumero(siguienteNumero());
         c.actualizarDatos(
                 nombre, paterno, limpio(r.apellidoMaterno()), r.fechaNacimiento(), limpio(r.telefono()), null,
-                limpio(r.correo()), curp, rfc, limpio(r.lugarNacimiento()), null, null, null,
-                limpio(r.calle()), limpio(r.colonia()), limpio(r.municipio()), estado,
-                limpio(r.codigoPostal()), null, null,
+                limpio(r.correo()), curp, rfc, limpio(r.lugarNacimiento()), limpio(r.nacionalidad()), r.estadoCivil(),
+                limpio(r.ocupacion()), limpio(r.calle()), limpio(r.colonia()), limpio(r.municipio()), estado,
+                limpio(r.codigoPostal()), limpio(r.beneficiarioNombre()), limpio(r.beneficiarioParentesco()),
                 FuenteCliente.PRECONTRATO, null, captadoUsuario, captadoAsesor, null, null, null);
         c.setPaisResidencia(pais);
         return c;

@@ -71,6 +71,9 @@
                   @if (p.destino) {
                     <span class="rounded-md bg-we-primary/10 px-2 py-0.5 text-[11px] font-medium text-we-primary dark:text-we-blue-light">{{ destinoEtiqueta[p.destino] }}</span>
                   }
+                  @if (p.campoCliente) {
+                    <span class="rounded-md bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">Cliente: {{ etiquetaCampo(p.campoCliente) }}</span>
+                  }
                   @if (!p.visible) {
                     <span class="rounded-md bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">Oculta</span>
                   }
@@ -96,7 +99,24 @@
                       class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
                   </div>
                 }
-                @if (esConOpciones(p.tipo) && !p.fija) {
+                @if (!p.fija && p.tipo !== 'TITULO' && (camposDisponibles(p).length > 0 || eCampoCliente())) {
+                  <div>
+                    <label class="mb-1 block text-xs font-medium text-ink-muted">Vincular con dato del cliente</label>
+                    <select [ngModel]="eCampoCliente()" (ngModelChange)="eCampoCliente.set($event)" data-testid="editor-campo-cliente"
+                      class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50">
+                      <option [ngValue]="null">Ninguno (solo se guarda en la respuesta)</option>
+                      @if (eCampoCliente(); as actual) {
+                        @if (!camposDisponibles(p).some((c) => c.campo === actual)) { <option [ngValue]="actual">{{ etiquetaCampo(actual) }}</option> }
+                      }
+                      @for (c of camposDisponibles(p); track c.campo) { <option [ngValue]="c.campo">{{ c.etiqueta }}</option> }
+                    </select>
+                    <p class="mt-1 text-xs text-ink-muted">
+                      Al registrar la venta, la respuesta se guarda en la ficha del cliente (si el cliente ya existía, solo si no tenía ese dato).
+                      @if (eCampoCliente() === 'ESTADO_CIVIL') { Las opciones quedan fijas: Soltero(a), Casado(a), Unión libre, Divorciado(a) y Viudo(a). }
+                    </p>
+                  </div>
+                }
+                @if (esConOpciones(p.tipo) && !p.fija && eCampoCliente() !== 'ESTADO_CIVIL') {
                   <div>
                     <label class="mb-1 block text-xs font-medium text-ink-muted">Opciones (una por línea, mínimo dos)</label>
                     <textarea rows="4" [ngModel]="eOpciones()" (ngModelChange)="eOpciones.set($event)"

@@ -58,9 +58,7 @@ class PromocionAlModificarVentaIntegracionTest extends PruebaDeIntegracion {
         p.setProyecto("samai");
         p.setTipoPrecio(TipoPrecioPromocion.LOTE);
         p.setModalidad(ModalidadPromocion.BONO_LOTES);
-        p.setBonoUnLote(new BigDecimal(bonoUnLote));
-        p.setBonoDosLotes(new BigDecimal("20000"));
-        p.setBonoTresLotes(new BigDecimal("30000"));
+        p.setBonos(java.util.Map.of(1, new BigDecimal(bonoUnLote), 2, new BigDecimal("20000"), 3, new BigDecimal("30000")));
         p.setPlazoFijo(60);
         p.setActiva(true);
         p.setFechaFin(LocalDateTime.now().plusDays(5));

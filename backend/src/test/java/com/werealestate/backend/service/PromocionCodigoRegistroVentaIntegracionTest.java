@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.werealestate.backend.dto.LoteDto;
+import com.werealestate.backend.dto.NivelBono;
 import com.werealestate.backend.dto.PromocionCreateRequest;
 import com.werealestate.backend.dto.PromocionDto;
 import com.werealestate.backend.dto.PromocionUpdateRequest;
@@ -47,6 +48,7 @@ class PromocionCodigoRegistroVentaIntegracionTest extends PruebaDeIntegracion {
     @Autowired WeFormRespuestaRepository respuestas;
     @Autowired ObjectMapper json;
     @Autowired EntityManager em;
+    @Autowired PromocionVentaService promocionVenta;
 
     private final Random azar = new Random();
     private Usuario admin;
@@ -68,8 +70,8 @@ class PromocionCodigoRegistroVentaIntegracionTest extends PruebaDeIntegracion {
         boolean bono = modalidad == ModalidadPromocion.BONO_LOTES;
         PromocionDto p = promocionService.crear(new PromocionCreateRequest("Promo " + etiqueta(), proyecto,
                 TipoPrecioPromocion.LOTE, modalidad, bono ? null : new BigDecimal("1900"),
-                bono ? new BigDecimal("10000") : null, bono ? new BigDecimal("20000") : null,
-                bono ? new BigDecimal("30000") : null, bono ? 60 : null, null, true, null, null, codigo));
+                bono ? List.of(new NivelBono(1, new BigDecimal("10000")), new NivelBono(4, new BigDecimal("40000"))) : null,
+                bono ? 60 : null, null, true, null, null, codigo));
         em.flush();
         return p;
     }
@@ -193,13 +195,52 @@ class PromocionCodigoRegistroVentaIntegracionTest extends PruebaDeIntegracion {
 
         PromocionDto otro = promocionService.generarCodigo(p.id());
         assertNotEquals(propio, otro.codigo());
-        assertTrue(otro.codigo().matches("\\d{6}"));
+        assertTrue(otro.codigo().matches("[A-Z0-9]{6}"));
         PromocionDto editada = promocionService.actualizar(p.id(), new PromocionUpdateRequest(
-                null, null, null, null, null, null, null, null, null, null, null, null, null, null, propio));
+                null, null, null, null, null, null, null, null, null, null, null, null, propio));
         assertEquals(propio, editada.codigo());
 
         iniciarSesionComo(usuario(Role.LIDER_AREA));
         assertTrue(promocionService.listar().stream().allMatch(x -> x.codigo() == null));
         assertTrue(promocionService.listarActivas().stream().allMatch(x -> x.codigo() == null));
+    }
+
+    @Test
+    void elCodigoAceptaLetrasSinDistinguirMayusculas() {
+        String propio = "Q" + etiqueta().substring(0, 5);
+        promociones.findAll().stream().filter(x -> propio.equalsIgnoreCase(x.getCodigo())).forEach(x -> x.setCodigo(null));
+        PromocionDto p = crear(ModalidadPromocion.BONO_LOTES, "samai", propio.toLowerCase());
+        assertEquals(propio, p.codigo());
+        iniciarSesionComo(asesor);
+        assertEquals(p.nombre(), panel.codigoPromocion(slug, " " + propio.toLowerCase() + " ").nombre());
+        assertThrows(ValidationException.class, () -> crear(ModalidadPromocion.BONO_LOTES, "nanuu", "AB-12C"));
+    }
+
+    @Test
+    void elBonoSoloAplicaAlNumeroExactoDeLotes() {
+        PromocionDto p = crear(ModalidadPromocion.BONO_LOTES, "samai", null);
+        var entidad = promociones.findById(p.id()).orElseThrow();
+        assertEquals(0, new BigDecimal("40000").compareTo(entidad.bonoPara(4)));
+        assertNull(entidad.bonoPara(2));
+        assertNull(entidad.bonoPara(5));
+        // Dos lotes: la promoción tiene niveles 1 y 4, así que no aplica.
+        Lote a = loteSamai();
+        Lote b = loteSamai();
+        assertThrows(ValidationException.class,
+                () -> promocionVenta.aplicar(p.id(), java.time.LocalDate.now(), List.of(a, b)));
+    }
+
+    @Test
+    void losNivelesSeValidan() {
+        iniciarSesionComo(admin);
+        assertThrows(ValidationException.class, () -> promocionService.crear(new PromocionCreateRequest("Promo " + etiqueta(),
+                "samai", TipoPrecioPromocion.LOTE, ModalidadPromocion.BONO_LOTES, null,
+                List.of(new NivelBono(21, new BigDecimal("1000"))), 60, null, true, null, null, null)));
+        assertThrows(ValidationException.class, () -> promocionService.crear(new PromocionCreateRequest("Promo " + etiqueta(),
+                "samai", TipoPrecioPromocion.LOTE, ModalidadPromocion.BONO_LOTES, null,
+                List.of(new NivelBono(3, new BigDecimal("1000")), new NivelBono(3, new BigDecimal("2000"))), 60, null, true,
+                null, null, null)));
+        assertThrows(ValidationException.class, () -> promocionService.crear(new PromocionCreateRequest("Promo " + etiqueta(),
+                "samai", TipoPrecioPromocion.LOTE, ModalidadPromocion.BONO_LOTES, null, List.of(), 60, null, true, null, null, null)));
     }
 }

@@ -15,6 +15,13 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.20.0', fecha: '2026-11-26', cambios: [
+    "Promociones de bono: ahora eliges a cuántos lotes aplica. Agregas los niveles que quieras (por ejemplo 3 lotes → $30,000, 4 lotes → $45,000, 6 lotes → $70,000, de 1 a 20 lotes) y el bono solo aplica con ese número exacto de lotes, en el cotizador, al registrar o modificar una venta y con código de promoción. Las promociones que ya existían quedan con sus mismos montos en 1, 2 y 3 lotes (exactos: «3 o más» ya no vale para 4 o más).",
+    "Código de promoción: ahora puede llevar letras y números (6 caracteres, por ejemplo BUEN25), sin distinguir mayúsculas. Los que se generan al azar también mezclan letras y números.",
+  ] },
+  { version: '12.19.0', fecha: '2026-11-26', cambios: [
+    "We Forms: una pregunta propia se puede vincular con un dato del cliente que no es obligatorio (nacionalidad, lugar de nacimiento, estado civil, ocupación, nombre y parentesco del beneficiario). Al registrar la venta, la respuesta se guarda en la ficha del cliente; si el cliente ya existía, solo llena lo que tenía vacío.",
+  ] },
   { version: '12.18.0', fecha: '2026-11-26', cambios: [
     "Promociones: cada promoción tiene un código de 6 dígitos (lo puedes escribir o dejar que se genere al azar), con botón para copiarlo y «Generar otro» si se filtró. Solo lo ve el administrador.",
     "Registrar venta (enlace con PIN y panel del asesor): nuevo campo «Código de promoción» debajo de Tipo de pago. Con un código de bono queda sin enganche, con el plazo de la promoción y el bono restado del precio; con uno de mensualidad fija, la mensualidad queda fija (ajustada al tamaño del lote) y solo se eligen los meses de las aportaciones, que se reparten solas. Lo que define la promoción se bloquea, y si cambias los lotes se recalcula.",

@@ -1,7 +1,12 @@
 package com.werealestate.backend.model;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.MapKeyColumn;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
@@ -11,6 +16,8 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.TreeMap;
 
 @Entity
 @Table(name = "promocion")
@@ -37,15 +44,14 @@ public class Promocion {
     @Column(name = "mensualidad_fija", precision = 14, scale = 2)
     private BigDecimal mensualidadFija;
 
-    /** Bono al comprar un solo lote (null = la promoción no aplica a 1 lote). */
-    @Column(name = "bono_un_lote", precision = 14, scale = 2)
-    private BigDecimal bonoUnLote;
-
-    @Column(name = "bono_dos_lotes", precision = 14, scale = 2)
-    private BigDecimal bonoDosLotes;
-
-    @Column(name = "bono_tres_lotes", precision = 14, scale = 2)
-    private BigDecimal bonoTresLotes;
+    /** Bono por número EXACTO de lotes (V98, 12.20.0, decisión del usuario): una venta con un número de lotes que no
+     * tiene nivel no recibe bono. Reemplaza a las columnas bono_un_lote / bono_dos_lotes / bono_tres_lotes (que se
+     * conservan en la BD sin usarse). */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "promocion_bono", joinColumns = @JoinColumn(name = "promocion_id"))
+    @MapKeyColumn(name = "lotes")
+    @Column(name = "bono", nullable = false, precision = 14, scale = 2)
+    private Map<Integer, BigDecimal> bonos = new TreeMap<>();
 
     @Column(name = "plazo_fijo")
     private Integer plazoFijo;
@@ -67,7 +73,7 @@ public class Promocion {
     @Column(name = "inicio_aplicado", nullable = false)
     private boolean inicioAplicado = true;
 
-    /** Código de 6 dígitos para aplicarla en el registro de venta (null = sin código). Único; solo lo ve el admin. */
+    /** Código de 6 letras o números (en mayúsculas) para aplicarla en el registro de venta (null = sin código). Único; solo lo ve el admin. */
     @Column(name = "codigo", length = 6)
     private String codigo;
 
@@ -159,28 +165,19 @@ public class Promocion {
         this.mensualidadFija = mensualidadFija;
     }
 
-    public BigDecimal getBonoUnLote() {
-        return bonoUnLote;
+    /** Los niveles, de menos a más lotes. */
+    public Map<Integer, BigDecimal> getBonos() {
+        return new TreeMap<>(bonos);
     }
 
-    public void setBonoUnLote(BigDecimal bonoUnLote) {
-        this.bonoUnLote = bonoUnLote;
+    public void setBonos(Map<Integer, BigDecimal> nuevos) {
+        bonos.clear();
+        if (nuevos != null) bonos.putAll(nuevos);
     }
 
-    public BigDecimal getBonoDosLotes() {
-        return bonoDosLotes;
-    }
-
-    public void setBonoDosLotes(BigDecimal bonoDosLotes) {
-        this.bonoDosLotes = bonoDosLotes;
-    }
-
-    public BigDecimal getBonoTresLotes() {
-        return bonoTresLotes;
-    }
-
-    public void setBonoTresLotes(BigDecimal bonoTresLotes) {
-        this.bonoTresLotes = bonoTresLotes;
+    /** Bono para exactamente esos lotes; null = la promoción no aplica a ese número de lotes. */
+    public BigDecimal bonoPara(int lotes) {
+        return bonos.get(lotes);
     }
 
     public Integer getPlazoFijo() {

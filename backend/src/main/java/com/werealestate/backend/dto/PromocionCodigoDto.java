@@ -17,9 +17,8 @@ public record PromocionCodigoDto(
         String descripcion,
         ModalidadPromocion modalidad,
         TipoPrecioPromocion tipoPrecio,
-        BigDecimal bonoUnLote,
-        BigDecimal bonoDosLotes,
-        BigDecimal bonoTresLotes,
+        // Bono por número exacto de lotes, de menos a más.
+        java.util.List<NivelBono> bonos,
         Integer plazoFijo,
         BigDecimal mensualidadFija,
         BigDecimal precioEstandar,
@@ -27,7 +26,7 @@ public record PromocionCodigoDto(
 
     public static PromocionCodigoDto de(Promocion p, BigDecimal precioEstandar) {
         return new PromocionCodigoDto(p.getId(), p.getNombre(), p.getDescripcion(), p.getModalidad(), p.getTipoPrecio(),
-                p.getBonoUnLote(), p.getBonoDosLotes(), p.getBonoTresLotes(), p.getPlazoFijo(), p.getMensualidadFija(),
+                NivelBono.de(p), p.getPlazoFijo(), p.getMensualidadFija(),
                 precioEstandar, p.getFechaFin());
     }
 }

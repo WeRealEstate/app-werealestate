@@ -10,6 +10,7 @@ import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.exception.ValidationException;
 import com.werealestate.backend.model.Desarrollo;
+import com.werealestate.backend.model.CampoCliente;
 import com.werealestate.backend.model.DestinoPregunta;
 import com.werealestate.backend.model.EstadoWeForm;
 import com.werealestate.backend.model.Modulo;
@@ -348,7 +349,7 @@ public class WeFormService {
         for (WeFormPregunta p : preguntaRepository.findByFormIdAndArchivadaFalseOrderByOrdenAsc(original.getId())) {
             preguntaRepository.save(new WeFormPregunta(
                     copia, orden++, p.getTipo(), p.getTitulo(), p.getDescripcion(), p.isObligatoria(), p.getOpciones(),
-                    p.getDestino(), p.isVisible()));
+                    p.getDestino(), p.isVisible())).setCampoCliente(p.getCampoCliente());
         }
         return detalle(copia);
     }
@@ -434,10 +435,11 @@ public class WeFormService {
         String opciones = opcionesTexto(tipo, request.opciones());
         int orden = preguntaRepository.maxOrden(formId) + 1;
         boolean obligatoria = tipo != TipoPreguntaForm.TITULO && request.obligatoria();
-        WeFormPregunta p = preguntaRepository.save(new WeFormPregunta(
+        WeFormPregunta p = new WeFormPregunta(
                 form, orden, tipo, request.titulo().trim(), Textos.opcional(request.descripcion()), obligatoria, opciones, null,
-                request.visible() == null || request.visible()));
-        return preguntaDto(p);
+                request.visible() == null || request.visible());
+        vincularCampoCliente(p, request.campoCliente());
+        return preguntaDto(preguntaRepository.save(p));
     }
 
     public WeFormDtos.Pregunta editarPregunta(Long formId, Long preguntaId, WeFormDtos.PreguntaRequest request) {
@@ -459,7 +461,31 @@ public class WeFormService {
         p.editar(
                 request.titulo().trim(), Textos.opcional(request.descripcion()), obligatoria,
                 destino == null ? opcionesTexto(p.getTipo(), request.opciones()) : p.getOpciones(), visible);
+        if (destino == null) vincularCampoCliente(p, request.campoCliente());
         return preguntaDto(p);
+    }
+
+    /**
+     * Vincula (o desvincula, con null) una pregunta propia a un dato opcional del cliente: solo con un tipo de pregunta
+     * que le sirva y sin que otra pregunta del formulario ya llene ese dato. Estado civil lleva sus opciones fijas.
+     */
+    private void vincularCampoCliente(WeFormPregunta p, CampoCliente campo) {
+        if (campo != null) {
+            if (!campo.aceptaTipo(p.getTipo())) {
+                throw new ValidationException("Una pregunta de este tipo no se puede vincular con «" + campo.etiqueta() + "»");
+            }
+            boolean ocupado = p.getForm().getId() != null && preguntaRepository
+                    .findByFormIdAndArchivadaFalseOrderByOrdenAsc(p.getForm().getId()).stream()
+                    .anyMatch(otra -> campo == otra.getCampoCliente() && !otra.getId().equals(p.getId()));
+            if (ocupado) {
+                throw new ValidationException("Otra pregunta de este formulario ya llena «" + campo.etiqueta() + "»");
+            }
+            if (campo == CampoCliente.ESTADO_CIVIL) {
+                p.editar(p.getTitulo(), p.getDescripcion(), p.isObligatoria(),
+                        String.join("\n", CampoCliente.OPCIONES_ESTADO_CIVIL), p.isVisible());
+            }
+        }
+        p.setCampoCliente(campo);
     }
 
     /** Las preguntas propias se archivan (dejan de verse en el formulario, sus respuestas viejas se conservan);
@@ -543,7 +569,7 @@ public class WeFormService {
         return new WeFormDtos.Pregunta(
                 p.getId(), p.getOrden(), p.getTipo(), p.getTitulo(), p.getDescripcion(), p.isObligatoria(),
                 p.opcionesLista(), d, p.isVisible(), d != null, d != null && d.siempreObligatoria(),
-                d != null && d.opcionalEditable());
+                d != null && d.opcionalEditable(), p.getCampoCliente());
     }
 
     private WeFormDtos.Respuesta respuestaDto(WeFormRespuesta r, List<WeFormRespuestaItem> items) {

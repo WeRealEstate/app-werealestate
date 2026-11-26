@@ -4,7 +4,7 @@ import { Component, inject, signal } from '@angular/core';
 import { LucidePencil, LucideTrash2 } from '@lucide/angular';
 import { RouterLink } from '@angular/router';
 import { PromocionesService } from '../../../core/services/promociones.service';
-import { ModalidadPromocion, Promocion, ProyectoPromocion, TipoPrecioPromocion } from '../../../core/models/promocion.model';
+import { ModalidadPromocion, Promocion, ProyectoPromocion, TipoPrecioPromocion, MAX_LOTES_NIVEL, NivelBono } from '../../../core/models/promocion.model';
 import { ToastService } from '../../../core/services/toast.service';
 import { ConfirmService } from '../../../core/services/confirm.service';
 import { PROJECTS_CONFIG } from '../../../core/data/proyectos-cotizador.config';
@@ -19,6 +19,21 @@ import {
 import { formatearNumero, limpiarNumero, numeroDeTexto } from '../../../shared/moneda-input/moneda-input.directive';
 
 const PLAZO_PREVIEW_OPCIONES = [12, 24, 36, 48, 60] as const;
+
+/** Un nivel mientras se edita: el número de lotes puede quedar vacío y el bono lleva su texto con comas. */
+interface NivelEditable {
+  lotes: number | null;
+  bono: number;
+  bonoDisplay: string;
+}
+
+/** Los niveles con que arranca una promoción nueva de bono: 2 y 3 lotes, como antes. */
+function nivelesPorDefecto(): NivelEditable[] {
+  return [
+    { lotes: 2, bono: 20000, bonoDisplay: '20,000' },
+    { lotes: 3, bono: 30000, bonoDisplay: '30,000' },
+  ];
+}
 
 @Component({
   selector: 'app-promociones',
@@ -46,12 +61,9 @@ export class PromocionesComponent {
   readonly mensualidadFija = signal(0);
   readonly mensualidadDisplay = signal('');
   /** 0 = la promoción no aplica a 1 lote. */
-  readonly bonoUnLote = signal(0);
-  readonly bonoUnLoteDisplay = signal('');
-  readonly bonoDosLotes = signal(20000);
-  readonly bonoDosLotesDisplay = signal('20,000');
-  readonly bonoTresLotes = signal(30000);
-  readonly bonoTresLotesDisplay = signal('30,000');
+  /** Niveles del bono: cuántos lotes (exactos) y de cuánto es el bono; se agregan los que haga falta. */
+  readonly niveles = signal<NivelEditable[]>(nivelesPorDefecto());
+  readonly maxLotesNivel = MAX_LOTES_NIVEL;
   readonly plazoFijo = signal(60);
   readonly descripcion = signal('');
   /** Código de 6 dígitos que escribe el admin; vacío = al crear, uno al azar; al editar, el mismo. */
@@ -81,7 +93,7 @@ export class PromocionesComponent {
   get formularioValido(): boolean {
     if (!this.nombre().trim()) return false;
     if (this.modalidad() === 'BONO_LOTES') {
-      return this.bonoDosLotes() > 0 && this.bonoTresLotes() > 0 && this.plazoFijo() > 0;
+      return this.errorNiveles() === null && this.plazoFijo() > 0;
     }
     return this.mensualidadFija() > 0;
   }
@@ -118,46 +130,67 @@ export class PromocionesComponent {
     return Math.max((this.precioReferenciaPreview - cubiertoPorMensualidades) / count, 0);
   }
 
-  /** Vista previa para la modalidad BONO_LOTES con 2 y 3 lotes estándar de 200 m². */
+  /** Vista previa para la modalidad BONO_LOTES: cada nivel sobre lotes estándar de 200 m². */
   private precioLoteBaseBonoPreview(): number {
     const config = PROJECTS_CONFIG[this.proyecto()];
     return config.minimumArea * config.pricePerM2;
   }
 
-  get precioListaUnLotePreview(): number {
-    return this.precioLoteBaseBonoPreview();
+  get nivelesPreview(): { lotes: number; lista: number; bono: number; total: number; mensualidad: number }[] {
+    return this.niveles()
+      .filter((n) => n.lotes !== null && n.lotes >= 1 && n.bono > 0)
+      .sort((x, y) => (x.lotes ?? 0) - (y.lotes ?? 0))
+      .map((n) => {
+        const lista = this.precioLoteBaseBonoPreview() * (n.lotes ?? 0);
+        const total = Math.max(lista - n.bono, 0);
+        return { lotes: n.lotes ?? 0, lista, bono: n.bono, total, mensualidad: this.plazoFijo() > 0 ? total / this.plazoFijo() : 0 };
+      });
   }
 
-  get totalConBonoUnLotePreview(): number {
-    return Math.max(this.precioListaUnLotePreview - this.bonoUnLote(), 0);
+  /** Qué le falta a los niveles para poder guardar (null = están bien). */
+  errorNiveles(): string | null {
+    const niveles = this.niveles();
+    if (niveles.length === 0) return 'Agrega al menos un nivel.';
+    const vistos = new Set<number>();
+    for (const n of niveles) {
+      if (n.lotes === null || !Number.isInteger(n.lotes) || n.lotes < 1 || n.lotes > MAX_LOTES_NIVEL) {
+        return `Cada nivel debe ser de 1 a ${MAX_LOTES_NIVEL} lotes.`;
+      }
+      if (vistos.has(n.lotes)) return `Hay dos niveles para ${n.lotes} lotes.`;
+      vistos.add(n.lotes);
+      if (!(n.bono > 0)) return `Escribe el bono para ${n.lotes} ${n.lotes === 1 ? 'lote' : 'lotes'}.`;
+    }
+    return null;
   }
 
-  get mensualidadUnLotePreview(): number {
-    return this.plazoFijo() > 0 ? this.totalConBonoUnLotePreview / this.plazoFijo() : 0;
+  agregarNivel(): void {
+    const usados = new Set(this.niveles().map((n) => n.lotes));
+    let siguiente = Math.max(0, ...this.niveles().map((n) => n.lotes ?? 0)) + 1;
+    while (usados.has(siguiente) && siguiente <= MAX_LOTES_NIVEL) siguiente++;
+    this.niveles.update((l) => [...l, { lotes: siguiente <= MAX_LOTES_NIVEL ? siguiente : null, bono: 0, bonoDisplay: '' }]);
   }
 
-  get precioListaDosLotesPreview(): number {
-    return this.precioLoteBaseBonoPreview() * 2;
+  quitarNivel(i: number): void {
+    this.niveles.update((l) => l.filter((_, k) => k !== i));
   }
 
-  get totalConBonoDosLotesPreview(): number {
-    return Math.max(this.precioListaDosLotesPreview - this.bonoDosLotes(), 0);
+  cambiarLotesNivel(i: number, valor: string): void {
+    const n = valor === '' ? null : Number(valor);
+    this.niveles.update((l) => l.map((x, k) => (k === i ? { ...x, lotes: n } : x)));
   }
 
-  get mensualidadDosLotesPreview(): number {
-    return this.plazoFijo() > 0 ? this.totalConBonoDosLotesPreview / this.plazoFijo() : 0;
+  onBonoNivelInput(i: number, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const limpio = limpiarNumero(input.value, 2);
+    const display = formatearNumero(limpio, 2);
+    input.value = display;
+    this.niveles.update((l) => l.map((x, k) => (k === i ? { ...x, bono: numeroDeTexto(limpio), bonoDisplay: display } : x)));
   }
 
-  get precioListaTresLotesPreview(): number {
-    return this.precioLoteBaseBonoPreview() * 3;
-  }
-
-  get totalConBonoTresLotesPreview(): number {
-    return Math.max(this.precioListaTresLotesPreview - this.bonoTresLotes(), 0);
-  }
-
-  get mensualidadTresLotesPreview(): number {
-    return this.plazoFijo() > 0 ? this.totalConBonoTresLotesPreview / this.plazoFijo() : 0;
+  private nivelesParaGuardar(): NivelBono[] {
+    return this.niveles()
+      .map((n) => ({ lotes: n.lotes ?? 0, bono: n.bono }))
+      .sort((x, y) => x.lotes - y.lotes);
   }
 
   async cargar(): Promise<void> {
@@ -189,30 +222,6 @@ export class PromocionesComponent {
     input.value = this.mensualidadDisplay();
   }
 
-  onBonoUnLoteInput(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const limpio = limpiarNumero(input.value, 2);
-    this.bonoUnLote.set(numeroDeTexto(limpio));
-    this.bonoUnLoteDisplay.set(formatearNumero(limpio, 2));
-    input.value = this.bonoUnLoteDisplay();
-  }
-
-  onBonoDosLotesInput(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const limpio = limpiarNumero(input.value, 2);
-    this.bonoDosLotes.set(numeroDeTexto(limpio));
-    this.bonoDosLotesDisplay.set(formatearNumero(limpio, 2));
-    input.value = this.bonoDosLotesDisplay();
-  }
-
-  onBonoTresLotesInput(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const limpio = limpiarNumero(input.value, 2);
-    this.bonoTresLotes.set(numeroDeTexto(limpio));
-    this.bonoTresLotesDisplay.set(formatearNumero(limpio, 2));
-    input.value = this.bonoTresLotesDisplay();
-  }
-
   editar(promo: Promocion): void {
     this.editandoId.set(promo.id);
     this.nombre.set(promo.nombre);
@@ -221,15 +230,11 @@ export class PromocionesComponent {
     const mod: ModalidadPromocion = promo.modalidad ?? 'MENSUALIDAD_FIJA';
     this.modalidad.set(mod);
     if (mod === 'BONO_LOTES') {
-      const b1 = promo.bonoUnLote ?? 0;
-      this.bonoUnLote.set(b1);
-      this.bonoUnLoteDisplay.set(b1 > 0 ? formatearNumero(String(b1), 2) : '');
-      const b2 = promo.bonoDosLotes ?? 20000;
-      const b3 = promo.bonoTresLotes ?? 30000;
-      this.bonoDosLotes.set(b2);
-      this.bonoDosLotesDisplay.set(formatearNumero(String(b2), 2));
-      this.bonoTresLotes.set(b3);
-      this.bonoTresLotesDisplay.set(formatearNumero(String(b3), 2));
+      this.niveles.set(
+        promo.bonos.length > 0
+          ? promo.bonos.map((n) => ({ lotes: n.lotes, bono: n.bono, bonoDisplay: formatearNumero(String(n.bono), 2) }))
+          : nivelesPorDefecto(),
+      );
       this.plazoFijo.set(promo.plazoFijo ?? 60);
     } else {
       const mens = promo.mensualidadFija ?? 0;
@@ -272,12 +277,7 @@ export class PromocionesComponent {
     this.modalidad.set('MENSUALIDAD_FIJA');
     this.mensualidadFija.set(0);
     this.mensualidadDisplay.set('');
-    this.bonoUnLote.set(0);
-    this.bonoUnLoteDisplay.set('');
-    this.bonoDosLotes.set(20000);
-    this.bonoDosLotesDisplay.set('20,000');
-    this.bonoTresLotes.set(30000);
-    this.bonoTresLotesDisplay.set('30,000');
+    this.niveles.set(nivelesPorDefecto());
     this.plazoFijo.set(60);
     this.descripcion.set('');
     this.codigo.set('');
@@ -293,8 +293,8 @@ export class PromocionesComponent {
     const nombre = this.nombre().trim();
     if (!this.formularioValido || this.isSaving()) return;
     const codigo = this.codigo().trim();
-    if (codigo && !/^\d{6}$/.test(codigo)) {
-      this.toast.error('El código de promoción debe tener exactamente 6 dígitos.');
+    if (codigo && !/^[A-Z0-9]{6}$/.test(codigo)) {
+      this.toast.error('El código de promoción debe tener exactamente 6 letras o números.');
       return;
     }
 
@@ -312,9 +312,7 @@ export class PromocionesComponent {
           nombre,
           modalidad: mod,
           mensualidadFija: mod === 'MENSUALIDAD_FIJA' ? this.mensualidadFija() : null,
-          bonoUnLote: mod === 'BONO_LOTES' ? this.bonoUnLote() : null,
-          bonoDosLotes: mod === 'BONO_LOTES' ? this.bonoDosLotes() : null,
-          bonoTresLotes: mod === 'BONO_LOTES' ? this.bonoTresLotes() : null,
+          bonos: mod === 'BONO_LOTES' ? this.nivelesParaGuardar() : null,
           plazoFijo: mod === 'BONO_LOTES' ? this.plazoFijo() : null,
           descripcion: this.descripcion().trim() || null,
           fechaFin,
@@ -331,9 +329,7 @@ export class PromocionesComponent {
           tipoPrecio: this.tipoPrecio(),
           modalidad: mod,
           mensualidadFija: mod === 'MENSUALIDAD_FIJA' ? this.mensualidadFija() : null,
-          bonoUnLote: mod === 'BONO_LOTES' ? this.bonoUnLote() : null,
-          bonoDosLotes: mod === 'BONO_LOTES' ? this.bonoDosLotes() : null,
-          bonoTresLotes: mod === 'BONO_LOTES' ? this.bonoTresLotes() : null,
+          bonos: mod === 'BONO_LOTES' ? this.nivelesParaGuardar() : null,
           plazoFijo: mod === 'BONO_LOTES' ? this.plazoFijo() : null,
           descripcion: this.descripcion().trim() || null,
           fechaFin,
@@ -400,10 +396,10 @@ export class PromocionesComponent {
     }
   }
 
-  /** Solo dígitos, máximo 6. */
+  /** Letras y números en mayúsculas, máximo 6 (el código no distingue mayúsculas). */
   escribirCodigo(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const limpio = input.value.replace(/\D/g, '').slice(0, 6);
+    const limpio = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
     input.value = limpio;
     this.codigo.set(limpio);
   }

@@ -11,7 +11,9 @@ import com.werealestate.backend.dto.WeFormDtos;
 import com.werealestate.backend.exception.ConflictException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.exception.ValidationException;
+import com.werealestate.backend.model.CampoCliente;
 import com.werealestate.backend.model.DestinoPregunta;
+import com.werealestate.backend.model.EstadoCivil;
 import com.werealestate.backend.model.EstadoWeForm;
 import com.werealestate.backend.model.Lote;
 import com.werealestate.backend.model.EstadosMexico;
@@ -393,8 +395,9 @@ public class WeFormPublicoService {
 
         // 4) Cliente: por CURP (vincula sin duplicar) o nuevo.
         // El país de residencia del cliente sale de la primera pregunta tipo País (por orden) que se contestó.
+        // Una pregunta País vinculada a otro dato del cliente (nacionalidad, lugar de nacimiento) no cuenta aquí.
         String paisResidencia = preguntas.stream()
-                .filter(p -> p.getTipo() == TipoPreguntaForm.PAIS)
+                .filter(p -> p.getTipo() == TipoPreguntaForm.PAIS && p.getCampoCliente() == null)
                 .map(p -> textoPorPregunta.get(p.getId()))
                 .filter(t -> t != null && !t.isBlank())
                 .findFirst()
@@ -412,7 +415,8 @@ public class WeFormPublicoService {
                 if (p.getDestino() == DestinoPregunta.ESTADO) textoPorPregunta.put(p.getId(), estadoCliente);
             }
         }
-        ClienteRequest datosCliente = datosCliente(porDestino, paisResidencia, estadoCliente);
+        ClienteRequest datosCliente = datosCliente(porDestino, paisResidencia, estadoCliente,
+                datosVinculados(preguntas, textoPorPregunta));
         ClienteService.ClienteResuelto resuelto =
                 clienteService.resolverDesdeRegistroDeVenta(datosCliente, asesor.usuario(), asesor.externo());
 
@@ -718,8 +722,27 @@ public class WeFormPublicoService {
         return lista;
     }
 
+    /** Las respuestas de las preguntas propias vinculadas a un dato del cliente (CampoCliente), ya validadas. */
+    static Map<CampoCliente, String> datosVinculados(List<WeFormPregunta> preguntas, Map<Long, String> textoPorPregunta) {
+        Map<CampoCliente, String> datos = new java.util.EnumMap<>(CampoCliente.class);
+        for (WeFormPregunta p : preguntas) {
+            CampoCliente campo = p.getCampoCliente();
+            String texto = textoPorPregunta.get(p.getId());
+            if (campo == null || texto == null || texto.isBlank()) continue;
+            texto = texto.trim();
+            if (campo == CampoCliente.ESTADO_CIVIL) {
+                if (CampoCliente.estadoCivilDe(texto) == null) throw new ValidationException(p.getTitulo() + ": elige una opción de la lista");
+            } else if (texto.length() > campo.maximo()) {
+                throw new ValidationException(p.getTitulo() + ": máximo " + campo.maximo() + " caracteres");
+            }
+            datos.put(campo, texto);
+        }
+        return datos;
+    }
+
     private static ClienteRequest datosCliente(
-            Map<DestinoPregunta, JsonNode> d, String paisResidencia, String estadoDeLista) {
+            Map<DestinoPregunta, JsonNode> d, String paisResidencia, String estadoDeLista, Map<CampoCliente, String> v) {
+        EstadoCivil estadoCivil = CampoCliente.estadoCivilDe(v.get(CampoCliente.ESTADO_CIVIL));
         LocalDate nacimiento;
         try {
             nacimiento = LocalDate.parse(texto(d, DestinoPregunta.FECHA_NACIMIENTO));
@@ -730,9 +753,11 @@ public class WeFormPublicoService {
                 texto(d, DestinoPregunta.NOMBRE), texto(d, DestinoPregunta.APELLIDO_PATERNO),
                 texto(d, DestinoPregunta.APELLIDO_MATERNO), nacimiento, texto(d, DestinoPregunta.TELEFONO), null,
                 minusculas(texto(d, DestinoPregunta.CORREO)), texto(d, DestinoPregunta.CURP), texto(d, DestinoPregunta.RFC),
-                null, null, null, null, texto(d, DestinoPregunta.CALLE), texto(d, DestinoPregunta.COLONIA),
+                v.get(CampoCliente.LUGAR_NACIMIENTO), v.get(CampoCliente.NACIONALIDAD), estadoCivil, v.get(CampoCliente.OCUPACION),
+                texto(d, DestinoPregunta.CALLE), texto(d, DestinoPregunta.COLONIA),
                 texto(d, DestinoPregunta.MUNICIPIO), estadoDeLista != null ? estadoDeLista : texto(d, DestinoPregunta.ESTADO),
-                texto(d, DestinoPregunta.CODIGO_POSTAL), null, null, null, null, null, null, null, null, null, null,
+                texto(d, DestinoPregunta.CODIGO_POSTAL), v.get(CampoCliente.BENEFICIARIO_NOMBRE),
+                v.get(CampoCliente.BENEFICIARIO_PARENTESCO), null, null, null, null, null, null, null, null,
                 paisResidencia);
     }
 

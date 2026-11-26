@@ -97,11 +97,8 @@ public class PromocionVentaService {
             }
             return new Aplicada(p.getNombre(), null, p.getMensualidadFija());
         }
-        BigDecimal bono = switch (lotes.size()) {
-            case 1 -> p.getBonoUnLote();
-            case 2 -> p.getBonoDosLotes();
-            default -> p.getBonoTresLotes();
-        };
+        // Solo números exactos de lotes (decisión del usuario 12.20.0).
+        BigDecimal bono = p.bonoPara(lotes.size());
         if (bono == null || bono.signum() <= 0) {
             throw new ValidationException("La promoción " + p.getNombre() + " no aplica a " + lotes.size() + " lote(s)");
         }
@@ -115,8 +112,8 @@ public class PromocionVentaService {
      */
     @Transactional(readOnly = true)
     public Promocion porCodigo(String codigo, Desarrollo desarrollo) {
-        String limpio = codigo == null ? "" : codigo.trim();
-        if (!limpio.matches("\\d{6}")) throw new ValidationException("El código de promoción tiene 6 dígitos");
+        String limpio = PromocionService.normalizarCodigo(codigo);
+        if (!limpio.matches("[A-Z0-9]{6}")) throw new ValidationException("El código de promoción tiene 6 letras o números");
         LocalDateTime ahora = LocalDateTime.now();
         Promocion p = promocionRepository.findByCodigo(limpio)
                 .filter(x -> x.isActiva() && x.isInicioAplicado())

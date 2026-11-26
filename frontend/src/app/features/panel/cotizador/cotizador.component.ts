@@ -1,3 +1,4 @@
+import { bonoDe, lotesQueAplica, textoBonos } from '../../../core/utils/promocion';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { LucideCalendar, LucideCheck, LucideDollarSign, LucideHistory } from '@lucide/angular';
 import { DatePipe } from '@angular/common';
@@ -764,24 +765,21 @@ export class CotizadorComponent implements OnInit {
     return this.isPromocion && this.promocionSeleccionada?.modalidad === 'BONO_LOTES';
   }
 
-  /** Desde cuántos lotes aplica la promoción de bono: 1 si tiene bono para 1 lote, 2 si no. */
-  get lotesMinimosPromocion(): number {
-    return (this.promocionSeleccionada?.bonoUnLote ?? 0) > 0 ? 1 : 2;
+  /** La promoción de bono tiene nivel para el número de lotes de la cotización (solo números exactos, 12.20.0). */
+  get bonoAplicaALotes(): boolean {
+    return !!this.promocionSeleccionada && bonoDe(this.promocionSeleccionada, this.cantidadLotes) > 0;
   }
 
-  /** Bono en pesos aplicado cuando la promoción activa es de modalidad BONO_LOTES (1, 2 o 3+ lotes). */
+  /** Bono en pesos aplicado cuando la promoción activa es de modalidad BONO_LOTES (el de su número exacto de lotes). */
   get bonoPromocion(): number {
     if (!this.isPromocionBonoLotes || !this.promocionSeleccionada) {
       return 0;
     }
-    if (this.cantidadLotes >= 3) {
-      return this.promocionSeleccionada.bonoTresLotes ?? 0;
-    }
-    if (this.cantidadLotes === 2) {
-      return this.promocionSeleccionada.bonoDosLotes ?? 0;
-    }
-    return this.promocionSeleccionada.bonoUnLote ?? 0;
+    return bonoDe(this.promocionSeleccionada, this.cantidadLotes);
   }
+
+  readonly textoBonos = textoBonos;
+  readonly lotesQueAplica = lotesQueAplica;
 
   /** LOTE (precio normal por m²) o HECTAREA (tarifa de macrolote): solo SAMAI llega a HECTAREA,
    * cuando el precio por m² vigente ya es el de macrolote (ver aplicarPrecioMacrolote/selectPricePerM2). */
@@ -835,7 +833,7 @@ export class CotizadorComponent implements OnInit {
   get promocionInvalida(): boolean {
     if (this.isPromocionBonoLotes) {
       const plazoRequerido = this.promocionSeleccionada?.plazoFijo;
-      return this.cantidadLotes < this.lotesMinimosPromocion || (!!plazoRequerido && this.selectedMonths !== plazoRequerido);
+      return !this.bonoAplicaALotes || (!!plazoRequerido && this.selectedMonths !== plazoRequerido);
     }
     if (this.promocionSinAportacionesDisponibles) {
       return true;
@@ -1339,8 +1337,8 @@ export class CotizadorComponent implements OnInit {
     if (this.requiereLoteEnCaptura && !this.lotNumber.trim()) faltan.push('el lote');
     if (!this.hayFormaPago) faltan.push('la forma de pago');
     if (faltan.length === 0) {
-      if (this.isPromocionBonoLotes && this.cantidadLotes < this.lotesMinimosPromocion) {
-        return 'Esta promoción requiere agregar al menos 2 lotes a la cotización.';
+      if (this.isPromocionBonoLotes && !this.bonoAplicaALotes && this.promocionSeleccionada) {
+        return `Esta promoción aplica con ${lotesQueAplica(this.promocionSeleccionada)} en la cotización.`;
       }
       if (this.isPromocionBonoLotes && this.promocionSeleccionada?.plazoFijo && this.selectedMonths !== this.promocionSeleccionada.plazoFijo) {
         return `Esta promoción aplica únicamente a ${this.promocionSeleccionada.plazoFijo} meses.`;

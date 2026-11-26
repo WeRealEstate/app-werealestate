@@ -30,7 +30,9 @@ public final class WeFormDtos {
             // Siempre visible y obligatoria (no se puede ocultar ni volver opcional).
             boolean siempreObligatoria,
             // El admin puede ocultarla o cambiar si es obligatoria.
-            boolean opcionalEditable) {
+            boolean opcionalEditable,
+            // Pregunta propia vinculada a un dato opcional del cliente (null = ninguno).
+            com.werealestate.backend.model.CampoCliente campoCliente) {
     }
 
     public record Detalle(
@@ -68,7 +70,9 @@ public final class WeFormDtos {
             @Size(max = 500) String descripcion,
             boolean obligatoria,
             List<@Size(max = 200) String> opciones,
-            Boolean visible) {
+            Boolean visible,
+            // Solo preguntas propias: el dato del cliente que llena (null = ninguno).
+            com.werealestate.backend.model.CampoCliente campoCliente) {
     }
 
     public record OrdenRequest(@NotNull List<Long> ids) {

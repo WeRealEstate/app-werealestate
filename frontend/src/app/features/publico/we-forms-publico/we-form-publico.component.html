@@ -265,7 +265,7 @@
                 @if (p.destino === 'TIPO_PAGO') {
                   <div id="codigo-promocion" class="rounded-xl border bg-surface p-4 shadow-sm" [class]="errorCodigo() || motivoNoAplica() ? 'border-red-400' : 'border-border'" data-testid="pregunta-CODIGO_PROMOCION">
                     <label for="codigo-promocion-input" class="block text-sm font-medium text-ink">Código de promoción</label>
-                    <p class="mt-0.5 text-xs text-ink-muted">Opcional. Si la venta lleva una promoción, escribe su código de 6 dígitos: llena y bloquea el tipo de pago y lo que la promoción define.</p>
+                    <p class="mt-0.5 text-xs text-ink-muted">Opcional. Si la venta lleva una promoción, escribe su código de 6 letras o números: llena y bloquea el tipo de pago y lo que la promoción define.</p>
                     @if (promocion(); as promo) {
                       <div class="mt-2.5 flex items-start justify-between gap-3 rounded-xl border border-emerald-300 bg-emerald-50 p-3.5 dark:border-emerald-500/30 dark:bg-emerald-500/10" data-testid="promocion-aplicada">
                         <div class="min-w-0">
@@ -273,9 +273,7 @@
                           @if (promo.descripcion) { <p class="mt-0.5 text-xs text-ink-muted">{{ promo.descripcion }}</p> }
                           @if (promo.modalidad === 'BONO_LOTES') {
                             <p class="mt-1 text-xs text-ink">
-                              Sin enganche · {{ promo.plazoFijo ?? 60 }} meses. Bono:
-                              @if (promo.bonoUnLote) { 1 lote ${{ promo.bonoUnLote | number: '1.0-2' }} · }
-                              2 lotes ${{ promo.bonoDosLotes ?? 0 | number: '1.0-2' }} · 3 o más ${{ promo.bonoTresLotes ?? 0 | number: '1.0-2' }}
+                              Sin enganche · {{ promo.plazoFijo ?? 60 }} meses. Bono (solo con ese número de lotes): {{ textoBonos(promo) }}
                             </p>
                           } @else {
                             <p class="mt-1 text-xs text-ink">
@@ -288,7 +286,7 @@
                       </div>
                     } @else {
                       <div class="mt-2.5 flex gap-2">
-                        <input id="codigo-promocion-input" type="text" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="000000"
+                        <input id="codigo-promocion-input" type="text" maxlength="6" autocomplete="off" autocapitalize="characters" placeholder="ABC123"
                           [value]="codigoEscrito()" (input)="escribirCodigo($event)" (keydown.enter)="aplicarCodigo()" data-testid="codigo-promocion"
                           class="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 font-mono text-sm tracking-widest text-ink placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
                         <button type="button" (click)="aplicarCodigo()" [disabled]="validandoCodigo() || codigoEscrito().length !== 6" data-testid="aplicar-codigo"

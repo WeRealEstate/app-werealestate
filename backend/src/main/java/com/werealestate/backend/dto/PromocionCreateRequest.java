@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record PromocionCreateRequest(
         @NotBlank(message = "El nombre es obligatorio")
@@ -23,12 +24,8 @@ public record PromocionCreateRequest(
 
         BigDecimal mensualidadFija,
 
-        /** Opcional: vacío o 0 = la promoción no aplica a 1 lote. */
-        BigDecimal bonoUnLote,
-
-        BigDecimal bonoDosLotes,
-
-        BigDecimal bonoTresLotes,
+        /** Bono por lotes: un nivel por número exacto de lotes (1 a 20), p. ej. 3 → $30,000 y 6 → $70,000. */
+        List<NivelBono> bonos,
 
         Integer plazoFijo,
 
@@ -42,14 +39,7 @@ public record PromocionCreateRequest(
         // null = empieza al crearla.
         LocalDateTime fechaInicio,
 
-        // 6 dígitos escritos por el admin; vacío o null = uno al azar.
+        // 6 letras o números escritos por el admin; vacío o null = uno al azar.
         String codigo
 ) {
-    /** Sin código (al azar). */
-    public PromocionCreateRequest(String nombre, String proyecto, TipoPrecioPromocion tipoPrecio, ModalidadPromocion modalidad,
-            BigDecimal mensualidadFija, BigDecimal bonoUnLote, BigDecimal bonoDosLotes, BigDecimal bonoTresLotes,
-            Integer plazoFijo, String descripcion, Boolean activa, LocalDateTime fechaFin, LocalDateTime fechaInicio) {
-        this(nombre, proyecto, tipoPrecio, modalidad, mensualidadFija, bonoUnLote, bonoDosLotes, bonoTresLotes, plazoFijo,
-                descripcion, activa, fechaFin, fechaInicio, null);
-    }
 }
