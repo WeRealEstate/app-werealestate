@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.16.1', fecha: '2026-11-26', cambios: [
+    "Planos públicos (seguridad): apartar ahora exige el PIN del asesor también en el servidor, con acceso a ese desarrollo, y el apartado queda con el nombre del dueño del PIN.",
+  ] },
   { version: '12.16.0', fecha: '2026-11-26', cambios: [
     "Recordatorio de pago: si el pago ya tiene un abono registrado y le faltan menos de $100, no se envía; queda anotado en el registro de correos de la venta («Ya abonó, faltan $…»).",
     "Registro de correos: «Reintentar» ya no aparece en un recordatorio cuyo pago ya se registró.",

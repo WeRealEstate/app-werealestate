@@ -10,6 +10,7 @@ import com.werealestate.backend.dto.ApartarVariosPublicoRequest;
 import com.werealestate.backend.dto.CambiarEstadoLotePublicoRequest;
 import com.werealestate.backend.dto.CambiarEstadoLoteRequest;
 import com.werealestate.backend.dto.LoteDto;
+import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.exception.ValidationException;
 import com.werealestate.backend.model.AsesorExterno;
@@ -117,22 +118,40 @@ class LoteApartadoIntegracionTest extends PruebaDeIntegracion {
     }
 
     @Test
-    void apartarEnElPlanoPublicoSinPinOConPinMaloSigueFuncionandoYDejaLaClaveVacia() {
-        sinSesion();
+    void apartarEnElPlanoPublicoSinPinOConPinMaloSeRechazaYElLoteSigueDisponible() {
         String tag = etiqueta();
-        Lote sinPin = lote(samai(), tag, "1", "200", EstadoLote.DISPONIBLE);
-        Lote pinMalo = lote(samai(), tag, "2", "200", EstadoLote.DISPONIBLE);
+        Lote uno = lote(samai(), tag, "1", "200", EstadoLote.DISPONIBLE);
+        Lote dos = lote(samai(), tag, "2", "200", EstadoLote.DISPONIBLE);
+        var varios = new ApartarVariosPublicoRequest(List.of(uno.getId(), dos.getId()), "Quien atendió", "Cliente", null);
 
-        controller.cambiarEstadoPublico(sinPin.getId(), apartarPublico(), null, peticion());
-        controller.cambiarEstadoPublico(pinMalo.getId(), apartarPublico(), "QQQQ", peticion());
+        assertThrows(ValidationException.class,
+                () -> controller.cambiarEstadoPublico(uno.getId(), apartarPublico(), null, peticion()));
+        assertThrows(ResourceNotFoundException.class,
+                () -> controller.cambiarEstadoPublico(uno.getId(), apartarPublico(), "QQQQ", peticion()));
+        assertThrows(ValidationException.class, () -> controller.apartarVariosPublico(varios, " ", peticion()));
+        assertThrows(ResourceNotFoundException.class, () -> controller.apartarVariosPublico(varios, "QQQQ", peticion()));
 
-        assertEquals(EstadoLote.APARTADO, recargar(sinPin).getEstado());
-        assertNull(recargar(sinPin).getApartadoPorClave());
-        assertEquals(EstadoLote.APARTADO, recargar(pinMalo).getEstado());
-        assertNull(recargar(pinMalo).getApartadoPorClave());
+        assertEquals(EstadoLote.DISPONIBLE, recargar(uno).getEstado());
+        assertEquals(EstadoLote.DISPONIBLE, recargar(dos).getEstado());
     }
 
-    // ---------------------------------------------------------------- panel y limpieza
+    @Test
+    void unAsesorSinAccesoAlDesarrolloNoPuedeApartarloYElNombreEsElDelPin() {
+        String pin = pinNuevo();
+        AsesorExterno externo = externoConPin("Externa sin Samai", pin);
+        externo.setAccesoSamai(false);
+        externos.saveAndFlush(externo);
+        Lote lote = lote(samai(), etiqueta(), "1", "200", EstadoLote.DISPONIBLE);
+        assertThrows(ForbiddenOperationException.class,
+                () -> controller.cambiarEstadoPublico(lote.getId(), apartarPublico(), pin, peticion()));
+        assertEquals(EstadoLote.DISPONIBLE, recargar(lote).getEstado());
+
+        String otroPin = pinNuevo();
+        asesorConPin("Dueña del PIN", otroPin);
+        controller.cambiarEstadoPublico(lote.getId(), apartarPublico(), otroPin, peticion());
+
+        assertEquals("Dueña del PIN", movimientos.findByLoteIdOrderByFechaDesc(lote.getId()).get(0).getNombreAsesor());
+    }
 
     @Test
     void apartarDesdeElPanelGuardaAQuienLoHaceYSiAdministracionElige_AlAsesorElegido() {

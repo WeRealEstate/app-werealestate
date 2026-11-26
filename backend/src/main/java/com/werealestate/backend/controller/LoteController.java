@@ -96,9 +96,9 @@ public class LoteController {
         return apartadoService.listarCotizables(desarrolloId);
     }
 
-    /** Endpoints públicos de este controlador de este controlador, sin sesión (ver SecurityConfig): la
-     * disponibilidad de lotes en los planos públicos y el cotizador público, y apartar desde ahí (con el PIN del asesor, si lo
-     * tiene guardado, en X-Asesor-Pin: así el apartado queda a su nombre). */
+    /** Endpoints públicos de este controlador, sin sesión (ver SecurityConfig): la disponibilidad de lotes en los
+     * planos públicos y el cotizador público, y apartar desde ahí, que exige el PIN del asesor (X-Asesor-Pin) con acceso
+     * a ese desarrollo: el apartado queda a su nombre. */
     @GetMapping("/publico")
     public List<LoteDto> listarPublico(@RequestParam String proyecto) {
         return consultaService.listarPublicoPorProyecto(proyecto);
@@ -110,7 +110,11 @@ public class LoteController {
             @Valid @RequestBody ApartarVariosPublicoRequest request,
             @RequestHeader(value = "X-Asesor-Pin", required = false) String pin,
             HttpServletRequest http) {
-        return loteService.apartarVariosPublico(request, claveDelPin(http, pin));
+        AsesorPublicoService.Identificado asesor = exigirAsesor(http, pin, request.loteIds());
+        return loteService.apartarVariosPublico(
+                new ApartarVariosPublicoRequest(
+                        request.loteIds(), asesor.nombre(), request.nombreCliente(), request.nota()),
+                ClaveAsesor.de(asesor.usuario(), asesor.externo()));
     }
 
     @PutMapping("/publico/{id}/estado")
@@ -119,7 +123,12 @@ public class LoteController {
             @Valid @RequestBody CambiarEstadoLotePublicoRequest request,
             @RequestHeader(value = "X-Asesor-Pin", required = false) String pin,
             HttpServletRequest http) {
-        return loteService.cambiarEstadoPublico(id, request, claveDelPin(http, pin));
+        AsesorPublicoService.Identificado asesor = exigirAsesor(http, pin, List.of(id));
+        return loteService.cambiarEstadoPublico(
+                id,
+                new CambiarEstadoLotePublicoRequest(
+                        request.estado(), asesor.nombre(), request.nombreCliente(), request.nota()),
+                ClaveAsesor.de(asesor.usuario(), asesor.externo()));
     }
 
     /** Los apartados del asesor dueño del PIN (X-Asesor-Pin, nunca en la URL) en un plano, para que los cotice en el
@@ -136,11 +145,16 @@ public class LoteController {
                 proyecto, ClaveAsesor.de(asesor.usuario(), asesor.externo()), asesor.nombre());
     }
 
-    /** Clave del asesor del PIN que vino al apartar, o null (sin PIN o uno que no sirve: el apartado sigue como siempre,
-     * solo que sin dueño; un PIN malo cuenta contra el tope de intentos igual que en el Score). */
-    private String claveDelPin(HttpServletRequest http, String pin) {
-        AsesorPublicoService.Identificado asesor = limitadorPin.identificarSiViene(http, pin).asesor();
-        return asesor == null ? null : ClaveAsesor.de(asesor.usuario(), asesor.externo());
+    /** El asesor del PIN, con acceso a los planos de todos esos lotes. Sin PIN, 400; con uno que no sirve, 404 / 403 /
+     * 429 como los demás endpoints con PIN (y cuenta contra el tope de intentos por IP). El nombre que se registra es el
+     * del PIN, no el que mande el navegador. */
+    private AsesorPublicoService.Identificado exigirAsesor(HttpServletRequest http, String pin, List<Long> loteIds) {
+        if (pin == null || pin.isBlank()) throw new ValidationException("Falta el PIN del asesor");
+        AsesorPublicoService.Identificado asesor = null;
+        for (String proyecto : loteService.proyectosPublicosDe(loteIds)) {
+            asesor = limitadorPin.exigir(http, pin, proyecto);
+        }
+        return asesor;
     }
 
     /** Historial de movimientos de todos los lotes (no solo uno), para /panel/lotes/historial. */

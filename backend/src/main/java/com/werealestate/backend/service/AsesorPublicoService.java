@@ -13,8 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Candado ligero de los links públicos (/samai, /aldea-nanuu): confirma que el PIN que escribe
  * el visitante corresponde a un asesor externo activo
- * antes de que el frontend le muestre los botones de cotizar y apartar. No es autenticación: no
- * emite ningún token y el apartado público sigue aceptando peticiones directas a la API.
+ * antes de que el frontend le muestre los botones de cotizar y apartar. No emite ningún token: cada
+ * apartado público vuelve a mandar el PIN y el servidor lo revisa (ver LoteController).
  */
 @Service
 @Transactional(readOnly = true)

@@ -75,6 +75,13 @@ const DURACION_AVISO_ROTAR_MS = 9000;
  * desarrollo directamente (/samai, /aldea-nanuu, ver app.routes.ts). Cualquiera puede ver el estado de cada
  * lote y apartar uno disponible (pidiendo nombre de asesor y de cliente, ver LoteService.cambiarEstadoPublico), pero no editar el
  * plano, delimitar lotes ni liberar uno ya apartado — eso sigue siendo exclusivo de /panel/plano. */
+/** El servidor ya no acepta el PIN guardado (se cambió o el dispositivo no lo mandó). */
+function esPinRechazado(error: unknown): boolean {
+  if (!(error instanceof HttpErrorResponse)) return false;
+  const mensaje = error.error?.message;
+  return mensaje === 'PIN incorrecto' || mensaje === 'Falta el PIN del asesor';
+}
+
 @Component({
   selector: 'app-plano-publico',
   standalone: true,
@@ -246,6 +253,11 @@ export class PlanoPublicoComponent implements OnDestroy {
   async confirmarApartarVarios(): Promise<void> {
     const ids = this.seleccion();
     if (ids.length === 0 || this.nombreAsesorInvalido() || this.nombreClienteInvalido() || this.isApartando()) return;
+    const pin = this.weFormsPublico.pin();
+    if (!pin) {
+      this.pedirPinDeNuevo();
+      return;
+    }
 
     this.isApartando.set(true);
     try {
@@ -254,7 +266,7 @@ export class PlanoPublicoComponent implements OnDestroy {
         this.nombreAsesorInput().trim(),
         this.nombreClienteInput().trim(),
         this.notaInput().trim() || undefined,
-        this.weFormsPublico.pin(),
+        pin,
       );
       this.lotes.update((lista) => lista.map((l) => apartados.find((a) => a.id === l.id) ?? l));
       this.toast.success(apartados.length === 1 ? 'Lote apartado.' : `${apartados.length} lotes apartados.`);
@@ -262,6 +274,10 @@ export class PlanoPublicoComponent implements OnDestroy {
       this.modoSeleccion.set(false);
       this.seleccion.set([]);
     } catch (error) {
+      if (esPinRechazado(error)) {
+        this.pedirPinDeNuevo();
+        return;
+      }
       this.toast.error(
         error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
           ? error.error.message
@@ -588,9 +604,24 @@ export class PlanoPublicoComponent implements OnDestroy {
     this.mostrarApartar.set(false);
   }
 
+  /** El servidor exige el PIN al apartar: si este dispositivo ya no lo tiene (o dejó de existir), se pide otra vez. */
+  private pedirPinDeNuevo(): void {
+    this.cerrarSesionAsesor();
+    this.mostrarApartarVarios.set(false);
+    this.modoSeleccion.set(false);
+    this.seleccion.set([]);
+    this.abrirAcceso();
+    this.accesoError.set('Vuelve a escribir tu PIN para poder apartar.');
+  }
+
   async confirmarApartar(): Promise<void> {
     const lote = this.loteActivo();
     if (!lote || this.nombreAsesorInvalido() || this.nombreClienteInvalido()) return;
+    const pin = this.weFormsPublico.pin();
+    if (!pin) {
+      this.pedirPinDeNuevo();
+      return;
+    }
 
     this.isApartando.set(true);
     try {
@@ -599,14 +630,22 @@ export class PlanoPublicoComponent implements OnDestroy {
         this.nombreAsesorInput().trim(),
         this.nombreClienteInput().trim(),
         this.notaInput().trim() || undefined,
-        this.weFormsPublico.pin(),
+        pin,
       );
       this.lotes.update((lista) => lista.map((l) => (l.id === lote.id ? actualizado : l)));
       this.loteActivo.set(actualizado);
       this.toast.success('Lote apartado.');
       this.mostrarApartar.set(false);
-    } catch {
-      this.toast.error('No se pudo apartar el lote. Intenta de nuevo.');
+    } catch (error) {
+      if (esPinRechazado(error)) {
+        this.pedirPinDeNuevo();
+        return;
+      }
+      this.toast.error(
+        error instanceof HttpErrorResponse && typeof error.error?.message === 'string'
+          ? error.error.message
+          : 'No se pudo apartar el lote. Intenta de nuevo.',
+      );
     } finally {
       this.isApartando.set(false);
     }

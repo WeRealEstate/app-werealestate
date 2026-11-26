@@ -1,5 +1,6 @@
 package com.werealestate.backend.service;
 
+import java.util.LinkedHashSet;
 import com.werealestate.backend.dto.ActualizarPoligonoMapaRequest;
 import com.werealestate.backend.dto.ApartarVariosPublicoRequest;
 import com.werealestate.backend.dto.ApartarVariosRequest;
@@ -93,6 +94,23 @@ public class LoteService {
         this.consulta = consulta;
         this.historial = historial;
         this.autorizacion = autorizacion;
+    }
+
+    /** Los planos públicos ("samai" / "nanuu") a los que pertenecen esos lotes, para revisar que el PIN tenga acceso. Un
+     * lote de un desarrollo sin plano público no se puede tocar desde fuera. */
+    @Transactional(readOnly = true)
+    public Set<String> proyectosPublicosDe(List<Long> loteIds) {
+        if (loteIds == null || loteIds.isEmpty()) throw new ValidationException("Elige al menos un lote");
+        Set<String> proyectos = new LinkedHashSet<>();
+        for (Long id : loteIds) {
+            String proyecto = WeFormService.PROYECTO_POR_DESARROLLO.get(
+                    consulta.obtenerEntidad(id).getDesarrollo().getNombre());
+            if (proyecto == null) {
+                throw new ForbiddenOperationException("Este lote no se puede modificar desde la disponibilidad pública");
+            }
+            proyectos.add(proyecto);
+        }
+        return proyectos;
     }
 
     /** Igual que {@link #cambiarEstado}, pero para los planos públicos: sin sesión iniciada,

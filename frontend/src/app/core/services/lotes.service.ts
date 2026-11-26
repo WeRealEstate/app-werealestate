@@ -130,7 +130,7 @@ export class LotesService {
   /** Apartar un lote desde un plano público: nombreAsesor y nombreCliente son
    * obligatorios, nota es opcional — ver LoteService.cambiarEstadoPublico. Liberar un lote ya
    * apartado no está permitido desde aquí. Con el PIN del asesor (el guardado en el dispositivo), el apartado queda a
-   * su nombre y luego puede cotizar ese lote; sin PIN todo funciona igual. */
+   * su nombre y luego puede cotizar ese lote. El servidor lo exige: sin PIN válido no se aparta. */
   apartarLotePublico(id: number, nombreAsesor: string, nombreCliente: string, nota?: string, pin?: string | null): Promise<Lote> {
     return firstValueFrom(
       this.http.put<Lote>(
