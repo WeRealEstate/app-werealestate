@@ -37,5 +37,8 @@ public record PromocionCreateRequest(
 
         Boolean activa,
 
-        LocalDateTime fechaFin
+        LocalDateTime fechaFin,
+
+        // null = empieza al crearla.
+        LocalDateTime fechaInicio
 ) {}

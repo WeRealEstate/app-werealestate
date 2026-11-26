@@ -299,15 +299,22 @@ public class VentaService {
      * último año calendario del plazo (queda libre para mensualidades regulares); no se repite el mes;
      * y juntas dejan saldo por pagar en mensualidades. */
     private void validarAportaciones(List<VentaAportacionItemRequest> aportaciones, VentaCreateRequest request) {
+        BigDecimal precio =
+                request.lotes().stream().map(VentaLoteItemRequest::precio).reduce(BigDecimal.ZERO, BigDecimal::add);
+        validarAportaciones(aportaciones, request.fechaVenta(), request.plazoMeses(), request.enganche(), precio);
+    }
+
+    private static void validarAportaciones(List<VentaAportacionItemRequest> aportaciones, LocalDate fechaVenta,
+            Integer plazoMeses, BigDecimal engancheVenta, BigDecimal precio) {
         if (aportaciones.isEmpty()) {
             return;
         }
-        if (request.plazoMeses() == null) {
+        if (plazoMeses == null) {
             throw new ValidationException("Indica el plazo para registrar aportaciones");
         }
 
-        YearMonth inicio = YearMonth.from(request.fechaVenta());
-        YearMonth fin = inicio.plusMonths(request.plazoMeses() - 1L);
+        YearMonth inicio = YearMonth.from(fechaVenta);
+        YearMonth fin = inicio.plusMonths(plazoMeses - 1L);
         Set<YearMonth> usados = new HashSet<>();
         BigDecimal total = BigDecimal.ZERO;
 
@@ -329,9 +336,7 @@ public class VentaService {
 
         // Con enganche o pago inicial (se pueden combinar con aportaciones o anualidades), entre los dos
         // tampoco pueden cubrir todo el precio: debe quedar saldo para las mensualidades regulares.
-        BigDecimal precio =
-                request.lotes().stream().map(VentaLoteItemRequest::precio).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal enganche = request.enganche() == null ? BigDecimal.ZERO : request.enganche();
+        BigDecimal enganche = engancheVenta == null ? BigDecimal.ZERO : engancheVenta;
         if (total.add(enganche).compareTo(precio) >= 0) {
             throw new ValidationException(enganche.signum() > 0
                     ? "El enganche y las aportaciones no pueden sumar todo el precio de la venta"
@@ -398,7 +403,7 @@ public class VentaService {
         // El plan reestructurado de forma completa arranca en la fecha de venta: si esta cambió, lo sigue.
         if (fechaCambio) venta.seguirFechaDeVenta(fechaAnterior, consultas.pagosVigentes(venta.getId()));
         if (Boolean.TRUE.equals(request.cambiarPromocion())) {
-            cambiarPromocion(venta, request.promocionId(), request.password());
+            cambiarPromocion(venta, request.promocionId(), request.password(), request.aportaciones());
         }
         if (request.clienteId() != null) {
             Cliente nuevo = clienteService.obtenerEntidad(request.clienteId());
@@ -437,7 +442,8 @@ public class VentaService {
      * y comisión salen de ese precio; la mensualidad la recalcula el formulario y llega en el mismo request. Pide la
      * contraseña de quien lo hace porque mueve precio y comisión (igual que «Cambiar lotes»).
      */
-    private void cambiarPromocion(Venta venta, Long promocionId, String password) {
+    private void cambiarPromocion(Venta venta, Long promocionId, String password,
+            List<VentaAportacionItemRequest> aportaciones) {
         autorizacion.exigirAdminOLiderConContrasena(
                 "Solo un administrador o personal de administración puede cambiar la promoción de una venta", password);
         List<VentaLote> lotes = ventaLoteRepository.findByVentaId(venta.getId()).stream()
@@ -448,11 +454,13 @@ public class VentaService {
         }
         List<BigDecimal> devolver = partesDelBono(venta.getPromocionBono(), lotes.size());
         BigDecimal bonoNuevo = null;
+        boolean mensualidadFija = false;
         if (promocionId != null) {
             var aplicada = promocionVenta.aplicar(promocionId, venta.getFechaVenta(),
-                    lotes.stream().map(VentaLote::getLote).toList(), venta.getPromocionNombre());
-            venta.registrarPromocion(aplicada.nombre(), aplicada.bono());
+                    lotes.stream().map(VentaLote::getLote).toList(), venta.getPromocionNombre(), true);
+            venta.registrarPromocion(aplicada.nombre(), aplicada.bono(), aplicada.mensualidadFija());
             bonoNuevo = aplicada.bono();
+            mensualidadFija = aplicada.mensualidadFija() != null;
         } else {
             venta.registrarPromocion(null, null);
         }
@@ -469,8 +477,29 @@ public class VentaService {
             total = total.add(precio);
         }
         validarPlanConPrecio(venta, total);
+        // Mensualidad fija: el precio no cambia; la mensualidad (escalada como en el cotizador) llega en el request y
+        // el resto se cubre con aportaciones anuales, que reemplazan a las del plan original (decisión del usuario:
+        // también en ventas reestructuradas, cuyo plan vigente sigue siendo el de su reestructuración).
+        if (mensualidadFija && aportaciones != null) {
+            reemplazarAportaciones(venta, aportaciones, total);
+        }
         ventaLoteRepository.flush();
         comisionService.recalcularPorCambioDePrecio(venta);
+    }
+
+    /** Cambia las aportaciones del plan original (las de reestructuraciones se quedan) con las mismas reglas que al
+     * crear la venta. */
+    private void reemplazarAportaciones(Venta venta, List<VentaAportacionItemRequest> aportaciones, BigDecimal precio) {
+        validarAportaciones(aportaciones, venta.getFechaVenta(), venta.getPlazoMeses(), venta.getEnganche(), precio);
+        List<VentaAportacion> originales = ventaAportacionRepository.findByVentaIdOrderByAnioAscMesAsc(venta.getId())
+                .stream()
+                .filter(a -> a.getReestructuracionId() == null)
+                .toList();
+        ventaAportacionRepository.deleteAll(originales);
+        ventaAportacionRepository.flush();
+        for (VentaAportacionItemRequest item : aportaciones) {
+            ventaAportacionRepository.save(new VentaAportacion(venta, item.anio(), item.mes(), item.monto()));
+        }
     }
 
     /** Partes iguales al centavo de un bono entre n lotes; lo que sobra va al último (ceros si no hay bono). */

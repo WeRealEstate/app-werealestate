@@ -40,7 +40,10 @@ public record VentaUpdateRequest(
         // Cambiarla mueve el precio de los lotes (el bono se resta de ellos), por eso pide la contraseña.
         Boolean cambiarPromocion,
         Long promocionId,
-        String password) {
+        String password,
+        // Con cambiarPromocion a una de mensualidad fija: las aportaciones del plan original (reemplazan a las que
+        // tuviera). null = las aportaciones no cambian.
+        @jakarta.validation.Valid java.util.List<VentaAportacionItemRequest> aportaciones) {
 
     /** Sin tocar la promoción (como antes de poder cambiarla al modificar). */
     public VentaUpdateRequest(Long clienteId, Long numero, java.util.List<Long> copropietariosIds, Long usuarioAsesorId,
@@ -49,6 +52,6 @@ public record VentaUpdateRequest(
             Boolean confirmarFecha, com.werealestate.backend.model.ModalidadPago modalidadPago) {
         this(clienteId, numero, copropietariosIds, usuarioAsesorId, asesorExternoId, formaPago, fechaVenta, mensualidad,
                 plazoMeses, engancheLabel, enganche, diaPago, primeraMensualidadMesVenta, notas, confirmarFecha,
-                modalidadPago, null, null, null);
+                modalidadPago, null, null, null, null);
     }
 }

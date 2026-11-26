@@ -35,13 +35,16 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Promocion } from '../../../../core/models/promocion.model';
 import { PromocionesService } from '../../../../core/services/promociones.service';
 import { bonoDe, motivoNoAplica } from '../../../../core/utils/promocion';
+import { Aportacion } from '../../../../core/utils/aportaciones';
+import { AportacionesSelectorComponent } from '../../../../shared/aportaciones-selector/aportaciones-selector.component';
+import { PRECIO_M2_MACROLOTE, SUPERFICIE_ESTANDAR_M2 } from '../../cotizador/cotizador-datos';
 
 const SEGUNDOS_ESPERA_ELIMINAR = 10;
 
 @Component({
   selector: 'app-venta-detalle',
   standalone: true,
-  imports: [CorreosVentaComponent, MonedaInputDirective, WeLoaderComponent, ReciboFormComponent, RecibosVentaComponent, ContratoVentaComponent, TablaAmortizacionComponent, ReestructurarVentaComponent, CambiarLotesVentaComponent, ReactiveFormsModule, RouterLink, ClienteSelectorComponent, CopropietariosEditorComponent, NumeroVentaComponent, LucideCircleAlert, LucideMail, LucidePencil, LucideTrash2],
+  imports: [AportacionesSelectorComponent, CorreosVentaComponent, MonedaInputDirective, WeLoaderComponent, ReciboFormComponent, RecibosVentaComponent, ContratoVentaComponent, TablaAmortizacionComponent, ReestructurarVentaComponent, CambiarLotesVentaComponent, ReactiveFormsModule, RouterLink, ClienteSelectorComponent, CopropietariosEditorComponent, NumeroVentaComponent, LucideCircleAlert, LucideMail, LucidePencil, LucideTrash2],
   templateUrl: './venta-detalle.component.html',
 })
 export class VentaDetalleComponent implements OnInit, OnDestroy {
@@ -136,6 +139,41 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
     const nuevo = promo && !this.errorPromocionEdicion() ? bonoDe(promo, v.lotes.length) : 0;
     return Math.round((v.precioVenta + (v.promocionBono ?? 0) - nuevo) * 100) / 100;
   });
+  /** Mensualidad fija: la elegida es de esa modalidad (el precio no cambia; reparte mensualidad y aportaciones). */
+  readonly esMensualidadFija = computed(() => this.promocionElegida()?.modalidad === 'MENSUALIDAD_FIJA');
+  /** Aportaciones del plan con mensualidad fija: se eligen los meses y el monto se reparte solo (editable). */
+  readonly aportacionesEdicion = signal<Aportacion[]>([]);
+  /** Mes del primer pago del plan (el de la fecha de venta), para el selector de aportaciones. */
+  readonly inicioAportacionesEdicion = computed(() => {
+    const [anio, mes] = (this.venta()?.fechaVenta ?? '').split('-').map(Number);
+    return new Date(anio || new Date().getFullYear(), (mes || 1) - 1, 1);
+  });
+  /** La mensualidad fija es para un lote de 200 m²; se escala con el precio de la venta frente al de un lote de
+   * 200 m² al precio por m² del desarrollo (o la tarifa de hectárea), sin intereses (decisión del usuario 12.17.0). */
+  readonly mensualidadFijaEscalada = computed(() => {
+    const promo = this.promocionElegida();
+    const v = this.venta();
+    if (!promo || promo.modalidad !== 'MENSUALIDAD_FIJA' || !v || v.lotes.length === 0) return 0;
+    const precioM2 = promo.tipoPrecio === 'HECTAREA' ? PRECIO_M2_MACROLOTE : v.lotes[0].lote.desarrollo.precioM2;
+    const estandar = SUPERFICIE_ESTANDAR_M2 * precioM2;
+    if (!(estandar > 0)) return promo.mensualidadFija ?? 0;
+    return Math.round((promo.mensualidadFija ?? 0) * (this.precioConPromocion() / estandar) * 100) / 100;
+  });
+  /** Lo que le toca a cada aportación para cubrir el resto del precio: (precio − enganche − mensualidades) ÷ aportaciones. */
+  readonly montoSugeridoAportacion = computed<number | null>(() => {
+    const n = this.aportacionesEdicion().length;
+    const plazo = this.plazoEdicion();
+    if (!this.esMensualidadFija() || n === 0 || !plazo) return null;
+    const resto = this.precioConPromocion() - (this.engancheEdicion() ?? 0) - this.mensualidadFijaEscalada() * (plazo - n);
+    return resto > 0 ? Math.round((resto / n) * 100) / 100 : null;
+  });
+  readonly plazoEdicion = signal<number | null>(null);
+  readonly engancheEdicion = signal<number | null>(null);
+  private readonly plazoYEnganche = this.edicionForm.valueChanges.pipe(takeUntilDestroyed()).subscribe((v) => {
+    this.plazoEdicion.set(v.plazoMeses ?? null);
+    this.engancheEdicion.set(v.enganche ?? null);
+  });
+
   /** Las promociones vigentes cambian con la fecha de venta. */
   private readonly promocionesPorFecha = this.edicionForm.controls.fechaVenta.valueChanges
     .pipe(takeUntilDestroyed())
@@ -405,13 +443,16 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
     this.confirmarFechaEdicion.set(false);
     this.promocionEdicion.set('igual');
     this.passwordPromocion.set('');
+    this.aportacionesEdicion.set([]);
+    this.plazoEdicion.set(v.plazoMeses);
+    this.engancheEdicion.set(v.enganche);
     void this.cargarPromocionesEdicion(v.fechaVenta);
     this.editando.set(true);
   }
 
   private async cargarPromocionesEdicion(fecha: string): Promise<void> {
     try {
-      this.promocionesEdicion.set(fecha ? await this.promocionesService.paraVenta(fecha) : []);
+      this.promocionesEdicion.set(fecha ? await this.promocionesService.paraVenta(fecha, true) : []);
     } catch {
       this.promocionesEdicion.set([]);
     }
@@ -422,15 +463,25 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Nombre y bono que le tocaría a esta venta con esa promoción. */
+  /** Nombre y bono (o mensualidad fija) que le tocaría a esta venta con esa promoción. */
   etiquetaPromocionEdicion(p: Promocion): string {
+    if (p.modalidad === 'MENSUALIDAD_FIJA') return `${p.nombre} · mensualidad fija $${dinero(p.mensualidadFija ?? 0)}`;
     const bono = bonoDe(p, this.venta()?.lotes.length ?? 0);
     return bono > 0 ? `${p.nombre} · bono $${dinero(bono)}` : p.nombre;
   }
 
   onPromocionEdicion(valor: string): void {
     this.promocionEdicion.set(valor === 'igual' ? 'igual' : valor === '' ? null : Number(valor));
+    this.aportacionesEdicion.set([]);
+    if (this.esMensualidadFija()) {
+      this.edicionForm.controls.mensualidad.setValue(this.mensualidadFijaEscalada() || null);
+      return;
+    }
     this.recalcularMensualidadEdicion();
+  }
+
+  onAportacionesEdicion(lista: Aportacion[]): void {
+    this.aportacionesEdicion.set(lista);
   }
 
   /** Al cambiar la promoción la mensualidad se recalcula con el precio nuevo (saldo ÷ meses sin aportación, como al
@@ -514,6 +565,16 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
         this.errorEdicion.set('Escribe tu contraseña para cambiar la promoción.');
         return;
       }
+      if (this.esMensualidadFija()) {
+        if (!this.edicionForm.controls.plazoMeses.value) {
+          this.errorEdicion.set('Indica el plazo para la promoción de mensualidad fija.');
+          return;
+        }
+        if (this.aportacionesEdicion().some((a) => !(a.monto && a.monto > 0))) {
+          this.errorEdicion.set('Falta el monto de alguna aportación.');
+          return;
+        }
+      }
     }
 
     this.isSavingEdicion.set(true);
@@ -538,7 +599,14 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
         primeraMensualidadMesVenta: this.edicionPrimeraMensualidadMesVenta(),
         notas: v.notas?.trim() || null,
         ...(this.cambiaPromocion()
-          ? { cambiarPromocion: true, promocionId: typeof promocion === 'number' ? promocion : null, password: this.passwordPromocion() }
+          ? {
+              cambiarPromocion: true,
+              promocionId: typeof promocion === 'number' ? promocion : null,
+              password: this.passwordPromocion(),
+              ...(this.esMensualidadFija()
+                ? { aportaciones: this.aportacionesEdicion().map((a) => ({ anio: a.anio, mes: a.mes, monto: a.monto as number })) }
+                : {}),
+            }
           : {}),
       });
       this.venta.set(actualizada);

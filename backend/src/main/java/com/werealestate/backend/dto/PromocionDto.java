@@ -20,7 +20,11 @@ public record PromocionDto(
         String descripcion,
         boolean activa,
         LocalDateTime fechaFin,
-        LocalDateTime fechaCreacion
+        LocalDateTime fechaCreacion,
+        // null en las de antes de la fecha de inicio (valen desde siempre).
+        LocalDateTime fechaInicio,
+        // true = espera su fecha de inicio para activarse sola.
+        boolean programada
 ) {
     public static PromocionDto fromEntity(Promocion p) {
         return new PromocionDto(
@@ -37,7 +41,9 @@ public record PromocionDto(
                 p.getDescripcion(),
                 p.isActiva(),
                 p.getFechaFin(),
-                p.getFechaCreacion()
+                p.getFechaCreacion(),
+                p.getFechaInicio(),
+                !p.isInicioAplicado()
         );
     }
 }

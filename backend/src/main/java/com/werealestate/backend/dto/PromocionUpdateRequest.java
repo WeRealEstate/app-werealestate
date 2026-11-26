@@ -36,5 +36,8 @@ public record PromocionUpdateRequest(
 
         LocalDateTime fechaFin,
 
-        Boolean limpiarFechaFin
+        Boolean limpiarFechaFin,
+
+        // null = sin cambios.
+        LocalDateTime fechaInicio
 ) {}

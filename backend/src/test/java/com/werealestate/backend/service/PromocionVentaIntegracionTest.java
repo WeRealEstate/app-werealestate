@@ -84,9 +84,9 @@ class PromocionVentaIntegracionTest extends PruebaDeIntegracion {
     void unaVencidaSirveParaVentasDeAntesDeSuFinPeroNoDeDespues() {
         Promocion p = promocion(false, LocalDateTime.now().minusDays(3));
         LocalDate antes = LocalDate.now().minusDays(10);
-        assertTrue(promocionVenta.paraVenta(antes).stream().anyMatch(d -> d.id().equals(p.getId())));
+        assertTrue(promocionVenta.paraVenta(antes, false).stream().anyMatch(d -> d.id().equals(p.getId())));
         assertEquals(p.getNombre(), ventaService.crear(venta(p.getId(), antes, "200")).promocionNombre());
-        assertFalse(promocionVenta.paraVenta(LocalDate.now()).stream().anyMatch(d -> d.id().equals(p.getId())));
+        assertFalse(promocionVenta.paraVenta(LocalDate.now(), false).stream().anyMatch(d -> d.id().equals(p.getId())));
         assertThrows(ValidationException.class, () -> ventaService.crear(venta(p.getId(), LocalDate.now(), "200")));
     }
 

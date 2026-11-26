@@ -3,12 +3,15 @@ package com.werealestate.backend.service;
 import com.werealestate.backend.dto.PromocionCreateRequest;
 import com.werealestate.backend.dto.PromocionDto;
 import com.werealestate.backend.dto.PromocionUpdateRequest;
+import com.werealestate.backend.exception.ForbiddenOperationException;
 import com.werealestate.backend.exception.ResourceNotFoundException;
 import com.werealestate.backend.exception.ValidationException;
 import com.werealestate.backend.model.ModalidadPromocion;
 import com.werealestate.backend.model.Promocion;
+import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.TipoPrecioPromocion;
 import com.werealestate.backend.repository.PromocionRepository;
+import com.werealestate.backend.security.CurrentUserProvider;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,13 +23,16 @@ public class PromocionService {
 
     private final PromocionRepository promocionRepository;
 
-    public PromocionService(PromocionRepository promocionRepository) {
+    private final CurrentUserProvider currentUserProvider;
+
+    public PromocionService(PromocionRepository promocionRepository, CurrentUserProvider currentUserProvider) {
+        this.currentUserProvider = currentUserProvider;
         this.promocionRepository = promocionRepository;
     }
 
     @Transactional
     public List<PromocionDto> listarActivas() {
-        desactivarVencidas();
+        actualizarVigencias();
         return promocionRepository.findByActivaTrue().stream()
                 .map(PromocionDto::fromEntity)
                 .toList();
@@ -34,7 +40,7 @@ public class PromocionService {
 
     @Transactional
     public List<PromocionDto> listar() {
-        desactivarVencidas();
+        actualizarVigencias();
         return promocionRepository.findAllByOrderByFechaCreacionDesc().stream()
                 .map(PromocionDto::fromEntity)
                 .toList();
@@ -42,6 +48,7 @@ public class PromocionService {
 
     @Transactional
     public PromocionDto crear(PromocionCreateRequest request) {
+        exigirAdmin();
         TipoPrecioPromocion tipoPrecio = request.tipoPrecio() != null ? request.tipoPrecio() : TipoPrecioPromocion.LOTE;
         ModalidadPromocion modalidad = request.modalidad() != null ? request.modalidad() : ModalidadPromocion.MENSUALIDAD_FIJA;
 
@@ -61,14 +68,12 @@ public class PromocionService {
         );
         p.setDescripcion(limpiarDescripcion(request.descripcion()));
         p.setFechaFin(request.fechaFin());
+        // Sin fecha de inicio empieza al crearla (decisión del usuario).
+        p.setFechaInicio(request.fechaInicio() != null ? request.fechaInicio() : LocalDateTime.now());
+        validarFechas(p);
 
-        boolean activa = request.activa() == null || request.activa();
-        if (activa && p.getFechaFin() != null && !p.getFechaFin().isAfter(LocalDateTime.now())) {
-            activa = false;
-        }
-        p.setActiva(activa);
-
-        if (activa) {
+        ajustarPorInicio(p, request.activa() == null || request.activa());
+        if (p.isActiva()) {
             desactivarOtrasDelProyecto(p.getProyecto(), p.getTipoPrecio(), p.getModalidad(), null);
         }
 
@@ -77,11 +82,13 @@ public class PromocionService {
 
     @Transactional
     public PromocionDto actualizar(Long id, PromocionUpdateRequest request) {
+        exigirAdmin();
         Promocion p = promocionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Promoción no encontrada"));
 
-        if (request.nombre() != null && !request.nombre().isBlank()) {
-            p.setNombre(request.nombre().trim());
+        // El nombre no se cambia (decisión del usuario): las ventas guardan la promoción por su nombre.
+        if (request.nombre() != null && !request.nombre().isBlank() && !request.nombre().trim().equals(p.getNombre())) {
+            throw new ValidationException("El nombre de una promoción no se puede cambiar; crea una promoción nueva");
         }
         if (request.proyecto() != null && !request.proyecto().isBlank()) {
             p.setProyecto(request.proyecto().trim());
@@ -110,12 +117,13 @@ public class PromocionService {
         } else if (request.fechaFin() != null) {
             p.setFechaFin(request.fechaFin());
         }
-        if (request.activa() != null) {
-            p.setActiva(request.activa());
+        if (request.fechaInicio() != null) {
+            p.setFechaInicio(request.fechaInicio());
         }
-        if (p.isActiva() && p.getFechaFin() != null && !p.getFechaFin().isAfter(LocalDateTime.now())) {
-            p.setActiva(false);
-        }
+        validarFechas(p);
+        // Una programada cuenta como «quiere estar activa».
+        boolean quiereActiva = request.activa() != null ? request.activa() : (p.isActiva() || !p.isInicioAplicado());
+        ajustarPorInicio(p, quiereActiva);
 
         if (p.isActiva()) {
             desactivarOtrasDelProyecto(p.getProyecto(), p.getTipoPrecio(), p.getModalidad(), p.getId());
@@ -126,6 +134,7 @@ public class PromocionService {
 
     @Transactional
     public PromocionDto cambiarEstado(Long id, boolean activa) {
+        exigirAdmin();
         Promocion p = promocionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Promoción no encontrada"));
 
@@ -133,8 +142,9 @@ public class PromocionService {
             throw new ValidationException("La fecha de fin ya venció; amplíala o quítala antes de activar la promoción.");
         }
 
-        p.setActiva(activa);
-        if (activa) {
+        // Activar una que aún no empieza la deja programada; desactivar una programada la cancela.
+        ajustarPorInicio(p, activa);
+        if (p.isActiva()) {
             ModalidadPromocion modalidad = p.getModalidad() != null ? p.getModalidad() : ModalidadPromocion.MENSUALIDAD_FIJA;
             desactivarOtrasDelProyecto(p.getProyecto(), p.getTipoPrecio(), modalidad, p.getId());
         }
@@ -144,6 +154,7 @@ public class PromocionService {
 
     @Transactional
     public void eliminar(Long id) {
+        exigirAdmin();
         if (!promocionRepository.existsById(id)) {
             throw new ResourceNotFoundException("Promoción no encontrada");
         }
@@ -188,6 +199,53 @@ public class PromocionService {
             p.setBonoDosLotes(null);
             p.setBonoTresLotes(null);
             p.setPlazoFijo(null);
+        }
+    }
+
+    /**
+     * Pone al día el estado por fechas: las programadas cuya fecha de inicio ya llegó se activan solas (y, como al
+     * activarlas a mano, apagan a la otra activa del mismo proyecto, tarifa y modalidad) y las vencidas se apagan.
+     * Lo corre PromocionScheduler cada minuto y también al listar.
+     */
+    @Transactional
+    public void actualizarVigencias() {
+        LocalDateTime ahora = LocalDateTime.now();
+        for (Promocion p : promocionRepository.findByInicioAplicadoFalse()) {
+            if (p.getFechaInicio() != null && p.getFechaInicio().isAfter(ahora)) continue;
+            p.setInicioAplicado(true);
+            boolean vencida = p.getFechaFin() != null && !p.getFechaFin().isAfter(ahora);
+            p.setActiva(!vencida);
+            promocionRepository.save(p);
+            if (!vencida) {
+                desactivarOtrasDelProyecto(p.getProyecto(), p.getTipoPrecio(), p.getModalidad(), p.getId());
+            }
+        }
+        desactivarVencidas();
+    }
+
+    /** Activa o no según su fecha de inicio: si aún no empieza, queda programada (si se quería activa) y apagada. */
+    private static void ajustarPorInicio(Promocion p, boolean quiereActiva) {
+        LocalDateTime ahora = LocalDateTime.now();
+        if (p.getFechaInicio() != null && p.getFechaInicio().isAfter(ahora)) {
+            p.setActiva(false);
+            p.setInicioAplicado(!quiereActiva);
+            return;
+        }
+        p.setInicioAplicado(true);
+        boolean vencida = p.getFechaFin() != null && !p.getFechaFin().isAfter(ahora);
+        p.setActiva(quiereActiva && !vencida);
+    }
+
+    private static void validarFechas(Promocion p) {
+        if (p.getFechaInicio() != null && p.getFechaFin() != null && !p.getFechaFin().isAfter(p.getFechaInicio())) {
+            throw new ValidationException("La fecha de fin debe ser posterior a la fecha de inicio");
+        }
+    }
+
+    /** Crear, editar, activar o eliminar promociones: solo admin (decisión del usuario 12.17.0). */
+    private void exigirAdmin() {
+        if (currentUserProvider.getUsuarioActual().getRol() != Role.ADMIN) {
+            throw new ForbiddenOperationException("Solo un administrador puede crear o cambiar promociones");
         }
     }
 

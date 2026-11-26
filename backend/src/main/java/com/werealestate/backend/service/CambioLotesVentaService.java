@@ -101,7 +101,7 @@ public class CambioLotesVentaService {
         if (request.promocionId() != null) {
             List<Lote> todos = pedidos.keySet().stream().map(id -> loteRepository.findById(id).orElseThrow()).toList();
             var promocion = promocionVenta.aplicar(request.promocionId(), venta.getFechaVenta(), todos, venta.getPromocionNombre());
-            venta.registrarPromocion(promocion.nombre(), promocion.bono());
+            venta.registrarPromocion(promocion.nombre(), promocion.bono(), promocion.mensualidadFija());
         } else {
             venta.registrarPromocion(null, null);
         }

@@ -283,9 +283,23 @@ public class Venta {
         return promocionBono;
     }
 
+    /** Mensualidad fija de su promoción (copia; solo las de modalidad MENSUALIDAD_FIJA, V95). */
+    @Column(name = "promocion_mensualidad_fija", precision = 14, scale = 2)
+    private BigDecimal promocionMensualidadFija;
+
+    public BigDecimal getPromocionMensualidadFija() {
+        return promocionMensualidadFija;
+    }
+
     public void registrarPromocion(String nombre, BigDecimal bono) {
+        registrarPromocion(nombre, bono, null);
+    }
+
+    /** bono para las de bono por lotes y mensualidadFija para las de mensualidad fija (la otra va en null). */
+    public void registrarPromocion(String nombre, BigDecimal bono, BigDecimal mensualidadFija) {
         this.promocionNombre = nombre;
         this.promocionBono = bono;
+        this.promocionMensualidadFija = mensualidadFija;
     }
 
     /** Modalidad de pago: efectivo o transferencia, una sola (null = sin definir, ver V66). */

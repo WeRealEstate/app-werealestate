@@ -25,6 +25,8 @@ export function motivoNoAplica(promo: Promocion, lotes: { superficie: number; de
   if (lotes.some((l) => l.superficie > SUPERFICIE_MACROLOTE_M2 !== hectarea)) {
     return `Esta promoción solo aplica a ${hectarea ? 'hectáreas' : 'lotes (no hectáreas)'}.`;
   }
-  if (!(bonoDe(promo, lotes.length) > 0)) return `Esta promoción no aplica a ${lotes.length} lote(s).`;
+  if (promo.modalidad === 'BONO_LOTES' && !(bonoDe(promo, lotes.length) > 0)) {
+    return `Esta promoción no aplica a ${lotes.length} lote(s).`;
+  }
   return null;
 }

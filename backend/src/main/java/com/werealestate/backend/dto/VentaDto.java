@@ -53,6 +53,8 @@ public record VentaDto(
         // Promoción con la que se vendió y su bono (null = sin promoción).
         String promocionNombre,
         BigDecimal promocionBono,
+        // Mensualidad fija de la promoción (solo las de modalidad mensualidad fija; null en las de bono).
+        BigDecimal promocionMensualidadFija,
         // true = la bienvenida y la liquidación le salen solas (sin botón para mandarlas a mano).
         boolean correosAutomaticos) {
 
@@ -101,6 +103,7 @@ public record VentaDto(
                 venta.getDepositoPendiente(),
                 venta.getPromocionNombre(),
                 venta.getPromocionBono(),
+                venta.getPromocionMensualidadFija(),
                 venta.isCorreosAutomaticos());
     }
 }

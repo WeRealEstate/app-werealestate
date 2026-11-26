@@ -18,6 +18,9 @@ export const CHANGELOG: EntradaVersion[] = [
   { version: '12.17.0', fecha: '2026-11-26', cambios: [
     "Modificar venta: ahora se puede poner, cambiar o quitar la promoción (las de bono vigentes en la fecha de la venta). El bono se resta del precio de los lotes, así bajan el saldo y la comisión; la mensualidad se recalcula y se puede ajustar. Pide tu contraseña.",
     "Lotes: nueva columna «Precio vendido» con el precio al que se vendió cada lote (ya con el bono de su promoción). Solo admin y administración.",
+    "Modificar venta: también se pueden poner promociones de mensualidad fija. El precio no cambia; la mensualidad se ajusta al tamaño de la venta y eliges los meses de las aportaciones anuales, que se reparten solas.",
+    "Promociones: fecha de inicio. Si es futura, la promoción queda «Programada» y se activa sola ese día (apagando a la que esté activa del mismo tipo); sin fecha, empieza al crearla.",
+    "Promociones: el nombre ya no se puede cambiar al editar, y solo un administrador puede crear, editar, activar o eliminar promociones (ahora también lo revisa el servidor).",
   ] },
   { version: '12.16.1', fecha: '2026-11-26', cambios: [
     "Planos públicos (seguridad): apartar ahora exige el PIN del asesor también en el servidor, con acceso a ese desarrollo, y el apartado queda con el nombre del dueño del PIN.",

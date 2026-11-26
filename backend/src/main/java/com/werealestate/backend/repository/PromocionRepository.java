@@ -11,6 +11,9 @@ public interface PromocionRepository extends JpaRepository<Promocion, Long> {
 
     List<Promocion> findByActivaTrue();
 
+    /** Programadas: esperan su fecha de inicio. */
+    List<Promocion> findByInicioAplicadoFalse();
+
     List<Promocion> findByProyectoAndTipoPrecioAndActivaTrue(String proyecto, TipoPrecioPromocion tipoPrecio);
 
     List<Promocion> findByProyectoAndTipoPrecioAndModalidadAndActivaTrue(

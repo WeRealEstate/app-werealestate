@@ -59,6 +59,30 @@ public class Promocion {
     @Column(name = "fecha_fin")
     private LocalDateTime fechaFin;
 
+    /** Desde cuándo vale (null = las de antes de V95: desde siempre). */
+    @Column(name = "fecha_inicio")
+    private LocalDateTime fechaInicio;
+
+    /** false = programada: espera su fecha de inicio para activarse sola (ver PromocionService.actualizarVigencias). */
+    @Column(name = "inicio_aplicado", nullable = false)
+    private boolean inicioAplicado = true;
+
+    public LocalDateTime getFechaInicio() {
+        return fechaInicio;
+    }
+
+    public void setFechaInicio(LocalDateTime fechaInicio) {
+        this.fechaInicio = fechaInicio;
+    }
+
+    public boolean isInicioAplicado() {
+        return inicioAplicado;
+    }
+
+    public void setInicioAplicado(boolean inicioAplicado) {
+        this.inicioAplicado = inicioAplicado;
+    }
+
     @Column(name = "fecha_creacion", nullable = false)
     private LocalDateTime fechaCreacion;
 

@@ -55,6 +55,12 @@ export class PromocionesComponent {
   readonly plazoFijo = signal(60);
   readonly descripcion = signal('');
 
+  /** Fecha y hora desde las que aplica; vacía = al crearla (al editar, vacía = la que ya tiene). Si es futura, la
+   * promoción queda programada y se activa sola ese día. */
+  readonly fechaInicio = signal('');
+  readonly horaInicio = signal(HORA_POR_DEFECTO);
+  readonly minutoInicio = signal(MINUTO_POR_DEFECTO);
+
   /** Fecha y hora en las que la promoción deja de aplicar; vacía = sin vencimiento. */
   readonly fechaFin = signal('');
   readonly horaFin = signal(HORA_POR_DEFECTO);
@@ -230,6 +236,18 @@ export class PromocionesComponent {
     }
     this.descripcion.set(promo.descripcion ?? '');
 
+    if (promo.fechaInicio) {
+      const [fecha, horaMinuto] = promo.fechaInicio.split('T');
+      const [hora, minuto] = (horaMinuto ?? '').split(':');
+      this.fechaInicio.set(fecha);
+      this.horaInicio.set(hora || HORA_POR_DEFECTO);
+      this.minutoInicio.set(minuto || MINUTO_POR_DEFECTO);
+    } else {
+      this.fechaInicio.set('');
+      this.horaInicio.set(HORA_POR_DEFECTO);
+      this.minutoInicio.set(MINUTO_POR_DEFECTO);
+    }
+
     if (promo.fechaFin) {
       const [fecha, horaMinuto] = promo.fechaFin.split('T');
       const [hora, minuto] = (horaMinuto ?? '').split(':');
@@ -259,6 +277,9 @@ export class PromocionesComponent {
     this.bonoTresLotesDisplay.set('30,000');
     this.plazoFijo.set(60);
     this.descripcion.set('');
+    this.fechaInicio.set('');
+    this.horaInicio.set(HORA_POR_DEFECTO);
+    this.minutoInicio.set(MINUTO_POR_DEFECTO);
     this.fechaFin.set('');
     this.horaFin.set(HORA_POR_DEFECTO);
     this.minutoFin.set(MINUTO_POR_DEFECTO);
@@ -270,6 +291,9 @@ export class PromocionesComponent {
 
     const mod = this.modalidad();
     const fechaFin = this.fechaFin() ? combinarFechaHora(this.fechaFin(), this.horaFin(), this.minutoFin()) : null;
+    const fechaInicio = this.fechaInicio()
+      ? combinarFechaHora(this.fechaInicio(), this.horaInicio(), this.minutoInicio())
+      : null;
 
     this.isSaving.set(true);
     try {
@@ -286,6 +310,7 @@ export class PromocionesComponent {
           descripcion: this.descripcion().trim() || null,
           fechaFin,
           limpiarFechaFin: !fechaFin,
+          fechaInicio,
         });
         this.promociones.update((lista) => lista.map((p) => (p.id === id ? actualizada : p)));
         this.toast.success('Promoción actualizada.');
@@ -302,11 +327,14 @@ export class PromocionesComponent {
           plazoFijo: mod === 'BONO_LOTES' ? this.plazoFijo() : null,
           descripcion: this.descripcion().trim() || null,
           fechaFin,
+          fechaInicio,
         });
-        // Crear una promoción activa desactiva otra del mismo proyecto, tarifa y modalidad.
+        // Crear una promoción activa desactiva otra del mismo proyecto, tarifa y modalidad (una programada no, hasta
+        // que llegue su fecha de inicio).
         this.promociones.update((lista) => [
           nueva,
           ...lista.map((p) =>
+            nueva.activa &&
             p.proyecto === nueva.proyecto &&
             p.tipoPrecio === nueva.tipoPrecio &&
             (p.modalidad ?? 'MENSUALIDAD_FIJA') === (nueva.modalidad ?? 'MENSUALIDAD_FIJA')
@@ -314,7 +342,11 @@ export class PromocionesComponent {
               : p,
           ),
         ]);
-        this.toast.success(`Promoción "${nueva.nombre}" creada.`);
+        this.toast.success(
+          nueva.programada
+            ? `Promoción "${nueva.nombre}" creada: se activará sola al llegar su fecha de inicio.`
+            : `Promoción "${nueva.nombre}" creada.`,
+        );
       }
       this.cancelarEdicion();
     } catch (error) {
@@ -330,7 +362,7 @@ export class PromocionesComponent {
 
   async toggleActiva(promo: Promocion): Promise<void> {
     try {
-      const actualizada = await this.promocionesService.cambiarEstado(promo.id, !promo.activa);
+      const actualizada = await this.promocionesService.cambiarEstado(promo.id, promo.programada ? false : !promo.activa);
       this.promociones.update((lista) =>
         lista.map((p) => {
           if (p.id === actualizada.id) return actualizada;
@@ -346,7 +378,11 @@ export class PromocionesComponent {
         }),
       );
       this.toast.success(
-        actualizada.activa ? `"${actualizada.nombre}" ahora está activa.` : `"${actualizada.nombre}" fue desactivada.`,
+        actualizada.programada
+          ? `"${actualizada.nombre}" se activará sola al llegar su fecha de inicio.`
+          : actualizada.activa
+            ? `"${actualizada.nombre}" ahora está activa.`
+            : `"${actualizada.nombre}" fue desactivada.`,
       );
     } catch {
       this.toast.error('No se pudo cambiar el estado de la promoción.');

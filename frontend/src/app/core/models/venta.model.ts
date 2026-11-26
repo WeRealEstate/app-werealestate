@@ -125,6 +125,8 @@ export interface Venta {
   /** Promoción con la que se vendió y su bono (null = sin promoción). El bono ya va descontado en el precio. */
   promocionNombre: string | null;
   promocionBono: number | null;
+  /** Mensualidad fija de su promoción (solo las de modalidad mensualidad fija). */
+  promocionMensualidadFija: number | null;
   /** true = la bienvenida y la liquidación le salen solas (sin botón para mandarlas a mano). */
   correosAutomaticos: boolean;
 }
@@ -212,6 +214,8 @@ export interface VentaUpdateRequest {
   cambiarPromocion?: boolean;
   promocionId?: number | null;
   password?: string;
+  /** Con una promoción de mensualidad fija: reemplazan las aportaciones del plan original. */
+  aportaciones?: { anio: number; mes: number; monto: number }[];
 }
 
 /** Para qué es una línea de un recibo. Los abonos anteriores a que existieran los tipos no lo

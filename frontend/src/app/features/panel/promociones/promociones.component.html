@@ -20,10 +20,14 @@
           type="text"
           [value]="nombre()"
           (input)="nombre.set($any($event.target).value)"
+          [disabled]="editandoId() !== null"
           placeholder="Ej. Buen Fin"
           class="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted
-                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+                 focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary disabled:opacity-60"
         />
+        @if (editandoId() !== null) {
+          <p class="mt-1.5 text-xs text-ink-muted">El nombre no se puede cambiar: las ventas guardan la promoción por su nombre.</p>
+        }
       </div>
 
       <div>
@@ -177,6 +181,49 @@
           class="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted
                  focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
         />
+      </div>
+
+      <div class="sm:col-span-2">
+        <label class="mb-1.5 block text-sm font-medium text-ink">Fecha y hora de inicio</label>
+        <p class="mb-2 text-xs text-ink-muted">
+          Desde cuándo aplica. Vacía = desde que la creas. Si es una fecha futura, la promoción queda programada y se
+          activa sola ese día (y apaga a la que esté activa del mismo proyecto, tarifa y modalidad).
+        </p>
+        <div class="grid grid-cols-[1fr_auto_auto] gap-2">
+          <input
+            type="date"
+            [value]="fechaInicio()"
+            (input)="fechaInicio.set($any($event.target).value)"
+            class="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm text-ink bg-surface
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary"
+          />
+
+          <select
+            [value]="horaInicio()"
+            (change)="horaInicio.set($any($event.target).value)"
+            [disabled]="!fechaInicio()"
+            aria-label="Hora de inicio (24h)"
+            class="rounded-lg border border-border px-3 py-2.5 text-sm text-ink bg-surface
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary disabled:opacity-60"
+          >
+            @for (h of horasOpciones; track h) {
+              <option [value]="h">{{ h }}</option>
+            }
+          </select>
+
+          <select
+            [value]="minutoInicio()"
+            (change)="minutoInicio.set($any($event.target).value)"
+            [disabled]="!fechaInicio()"
+            aria-label="Minuto de inicio"
+            class="rounded-lg border border-border px-3 py-2.5 text-sm text-ink bg-surface
+                   focus:outline-none focus:ring-2 focus:ring-we-primary/50 focus:border-we-primary disabled:opacity-60"
+          >
+            @for (m of minutosOpciones; track m) {
+              <option [value]="m">{{ m }}</option>
+            }
+          </select>
+        </div>
       </div>
 
       <div class="sm:col-span-2">
@@ -361,6 +408,7 @@
             <th class="px-4 py-3">Proyecto</th>
             <th class="px-4 py-3">Aplica a</th>
             <th class="px-4 py-3">Beneficio</th>
+            <th class="px-4 py-3">Inicia</th>
             <th class="px-4 py-3">Vence</th>
             <th class="px-4 py-3">Estado</th>
             <th class="px-4 py-3"></th>
@@ -402,6 +450,9 @@
                 }
               </td>
               <td class="px-4 py-3 text-ink-muted">
+                {{ promo.fechaInicio ? (promo.fechaInicio | date: 'dd/MM/yyyy HH:mm') : '—' }}
+              </td>
+              <td class="px-4 py-3 text-ink-muted">
                 {{ promo.fechaFin ? (promo.fechaFin | date: 'dd/MM/yyyy HH:mm') : 'Sin vencimiento' }}
               </td>
               <td class="px-4 py-3">
@@ -413,10 +464,15 @@
                   [class.text-green-700]="promo.activa"
                   [class.dark:bg-green-500/15]="promo.activa"
                   [class.dark:text-green-300]="promo.activa"
-                  [class.bg-surface-2]="!promo.activa"
-                  [class.text-ink-muted]="!promo.activa"
+                  [class.bg-amber-100]="promo.programada"
+                  [class.text-amber-800]="promo.programada"
+                  [class.dark:bg-amber-500/15]="promo.programada"
+                  [class.dark:text-amber-300]="promo.programada"
+                  [class.bg-surface-2]="!promo.activa && !promo.programada"
+                  [class.text-ink-muted]="!promo.activa && !promo.programada"
+                  [title]="promo.programada ? 'Se activa sola en su fecha de inicio; clic para cancelarla' : ''"
                 >
-                  {{ promo.activa ? 'Activa' : 'Inactiva' }}
+                  {{ promo.programada ? 'Programada' : promo.activa ? 'Activa' : 'Inactiva' }}
                 </button>
               </td>
               <td class="px-4 py-3">

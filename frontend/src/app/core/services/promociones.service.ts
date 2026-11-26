@@ -14,9 +14,11 @@ export class PromocionesService {
     return firstValueFrom(this.http.get<Promocion[]>(`${this.baseUrl}/activas`));
   }
 
-  /** Las que se pueden elegir al registrar una venta de esa fecha (yyyy-MM-dd). */
-  paraVenta(fecha: string): Promise<Promocion[]> {
-    return firstValueFrom(this.http.get<Promocion[]>(`${this.baseUrl}/para-venta`, { params: { fecha } }));
+  /** Las que se pueden elegir al registrar una venta de esa fecha (yyyy-MM-dd): solo las de bono. Con modificar,
+   * también las de mensualidad fija (solo se ponen desde «Modificar venta»). */
+  paraVenta(fecha: string, modificar = false): Promise<Promocion[]> {
+    const params: Record<string, string> = modificar ? { fecha, modificar: 'true' } : { fecha };
+    return firstValueFrom(this.http.get<Promocion[]>(`${this.baseUrl}/para-venta`, { params }));
   }
 
   /** Catálogo completo (activas e inactivas), solo para la pantalla de administración. */

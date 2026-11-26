@@ -40,8 +40,9 @@ public class PromocionController {
 
     /** Las promociones que se pueden elegir al registrar una venta de esa fecha. */
     @GetMapping("/para-venta")
-    public List<PromocionDto> paraVenta(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
-        return promocionVentaService.paraVenta(fecha);
+    public List<PromocionDto> paraVenta(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha,
+            @RequestParam(defaultValue = "false") boolean modificar) {
+        return promocionVentaService.paraVenta(fecha, modificar);
     }
 
     @GetMapping

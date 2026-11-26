@@ -135,10 +135,11 @@ export class CambiarLotesVentaComponent {
     try {
       const [inventario, promociones] = await Promise.all([
         this.lotesService.buscarPaginado({ desarrolloId: v.lotes[0].lote.desarrollo.id, pagina: 0, tamano: 1000 }),
-        this.promocionesService.paraVenta(v.fechaVenta).catch(() => [] as Promocion[]),
+        this.promocionesService.paraVenta(v.fechaVenta, true).catch(() => [] as Promocion[]),
       ]);
       this.inventario.set(inventario.contenido);
-      this.promociones.set(promociones);
+      // Aquí solo se eligen las de bono; la de mensualidad fija que ya tenga la venta se conserva.
+      this.promociones.set(promociones.filter((p) => p.modalidad === 'BONO_LOTES' || p.nombre === v.promocionNombre));
       if (v.promocionNombre) {
         const actual = promociones.find((p) => p.nombre === v.promocionNombre);
         if (actual) {

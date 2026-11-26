@@ -4,9 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.werealestate.backend.dto.VentaAportacionItemRequest;
 import com.werealestate.backend.dto.VentaDto;
 import com.werealestate.backend.dto.VentaUpdateRequest;
 import com.werealestate.backend.exception.ForbiddenOperationException;
+import com.werealestate.backend.exception.ValidationException;
 import com.werealestate.backend.integracion.PruebaDeIntegracion;
 import com.werealestate.backend.model.EstadoLote;
 import com.werealestate.backend.model.Lote;
@@ -22,6 +24,8 @@ import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +36,7 @@ class PromocionAlModificarVentaIntegracionTest extends PruebaDeIntegracion {
     @Autowired PromocionRepository promociones;
     @Autowired VentaComisionRepository comisiones;
     @Autowired EntityManager em;
+    @Autowired PromocionVentaService promocionVenta;
 
     private Usuario asesor;
     private VentaDto venta;
@@ -65,9 +70,46 @@ class PromocionAlModificarVentaIntegracionTest extends PruebaDeIntegracion {
     private VentaDto modificar(Long promocionId, String password, String mensualidad) {
         VentaDto v = ventaService.actualizar(venta.id(), new VentaUpdateRequest(
                 null, null, null, asesor.getId(), null, venta.formaPago(), fecha, new BigDecimal(mensualidad), 60,
-                null, null, null, null, null, null, null, true, promocionId, password));
+                null, null, null, null, null, null, null, true, promocionId, password, null));
         em.flush();
         return v;
+    }
+
+    private Promocion mensualidadFija() {
+        Promocion p = new Promocion();
+        p.setNombre("Fija " + etiqueta());
+        p.setProyecto("samai");
+        p.setTipoPrecio(TipoPrecioPromocion.LOTE);
+        p.setModalidad(ModalidadPromocion.MENSUALIDAD_FIJA);
+        p.setMensualidadFija(new BigDecimal("1900"));
+        p.setActiva(true);
+        p.setFechaFin(LocalDateTime.now().plusDays(5));
+        return promociones.saveAndFlush(p);
+    }
+
+    @Test
+    void mensualidadFijaNoCambiaElPrecioYReemplazaLasAportaciones() {
+        Promocion p = mensualidadFija();
+        YearMonth mes = YearMonth.from(fecha).plusMonths(6);
+        VentaDto v = ventaService.actualizar(venta.id(), new VentaUpdateRequest(
+                null, null, null, asesor.getId(), null, venta.formaPago(), fecha, new BigDecimal("1900"), 60,
+                null, null, null, null, null, null, null, true, p.getId(), CONTRASENA,
+                List.of(new VentaAportacionItemRequest(mes.getYear(), mes.getMonthValue(), new BigDecimal("50000")))));
+        em.flush();
+        assertEquals(p.getNombre(), v.promocionNombre());
+        assertNull(v.promocionBono());
+        assertEquals(0, new BigDecimal("1900").compareTo(v.promocionMensualidadFija()));
+        assertEquals(0, new BigDecimal("160000").compareTo(v.precioVenta()));
+        assertEquals(0, new BigDecimal("1900").compareTo(v.mensualidad()));
+        assertEquals(1, v.aportaciones().size());
+        assertEquals(0, new BigDecimal("50000").compareTo(v.aportaciones().get(0).monto()));
+    }
+
+    @Test
+    void mensualidadFijaNoSePuedeEnNuevaVenta() {
+        Promocion p = mensualidadFija();
+        var lote = lote(samai(), etiqueta(), "1", "200", EstadoLote.DISPONIBLE);
+        assertThrows(ValidationException.class, () -> promocionVenta.aplicar(p.getId(), fecha, List.of(lote)));
     }
 
     @Test

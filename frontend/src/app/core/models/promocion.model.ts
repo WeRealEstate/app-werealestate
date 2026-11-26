@@ -20,6 +20,10 @@ export interface Promocion {
   activa: boolean;
   fechaFin: string | null;
   fechaCreacion: string;
+  /** Desde cuándo vale; null en las de antes de existir la fecha de inicio (valen desde siempre). */
+  fechaInicio: string | null;
+  /** true = espera su fecha de inicio y se activa sola ese día. */
+  programada: boolean;
 }
 
 export interface PromocionCreateRequest {
@@ -36,6 +40,8 @@ export interface PromocionCreateRequest {
   descripcion?: string | null;
   activa?: boolean;
   fechaFin?: string | null;
+  /** null = empieza al crearla. */
+  fechaInicio?: string | null;
 }
 
 export interface PromocionUpdateRequest {
@@ -53,4 +59,5 @@ export interface PromocionUpdateRequest {
   activa?: boolean;
   fechaFin?: string | null;
   limpiarFechaFin?: boolean;
+  fechaInicio?: string | null;
 }
