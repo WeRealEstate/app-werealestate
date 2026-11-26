@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.20.1', fecha: '2026-11-26', cambios: [
+    "Información del lote: los movimientos hechos desde el plano público ahora dicen el nombre del asesor que los hizo, en vez de «Sesiones públicas».",
+  ] },
   { version: '12.20.0', fecha: '2026-11-26', cambios: [
     "Promociones de bono: ahora eliges a cuántos lotes aplica. Agregas los niveles que quieras (por ejemplo 3 lotes → $30,000, 4 lotes → $45,000, 6 lotes → $70,000, de 1 a 20 lotes) y el bono solo aplica con ese número exacto de lotes, en el cotizador, al registrar o modificar una venta y con código de promoción. Las promociones que ya existían quedan con sus mismos montos en 1, 2 y 3 lotes (exactos: «3 o más» ya no vale para 4 o más).",
     "Código de promoción: ahora puede llevar letras y números (6 caracteres, por ejemplo BUEN25), sin distinguir mayúsculas. Los que se generan al azar también mezclan letras y números.",
