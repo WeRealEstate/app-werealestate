@@ -26,7 +26,10 @@ public record LoteDto(
         // Precio por m² que aplica (el propio del lote o el del desarrollo), el propio (null si no tiene) y el total.
         BigDecimal precioM2,
         BigDecimal precioM2Propio,
-        BigDecimal precio) {
+        BigDecimal precio,
+        // Precio al que se vendió (el de la venta, ya con el bono de su promoción). Solo admin y administración,
+        // igual que ventaNumero (ver LoteConsultaService.marcarVentas); null = sin venta o no lo puede ver.
+        BigDecimal precioVendido) {
 
     public static LoteDto from(Lote lote) {
         return de(lote, VisibilidadLote.visible(lote.getEstado()), true, true);
@@ -64,15 +67,17 @@ public record LoteDto(
                 null,
                 lote.getPrecioM2Efectivo(),
                 lote.getPrecioM2(),
-                lote.getPrecioM2Efectivo().multiply(lote.getSuperficie()).setScale(2, java.math.RoundingMode.HALF_UP));
+                lote.getPrecioM2Efectivo().multiply(lote.getSuperficie()).setScale(2, java.math.RoundingMode.HALF_UP),
+                null);
     }
 
     /** Para /panel/lotes, /panel/plano y el formulario de Ventas (admin y administración): en qué venta está el lote
      * y si es un VENDIDO sin ninguna ("Reservado por We"). Ver LoteService.marcarVentas; en cualquier otro contexto
      * van en falso y null, no vale la pena la consulta extra. */
-    public LoteDto conVenta(boolean sinVentaRegistrada, String ventaNumero) {
+    public LoteDto conVenta(boolean sinVentaRegistrada, String ventaNumero, BigDecimal precioVendido) {
         return new LoteDto(
                 id, desarrollo, manzana, numeroLote, superficie, estado, fechaCambioEstado, cambiadoPor, mapaPoligono,
-                fechaExpiraApartado, montoApartado, sinVentaRegistrada, ventaNumero, precioM2, precioM2Propio, precio);
+                fechaExpiraApartado, montoApartado, sinVentaRegistrada, ventaNumero, precioM2, precioM2Propio, precio,
+                precioVendido);
     }
 }

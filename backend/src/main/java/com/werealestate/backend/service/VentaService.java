@@ -397,6 +397,9 @@ public class VentaService {
                 notas);
         // El plan reestructurado de forma completa arranca en la fecha de venta: si esta cambió, lo sigue.
         if (fechaCambio) venta.seguirFechaDeVenta(fechaAnterior, consultas.pagosVigentes(venta.getId()));
+        if (Boolean.TRUE.equals(request.cambiarPromocion())) {
+            cambiarPromocion(venta, request.promocionId(), request.password());
+        }
         if (request.clienteId() != null) {
             Cliente nuevo = clienteService.obtenerEntidad(request.clienteId());
             venta.ligarCliente(nuevo);
@@ -425,6 +428,76 @@ public class VentaService {
         }
         NumeracionVisible.olvidar();
         return dtoArmador.armar(consultas.obtenerEntidad(id));
+    }
+
+    /**
+     * Pone, cambia o quita (promocionId null) la promoción de una venta ya registrada (decisión del usuario 12.17.0):
+     * el bono anterior se le devuelve al precio de los lotes y el nuevo se resta, en partes iguales al centavo (lo que
+     * sobra, al último lote; mismo reparto que el formulario de Nueva venta, {@code partesDelBono}). Saldo, Finanzas
+     * y comisión salen de ese precio; la mensualidad la recalcula el formulario y llega en el mismo request. Pide la
+     * contraseña de quien lo hace porque mueve precio y comisión (igual que «Cambiar lotes»).
+     */
+    private void cambiarPromocion(Venta venta, Long promocionId, String password) {
+        autorizacion.exigirAdminOLiderConContrasena(
+                "Solo un administrador o personal de administración puede cambiar la promoción de una venta", password);
+        List<VentaLote> lotes = ventaLoteRepository.findByVentaId(venta.getId()).stream()
+                .sorted(java.util.Comparator.comparing(VentaLote::getId))
+                .toList();
+        if (lotes.isEmpty()) {
+            throw new ValidationException("Esta venta no tiene lotes a los que aplicarles la promoción");
+        }
+        List<BigDecimal> devolver = partesDelBono(venta.getPromocionBono(), lotes.size());
+        BigDecimal bonoNuevo = null;
+        if (promocionId != null) {
+            var aplicada = promocionVenta.aplicar(promocionId, venta.getFechaVenta(),
+                    lotes.stream().map(VentaLote::getLote).toList(), venta.getPromocionNombre());
+            venta.registrarPromocion(aplicada.nombre(), aplicada.bono());
+            bonoNuevo = aplicada.bono();
+        } else {
+            venta.registrarPromocion(null, null);
+        }
+        List<BigDecimal> restar = partesDelBono(bonoNuevo, lotes.size());
+        BigDecimal total = BigDecimal.ZERO;
+        for (int i = 0; i < lotes.size(); i++) {
+            VentaLote vl = lotes.get(i);
+            BigDecimal precio = vl.getPrecio().add(devolver.get(i)).subtract(restar.get(i));
+            if (precio.signum() <= 0) {
+                throw new ValidationException("El bono de la promoción deja el lote Mz " + vl.getLote().getManzana()
+                        + " / Lote " + vl.getLote().getNumeroLote() + " sin precio");
+            }
+            vl.setPrecio(precio);
+            total = total.add(precio);
+        }
+        validarPlanConPrecio(venta, total);
+        ventaLoteRepository.flush();
+        comisionService.recalcularPorCambioDePrecio(venta);
+    }
+
+    /** Partes iguales al centavo de un bono entre n lotes; lo que sobra va al último (ceros si no hay bono). */
+    static List<BigDecimal> partesDelBono(BigDecimal bono, int lotes) {
+        List<BigDecimal> partes = new ArrayList<>();
+        long centavos = bono == null ? 0 : bono.movePointRight(2).setScale(0, RoundingMode.HALF_UP).longValueExact();
+        long parte = centavos / lotes;
+        for (int i = 0; i < lotes; i++) {
+            long c = i == lotes - 1 ? centavos - parte * (lotes - 1) : parte;
+            partes.add(BigDecimal.valueOf(c, 2));
+        }
+        return partes;
+    }
+
+    /** Con saldo por pagar, el enganche y las aportaciones no pueden cubrir todo el precio nuevo (misma regla que
+     * CambioLotesVentaService.validarPlan). En una venta reestructurada el plan vigente solo reparte lo que haya. */
+    private void validarPlanConPrecio(Venta venta, BigDecimal precio) {
+        if (venta.getPlazoMeses() == null || !venta.getReestructuraciones().isEmpty()) return;
+        if (precio.compareTo(consultas.totalAbonado(venta.getId())) <= 0) return;
+        BigDecimal fijo = venta.getEnganche() != null ? venta.getEnganche() : BigDecimal.ZERO;
+        for (VentaAportacion a : ventaAportacionRepository.findByVentaIdOrderByAnioAscMesAsc(venta.getId())) {
+            fijo = fijo.add(a.getMonto());
+        }
+        if (fijo.compareTo(precio) >= 0) {
+            throw new ValidationException("El enganche y las aportaciones cubren todo el precio con la promoción: "
+                    + "corrige el enganche");
+        }
     }
 
     /** Aplica el dinero con el que ya estaba apartado el lote de una venta que nació de un registro de venta

@@ -31,6 +31,10 @@ import { MonedaInputDirective } from '../../../../shared/moneda-input/moneda-inp
 import { fechaLarga, porcentajeDe, ultimaMensualidad } from '../../../../core/utils/financiamiento';
 import { NumeroVentaComponent } from '../../../../shared/numero-venta/numero-venta.component';
 import { dinero } from '../../../../core/utils/formato-pantalla';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Promocion } from '../../../../core/models/promocion.model';
+import { PromocionesService } from '../../../../core/services/promociones.service';
+import { bonoDe, motivoNoAplica } from '../../../../core/utils/promocion';
 
 const SEGUNDOS_ESPERA_ELIMINAR = 10;
 
@@ -51,6 +55,7 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
   private readonly fb = inject(FormBuilder);
+  private readonly promocionesService = inject(PromocionesService);
 
   readonly venta = signal<Venta | null>(null);
   readonly asesoresInternos = signal<UsuarioResumen[]>([]);
@@ -103,6 +108,40 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
     notas: this.fb.control(''),
   });
   readonly edicionPrimeraMensualidadMesVenta = signal(false);
+
+  // --- Promoción al modificar (12.17.0) ---
+  /** Las de bono vigentes en la fecha de la venta (las mismas que ofrece Nueva venta). */
+  readonly promocionesEdicion = signal<Promocion[]>([]);
+  /** 'igual' = la promoción no se toca; null = quitarla; un id = cambiar a esa. */
+  readonly promocionEdicion = signal<number | null | 'igual'>('igual');
+  /** Cambiar la promoción mueve precio, saldo y comisión: se pide la contraseña (igual que «Cambiar lotes»). */
+  readonly passwordPromocion = signal('');
+  readonly cambiaPromocion = computed(() => this.promocionEdicion() !== 'igual');
+  readonly promocionElegida = computed(() => {
+    const id = this.promocionEdicion();
+    return typeof id === 'number' ? (this.promocionesEdicion().find((p) => p.id === id) ?? null) : null;
+  });
+  /** Por qué la promoción elegida no aplica a los lotes de la venta (mismo criterio que el servidor). */
+  readonly errorPromocionEdicion = computed<string | null>(() => {
+    const promo = this.promocionElegida();
+    const v = this.venta();
+    if (!promo || !v) return null;
+    return motivoNoAplica(promo, v.lotes.map((l) => ({ superficie: l.lote.superficie, desarrollo: l.lote.desarrollo.nombre })));
+  });
+  /** Precio de la venta con la promoción elegida: se le devuelve el bono que tenía y se resta el nuevo. */
+  readonly precioConPromocion = computed(() => {
+    const v = this.venta();
+    if (!v) return 0;
+    const promo = this.promocionElegida();
+    const nuevo = promo && !this.errorPromocionEdicion() ? bonoDe(promo, v.lotes.length) : 0;
+    return Math.round((v.precioVenta + (v.promocionBono ?? 0) - nuevo) * 100) / 100;
+  });
+  /** Las promociones vigentes cambian con la fecha de venta. */
+  private readonly promocionesPorFecha = this.edicionForm.controls.fechaVenta.valueChanges
+    .pipe(takeUntilDestroyed())
+    .subscribe((fecha) => {
+      if (this.editando()) void this.cargarPromocionesEdicion(fecha);
+    });
   /** Número de venta en la edición: arranca con el actual; si se cambia, el servidor recorre las consecutivas. */
   readonly numeroEdicion = signal<number | null>(null);
   /** "S-" / "N-" de la venta, para mostrar los números del campo de edición. */
@@ -364,7 +403,50 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
     this.errorEdicion.set(null);
     this.numeroEdicion.set(this.venta()?.numero ?? null);
     this.confirmarFechaEdicion.set(false);
+    this.promocionEdicion.set('igual');
+    this.passwordPromocion.set('');
+    void this.cargarPromocionesEdicion(v.fechaVenta);
     this.editando.set(true);
+  }
+
+  private async cargarPromocionesEdicion(fecha: string): Promise<void> {
+    try {
+      this.promocionesEdicion.set(fecha ? await this.promocionesService.paraVenta(fecha) : []);
+    } catch {
+      this.promocionesEdicion.set([]);
+    }
+    const id = this.promocionEdicion();
+    if (typeof id === 'number' && !this.promocionesEdicion().some((p) => p.id === id)) {
+      this.promocionEdicion.set('igual');
+      this.recalcularMensualidadEdicion();
+    }
+  }
+
+  /** Nombre y bono que le tocaría a esta venta con esa promoción. */
+  etiquetaPromocionEdicion(p: Promocion): string {
+    const bono = bonoDe(p, this.venta()?.lotes.length ?? 0);
+    return bono > 0 ? `${p.nombre} · bono $${dinero(bono)}` : p.nombre;
+  }
+
+  onPromocionEdicion(valor: string): void {
+    this.promocionEdicion.set(valor === 'igual' ? 'igual' : valor === '' ? null : Number(valor));
+    this.recalcularMensualidadEdicion();
+  }
+
+  /** Al cambiar la promoción la mensualidad se recalcula con el precio nuevo (saldo ÷ meses sin aportación, como al
+   * aplicar un depósito); el campo sigue editable. */
+  private recalcularMensualidadEdicion(): void {
+    const v = this.venta();
+    const plazo = this.edicionForm.controls.plazoMeses.value;
+    if (!v || !plazo) return;
+    const precio = this.cambiaPromocion() ? this.precioConPromocion() : v.precioVenta;
+    const enganche = this.edicionForm.controls.enganche.value ?? 0;
+    const aportado = v.aportaciones.reduce((suma, a) => suma + a.monto, 0);
+    const meses = plazo - v.aportaciones.length;
+    const saldo = precio - enganche - aportado;
+    if (meses > 0 && saldo > 0) {
+      this.edicionForm.controls.mensualidad.setValue(Math.round((saldo / meses) * 100) / 100);
+    }
   }
 
   abrirDeposito(): void {
@@ -421,6 +503,18 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
       this.edicionForm.markAllAsTouched();
       return;
     }
+    const promocion = this.promocionEdicion();
+    if (this.cambiaPromocion()) {
+      const motivo = this.errorPromocionEdicion();
+      if (motivo) {
+        this.errorEdicion.set(motivo);
+        return;
+      }
+      if (!this.passwordPromocion()) {
+        this.errorEdicion.set('Escribe tu contraseña para cambiar la promoción.');
+        return;
+      }
+    }
 
     this.isSavingEdicion.set(true);
     this.errorEdicion.set(null);
@@ -443,11 +537,16 @@ export class VentaDetalleComponent implements OnInit, OnDestroy {
         diaPago: v.diaPago as number,
         primeraMensualidadMesVenta: this.edicionPrimeraMensualidadMesVenta(),
         notas: v.notas?.trim() || null,
+        ...(this.cambiaPromocion()
+          ? { cambiarPromocion: true, promocionId: typeof promocion === 'number' ? promocion : null, password: this.passwordPromocion() }
+          : {}),
       });
       this.venta.set(actualizada);
       this.sincronizarDireccion(actualizada.etiqueta);
       this.editando.set(false);
       this.toast.success('Venta actualizada.');
+      // Con otra promoción cambiaron precio, saldo y comisión: se recarga todo (tabla de amortización incluida).
+      if (this.cambiaPromocion()) void this.cargar();
     } catch (error) {
       const mensaje =
         error instanceof HttpErrorResponse && typeof error.error?.message === 'string'

@@ -35,5 +35,20 @@ public record VentaUpdateRequest(
         // true = la fecha de venta ya es la definitiva (quita la marca de "fecha provisional"); cambiarla también la quita.
         Boolean confirmarFecha,
         // Efectivo o transferencia; null = sin definir (quita la que tuviera).
-        com.werealestate.backend.model.ModalidadPago modalidadPago) {
+        com.werealestate.backend.model.ModalidadPago modalidadPago,
+        // true = aplicar promocionId (null = quitar la promoción); null o false = la promoción no cambia.
+        // Cambiarla mueve el precio de los lotes (el bono se resta de ellos), por eso pide la contraseña.
+        Boolean cambiarPromocion,
+        Long promocionId,
+        String password) {
+
+    /** Sin tocar la promoción (como antes de poder cambiarla al modificar). */
+    public VentaUpdateRequest(Long clienteId, Long numero, java.util.List<Long> copropietariosIds, Long usuarioAsesorId,
+            Long asesorExternoId, String formaPago, LocalDate fechaVenta, BigDecimal mensualidad, Integer plazoMeses,
+            String engancheLabel, BigDecimal enganche, Integer diaPago, Boolean primeraMensualidadMesVenta, String notas,
+            Boolean confirmarFecha, com.werealestate.backend.model.ModalidadPago modalidadPago) {
+        this(clienteId, numero, copropietariosIds, usuarioAsesorId, asesorExternoId, formaPago, fechaVenta, mensualidad,
+                plazoMeses, engancheLabel, enganche, diaPago, primeraMensualidadMesVenta, notas, confirmarFecha,
+                modalidadPago, null, null, null);
+    }
 }

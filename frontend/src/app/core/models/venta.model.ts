@@ -208,6 +208,10 @@ export interface VentaUpdateRequest {
   notas: string | null;
   /** Efectivo o transferencia; null = sin definir (quita la que tuviera). */
   modalidadPago?: ModalidadPago | null;
+  /** true = aplicar promocionId (null = quitarla); omitido = la promoción no cambia. Pide la contraseña. */
+  cambiarPromocion?: boolean;
+  promocionId?: number | null;
+  password?: string;
 }
 
 /** Para qué es una línea de un recibo. Los abonos anteriores a que existieran los tipos no lo

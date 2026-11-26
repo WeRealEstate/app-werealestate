@@ -91,7 +91,7 @@ class LoteVentaReglasTest {
         VentaLote vl = new VentaLote(venta, lote, new BigDecimal("1000"));
         when(ventaLotes.findFirstByLoteIdOrderByIdDesc(lote.getId())).thenReturn(Optional.of(vl));
         when(ventaLotes.existsByLoteId(lote.getId())).thenReturn(true);
-        numeros.add(new Object[] {lote.getId(), venta});
+        numeros.add(new Object[] {lote.getId(), venta, new java.math.BigDecimal("150000")});
     }
 
     private static CambiarEstadoLoteRequest a(EstadoLote estado) {
@@ -249,7 +249,7 @@ class LoteVentaReglasTest {
         when(venta.isContratoFirmado()).thenReturn(firmada);
         VentaLote vl = new VentaLote(venta, lote, new BigDecimal("1000"));
         when(ventaLotes.findByLoteId(lote.getId())).thenReturn(List.of(vl));
-        numeros.add(new Object[] {lote.getId(), venta});
+        numeros.add(new Object[] {lote.getId(), venta, new java.math.BigDecimal("150000")});
         return venta;
     }
 

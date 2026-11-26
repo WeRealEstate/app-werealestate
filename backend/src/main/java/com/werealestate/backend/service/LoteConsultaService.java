@@ -179,6 +179,7 @@ public class LoteConsultaService {
             return lotes;
         }
         Map<Long, String> numeroPorLote = new HashMap<>();
+        Map<Long, java.math.BigDecimal> precioPorLote = new HashMap<>();
         // Lotes cuya venta quien pregunta no puede ver (VisibilidadVentas): van sin el chip de la venta, pero tampoco
         // como "sin venta registrada" (sí la tienen).
         java.util.Set<Long> conVentaOculta = new java.util.HashSet<>();
@@ -186,6 +187,7 @@ public class LoteConsultaService {
             Venta venta = (Venta) fila[1];
             if (VisibilidadVentas.visible(venta)) {
                 numeroPorLote.put((Long) fila[0], venta.getEtiqueta());
+                precioPorLote.put((Long) fila[0], (java.math.BigDecimal) fila[2]);
             } else {
                 conVentaOculta.add((Long) fila[0]);
             }
@@ -195,7 +197,7 @@ public class LoteConsultaService {
                     String numero = numeroPorLote.get(l.id());
                     if (numero == null && conVentaOculta.contains(l.id())) return l;
                     boolean sinVenta = l.estado() == EstadoLote.VENDIDO && numero == null;
-                    return numero == null && !sinVenta ? l : l.conVenta(sinVenta, numero);
+                    return numero == null && !sinVenta ? l : l.conVenta(sinVenta, numero, precioPorLote.get(l.id()));
                 })
                 .toList();
     }

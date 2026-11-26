@@ -15,6 +15,10 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.17.0', fecha: '2026-11-26', cambios: [
+    "Modificar venta: ahora se puede poner, cambiar o quitar la promoción (las de bono vigentes en la fecha de la venta). El bono se resta del precio de los lotes, así bajan el saldo y la comisión; la mensualidad se recalcula y se puede ajustar. Pide tu contraseña.",
+    "Lotes: nueva columna «Precio vendido» con el precio al que se vendió cada lote (ya con el bono de su promoción). Solo admin y administración.",
+  ] },
   { version: '12.16.1', fecha: '2026-11-26', cambios: [
     "Planos públicos (seguridad): apartar ahora exige el PIN del asesor también en el servidor, con acceso a ese desarrollo, y el apartado queda con el nombre del dueño del PIN.",
   ] },
