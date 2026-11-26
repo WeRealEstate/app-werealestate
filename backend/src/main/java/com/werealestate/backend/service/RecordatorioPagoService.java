@@ -34,6 +34,9 @@ import org.springframework.web.server.ResponseStatusException;
  * ({@link EstadoCuentaService#paraVenta}, que usa CalendarioPagos), así el correo dice lo mismo que ve el equipo. Sale
  * por la misma cuenta de Gmail que el aviso a finanzas (MAIL_USERNAME / MAIL_PASSWORD). El envío es síncrono, con un
  * solo intento: quien da clic debe ver si salió o falló. Solo los enviados con éxito quedan registrados.
+ *
+ * <p>No se recuerda un pago ya abonado: si la tabla lo muestra cubierto, el próximo pago es otro; y si ya tiene un
+ * abono y le faltan menos de {@link #FALTANTE_SIN_AVISO}, tampoco sale (decisión del usuario, 2026-11-26).
  */
 @Service
 @Transactional(readOnly = true)
@@ -45,6 +48,8 @@ public class RecordatorioPagoService {
     static final String SIN_PENDIENTES = "No hay pagos pendientes";
     private static final String NOMBRE_REMITENTE = "We Real Estate";
     private static final BigDecimal TOLERANCIA = new BigDecimal("0.01");
+    /** Con un abono registrado en ese pago, un faltante menor a esto ya no se recuerda. */
+    static final BigDecimal FALTANTE_SIN_AVISO = new BigDecimal("100");
 
     private final AutorizacionVentas autorizacion;
     private final ConsultasVenta consultas;
@@ -68,13 +73,16 @@ public class RecordatorioPagoService {
         this.remitente = remitente == null ? "" : remitente.trim();
     }
 
-    /** Lo que se le diría al cliente de una venta, con el motivo si no se puede mandar. */
+    /** Lo que se le diría al cliente de una venta, con el motivo si no se puede mandar.
+     *
+     * @param yaAbonado el motivo cuando el próximo pago ya tiene abono y le falta poco; null si no es el caso */
     record Preparado(
             Venta venta,
             Cliente titular,
             String correo,
             RecordatorioPagoCorreo.Contenido contenido,
-            String motivoNoDisponible) {
+            String motivoNoDisponible,
+            String yaAbonado) {
 
         boolean puedeEnviar() {
             return motivoNoDisponible == null;
@@ -87,7 +95,8 @@ public class RecordatorioPagoService {
         return aDto(preparar(consultas.obtenerEntidad(ventaId), LocalDate.now()));
     }
 
-    /** Envía el recordatorio ahora y lo registra. 400 si el cliente no tiene correo o no hay pagos pendientes; 503 si la
+    /** Envía el recordatorio ahora y lo registra. 400 si el cliente no tiene correo, no hay pagos pendientes o el próximo
+     * ya está abonado; 503 si la
      * app no tiene correo configurado; 502 si el servidor de correo rechaza el envío. */
     @Transactional
     public RecordatorioPagoDto enviar(Long ventaId) {
@@ -124,10 +133,47 @@ public class RecordatorioPagoService {
                 hayAtraso ? a.atrasoMonto() : BigDecimal.ZERO,
                 hayAtraso ? a.pagosAtrasados() : 0,
                 hayAtraso ? a.mensualidadesAtrasadas() : 0);
+        String yaAbonado = null;
+        if (proximo != null) {
+            BigDecimal falta = faltanteConAbono(a, proximo.fecha());
+            if (falta != null) yaAbonado = "Ya abonó, faltan " + RecordatorioPagoCorreo.dinero(falta);
+        }
         String motivo = null;
-        if (correo == null) motivo = SIN_CORREO;
+        if (yaAbonado != null) motivo = yaAbonado;
+        else if (correo == null) motivo = SIN_CORREO;
         else if (proximo == null && !hayAtraso) motivo = SIN_PENDIENTES;
-        return new Preparado(venta, titular, correo, contenido, motivo);
+        return new Preparado(venta, titular, correo, contenido, motivo, yaAbonado);
+    }
+
+    /** Si el pago de esa fecha ya no se debe recordar: la tabla lo muestra cubierto, o tiene abono y le falta poco. */
+    boolean pagoAbonado(Venta venta, LocalDate fecha, LocalDate hoy) {
+        AmortizacionDto a = estadoCuenta.paraVenta(venta, hoy);
+        List<AmortizacionDto.Fila> filas = filasDe(a, fecha);
+        return !filas.isEmpty() && (falta(filas).compareTo(TOLERANCIA) <= 0 || faltanteConAbono(a, fecha) != null);
+    }
+
+    /** Lo que le falta al pago de esa fecha cuando ya tiene algún abono y es poco; null en cualquier otro caso. */
+    private static BigDecimal faltanteConAbono(AmortizacionDto a, LocalDate fecha) {
+        List<AmortizacionDto.Fila> filas = filasDe(a, fecha);
+        // El abono debe ser del renglón que aún debe: el enganche pagado el mismo día no cuenta para la mensualidad.
+        if (filas.stream().noneMatch(f -> f.abonadoMes().signum() > 0
+                && f.monto().subtract(f.pagado()).compareTo(TOLERANCIA) > 0)) {
+            return null;
+        }
+        BigDecimal falta = falta(filas);
+        return falta.compareTo(TOLERANCIA) > 0 && falta.compareTo(FALTANTE_SIN_AVISO) < 0 ? falta : null;
+    }
+
+    /** Los renglones del plan en esa fecha (los pagos extemporáneos no son un pago programado). */
+    private static List<AmortizacionDto.Fila> filasDe(AmortizacionDto a, LocalDate fecha) {
+        return a.detalleMensual().stream()
+                .filter(f -> fecha.equals(f.fecha()) && !"Pago extemporáneo".equals(f.concepto()))
+                .toList();
+    }
+
+    private static BigDecimal falta(List<AmortizacionDto.Fila> filas) {
+        return filas.stream().map(f -> f.monto().subtract(f.pagado()).max(BigDecimal.ZERO))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     /** El concepto del próximo pago como lo muestra la tabla ("Mensualidad 7 de 60"): los renglones de la tabla mes con

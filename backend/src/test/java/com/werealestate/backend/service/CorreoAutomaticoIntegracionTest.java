@@ -125,6 +125,35 @@ class CorreoAutomaticoIntegracionTest extends PruebaDeIntegracion {
         em.clear();
     }
 
+    /** Venta de hoy (sin mensualidades vencidas que se arrastren), con el enganche ya pagado. */
+    private VentaDto conEnganchePagado(String precio, String mensualidad) {
+        VentaDto v = venta(precio, "60000", mensualidad, 60, LocalDate.now());
+        pagar(v, "60000");
+        return v;
+    }
+
+    private void abonarMensualidad(VentaDto v, LocalDate mes, String monto) {
+        reciboVentaService.registrarPago(v.id(), new PagoVentaCreateRequest(LocalDate.now(), "F-" + etiqueta(), null,
+                List.of(new PagoVentaCreateRequest.Linea(TipoAbono.MENSUALIDAD, new BigDecimal(monto),
+                        List.of(new PagoVentaCreateRequest.Mes(mes.getYear(), mes.getMonthValue())), null, null))));
+        em.flush();
+        em.clear();
+    }
+
+    /** Enciende los recordatorios, deja solo esa venta y corre la vuelta de las 6 p. m. del día anterior a su pago. */
+    private LocalDate correrVispera(VentaDto v, LocalDate proximo) {
+        encender(TipoCorreoAutomatico.RECORDATORIO);
+        em.createNativeQuery("update venta set sin_recordatorio_automatico = false where id = :v")
+                .setParameter("v", v.id()).executeUpdate();
+        em.clear();
+        servicio.ciclo(proximo.minusDays(1).atTime(18, 0));
+        return proximo;
+    }
+
+    private LocalDate proximaFecha(VentaDto v) {
+        return estadoCuenta.deVenta(v.id()).proximaFecha();
+    }
+
     private CorreosVentaDto registro(VentaDto v) {
         em.flush();
         em.clear();
@@ -268,6 +297,59 @@ class CorreoAutomaticoIntegracionTest extends PruebaDeIntegracion {
         assertTrue(envios.stream().allMatch(e -> e.reintentarId() == null));
         assertThrows(ConflictException.class, () -> servicio.reintentar(v.id(), correoId));
         verify(sender, times(1)).send(any(MimeMessage.class));
+    }
+
+    @Test
+    void conAbonoYPocoFaltanteNoSeRecuerdaYQuedaAnotado() {
+        VentaDto v = conEnganchePagado("300000", "4000");
+        LocalDate proximo = proximaFecha(v);
+        abonarMensualidad(v, proximo, "3900.50");
+
+        correrVispera(v, proximo);
+
+        verify(sender, never()).send(any(MimeMessage.class));
+        var envio = registro(v).envios().get(0);
+        assertFalse(envio.enviado());
+        assertEquals("Ya abonó, faltan $99.50", envio.detalle());
+        assertNull(envio.reintentarId());
+    }
+
+    @Test
+    void conAbonoPeroFaltandoCienOMasSiSeRecuerda() {
+        VentaDto v = conEnganchePagado("300000", "4000");
+        LocalDate proximo = proximaFecha(v);
+        abonarMensualidad(v, proximo, "3900");
+
+        correrVispera(v, proximo);
+
+        verify(sender, times(1)).send(any(MimeMessage.class));
+    }
+
+    @Test
+    void sinAbonoSeRecuerdaAunqueElPagoSeaMenorACien() {
+        VentaDto v = conEnganchePagado("63000", "50");
+        LocalDate proximo = proximaFecha(v);
+
+        correrVispera(v, proximo);
+
+        verify(sender, times(1)).send(any(MimeMessage.class));
+    }
+
+    @Test
+    void unRecordatorioNoEnviadoYaNoSeReintentaSiSeRegistraElAbono() {
+        VentaDto v = conEnganchePagado("300000", "4000");
+        em.createNativeQuery("update cliente set correo = null where id = (select cliente_id from venta where id = :v)")
+                .setParameter("v", v.id()).executeUpdate();
+        em.clear();
+        LocalDate proximo = correrVispera(v, proximaFecha(v));
+        Long correoId = registro(v).envios().get(0).reintentarId();
+        assertNotNull(correoId);
+
+        abonarMensualidad(v, proximo, "4000");
+
+        assertNull(registro(v).envios().get(0).reintentarId());
+        assertThrows(ConflictException.class, () -> servicio.reintentar(v.id(), correoId));
+        verify(sender, never()).send(any(MimeMessage.class));
     }
 
     @Test

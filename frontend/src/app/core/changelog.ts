@@ -15,6 +15,10 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.16.0', fecha: '2026-11-26', cambios: [
+    "Recordatorio de pago: si el pago ya tiene un abono registrado y le faltan menos de $100, no se envía; queda anotado en el registro de correos de la venta («Ya abonó, faltan $…»).",
+    "Registro de correos: «Reintentar» ya no aparece en un recordatorio cuyo pago ya se registró.",
+  ] },
   { version: '12.15.0', fecha: '2026-11-25', cambios: [
     "Detalle de la venta: se quitó el botón «Enviar recordatorio de pago» (sale solo). En las ventas registradas desde los correos automáticos tampoco están los de bienvenida y liquidación; las ventas anteriores los conservan.",
     "Registro de correos: «Reintentar» en un correo automático que no salió.",

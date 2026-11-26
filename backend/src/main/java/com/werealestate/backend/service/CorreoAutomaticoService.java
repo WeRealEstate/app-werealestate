@@ -32,7 +32,8 @@ import org.springframework.web.server.ResponseStatusException;
  *   <li>Bienvenida (contrato firmado) y liquidación (venta pagada por completo): solo ventas registradas desde V94 (la liquidación solo avisa a finanzas),
  *       {@link #MARGEN_MINUTOS} minutos después; si en ese rato se quita la firma o se anula el abono, no salen.</li>
  *   <li>Recordatorio de pago: a las 6:00 p. m. del día anterior a la fecha de pago, a todas las ventas con
- *       mensualidades (también las anteriores) salvo las excluidas.</li>
+ *       mensualidades (también las anteriores) salvo las excluidas. Si ese pago ya tiene abono y le falta poco, no sale y
+ *       queda anotado (ver {@link RecordatorioPagoService}).</li>
  * </ul>
  * Cada correo tiene su interruptor (apagado de origen). Lo que se decide queda en {@code correo_automatico}, así nunca
  * se manda dos veces; lo que sí sale se guarda además donde se guardan los envíos a mano, sin usuario. Lo que no sale
@@ -112,7 +113,8 @@ public class CorreoAutomaticoService {
     // ------------------------------------------------------------------ reintento desde la pantalla
 
     /** Si un correo que no salió todavía se puede mandar con «Reintentar»: mientras no se haya enviado después y, en
-     * los recordatorios, solo el más reciente (los anteriores ya quedaron superados). */
+     * los recordatorios, solo el más reciente (los anteriores ya quedaron superados) y mientras ese pago no se haya
+     * abonado (si no, saldría el recordatorio del mes siguiente). */
     public boolean reintentable(CorreoAutomatico c) {
         if (c.getEstado() != EstadoCorreoAutomatico.FALLIDO && c.getEstado() != EstadoCorreoAutomatico.NO_ENVIADO) {
             return false;
@@ -125,7 +127,8 @@ public class CorreoAutomaticoService {
                     .filter(o -> o.getTipo() == TipoCorreoAutomatico.RECORDATORIO)
                     .findFirst().map(o -> o.getId().equals(c.getId())).orElse(false)
                     && recordatorios.findByVentaId(ventaId).stream()
-                            .noneMatch(r -> !r.getEnviadoEn().isBefore(c.getCreadoEn()));
+                            .noneMatch(r -> !r.getEnviadoEn().isBefore(c.getCreadoEn()))
+                    && !recordatorio.pagoAbonado(c.getVenta(), c.getFechaPago(), LocalDate.now());
         };
     }
 
@@ -200,6 +203,7 @@ public class CorreoAutomaticoService {
         boolean yaAMano = recordatorios.findByVentaId(ventaId).stream().anyMatch(r -> manana.equals(r.getProximoPagoFecha())
                 && r.getEnviadoEn().toLocalDate().equals(ahora.toLocalDate()));
         if (yaAMano) c.resolver(EstadoCorreoAutomatico.OMITIDO, "Ya se había enviado a mano hoy", ahora);
+        else if (p.yaAbonado() != null) c.resolver(EstadoCorreoAutomatico.NO_ENVIADO, p.yaAbonado(), ahora);
         else if (p.correo() == null) c.resolver(EstadoCorreoAutomatico.NO_ENVIADO, SIN_CORREO, ahora);
         repositorio.save(c);
     }
@@ -221,6 +225,13 @@ public class CorreoAutomaticoService {
             if (yaSeMandoAMano(c)) {
                 c.resolver(EstadoCorreoAutomatico.OMITIDO, "Ya se había enviado a mano", ahora);
                 return Paso.TERMINADO;
+            }
+            if (c.getTipo() == TipoCorreoAutomatico.RECORDATORIO) {
+                String yaAbonado = recordatorio.preparar(c.getVenta(), ahora.toLocalDate()).yaAbonado();
+                if (yaAbonado != null) {
+                    c.resolver(EstadoCorreoAutomatico.NO_ENVIADO, yaAbonado, ahora);
+                    return Paso.TERMINADO;
+                }
             }
             if (c.getEnviarDesde().isAfter(ahora)) return Paso.ESPERAR;
             if (!activo(c.getTipo())) {
