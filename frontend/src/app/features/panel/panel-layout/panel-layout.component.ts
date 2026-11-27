@@ -1,5 +1,7 @@
 import { Component, DestroyRef, HostListener, computed, inject, signal } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter } from 'rxjs';
 import {
   LucideBuilding2,
   LucideCalendar,
@@ -20,9 +22,6 @@ import {
   LucideUserCog,
   LucideUsers,
   LucideUsersRound,
-  LucideWallet,
-  LucideTrendingUp,
-  LucideLandmark,
 } from '@lucide/angular';
 import { VERSION_ACTUAL } from '../../../core/changelog';
 import { FECHA_COMPILACION } from '../../../build-info';
@@ -41,7 +40,9 @@ interface NavItem {
   modulo?: Modulo;
   /** Alternativa: el item también se muestra a quien tenga este otro módulo (Finanzas incluye la pestaña Gastos). */
   tambienConModulo?: Modulo;
-  icon: 'home' | 'leads' | 'usuarios' | 'asesores' | 'comunidades' | 'calendario' | 'pipeline' | 'cotizador' | 'lotes' | 'plano' | 'ventas' | 'clientes' | 'finanzas' | 'ingresos' | 'valor' | 'gastos' | 'forms' | 'material' | 'comercializadoras' | 'score';
+  /** Subopciones: el item no navega, solo despliega las suyas (Finanzas). */
+  hijos?: NavItem[];
+  icon: 'home' | 'leads' | 'usuarios' | 'asesores' | 'comunidades' | 'calendario' | 'pipeline' | 'cotizador' | 'lotes' | 'plano' | 'ventas' | 'clientes' | 'finanzas' | 'forms' | 'material' | 'comercializadoras' | 'score';
 }
 
 const ASESORES_EXTERNOS_NAV_ITEM: NavItem = {
@@ -76,11 +77,12 @@ const VENTAS_ITEM: NavItem = { label: 'Ventas', route: '/panel/ventas', modulo: 
 const CLIENTES_ITEM: NavItem = { label: 'Clientes', route: '/panel/clientes', modulo: 'CLIENTES', icon: 'clientes' };
 const LOTES_ITEM: NavItem = { label: 'Lotes', route: '/panel/lotes', modulo: 'LOTES', icon: 'lotes' };
 const PLANO_ITEM: NavItem = { label: 'Plano', route: '/panel/plano', modulo: 'PLANO', icon: 'plano' };
-const GRUPO_FINANZAS: NavSection = { label: 'Finanzas', items: [
+/** Va dentro de Administración como desplegable; se ve si al usuario le queda alguna subopción. */
+const FINANZAS_ITEM: NavItem = { label: 'Finanzas', route: '/panel/finanzas', icon: 'finanzas', hijos: [
   { label: 'Comisiones', route: '/panel/finanzas', queryParams: { pestana: 'comisiones' }, modulo: 'FINANZAS', icon: 'finanzas' },
-  { label: 'Ingresos', route: '/panel/finanzas', queryParams: { pestana: 'ingresos' }, modulo: 'FINANZAS', icon: 'ingresos' },
-  { label: 'Valor vendido', route: '/panel/finanzas', queryParams: { pestana: 'valor' }, modulo: 'FINANZAS', icon: 'valor' },
-  { label: 'Gastos', route: '/panel/finanzas', queryParams: { pestana: 'gastos' }, modulo: 'GASTOS', icon: 'gastos' },
+  { label: 'Ingresos', route: '/panel/finanzas', queryParams: { pestana: 'ingresos' }, modulo: 'FINANZAS', icon: 'finanzas' },
+  { label: 'Valor vendido', route: '/panel/finanzas', queryParams: { pestana: 'valor' }, modulo: 'FINANZAS', icon: 'finanzas' },
+  { label: 'Gastos', route: '/panel/finanzas', queryParams: { pestana: 'gastos' }, modulo: 'GASTOS', icon: 'finanzas' },
 ] };
 const CALENDARIO_ITEM: NavItem = { label: 'Calendario', route: '/panel/calendario', modulo: 'CALENDARIO', icon: 'calendario' };
 
@@ -93,7 +95,7 @@ const GRUPO_VENTAS_ADMIN: NavSection = {
 const GRUPO_INVENTARIO: NavSection = { label: 'Inventario', items: [LOTES_ITEM, PLANO_ITEM] };
 const USUARIOS_ITEM: NavItem = { label: 'Usuarios', route: '/panel/usuarios', icon: 'usuarios' };
 const ITEMS_DE_PERSONAS: NavItem[] = [ASESORES_EXTERNOS_NAV_ITEM, COMERCIALIZADORAS_NAV_ITEM, TEAMS_NAV_ITEM, WE_FORMS_NAV_ITEM];
-const GRUPO_ADMINISTRACION: NavSection = { label: 'Administración', items: [MATERIAL_NAV_ITEM, CALENDARIO_ITEM] };
+const GRUPO_ADMINISTRACION: NavSection = { label: 'Administración', items: [FINANZAS_ITEM, MATERIAL_NAV_ITEM, CALENDARIO_ITEM] };
 /** Asesores y equipo interno: del grupo solo les toca el Calendario. */
 const GRUPO_ADMINISTRACION_SOLO_CALENDARIO: NavSection = { label: 'Administración', items: [CALENDARIO_ITEM] };
 
@@ -106,7 +108,6 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
     GRUPO_INVENTARIO,
     // La pantalla de Usuarios es solo del administrador.
     { label: 'Usuarios', items: ITEMS_DE_PERSONAS },
-    GRUPO_FINANZAS,
     GRUPO_ADMINISTRACION,
   ],
   EQUIPO_INTERNO: [INICIO('/panel/equipo'), GRUPO_ADMINISTRACION_SOLO_CALENDARIO],
@@ -115,7 +116,6 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
     GRUPO_VENTAS_ADMIN,
     GRUPO_INVENTARIO,
     { label: 'Usuarios', items: [USUARIOS_ITEM, ...ITEMS_DE_PERSONAS] },
-    GRUPO_FINANZAS,
     GRUPO_ADMINISTRACION,
   ],
 };
@@ -160,10 +160,7 @@ function leerSeccionesPlegadas(): ReadonlySet<string> {
     LucideUsersRound,
     LucideHandshake,
     LucideMenu,
-    LucideWallet,
-    LucideTrendingUp,
-    LucideLandmark,
-  ],
+        ],
   templateUrl: './panel-layout.component.html',
 })
 export class PanelLayoutComponent {
@@ -190,20 +187,36 @@ export class PanelLayoutComponent {
   readonly navSections = computed<NavSection[]>(() => {
     const user = this.user();
     if (!user) return [];
+    const visible = (item: NavItem) =>
+      !item.modulo ||
+      user.rol === 'ADMIN' ||
+      !user.modulos ||
+      user.modulos.includes(item.modulo) ||
+      (item.tambienConModulo !== undefined && user.modulos.includes(item.tambienConModulo));
     return NAV_BY_ROLE[user.rol]
       .map((seccion) => ({
         ...seccion,
-        items: seccion.items.filter(
-          (item) =>
-            !item.modulo ||
-            user.rol === 'ADMIN' ||
-            !user.modulos ||
-            user.modulos.includes(item.modulo) ||
-            (item.tambienConModulo !== undefined && user.modulos.includes(item.tambienConModulo)),
-        ),
+        items: seccion.items
+          .filter(visible)
+          .map((item) => (item.hijos ? { ...item, hijos: item.hijos.filter(visible) } : item))
+          .filter((item) => !item.hijos || item.hijos.length > 0),
       }))
       .filter((seccion) => seccion.items.length > 0);
   });
+
+  /** Si se está en una pantalla de Finanzas (con cualquier pestaña). */
+  readonly enFinanzas = signal(this.esRutaDeFinanzas());
+  /** Lo que el usuario eligió al tocar «Finanzas»; null = abierto solo si está en Finanzas. */
+  private readonly finanzasElegido = signal<boolean | null>(null);
+  readonly finanzasAbierto = computed(() => this.finanzasElegido() ?? this.enFinanzas());
+
+  alternarFinanzas(): void {
+    this.finanzasElegido.set(!this.finanzasAbierto());
+  }
+
+  private esRutaDeFinanzas(): boolean {
+    return this.router.url.split(/[?#]/)[0] === '/panel/finanzas';
+  }
 
   /** Secciones del menú que el usuario plegó (varias pueden estar abiertas a la vez; por defecto todas lo están).
    * Se recuerdan en este navegador para que sigan igual al recargar. */
@@ -216,6 +229,14 @@ export class PanelLayoutComponent {
   readonly esEscritorio = signal(typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches);
 
   constructor() {
+    this.router.events
+      .pipe(filter((e) => e instanceof NavigationEnd), takeUntilDestroyed())
+      .subscribe(() => {
+        const ahora = this.esRutaDeFinanzas();
+        // Al entrar o salir de Finanzas el desplegable vuelve a seguir a la pantalla.
+        if (ahora !== this.enFinanzas()) this.finanzasElegido.set(null);
+        this.enFinanzas.set(ahora);
+      });
     // Sin fondo de página propio a propósito: en Android la barra de navegación del sistema toma el
     // color de fondo de la página, y debe verse igual que el final del contenido (claro/oscuro del
     // tema), no azul de marca.

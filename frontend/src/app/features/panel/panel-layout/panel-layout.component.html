@@ -72,6 +72,62 @@
             <!-- Márgenes negativos con relleno igual: el overflow-hidden de la animación no recorta el aro de foco. -->
             <div class="-mx-1 -my-0.5 min-h-0 space-y-1 overflow-hidden px-1 py-0.5">
           @for (item of section.items; track item.label) {
+            @if (item.hijos) {
+              <button
+                type="button"
+                (click)="alternarFinanzas()"
+                [attr.aria-expanded]="finanzasAbierto()"
+                aria-controls="nav-finanzas"
+                [class.text-[var(--sb-fg)]]="enFinanzas()"
+                [class.text-[var(--sb-fg-dim)]]="!enFinanzas()"
+                class="flex w-full items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-medium
+                       hover:bg-[var(--sb-hover)] hover:text-[var(--sb-fg)] transition-[color,background-color,transform] duration-150 active:scale-[0.98]
+                       focus:outline-none focus:ring-2 focus:ring-[var(--sb-ring)]"
+              >
+                <svg lucideHandCoins [size]="18" aria-hidden="true"></svg>
+                <span class="flex-1 text-left">{{ item.label }}</span>
+                <svg
+                  viewBox="0 0 24 24"
+                  class="h-4 w-4 shrink-0 transition-transform duration-200"
+                  [class.rotate-180]="finanzasAbierto()"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              </button>
+              <div
+                id="nav-finanzas"
+                class="!mt-0 grid transition-[grid-template-rows] duration-200 ease-out"
+                [class.grid-rows-[1fr]]="finanzasAbierto()"
+                [class.grid-rows-[0fr]]="!finanzasAbierto()"
+                [attr.inert]="finanzasAbierto() ? null : ''"
+              >
+                <div class="min-h-0 overflow-hidden">
+                  <div class="ml-[1.4rem] mt-1 space-y-1 border-l border-[var(--sb-line)] py-0.5 pl-3 pr-0.5">
+                    @for (hijo of item.hijos; track hijo.label) {
+                      <a
+                        [routerLink]="hijo.route"
+                        [queryParams]="hijo.queryParams ?? null"
+                        routerLinkActive="bg-[var(--sb-active)] text-[var(--sb-active-fg)]"
+                        [routerLinkActiveOptions]="{ paths: 'exact', queryParams: 'exact', fragment: 'ignored', matrixParams: 'ignored' }"
+                        [class]="esComisionesPredeterminadas(hijo) ? 'bg-[var(--sb-active)] text-[var(--sb-active-fg)]' : ''"
+                        (click)="closeSidebar()"
+                        class="block rounded-lg px-3 py-2 text-sm font-medium text-[var(--sb-fg-dim)]
+                               hover:bg-[var(--sb-hover)] hover:text-[var(--sb-fg)] transition-[color,background-color,transform] duration-150 active:scale-[0.98]
+                               focus:outline-none focus:ring-2 focus:ring-[var(--sb-ring)]"
+                      >
+                        {{ hijo.label }}
+                      </a>
+                    }
+                  </div>
+                </div>
+              </div>
+            } @else {
             <a
               [routerLink]="item.route"
               [queryParams]="item.queryParams ?? null"
@@ -111,12 +167,6 @@
                 <svg lucideFolderOpen [size]="18" aria-hidden="true"></svg>
               } @else if (item.icon === 'finanzas') {
                 <svg lucideHandCoins [size]="18" aria-hidden="true"></svg>
-              } @else if (item.icon === 'ingresos') {
-                <svg lucideTrendingUp [size]="18" aria-hidden="true"></svg>
-              } @else if (item.icon === 'valor') {
-                <svg lucideLandmark [size]="18" aria-hidden="true"></svg>
-              } @else if (item.icon === 'gastos') {
-                <svg lucideWallet [size]="18" aria-hidden="true"></svg>
               } @else if (item.icon === 'asesores') {
                 <svg lucideHandshake [size]="18" aria-hidden="true"></svg>
               } @else if (item.icon === 'comunidades') {
@@ -128,6 +178,7 @@
               }
               {{ item.label }}
             </a>
+            }
           }
             </div>
           </div>
