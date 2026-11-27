@@ -25,6 +25,8 @@ interface GrupoAsesor {
   nombre: string;
   externo: boolean;
   comisiones: Comision[];
+  /** Suma del precio de venta de los lotes de sus ventas. */
+  valorVendido: number;
   total: number;
   pagado: number;
   porPagar: number;
@@ -75,11 +77,14 @@ export class ComisionesPanelComponent {
   readonly totales = computed(() => {
     let total = 0;
     let pagado = 0;
+    let valorVendido = 0;
     for (const c of this.vigentes()) {
       total += c.monto;
       pagado += c.entregado;
+      // La comisión del copropietario es de la misma venta: su valor no se suma dos veces.
+      if (!c.secundaria) valorVendido += c.base;
     }
-    return { total, pagado, saldo: Math.max(0, total - pagado) };
+    return { total, pagado, valorVendido, saldo: Math.max(0, total - pagado) };
   });
 
   readonly grupos = computed<GrupoAsesor[]>(() => {
@@ -89,10 +94,11 @@ export class ComisionesPanelComponent {
       if (q && !normalizar(`${c.asesorNombre} ${c.cliente} ${c.ventaNumero ?? ''}`).includes(q)) continue;
       let g = mapa.get(c.asesorClave);
       if (!g) {
-        g = { clave: c.asesorClave, nombre: c.asesorNombre, externo: c.asesorExterno, comisiones: [], total: 0, pagado: 0, porPagar: 0 };
+        g = { clave: c.asesorClave, nombre: c.asesorNombre, externo: c.asesorExterno, comisiones: [], valorVendido: 0, total: 0, pagado: 0, porPagar: 0 };
         mapa.set(c.asesorClave, g);
       }
       g.comisiones.push(c);
+      g.valorVendido += c.base;
       g.total += c.monto;
       g.pagado += c.entregado;
       g.porPagar += c.porEntregar;

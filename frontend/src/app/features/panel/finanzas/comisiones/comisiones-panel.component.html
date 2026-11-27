@@ -192,7 +192,12 @@
   } @else if (error()) {
     <p class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-300">{{ error() }}</p>
   } @else {
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div class="rounded-xl border border-border bg-surface p-4">
+        <p class="text-xs text-ink-muted">Valor vendido</p>
+        <p class="mt-1 text-xl font-semibold text-ink">${{ dinero(totales().valorVendido) }}</p>
+        <p class="text-xs text-ink-muted">Precio de venta de los lotes</p>
+      </div>
       <div class="rounded-xl border border-border bg-surface p-4">
         <p class="text-xs text-ink-muted">Comisión total</p>
         <p class="mt-1 text-xl font-semibold text-ink">${{ dinero(totales().total) }}</p>
@@ -239,6 +244,10 @@
               <span class="text-xs text-ink-muted">
                 {{ g.comisiones.length }} {{ g.comisiones.length === 1 ? 'venta' : 'ventas' }}{{ g.externo ? ' · externo' : '' }}
               </span>
+            </span>
+            <span class="text-right">
+              <span class="block text-xs text-ink-muted">Valor vendido</span>
+              <span class="text-sm text-ink">${{ dinero(g.valorVendido) }}</span>
             </span>
             <span class="text-right">
               <span class="block text-xs text-ink-muted">Comisión</span>

@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.30.3', fecha: '2026-11-27', cambios: [
+    "Comisiones: nuevo «Valor vendido» (suma del precio de venta de los lotes) en cada asesor y en el total de arriba.",
+  ] },
   { version: '12.30.2', fecha: '2026-11-27', cambios: [
     "Comisiones: las ventas eliminadas ya no aparecen en la lista ni cuentan en los totales.",
   ] },
