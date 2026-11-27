@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.28.0', fecha: '2026-11-27', cambios: [
+    "Menú: nuevos grupos desplegables «Usuarios» (Usuarios, Asesores externos, Equipos, Comunidades We y We Forms) y «Administración» (Finanzas, Material y Calendario).",
+  ] },
   { version: '12.27.0', fecha: '2026-11-27', cambios: [
     "Equipos: el enlace para unirse ahora es el nombre de la líder (/unirse/denisse-velasco) en los equipos nuevos y al usar «Generar enlace nuevo». Los enlaces largos que ya se compartieron siguen sirviendo mientras no se genere otro.",
   ] },

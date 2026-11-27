@@ -76,49 +76,37 @@ const PLANO_ITEM: NavItem = { label: 'Plano', route: '/panel/plano', modulo: 'PL
 const FINANZAS_ITEM: NavItem = { label: 'Finanzas', route: '/panel/finanzas', modulo: 'FINANZAS', tambienConModulo: 'GASTOS', icon: 'finanzas' };
 const CALENDARIO_ITEM: NavItem = { label: 'Calendario', route: '/panel/calendario', modulo: 'CALENDARIO', icon: 'calendario' };
 
-/** Dos grupos desplegables (Ventas e Inventario); lo demás va suelto, sin encabezado, debajo de ellos. */
+/** Grupos desplegables: Ventas, Inventario, Usuarios y Administración; solo Inicio va suelto. */
 const GRUPO_VENTAS_ASESOR: NavSection = { label: 'Ventas', items: [LEADS_ITEM, PIPELINE_ITEM, COTIZADOR_ITEM, REGISTRAR_VENTA_ITEM] };
 const GRUPO_VENTAS_ADMIN: NavSection = {
   label: 'Ventas',
   items: [LEADS_ITEM, PIPELINE_ITEM, COTIZADOR_ITEM, SCORE_ITEM, VENTAS_ITEM, CLIENTES_ITEM],
 };
 const GRUPO_INVENTARIO: NavSection = { label: 'Inventario', items: [LOTES_ITEM, PLANO_ITEM] };
+const USUARIOS_ITEM: NavItem = { label: 'Usuarios', route: '/panel/usuarios', icon: 'usuarios' };
+const ITEMS_DE_PERSONAS: NavItem[] = [ASESORES_EXTERNOS_NAV_ITEM, COMERCIALIZADORAS_NAV_ITEM, TEAMS_NAV_ITEM, WE_FORMS_NAV_ITEM];
+const GRUPO_ADMINISTRACION: NavSection = { label: 'Administración', items: [FINANZAS_ITEM, MATERIAL_NAV_ITEM, CALENDARIO_ITEM] };
+/** Asesores y equipo interno: del grupo solo les toca el Calendario. */
+const GRUPO_ADMINISTRACION_SOLO_CALENDARIO: NavSection = { label: 'Administración', items: [CALENDARIO_ITEM] };
 
 const NAV_BY_ROLE: Record<Role, NavSection[]> = {
-  ASESOR: [
-    INICIO('/panel/asesor'),
-    GRUPO_VENTAS_ASESOR,
-    GRUPO_INVENTARIO,
-    { label: null, items: [CALENDARIO_ITEM] },
-  ],
+  ASESOR: [INICIO('/panel/asesor'), GRUPO_VENTAS_ASESOR, GRUPO_INVENTARIO, GRUPO_ADMINISTRACION_SOLO_CALENDARIO],
   LIDER_AREA: [
     INICIO('/panel/equipo'),
     // Administración no ve Pipeline ni Cotizador en el menú (como antes).
     { label: 'Ventas', items: [LEADS_ITEM, SCORE_ITEM, VENTAS_ITEM, CLIENTES_ITEM] },
     GRUPO_INVENTARIO,
-    {
-      label: null,
-      items: [FINANZAS_ITEM, ASESORES_EXTERNOS_NAV_ITEM, COMERCIALIZADORAS_NAV_ITEM, TEAMS_NAV_ITEM, WE_FORMS_NAV_ITEM, MATERIAL_NAV_ITEM, CALENDARIO_ITEM],
-    },
+    // La pantalla de Usuarios es solo del administrador.
+    { label: 'Usuarios', items: ITEMS_DE_PERSONAS },
+    GRUPO_ADMINISTRACION,
   ],
-  EQUIPO_INTERNO: [INICIO('/panel/equipo'), { label: null, items: [CALENDARIO_ITEM] }],
+  EQUIPO_INTERNO: [INICIO('/panel/equipo'), GRUPO_ADMINISTRACION_SOLO_CALENDARIO],
   ADMIN: [
     INICIO('/panel/admin'),
     GRUPO_VENTAS_ADMIN,
     GRUPO_INVENTARIO,
-    {
-      label: null,
-      items: [
-        FINANZAS_ITEM,
-        { label: 'Usuarios', route: '/panel/usuarios', icon: 'usuarios' },
-        ASESORES_EXTERNOS_NAV_ITEM,
-        COMERCIALIZADORAS_NAV_ITEM,
-        TEAMS_NAV_ITEM,
-        WE_FORMS_NAV_ITEM,
-        MATERIAL_NAV_ITEM,
-        CALENDARIO_ITEM,
-      ],
-    },
+    { label: 'Usuarios', items: [USUARIOS_ITEM, ...ITEMS_DE_PERSONAS] },
+    GRUPO_ADMINISTRACION,
   ],
 };
 
