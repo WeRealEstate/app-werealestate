@@ -8,19 +8,14 @@ import com.werealestate.backend.model.*;
 import com.werealestate.backend.repository.*;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
-import java.time.YearMonth;
 import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 class SeguimientoCorreosServiceTest {
-    @Test
-    void preveRecordatorioUsandoLaMismaReglaDelEnvio() {
-        var autorizacion = mock(AutorizacionVentas.class);
-        var bienvenidas = mock(BienvenidaClienteRepository.class);
-        var recordatorios = mock(RecordatorioPagoRepository.class);
-        var liquidaciones = mock(LiquidacionAvisoRepository.class);
+    /** Una venta con un solo pago en esa fecha y lo que prepararía el recordatorio. */
+    private static SeguimientoCorreosService.Resumen previstos(LocalDate pago, boolean activos, String correo) {
         var automaticos = mock(CorreoAutomaticoRepository.class);
         var envio = mock(CorreoAutomaticoService.class);
         var recordatorio = mock(RecordatorioPagoService.class);
@@ -29,9 +24,8 @@ class SeguimientoCorreosServiceTest {
         when(venta.getId()).thenReturn(1L);
         when(venta.getCliente()).thenReturn("Ana López");
         when(venta.getEtiqueta()).thenReturn("S-1");
-        when(envio.activo(TipoCorreoAutomatico.RECORDATORIO)).thenReturn(true);
+        when(envio.activo(TipoCorreoAutomatico.RECORDATORIO)).thenReturn(activos);
         when(automaticos.conRecordatorio()).thenReturn(List.of(venta));
-        LocalDate pago = YearMonth.now().plusMonths(1).atDay(1);
         var fila = mock(com.werealestate.backend.dto.AmortizacionDto.Fila.class);
         when(fila.fecha()).thenReturn(pago);
         var cuenta = mock(com.werealestate.backend.dto.AmortizacionDto.class);
@@ -40,14 +34,30 @@ class SeguimientoCorreosServiceTest {
         var proximo = new RecordatorioPagoCorreo.ProximoPago(pago, BigDecimal.TEN, "Mensualidad", BigDecimal.ZERO);
         var contenido = new RecordatorioPagoCorreo.Contenido("Ana", null, "S-1", List.of(), List.of(), proximo, BigDecimal.ZERO, 0, 0);
         when(recordatorio.preparar(eq(venta), any())).thenReturn(new RecordatorioPagoService.Preparado(venta, null,
-                "ana@example.com", contenido, null, null));
-        var servicio = new SeguimientoCorreosService(autorizacion, bienvenidas, recordatorios, liquidaciones,
-                automaticos, envio, recordatorio, mock(JdbcTemplate.class), mock(VentaRepository.class), estadoCuenta);
-        var resultado = servicio.mesActual();
-        // El aviso sale el último día del mes, salvo si ese momento ya pasó.
-        boolean aunNoPasa = pago.minusDays(1).atTime(18, 0).isAfter(LocalDateTime.now());
-        assertEquals(aunNoPasa ? 1 : 0, resultado.entradas().size());
-        if (aunNoPasa) assertEquals("PREVISTO", resultado.entradas().getFirst().estado());
+                correo, contenido, null, null));
+        return new SeguimientoCorreosService(mock(AutorizacionVentas.class), mock(BienvenidaClienteRepository.class),
+                mock(RecordatorioPagoRepository.class), mock(LiquidacionAvisoRepository.class), automaticos, envio,
+                recordatorio, mock(JdbcTemplate.class), mock(VentaRepository.class), estadoCuenta).mesActual();
+    }
+
+    @Test
+    void preveLosProximosTreintaDiasAunqueCambieElMes() {
+        var dentro = previstos(LocalDate.now().plusDays(29), true, "ana@example.com");
+        assertEquals(1, dentro.entradas().size());
+        assertEquals("PREVISTO", dentro.entradas().getFirst().estado());
+        assertTrue(previstos(LocalDate.now().plusDays(40), true, "ana@example.com").entradas().isEmpty());
+    }
+
+    @Test
+    void apagadosOSinCorreoSeListanComoNoSaldraConElMotivo() {
+        LocalDate pago = LocalDate.now().plusDays(10);
+        var apagado = previstos(pago, false, "ana@example.com").entradas().getFirst();
+        assertEquals("NO_SALDRA", apagado.estado());
+        assertTrue(apagado.detalle().endsWith(" · recordatorios apagados"));
+
+        var sinCorreo = previstos(pago, true, null).entradas().getFirst();
+        assertEquals("NO_SALDRA", sinCorreo.estado());
+        assertTrue(sinCorreo.detalle().endsWith(" · sin correo registrado"));
     }
 
     @Test

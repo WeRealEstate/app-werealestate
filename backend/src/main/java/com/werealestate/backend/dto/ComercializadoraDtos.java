@@ -2,6 +2,7 @@ package com.werealestate.backend.dto;
 
 import com.werealestate.backend.model.AsesorExterno;
 import com.werealestate.backend.model.Comercializadora;
+import com.werealestate.backend.model.TipoEquipo;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -17,12 +18,12 @@ public final class ComercializadoraDtos {
 
     public record Item(
             Long id, String nombre, Long liderId, String liderNombre, String notas, boolean activa, long integrantes,
-            String token, LocalDateTime fechaCreacion) {
+            String token, LocalDateTime fechaCreacion, TipoEquipo tipo) {
 
         public static Item from(Comercializadora c, long integrantes) {
             return new Item(
                     c.getId(), c.getNombre(), c.getLider().getId(), c.getLider().getNombre(), c.getNotas(), c.isActiva(),
-                    integrantes, c.getToken(), c.getFechaCreacion());
+                    integrantes, c.getToken(), c.getFechaCreacion(), c.getTipo());
         }
     }
 
@@ -36,11 +37,16 @@ public final class ComercializadoraDtos {
     }
 
     public record CrearRequest(
-            @NotBlank @Size(max = 200) String nombre, @NotNull Long liderId, @Size(max = 1000) String notas) {}
+            @NotBlank @Size(max = 200) String nombre, @NotNull Long liderId, @Size(max = 1000) String notas,
+            @NotNull TipoEquipo tipo) {
+        public CrearRequest(String nombre, Long liderId, String notas) {
+            this(nombre, liderId, notas, TipoEquipo.COMERCIALIZADORA);
+        }
+    }
 
     public record ActualizarRequest(
             @NotBlank @Size(max = 200) String nombre, @NotNull Long liderId, @Size(max = 1000) String notas,
-            boolean activa) {}
+            boolean activa, @NotNull TipoEquipo tipo) {}
 
     /** pin: null = no cambia; vacío = generar uno nuevo al azar; 4 letras o números = ese PIN (único). */
     public record ActualizarIntegranteRequest(

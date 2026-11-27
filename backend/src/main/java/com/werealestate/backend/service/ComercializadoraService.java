@@ -141,19 +141,23 @@ public class ComercializadoraService {
         exigirAdminOLider();
         String nombre = request.nombre().trim();
         if (repository.existsByNombreIgnoreCase(nombre)) {
-            throw new ConflictException("Ya existe una comercializadora con ese nombre");
+            throw new ConflictException("Ya existe un equipo con ese nombre");
         }
         AsesorExterno lider = elegirLider(request.liderId(), null);
-        Comercializadora c = repository.save(new Comercializadora(nombre, lider, vacioANulo(request.notas()), nuevoToken()));
+        Comercializadora c = new Comercializadora(nombre, lider, vacioANulo(request.notas()), nuevoToken());
+        if (request.tipo() == null) throw new ValidationException("Selecciona un tipo de equipo");
+        c.setTipo(request.tipo());
+        c = repository.save(c);
         return ComercializadoraDtos.Item.from(c, 0);
     }
 
     public ComercializadoraDtos.Item actualizar(Long id, ComercializadoraDtos.ActualizarRequest request) {
         exigirAdminOLider();
+        if (request.tipo() == null) throw new ValidationException("Selecciona un tipo de equipo");
         Comercializadora c = obtener(id);
         String nombre = request.nombre().trim();
         if (!nombre.equalsIgnoreCase(c.getNombre()) && repository.existsByNombreIgnoreCase(nombre)) {
-            throw new ConflictException("Ya existe una comercializadora con ese nombre");
+            throw new ConflictException("Ya existe un equipo con ese nombre");
         }
         long integrantes = asesorRepository.countByComercializadoraId(id);
         long activos = asesorRepository.countByComercializadoraIdAndActivoTrue(id);
@@ -166,6 +170,7 @@ public class ComercializadoraService {
             lider = elegirLider(request.liderId(), c.getId());
         }
         c.actualizar(nombre, lider, vacioANulo(request.notas()), request.activa());
+        c.setTipo(request.tipo());
         return ComercializadoraDtos.Item.from(c, activos);
     }
 
@@ -224,7 +229,7 @@ public class ComercializadoraService {
     }
 
     private Comercializadora obtener(Long id) {
-        return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Comercializadora no encontrada"));
+        return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Equipo no encontrado"));
     }
 
     /** 32 caracteres aleatorios (192 bits): imposible de adivinar. */
@@ -237,7 +242,7 @@ public class ComercializadoraService {
     private Usuario exigirAdminOLider() {
         Usuario actual = currentUserProvider.getUsuarioActual();
         if (actual.getRol() != Role.ADMIN && actual.getRol() != Role.LIDER_AREA) {
-            throw new ForbiddenOperationException("Solo un administrador o personal de administración puede gestionar comercializadoras");
+            throw new ForbiddenOperationException("Solo un administrador o personal de administración puede gestionar equipos");
         }
         return actual;
     }

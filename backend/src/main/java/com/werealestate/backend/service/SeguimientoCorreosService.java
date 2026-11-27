@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -13,13 +14,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/** Vista mensual de los envíos registrados y los próximos recordatorios calculados del plan vigente. */
+/** Lo enviado y no enviado del mes en curso y los recordatorios de los próximos {@link #DIAS_PREVISTOS} días calculados
+ * del plan vigente. Un previsto que hoy no saldría (recordatorios apagados o cliente sin correo) se lista como
+ * {@code NO_SALDRA} con el motivo, para corregirlo antes. */
 @Service
 @Transactional(readOnly = true)
 public class SeguimientoCorreosService {
     public record Entrada(LocalDateTime fecha, String tipo, String estado, String cliente, String destino,
                           String venta, String detalle) {}
     public record Resumen(String mes, boolean recordatoriosActivos, List<Entrada> entradas) {}
+
+    static final int DIAS_PREVISTOS = 30;
+    private static final DateTimeFormatter FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final AutorizacionVentas autorizacion;
     private final BienvenidaClienteRepository bienvenidas;
@@ -79,27 +85,34 @@ public class SeguimientoCorreosService {
                                 rs.getString("estado"), venta, AvisoRegistroVentaCorreo.DESTINATARIO, rs.getString("detalle")));
                     }
                 }, desde, hasta);
+        LocalDateTime limite = ahora.plusDays(DIAS_PREVISTOS);
         List<CorreoAutomatico> pendientes = automaticos.findByEstadoOrderById(EstadoCorreoAutomatico.PENDIENTE);
         for (CorreoAutomatico c : pendientes) {
-            if (VisibilidadVentas.visible(c.getVenta()) && !c.getEnviarDesde().isBefore(desde) && c.getEnviarDesde().isBefore(hasta))
+            if (VisibilidadVentas.visible(c.getVenta()) && !c.getEnviarDesde().isBefore(desde) && !c.getEnviarDesde().isAfter(limite))
                 entradas.add(entrada(c.getEnviarDesde(), c.getTipo().name(), "PENDIENTE", c.getVenta(), destino(c.getVenta(), c.getTipo()), null));
         }
         boolean activos = envio.activo(TipoCorreoAutomatico.RECORDATORIO);
-        if (activos) for (Venta venta : automaticos.conRecordatorio()) {
+        for (Venta venta : automaticos.conRecordatorio()) {
             if (!VisibilidadVentas.visible(venta)) continue;
             var fechas = estadoCuenta.paraVenta(venta, ahora.toLocalDate()).detalleMensual().stream()
                     .map(f -> f.fecha()).filter(java.util.Objects::nonNull).distinct().toList();
             for (LocalDate fechaPago : fechas) {
                 LocalDateTime fechaEnvio = fechaPago.minusDays(1).atTime(LocalTime.of(18, 0));
-                if (fechaEnvio.isBefore(ahora) || !fechaEnvio.isBefore(hasta)) continue;
+                if (fechaEnvio.isBefore(ahora) || fechaEnvio.isAfter(limite)) continue;
                 if (pendientes.stream().anyMatch(c -> c.getVenta().getId().equals(venta.getId())
                         && c.getTipo() == TipoCorreoAutomatico.RECORDATORIO && fechaPago.equals(c.getFechaPago()))) continue;
                 if (automaticos.existsByVentaIdAndTipoAndFechaPago(venta.getId(), TipoCorreoAutomatico.RECORDATORIO, fechaPago)) continue;
                 // Reproduce la decisión que hará el programador el día anterior, con los pagos conocidos hoy.
                 var p = recordatorio.preparar(venta, fechaEnvio.toLocalDate());
                 var proximo = p.contenido().proximoPago();
-                if (proximo == null || !fechaPago.equals(proximo.fecha()) || p.correo() == null || p.yaAbonado() != null) continue;
-                entradas.add(entrada(fechaEnvio, "RECORDATORIO", "PREVISTO", venta, p.correo(), "Pago del " + fechaPago));
+                if (proximo == null || !fechaPago.equals(proximo.fecha()) || p.yaAbonado() != null) continue;
+                List<String> motivos = new ArrayList<>();
+                if (!activos) motivos.add("recordatorios apagados");
+                if (p.correo() == null) motivos.add("sin correo registrado");
+                String detalle = "Pago del " + FECHA.format(fechaPago)
+                        + (motivos.isEmpty() ? "" : " · " + String.join(" y ", motivos));
+                entradas.add(entrada(fechaEnvio, "RECORDATORIO", motivos.isEmpty() ? "PREVISTO" : "NO_SALDRA",
+                        venta, p.correo(), detalle));
             }
         }
         entradas.sort(Comparator.comparing(Entrada::fecha).reversed());

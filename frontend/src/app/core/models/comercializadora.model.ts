@@ -1,3 +1,5 @@
+export type TipoEquipo = 'COMERCIALIZADORA' | 'EQUIPO';
+
 export interface Comercializadora {
   id: number;
   nombre: string;
@@ -9,6 +11,7 @@ export interface Comercializadora {
   /** Secreto del enlace que la líder comparte con su equipo (ver /unirse/:token). */
   token: string;
   fechaCreacion: string;
+  tipo: TipoEquipo;
 }
 
 export interface IntegranteComercializadora {
@@ -38,6 +41,7 @@ export interface ComercializadoraRequest {
   nombre: string;
   liderId: number;
   notas: string | null;
+  tipo: TipoEquipo;
 }
 
 export interface ComercializadoraPublica {

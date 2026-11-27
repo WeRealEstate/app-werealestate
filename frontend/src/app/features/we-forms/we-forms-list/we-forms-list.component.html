@@ -128,9 +128,9 @@
   <!-- Altas de comercializadoras: no son formularios del constructor, el enlace es fijo y pide nombre, celular y correo. -->
   @if (!isLoading() && comercializadoras().length > 0) {
     <section class="mt-10" data-testid="altas-comercializadoras">
-      <h2 class="font-heading text-lg font-semibold text-ink">Altas de comercializadoras</h2>
+      <h2 class="font-heading text-lg font-semibold text-ink">Altas de equipos</h2>
       <p class="mt-1 text-sm text-ink-muted">
-        La líder comparte este enlace con su equipo de ventas: cada integrante se da de alta, recibe su PIN y entra al equipo de la líder en Comunidades We. Se crean y editan en Comercializadoras.
+        La persona líder comparte este enlace con su equipo: cada integrante se da de alta, recibe su PIN y entra a Comunidades We. Se crean y editan en Equipos.
       </p>
       <div class="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         @for (c of comercializadoras(); track c.id) {

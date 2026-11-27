@@ -33,7 +33,7 @@ export interface BuscarVentasParams {
 export interface SeguimientoCorreo {
   fecha: string;
   tipo: string;
-  estado: 'ENVIADO' | 'FALLIDO' | 'NO_ENVIADO' | 'PENDIENTE' | 'PREVISTO';
+  estado: 'ENVIADO' | 'FALLIDO' | 'NO_ENVIADO' | 'PENDIENTE' | 'PREVISTO' | 'NO_SALDRA';
   cliente: string;
   destino: string | null;
   venta: string;

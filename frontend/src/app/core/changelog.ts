@@ -15,6 +15,12 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.26.0', fecha: '2026-11-27', cambios: [
+    "Equipos: el apartado antes llamado Comercializadoras ahora muestra por separado Comercializadoras y Equipos. Al crear o editar se elige el tipo; los grupos existentes quedan como Comercializadoras y conservan sus integrantes y enlaces.",
+  ] },
+  { version: '12.25.0', fecha: '2026-11-27', cambios: [
+    "Envío de correos: los recordatorios previstos son los de los próximos 30 días (aunque cambie el mes) y se muestran aunque el envío esté apagado. Los que no saldrían (apagado o cliente sin correo) aparecen como «No saldrá» con el motivo.",
+  ] },
   { version: '12.24.0', fecha: '2026-11-27', cambios: [
     "Promociones: los códigos escritos pueden tener de 5 a 7 letras o números; los generados automáticamente siguen teniendo 6. También se pueden aplicar al registrar ventas.",
   ] },

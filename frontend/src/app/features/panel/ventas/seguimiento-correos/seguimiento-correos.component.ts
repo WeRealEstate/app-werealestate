@@ -25,7 +25,7 @@ export class SeguimientoCorreosComponent {
   readonly visibles = computed(() => (this.datos()?.entradas ?? []).filter((e) => {
     switch (this.filtro()) {
       case 'enviados': return e.estado === 'ENVIADO';
-      case 'pendientes': return e.estado === 'PENDIENTE' || e.estado === 'PREVISTO';
+      case 'pendientes': return e.estado === 'PENDIENTE' || e.estado === 'PREVISTO' || e.estado === 'NO_SALDRA';
       case 'fallidos': return e.estado === 'FALLIDO' || e.estado === 'NO_ENVIADO';
       default: return true;
     }
@@ -52,6 +52,6 @@ export class SeguimientoCorreosComponent {
   }
 
   estado(e: SeguimientoCorreo): string {
-    return ({ ENVIADO: 'Enviado', PENDIENTE: 'En cola', PREVISTO: 'Previsto', FALLIDO: 'Fallido', NO_ENVIADO: 'No enviado' })[e.estado];
+    return ({ ENVIADO: 'Enviado', PENDIENTE: 'En cola', PREVISTO: 'Previsto', FALLIDO: 'Fallido', NO_ENVIADO: 'No enviado', NO_SALDRA: 'No saldrá' })[e.estado];
   }
 }

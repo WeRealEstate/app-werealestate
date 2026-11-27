@@ -48,7 +48,7 @@ const ASESORES_EXTERNOS_NAV_ITEM: NavItem = {
   icon: 'asesores',
 };
 const COMERCIALIZADORAS_NAV_ITEM: NavItem = {
-  label: 'Comercializadoras',
+  label: 'Equipos',
   route: '/panel/comercializadoras',
   modulo: 'ASESORES_EXTERNOS',
   icon: 'comercializadoras',

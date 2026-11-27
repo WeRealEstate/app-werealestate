@@ -4,6 +4,7 @@ import {
   Comercializadora,
   IntegranteComercializadora,
   enlaceDeComercializadora,
+  TipoEquipo,
 } from '../../core/models/comercializadora.model';
 import { AsesorExterno } from '../../core/models/asesor-externo.model';
 import { AsesoresExternosService } from '../../core/services/asesores-externos.service';
@@ -29,6 +30,10 @@ export class ComercializadorasListComponent {
   private readonly confirmService = inject(ConfirmService);
 
   readonly items = signal<Comercializadora[]>([]);
+  readonly secciones = computed(() => [
+    { titulo: 'Comercializadoras', tipo: 'COMERCIALIZADORA', items: this.items().filter((c) => c.tipo === 'COMERCIALIZADORA') },
+    { titulo: 'Equipos', tipo: 'EQUIPO', items: this.items().filter((c) => c.tipo === 'EQUIPO') },
+  ]);
   readonly asesores = signal<AsesorExterno[]>([]);
   readonly isLoading = signal(true);
   readonly errorMessage = signal<string | null>(null);
@@ -37,6 +42,7 @@ export class ComercializadorasListComponent {
   readonly mostrarForm = signal(false);
   readonly editando = signal<Comercializadora | null>(null);
   readonly nombre = signal('');
+  readonly tipo = signal<TipoEquipo | null>(null);
   readonly liderId = signal<number | null>(null);
   readonly notas = signal('');
   readonly activa = signal(true);
@@ -83,7 +89,7 @@ export class ComercializadorasListComponent {
       this.items.set(items);
       this.asesores.set(asesores);
     } catch {
-      this.errorMessage.set('No se pudieron cargar las comercializadoras. Intenta de nuevo.');
+      this.errorMessage.set('No se pudieron cargar los equipos. Intenta de nuevo.');
     } finally {
       this.isLoading.set(false);
     }
@@ -92,6 +98,7 @@ export class ComercializadorasListComponent {
   abrirNueva(): void {
     this.editando.set(null);
     this.nombre.set('');
+    this.tipo.set(null);
     this.liderId.set(null);
     this.notas.set('');
     this.activa.set(true);
@@ -102,6 +109,7 @@ export class ComercializadorasListComponent {
   abrirEditar(c: Comercializadora): void {
     this.editando.set(c);
     this.nombre.set(c.nombre);
+    this.tipo.set(c.tipo);
     this.liderId.set(c.liderId);
     this.notas.set(c.notas ?? '');
     this.activa.set(c.activa);
@@ -112,13 +120,14 @@ export class ComercializadorasListComponent {
   async guardar(): Promise<void> {
     if (this.guardando()) return;
     const liderId = this.liderId();
-    if (!this.nombre().trim() || liderId === null) {
-      this.errorForm.set('El nombre y la líder son obligatorios.');
+    const tipo = this.tipo();
+    if (!this.nombre().trim() || liderId === null || tipo === null) {
+      this.errorForm.set('El tipo, el nombre y la persona líder son obligatorios.');
       return;
     }
     this.guardando.set(true);
     this.errorForm.set(null);
-    const base = { nombre: this.nombre().trim(), liderId, notas: this.notas().trim() || null };
+    const base = { nombre: this.nombre().trim(), liderId, notas: this.notas().trim() || null, tipo };
     try {
       const editando = this.editando();
       const guardada = editando
@@ -130,7 +139,7 @@ export class ComercializadorasListComponent {
       // Si la líder era independiente ahora es Líder: se refresca la lista de asesores para el selector.
       this.asesores.set(await this.asesoresService.listar());
       this.mostrarForm.set(false);
-      this.toast.success(editando ? 'Comercializadora actualizada.' : 'Comercializadora creada. Ya puedes copiar su enlace.');
+      this.toast.success(editando ? 'Equipo actualizado.' : 'Equipo creado. Ya puedes copiar su enlace.');
     } catch (e) {
       this.errorForm.set(mensajeDe(e, 'No se pudo guardar. Intenta de nuevo.'));
     } finally {
@@ -141,7 +150,7 @@ export class ComercializadorasListComponent {
   async copiarEnlace(c: Comercializadora): Promise<void> {
     try {
       await navigator.clipboard.writeText(enlaceDeComercializadora(c.token));
-      this.toast.success('Enlace copiado. Compártelo con la líder de la comercializadora.');
+      this.toast.success('Enlace copiado. Compártelo con la persona líder.');
     } catch {
       this.toast.error('No se pudo copiar el enlace.');
     }
@@ -165,7 +174,7 @@ export class ComercializadorasListComponent {
 
   async eliminar(c: Comercializadora): Promise<void> {
     const ok = await this.confirmService.confirm({
-      titulo: 'Eliminar comercializadora',
+      titulo: 'Eliminar equipo',
       mensaje: `¿Eliminar a ${c.nombre}? Su enlace dejará de funcionar. Esta acción no se puede deshacer.`,
       textoConfirmar: 'Eliminar',
       peligroso: true,
@@ -174,7 +183,7 @@ export class ComercializadorasListComponent {
     try {
       await this.service.eliminar(c.id);
       this.items.update((lista) => lista.filter((x) => x.id !== c.id));
-      this.toast.success('Comercializadora eliminada.');
+      this.toast.success('Equipo eliminado.');
     } catch (e) {
       this.toast.error(mensajeDe(e, 'No se pudo eliminar.'));
     }

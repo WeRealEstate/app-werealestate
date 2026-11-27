@@ -13,6 +13,7 @@ import com.werealestate.backend.model.AsesorExterno;
 import com.werealestate.backend.model.Comercializadora;
 import com.werealestate.backend.model.Role;
 import com.werealestate.backend.model.TipoAsesorExterno;
+import com.werealestate.backend.model.TipoEquipo;
 import com.werealestate.backend.model.Usuario;
 import com.werealestate.backend.repository.AsesorExternoRepository;
 import com.werealestate.backend.repository.ClienteRepository;
@@ -62,6 +63,29 @@ class ComercializadoraLiderInternoTest {
         var r = service.crear(new ComercializadoraDtos.CrearRequest("Sol", 7L, null));
         assertEquals("Iván Interno", r.liderNombre());
         assertEquals(TipoAsesorExterno.LIDER, interno.getTipo());
+    }
+
+    @Test
+    void permiteCrearUnEquipoConLasMismasFunciones() {
+        var resultado = service.crear(new ComercializadoraDtos.CrearRequest("Sol", 7L, null, TipoEquipo.EQUIPO));
+        assertEquals(TipoEquipo.EQUIPO, resultado.tipo());
+        assertEquals("Iván Interno", resultado.liderNombre());
+        assertEquals(TipoAsesorExterno.LIDER, interno.getTipo());
+    }
+
+    @Test
+    void permiteCambiarElTipoSinCambiarLiderNiEnlaceAunqueTengaIntegrantes() {
+        Comercializadora grupo = new Comercializadora("Sol", interno, null, "enlace-anterior");
+        ReflectionTestUtils.setField(grupo, "id", 11L);
+        when(repo.findById(11L)).thenReturn(Optional.of(grupo));
+        when(asesores.countByComercializadoraId(11L)).thenReturn(3L);
+        when(asesores.countByComercializadoraIdAndActivoTrue(11L)).thenReturn(3L);
+        var resultado = service.actualizar(11L,
+                new ComercializadoraDtos.ActualizarRequest("Sol", 7L, null, true, TipoEquipo.EQUIPO));
+        assertEquals(TipoEquipo.EQUIPO, resultado.tipo());
+        assertEquals("enlace-anterior", resultado.token());
+        assertEquals(3, resultado.integrantes());
+        assertEquals(7L, resultado.liderId());
     }
 
     @Test

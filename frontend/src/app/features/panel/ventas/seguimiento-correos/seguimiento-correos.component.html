@@ -3,7 +3,7 @@
   <div class="mt-4 flex flex-wrap items-end justify-between gap-4">
     <div>
       <h1 class="font-heading text-2xl font-semibold text-ink">Envío de correos</h1>
-      <p class="mt-1 text-sm text-ink-muted">Enviados y próximos envíos de {{ mes() }}.</p>
+      <p class="mt-1 text-sm text-ink-muted">Enviados de {{ mes() }} y recordatorios de los próximos 30 días.</p>
     </div>
     <button type="button" (click)="cargar()" class="min-h-[44px] rounded-lg border border-border bg-surface px-4 text-sm font-semibold text-ink hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-we-primary/50">Actualizar</button>
   </div>
@@ -16,7 +16,7 @@
     <div class="mt-6 space-y-1 text-sm text-ink-muted">
       <p>Los recordatorios previstos pueden cambiar si se registra un pago o se modifica la venta.</p>
       <p>Los avisos de registro a Finanzas se muestran a partir de la activación de esta función; los anteriores no cuentan con historial.</p>
-      @if (!datos()?.recordatoriosActivos) { <p>Los recordatorios automáticos están apagados.</p> }
+      @if (!datos()?.recordatoriosActivos) { <p class="font-semibold text-ink">Los recordatorios automáticos están apagados: los previstos no saldrán hasta que se enciendan arriba de Ventas.</p> }
     </div>
     <div class="mt-6 flex flex-wrap gap-2" aria-label="Filtrar correos">
       @for (opcion of filtros; track opcion.valor) {
