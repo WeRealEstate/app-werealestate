@@ -24,7 +24,7 @@ public record PromocionDto(
         LocalDateTime fechaInicio,
         // true = espera su fecha de inicio para activarse sola.
         boolean programada,
-        // Código de 6 dígitos para el registro de venta: solo va en lo que ve el admin (ver conCodigo); null en todo lo demás.
+        // Código de 5 a 7 letras o números: solo va en lo que ve el admin (ver conCodigo); null en todo lo demás.
         String codigo
 ) {
     /** Sin el código: es lo que reciben el cotizador (también el público), Nueva venta y cualquiera que no sea admin. */

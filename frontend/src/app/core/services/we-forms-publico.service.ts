@@ -50,7 +50,7 @@ export class WeFormsPublicoService {
     return firstValueFrom(this.http.get<WeFormPublico>(`${this.baseUrl}/${slug}`, { headers: this.cabeceras(pin) }));
   }
 
-  /** La promoción de un código de 6 dígitos (los equivocados se limitan: 10 por hora). */
+  /** La promoción de un código de 5 a 7 letras o números (10 intentos equivocados por hora). */
   codigoPromocion(slug: string, pin: string, codigo: string): Promise<PromocionCodigo> {
     return firstValueFrom(
       this.http.post<PromocionCodigo>(`${this.baseUrl}/${slug}/codigo-promocion`, { codigo }, { headers: this.cabeceras(pin) }),

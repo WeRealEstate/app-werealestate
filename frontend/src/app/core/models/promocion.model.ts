@@ -31,7 +31,7 @@ export interface Promocion {
   fechaInicio: string | null;
   /** true = espera su fecha de inicio y se activa sola ese día. */
   programada: boolean;
-  /** Código de 6 letras o números para aplicarla en el registro de venta; solo lo recibe el admin (null para los demás o sin código). */
+  /** Código de 5 a 7 letras o números para el registro de venta; solo lo recibe el admin. */
   codigo: string | null;
 }
 

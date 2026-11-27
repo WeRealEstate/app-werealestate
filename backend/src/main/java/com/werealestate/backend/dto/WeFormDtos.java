@@ -139,7 +139,7 @@ public final class WeFormDtos {
         }
     }
 
-    /** El código de promoción que escribió el asesor (6 dígitos). */
+    /** El código de promoción que escribió el asesor (5 a 7 letras o números). */
     public record CodigoPromocionRequest(String codigo) {
     }
 

@@ -251,10 +251,10 @@ export class WeFormPublicoComponent {
   readonly esBono = computed(() => this.promocion()?.modalidad === 'BONO_LOTES');
   readonly esMensualidadFija = computed(() => this.promocion()?.modalidad === 'MENSUALIDAD_FIJA');
 
-  /** Letras y números en mayúsculas, máximo 6 (el código no distingue mayúsculas). */
+  /** Letras y números en mayúsculas, máximo 7 (el código no distingue mayúsculas). */
   escribirCodigo(evento: Event): void {
     const campo = evento.target as HTMLInputElement;
-    const limpio = campo.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+    const limpio = campo.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7);
     campo.value = limpio;
     this.codigoEscrito.set(limpio);
     this.errorCodigo.set(null);
@@ -266,8 +266,8 @@ export class WeFormPublicoComponent {
     const codigo = this.codigoEscrito();
     const pin = this.service.pin();
     if (!pin || this.validandoCodigo()) return;
-    if (!/^[A-Z0-9]{6}$/.test(codigo)) {
-      this.errorCodigo.set('El código tiene 6 letras o números.');
+    if (!/^[A-Z0-9]{5,7}$/.test(codigo)) {
+      this.errorCodigo.set('El código debe tener de 5 a 7 letras o números.');
       return;
     }
     this.validandoCodigo.set(true);

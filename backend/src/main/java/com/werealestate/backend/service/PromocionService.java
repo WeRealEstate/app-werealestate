@@ -264,11 +264,11 @@ public class PromocionService {
         }
     }
 
-    /** Un código escrito por el admin: exactamente 6 letras o números (en mayúsculas) y que no lo tenga otra promoción. */
+    /** Un código escrito por el admin: de 5 a 7 letras o números y que no lo tenga otra promoción. */
     private String codigoLibre(String escrito, Promocion propia) {
         String codigo = normalizarCodigo(escrito);
-        if (!codigo.matches("[A-Z0-9]{6}")) {
-            throw new ValidationException("El código de promoción debe tener exactamente 6 letras o números");
+        if (!codigo.matches("[A-Z0-9]{5,7}")) {
+            throw new ValidationException("El código de promoción debe tener de 5 a 7 letras o números");
         }
         promocionRepository.findByCodigo(codigo)
                 .filter(otra -> propia == null || !otra.getId().equals(propia.getId()))

@@ -66,7 +66,7 @@ export class PromocionesComponent {
   readonly maxLotesNivel = MAX_LOTES_NIVEL;
   readonly plazoFijo = signal(60);
   readonly descripcion = signal('');
-  /** Código de 6 dígitos que escribe el admin; vacío = al crear, uno al azar; al editar, el mismo. */
+  /** Código de 5 a 7 letras o números; vacío = al crear, uno al azar; al editar, el mismo. */
   readonly codigo = signal('');
 
   /** Fecha y hora desde las que aplica; vacía = al crearla (al editar, vacía = la que ya tiene). Si es futura, la
@@ -293,8 +293,8 @@ export class PromocionesComponent {
     const nombre = this.nombre().trim();
     if (!this.formularioValido || this.isSaving()) return;
     const codigo = this.codigo().trim();
-    if (codigo && !/^[A-Z0-9]{6}$/.test(codigo)) {
-      this.toast.error('El código de promoción debe tener exactamente 6 letras o números.');
+    if (codigo && !/^[A-Z0-9]{5,7}$/.test(codigo)) {
+      this.toast.error('El código de promoción debe tener de 5 a 7 letras o números.');
       return;
     }
 
@@ -396,10 +396,10 @@ export class PromocionesComponent {
     }
   }
 
-  /** Letras y números en mayúsculas, máximo 6 (el código no distingue mayúsculas). */
+  /** Letras y números en mayúsculas, máximo 7 (el código no distingue mayúsculas). */
   escribirCodigo(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const limpio = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+    const limpio = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7);
     input.value = limpio;
     this.codigo.set(limpio);
   }

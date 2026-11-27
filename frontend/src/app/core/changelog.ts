@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.24.0', fecha: '2026-11-27', cambios: [
+    "Promociones: los códigos escritos pueden tener de 5 a 7 letras o números; los generados automáticamente siguen teniendo 6. También se pueden aplicar al registrar ventas.",
+  ] },
   { version: '12.23.1', fecha: '2026-11-27', cambios: [
     "Envío de correos: el mes del subtítulo ya no sale como «Noviembre De 2026».",
   ] },

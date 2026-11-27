@@ -191,7 +191,8 @@ class PromocionCodigoRegistroVentaIntegracionTest extends PruebaDeIntegracion {
         assertTrue(promocionService.listar().stream().anyMatch(x -> propio.equals(x.codigo())));
 
         assertThrows(ConflictException.class, () -> crear(ModalidadPromocion.BONO_LOTES, "nanuu", propio));
-        assertThrows(ValidationException.class, () -> crear(ModalidadPromocion.BONO_LOTES, "nanuu", "12345"));
+        assertThrows(ValidationException.class, () -> crear(ModalidadPromocion.BONO_LOTES, "nanuu", "1234"));
+        assertThrows(ValidationException.class, () -> crear(ModalidadPromocion.BONO_LOTES, "nanuu", "12345678"));
 
         PromocionDto otro = promocionService.generarCodigo(p.id());
         assertNotEquals(propio, otro.codigo());
@@ -203,6 +204,21 @@ class PromocionCodigoRegistroVentaIntegracionTest extends PruebaDeIntegracion {
         iniciarSesionComo(usuario(Role.LIDER_AREA));
         assertTrue(promocionService.listar().stream().allMatch(x -> x.codigo() == null));
         assertTrue(promocionService.listarActivas().stream().allMatch(x -> x.codigo() == null));
+    }
+
+    @Test
+    void aceptaYAplicaCodigosDeCincoSeisYSieteCaracteres() {
+        for (int longitud : List.of(5, 6, 7)) {
+            String codigo = etiqueta().substring(0, longitud);
+            promociones.findAll().stream().filter(x -> codigo.equals(x.getCodigo())).forEach(x -> x.setCodigo(null));
+            PromocionDto promo = crear(ModalidadPromocion.BONO_LOTES, "samai", codigo.toLowerCase());
+            assertEquals(codigo, promo.codigo());
+            iniciarSesionComo(asesor);
+            assertEquals(promo.nombre(), panel.codigoPromocion(slug, codigo.toLowerCase()).nombre());
+        }
+        iniciarSesionComo(admin);
+        assertThrows(ValidationException.class, () -> promocionVenta.porCodigo("1234", samai()));
+        assertThrows(ValidationException.class, () -> promocionVenta.porCodigo("12345678", samai()));
     }
 
     @Test

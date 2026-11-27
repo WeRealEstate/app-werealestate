@@ -73,8 +73,8 @@ public class Promocion {
     @Column(name = "inicio_aplicado", nullable = false)
     private boolean inicioAplicado = true;
 
-    /** Código de 6 letras o números (en mayúsculas) para aplicarla en el registro de venta (null = sin código). Único; solo lo ve el admin. */
-    @Column(name = "codigo", length = 6)
+    /** Código de 5 a 7 letras o números (en mayúsculas), único y visible solo para el admin. */
+    @Column(name = "codigo", length = 7)
     private String codigo;
 
     public String getCodigo() {

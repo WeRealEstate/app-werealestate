@@ -113,7 +113,7 @@ public class PromocionVentaService {
     @Transactional(readOnly = true)
     public Promocion porCodigo(String codigo, Desarrollo desarrollo) {
         String limpio = PromocionService.normalizarCodigo(codigo);
-        if (!limpio.matches("[A-Z0-9]{6}")) throw new ValidationException("El código de promoción tiene 6 letras o números");
+        if (!limpio.matches("[A-Z0-9]{5,7}")) throw new ValidationException("El código de promoción debe tener de 5 a 7 letras o números");
         LocalDateTime ahora = LocalDateTime.now();
         Promocion p = promocionRepository.findByCodigo(limpio)
                 .filter(x -> x.isActiva() && x.isInicioAplicado())
