@@ -7,7 +7,15 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public record ComisionDetalleDto(
-        ComisionDto comision, List<Devengo> devengos, List<Entrega> entregas, List<Devolucion> devoluciones) {
+        ComisionDto comision,
+        List<Devengo> devengos,
+        List<Entrega> entregas,
+        List<Devolucion> devoluciones,
+        List<AbonoCliente> abonosCliente) {
+
+    /** Un abono vigente del cliente, en orden, con lo que aportó a la comisión (12.31.0). */
+    public record AbonoCliente(LocalDate fecha, String concepto, BigDecimal monto, BigDecimal aComision) {
+    }
 
     public record Devolucion(
             Long id, LocalDate fecha, BigDecimal monto, String notas, String registradaPor, LocalDateTime fechaCreacion) {

@@ -368,6 +368,12 @@ public class ComisionService {
                     devengo.getFechaOrigen(), "Venta", null, null, false, devengo.getMonto(), devengo.getFechaEntrega());
         }
         BigDecimal segunRegla = mitad(pago.getMonto());
+        if (devengo.getMonto().compareTo(segunRegla) > 0) {
+            // El abono que liquidó la comisión (enganche al 5 %): aporta todo lo que faltaba.
+            return new ComisionesPorEntregarDto.Abono(
+                    devengo.getFechaOrigen(), conceptoDe(devengo), pago.getMonto(), 100, false,
+                    devengo.getMonto(), devengo.getFechaEntrega());
+        }
         // El último abono puede aportar menos: solo lo que faltaba para completar la comisión.
         boolean parcial = devengo.getMonto().compareTo(segunRegla) < 0;
         return new ComisionesPorEntregarDto.Abono(
@@ -712,6 +718,27 @@ public class ComisionService {
         return cambiadas;
     }
 
+    /**
+     * Regresa a su monto original un pago que el ajuste de 12.30.1 recortó (12.31.0, decisión del usuario: con la
+     * regla del enganche al 5 % sí le tocaba). Solo actúa si el pago más reciente de la comisión sigue en el monto
+     * recortado y lo generado alcanza para el original; cambia también su egreso en Gastos. Devuelve si lo cambió.
+     */
+    public boolean restaurarPagoRecortado(Long comisionId, BigDecimal recortado, BigDecimal original) {
+        VentaComision c = comisionRepository.findById(comisionId).orElse(null);
+        if (c == null || c.isCancelada()) return false;
+        VentaComisionEntrega ultima = entregaRepository.findByComisionIdOrderByFechaDescIdDesc(comisionId).stream()
+                .findFirst().orElse(null);
+        if (ultima == null || ultima.getMonto().compareTo(recortado) != 0) return false;
+        ComisionTotales totales = totalesDe(c);
+        BigDecimal disponible = totales.devengado(comisionId).subtract(totales.entregado(comisionId));
+        if (original.subtract(recortado).compareTo(disponible) > 0) return false;
+        aplicarCorreccion(ultima, ultima.getFecha(), original);
+        Gasto gasto = ultima.getGasto();
+        if (gasto != null) gasto.actualizar(gasto.getConcepto(), gasto.getFecha(), original);
+        log.info("Comisión {}: pago restaurado de ${} a ${} (enganche al 5 %)", comisionId, recortado, original);
+        return true;
+    }
+
     /** Lo ganado por la comisión, porción por porción y en el orden en que se entrega. */
     private List<Porcion> porcionesGanadas(Long comisionId) {
         return devengoRepository.findByComisionIdOrderByFechaEntregaAscIdAsc(comisionId).stream()
@@ -842,6 +869,10 @@ public class ComisionService {
     private static String conceptoDe(VentaComisionDevengo devengo) {
         PagoVenta pago = devengo.getPagoVenta();
         if (pago == null) return "Venta"; // comisión completa de una exhibición (regla anterior)
+        return conceptoDePago(pago);
+    }
+
+    private static String conceptoDePago(PagoVenta pago) {
         if (pago.getTipo() == null) return "Abono";
         return switch (pago.getTipo()) {
             case ENGANCHE -> "Enganche";
@@ -888,7 +919,8 @@ public class ComisionService {
     /**
      * Regla única (12.30.0, decisión del usuario; aplica a todas las comisiones, también a las de antes):
      * sobre los abonos vigentes en orden, cada abono aporta la mitad de su monto, sea apartado, enganche,
-     * mensualidad o aportación. Se acumula
+     * mensualidad o aportación; pero el abono con el que el enganche más el apartado llegan al 5 % del valor de la
+     * venta liquida lo que falte de la comisión (12.31.0). Se acumula
      * hasta completar la comisión. Cada aporte se entrega el sábado siguiente a su abono y, si el
      * contrato se firmó después, no antes del sábado siguiente a la firma. Mientras el contrato no
      * esté firmado, lo acumulado no se puede entregar (ver ComisionTotales.bloqueada).
@@ -898,20 +930,38 @@ public class ComisionService {
                 ? sabadoSiguiente(venta.getContratoFechaFirma())
                 : null;
         BigDecimal restante = comision.getMonto();
+        BigDecimal umbral = umbralLiquidacion(comision);
         BigDecimal enganche = BigDecimal.ZERO;
+        boolean liquidada = false;
         for (PagoVenta pago : pagoVentaRepository.findVigentesByVentaIdOrderByFechaAscIdAsc(venta.getId())) {
-            if (pago.getTipo() == TipoAbono.ENGANCHE) enganche = enganche.add(pago.getMonto());
+            boolean cuentaComoEnganche = cuentaComoEnganche(pago);
+            if (cuentaComoEnganche) enganche = enganche.add(pago.getMonto());
             if (restante.signum() <= 0) continue;
-            BigDecimal aporte = aporteDe(pago).min(restante);
+            // El abono con el que enganche + apartado llegan al 5 % del terreno liquida lo que falta de la comisión.
+            boolean liquida = cuentaComoEnganche && enganche.compareTo(umbral) >= 0;
+            BigDecimal aporte = (liquida ? restante : aporteDe(pago)).min(restante);
+            if (liquida) liquidada = true;
             if (aporte.signum() <= 0) continue;
             LocalDate entrega = sabadoSiguiente(pago.getFecha());
             if (sabadoFirma != null && sabadoFirma.isAfter(entrega)) entrega = sabadoFirma;
             devengoRepository.save(new VentaComisionDevengo(comision, pago, pago.getFecha(), entrega, aporte));
             restante = restante.subtract(aporte);
         }
-        // Solo informativo: si el enganche cubrió la comisión completa se muestra como una exhibición.
-        comision.setModalidad(
-                enganche.compareTo(comision.getMonto()) >= 0 ? ModalidadComision.UNA_EXHIBICION : ModalidadComision.PARCIALIDADES);
+        // Solo informativo: si el enganche liquidó la comisión se muestra como una exhibición.
+        comision.setModalidad(liquidada ? ModalidadComision.UNA_EXHIBICION : ModalidadComision.PARCIALIDADES);
+    }
+
+    /** Porcentaje del costo del terreno que, pagado de enganche (con el apartado), liquida la comisión completa. */
+    static final BigDecimal PORCENTAJE_LIQUIDA = new BigDecimal("5");
+
+    /** 5 % del valor de la venta (12.31.0, decisión del usuario). */
+    private static BigDecimal umbralLiquidacion(VentaComision comision) {
+        return porcentajeDe(comision.getBase(), PORCENTAJE_LIQUIDA);
+    }
+
+    /** El apartado y el enganche suman para llegar al 5 % que liquida la comisión. */
+    private static boolean cuentaComoEnganche(PagoVenta pago) {
+        return pago.getTipo() == TipoAbono.ENGANCHE || pago.getTipo() == TipoAbono.APARTADO;
     }
 
     /** Lo que aporta un abono a la comisión según su tipo (ver reconstruirDevengosPorTipo). */
@@ -1078,6 +1128,17 @@ public class ComisionService {
         List<ComisionDetalleDto.Devengo> devengos = listaDevengos.stream()
                 .map(d -> new ComisionDetalleDto.Devengo(d.getFechaOrigen(), d.getFechaEntrega(), d.getMonto()))
                 .toList();
+        // Todos los abonos vigentes del cliente con lo que cada uno aportó a la comisión (0 si ya estaba completa).
+        Map<Long, BigDecimal> aportePorPago = new HashMap<>();
+        for (VentaComisionDevengo d : listaDevengos) {
+            if (d.getPagoVenta() != null) aportePorPago.merge(d.getPagoVenta().getId(), d.getMonto(), BigDecimal::add);
+        }
+        List<ComisionDetalleDto.AbonoCliente> abonosCliente = comision.getVenta() == null
+                ? List.of()
+                : pagoVentaRepository.findVigentesByVentaIdOrderByFechaAscIdAsc(comision.getVenta().getId()).stream()
+                        .map(p -> new ComisionDetalleDto.AbonoCliente(p.getFecha(), conceptoDePago(p), p.getMonto(),
+                                aportePorPago.getOrDefault(p.getId(), BigDecimal.ZERO)))
+                        .toList();
         List<ComisionDetalleDto.Entrega> entregas = listaEntregas.stream()
                 .map(e -> new ComisionDetalleDto.Entrega(
                         e.getId(),
@@ -1101,7 +1162,7 @@ public class ComisionService {
                         d.getRegistradaPor().getNombre(),
                         d.getFechaCreacion()))
                 .toList();
-        return new ComisionDetalleDto(aDto(comision, totales), devengos, entregas, devoluciones);
+        return new ComisionDetalleDto(aDto(comision, totales), devengos, entregas, devoluciones, abonosCliente);
     }
 
     // ---------------------------------------------------------------- utilidades

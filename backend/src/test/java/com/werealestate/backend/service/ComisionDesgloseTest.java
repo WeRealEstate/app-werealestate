@@ -244,7 +244,7 @@ class ComisionDesgloseTest {
         assertEquals(50, deAna.abonos().get(0).porcentaje());
         assertEquals(false, deAna.abonos().get(0).parcial());
         igual("2000", deAna.abonos().get(0).montoAbono());
-        assertEquals(50, pe.items().get(1).abonos().get(0).porcentaje());
+        assertEquals(100, pe.items().get(1).abonos().get(0).porcentaje());
         igual("1800", pe.total());
     }
 

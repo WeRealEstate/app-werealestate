@@ -200,7 +200,7 @@ class ComisionCalculoTest {
 
     @Test
     void ventaNuevaCreaLaComisionDel5PorCientoSobreElValorDeLosLotes() {
-        pago(TipoAbono.ENGANCHE, "12000", MIERCOLES);
+        pago(TipoAbono.ENGANCHE, "12000", MIERCOLES); // pasa del 5 %: liquida
 
         service.sincronizarVentaNueva(venta, null, null, null, null);
 
@@ -242,6 +242,35 @@ class ComisionCalculoTest {
         igual("450", devengos.get(3).getMonto());
         igual("2000", devengos.get(4).getMonto());
         igual("50", devengos.get(5).getMonto());
+    }
+
+    @Test
+    void engancheConApartadoQueLlegaAl5PorCientoLiquidaLaComision() {
+        existente(true, ModalidadComision.PARCIALIDADES); // 5000 de 100000: el 5 % del terreno es 5000
+        pago(TipoAbono.APARTADO, "1000", MIERCOLES); // aún no llega: aporta la mitad
+        pago(TipoAbono.MENSUALIDAD, "2000", MIERCOLES.plusDays(3)); // la mitad
+        pago(TipoAbono.ENGANCHE, "4000", MIERCOLES.plusDays(7)); // apartado + enganche = 5000: liquida
+        pago(TipoAbono.MENSUALIDAD, "2000", MIERCOLES.plusDays(30)); // ya no cuenta
+
+        service.sincronizar(venta);
+
+        assertEquals(3, devengos.size());
+        igual("500", devengos.get(0).getMonto());
+        igual("1000", devengos.get(1).getMonto());
+        igual("3500", devengos.get(2).getMonto()); // lo que faltaba
+        assertEquals(ModalidadComision.UNA_EXHIBICION, devengos.get(0).getComision().getModalidad());
+    }
+
+    @Test
+    void engancheBajoDel5PorCientoVaALaMitad() {
+        existente(true, ModalidadComision.PARCIALIDADES);
+        pago(TipoAbono.ENGANCHE, "4999.99", MIERCOLES);
+
+        service.sincronizar(venta);
+
+        assertEquals(1, devengos.size());
+        igual("2500.00", devengos.get(0).getMonto());
+        assertEquals(ModalidadComision.PARCIALIDADES, devengos.get(0).getComision().getModalidad());
     }
 
     @Test
@@ -528,6 +557,23 @@ class ComisionCalculoTest {
         assertEquals(1, entregas.size());
         igual("2000", entregas.get(0).getMonto());
         org.mockito.Mockito.verify(gastos).delete(gastosGuardados.get(1));
+    }
+
+    @Test
+    void restaurarPagoRecortadoSoloSiSigueRecortadoYAlcanzaLoGenerado() {
+        VentaComision c = existente(true, ModalidadComision.PARCIALIDADES);
+        when(venta.isContratoFirmado()).thenReturn(true);
+        pago(TipoAbono.ENGANCHE, "6000", MIERCOLES); // pasa del 5 %: genera los 5000
+        service.sincronizar(venta);
+        service.entregar(c.getId(), entrega("3000")); // como quedó tras el recorte
+
+        assertEquals(false, service.restaurarPagoRecortado(c.getId(), new BigDecimal("2999"), new BigDecimal("5000")));
+        assertEquals(false, service.restaurarPagoRecortado(c.getId(), new BigDecimal("3000"), new BigDecimal("5000.01")));
+        assertTrue(service.restaurarPagoRecortado(c.getId(), new BigDecimal("3000"), new BigDecimal("5000")));
+
+        igual("5000", entregas.get(0).getMonto());
+        igual("5000", entregas.get(0).getEntregadoAcumulado());
+        igual("5000", gastosGuardados.get(0).getMonto());
     }
 
     /** Pequeño ayudante para verificar el guardado de la comisión nueva. */

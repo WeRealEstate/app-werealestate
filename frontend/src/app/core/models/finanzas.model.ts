@@ -177,11 +177,20 @@ export interface ComisionDevolucion {
   fechaCreacion: string;
 }
 
+/** Un abono vigente del cliente con lo que aportó a la comisión (0 si ya estaba completa). */
+export interface AbonoClienteComision {
+  fecha: string;
+  concepto: string;
+  monto: number;
+  aComision: number;
+}
+
 export interface ComisionDetalle {
   comision: Comision;
   devengos: ComisionDevengo[];
   entregas: ComisionEntrega[];
   devoluciones: ComisionDevolucion[];
+  abonosCliente: AbonoClienteComision[];
 }
 
 export interface ComisionResumen {

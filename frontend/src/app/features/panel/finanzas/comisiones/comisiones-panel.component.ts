@@ -33,7 +33,7 @@ interface GrupoAsesor {
   porPagar: number;
 }
 
-/** Un abono del cliente con la parte que le toca al asesor (la mitad, hasta completar la comisión). */
+/** Un abono del cliente con la parte que le toca al asesor (la mitad, o lo que falte si el enganche llegó al 5 %). */
 interface FilaCliente {
   concepto: string;
   fecha: string;
@@ -116,21 +116,14 @@ export class ComisionesPanelComponent {
 
   /** Abonos del cliente en orden, con lo que cada uno aporta a la comisión (mismo cálculo que el servidor). */
   readonly filasCliente = computed<FilaCliente[]>(() => {
-    const a = this.amortizacion();
+    const d = this.detalle();
     const c = this.ficha();
-    if (!a || !c) return [];
-    const pagos: { concepto: string; fecha: string; monto: number }[] = [];
-    for (const fila of a.detalleMensual) {
-      for (const p of fila.pagos) pagos.push({ concepto: fila.concepto, fecha: p.fecha, monto: p.monto });
-    }
-    pagos.sort((x, y) => x.fecha.localeCompare(y.fecha));
-    let saldo = a.precio;
-    let falta = c.monto;
-    return pagos.map((p) => {
+    if (!d || !c) return [];
+    // Lo que aporta cada abono lo calcula el servidor (ComisionService): así la ficha y lo pagado siempre cuadran.
+    let saldo = this.amortizacion()?.precio ?? c.base;
+    return d.abonosCliente.map((p) => {
       saldo -= p.monto;
-      const aporte = Math.max(0, Math.min(Math.round(p.monto * 50) / 100, falta));
-      falta -= aporte;
-      return { ...p, saldoTerreno: Math.max(0, saldo), aComision: aporte };
+      return { concepto: p.concepto, fecha: p.fecha, monto: p.monto, saldoTerreno: Math.max(0, saldo), aComision: p.aComision };
     });
   });
 

@@ -15,6 +15,10 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.31.0', fecha: '2026-11-27', cambios: [
+    "Comisiones: si el enganche, sumado al apartado, llega al 5 % del costo del terreno, la comisión del asesor se libera completa con ese pago. Si no llega, cada pago sigue aportando la mitad.",
+    "Comisiones: en S-47 el pago al asesor vuelve a ser de $9,818.40, también su egreso en Gastos. La ficha de cada venta muestra lo que aportó cada pago del cliente, calculado igual que lo pagado.",
+  ] },
   { version: '12.30.4', fecha: '2026-11-27', cambios: [
     "Comisiones: junto al número de ventas se muestra cuántos lotes se vendieron, en cada asesor y en el total.",
   ] },
