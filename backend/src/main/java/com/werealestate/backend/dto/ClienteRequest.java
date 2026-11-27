@@ -40,5 +40,7 @@ public record ClienteRequest(
         UbicacionDocumento expedienteUbicacion,
         @Size(max = 500) String expedienteDriveUrl,
         Boolean activo,
-        @Size(max = 80) String paisResidencia) {
+        @Size(max = 80) String paisResidencia,
+        // null = sin cambios al editar (sin factura al crear).
+        Boolean requiereFactura) {
 }

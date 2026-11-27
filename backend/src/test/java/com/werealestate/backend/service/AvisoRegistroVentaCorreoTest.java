@@ -23,6 +23,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 /** El aviso "¡Es hora de realizar un contrato!" que le llega a finanzas por cada registro de venta. */
 class AvisoRegistroVentaCorreoTest {
@@ -45,6 +46,17 @@ class AvisoRegistroVentaCorreoTest {
 
     private AvisoRegistroVentaCorreo aviso(String remitente) {
         return new AvisoRegistroVentaCorreo(proveedor, remitente, new long[] {0, 0, 0});
+    }
+
+    @Test
+    void registraResultadoSinReenviarSiFallaElHistorial() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        doThrow(new RuntimeException("Base no disponible")).when(jdbc).update(any(String.class), any(), any(), any(), any());
+        var registro = new AvisoRegistroVentaCorreo.RegistroDeVentaRecibido(
+                "Ana", "Beto", "SAMAI", "Registro", "S-7", List.of("Lote 1"), 7L);
+        new AvisoRegistroVentaCorreo(proveedor, "avisos.we@gmail.com", new long[] {0, 0, 0}, jdbc).alRecibirRegistro(registro);
+        verify(sender, times(1)).send(any(MimeMessage.class));
+        verify(jdbc, times(1)).update(any(String.class), any(), any(), any(), any());
     }
 
     @Test

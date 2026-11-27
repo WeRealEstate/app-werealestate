@@ -56,7 +56,9 @@ public record VentaDto(
         // Mensualidad fija de la promoción (solo las de modalidad mensualidad fija; null en las de bono).
         BigDecimal promocionMensualidadFija,
         // true = la bienvenida y la liquidación le salen solas (sin botón para mandarlas a mano).
-        boolean correosAutomaticos) {
+        boolean correosAutomaticos,
+        // El cliente titular pide factura (se marca en su ficha).
+        boolean clienteRequiereFactura) {
 
     public static VentaDto from(
             Venta venta,
@@ -104,6 +106,7 @@ public record VentaDto(
                 venta.getPromocionNombre(),
                 venta.getPromocionBono(),
                 venta.getPromocionMensualidadFija(),
-                venta.isCorreosAutomaticos());
+                venta.isCorreosAutomaticos(),
+                venta.getClienteRef() != null && venta.getClienteRef().isRequiereFactura());
     }
 }

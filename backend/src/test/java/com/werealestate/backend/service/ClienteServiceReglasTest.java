@@ -67,7 +67,7 @@ class ClienteServiceReglasTest {
     private static ClienteRequest peticion(String curp, String rfc, LocalDate nacimiento, String pais, String estado) {
         return new ClienteRequest(" Ana ", " Gómez ", " Pérez ", nacimiento, " 9511234567 ", null, "ana@correo.com", curp,
                 rfc, null, null, null, null, "Calle 1", "Centro", "Oaxaca", estado, "68000", null, null, null, null, null,
-                null, null, null, null, null, pais);
+                null, null, null, null, null, pais, null);
     }
 
     private static ClienteRequest valida() {

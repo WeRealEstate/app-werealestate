@@ -490,7 +490,7 @@ public class WeFormPublicoService {
         // el registro se guarda igual y no sale correo). Sale solo si todo lo anterior queda guardado (ver AvisoRegistroVentaCorreo).
         avisarAFinanzas(form, new AvisoRegistroVentaCorreo.RegistroDeVentaRecibido(
                 resuelto.cliente().nombreCompleto(), asesor.nombre(), form.getDesarrollo().getNombre(), form.getNombre(),
-                venta.getEtiqueta(), lotes.stream().map(l -> "Manzana " + l.getManzana() + ", Lote " + l.getNumeroLote()).toList()));
+                venta.getEtiqueta(), lotes.stream().map(l -> "Manzana " + l.getManzana() + ", Lote " + l.getNumeroLote()).toList(), venta.getId()));
         return new WeFormDtos.EnvioResultado(
                 respuesta.getId(), venta.getEtiqueta(), resuelto.cliente().nombreCompleto(), resuelto.nuevo());
     }
@@ -811,7 +811,9 @@ public class WeFormPublicoService {
                 texto(d, DestinoPregunta.MUNICIPIO), estadoDeLista != null ? estadoDeLista : texto(d, DestinoPregunta.ESTADO),
                 texto(d, DestinoPregunta.CODIGO_POSTAL), v.get(CampoCliente.BENEFICIARIO_NOMBRE),
                 v.get(CampoCliente.BENEFICIARIO_PARENTESCO), null, null, null, null, null, null, null, null,
-                paisResidencia);
+                paisResidencia,
+                // La factura no se pregunta en el registro: queda sin factura y la cambia administración.
+                null);
     }
 
     private static String minusculas(String t) {

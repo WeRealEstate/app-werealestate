@@ -30,6 +30,22 @@ export interface BuscarVentasParams {
   desarrolloId?: number | null;
 }
 
+export interface SeguimientoCorreo {
+  fecha: string;
+  tipo: string;
+  estado: 'ENVIADO' | 'FALLIDO' | 'NO_ENVIADO' | 'PENDIENTE' | 'PREVISTO';
+  cliente: string;
+  destino: string | null;
+  venta: string;
+  detalle: string | null;
+}
+
+export interface SeguimientoCorreos {
+  mes: string;
+  recordatoriosActivos: boolean;
+  entradas: SeguimientoCorreo[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class VentasService {
   private readonly http = inject(HttpClient);
@@ -97,6 +113,10 @@ export class VentasService {
 
   configCorreos(): Promise<ConfigCorreos> {
     return firstValueFrom(this.http.get<ConfigCorreos>(`${this.baseUrl}/correos-automaticos`));
+  }
+
+  seguimientoCorreos(): Promise<SeguimientoCorreos> {
+    return firstValueFrom(this.http.get<SeguimientoCorreos>(`${this.baseUrl}/seguimiento-correos`));
   }
 
   /** Enciende o apaga un correo automático y devuelve los tres interruptores. */

@@ -140,6 +140,8 @@ export interface Cliente {
   mensualidadesAtrasadas: number;
   atrasadoDesde: string | null;
   ventas: ClienteVenta[];
+  /** Pide factura (sin factura de origen). */
+  requiereFactura: boolean;
 }
 
 export interface ClienteRequest {
@@ -173,6 +175,8 @@ export interface ClienteRequest {
   expedienteDriveUrl: string | null;
   /** null = sin cambios al editar. */
   activo: boolean | null;
+  /** null = sin cambios al editar (sin factura al crear). */
+  requiereFactura: boolean | null;
 }
 
 /** Lo que se borra al eliminar un cliente (ver backend EliminacionClienteService). ventas: las suyas como titular (se

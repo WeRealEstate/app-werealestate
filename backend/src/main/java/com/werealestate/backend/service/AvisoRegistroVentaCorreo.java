@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
@@ -39,23 +40,35 @@ public class AvisoRegistroVentaCorreo {
     /** Lo que publica WeFormPublicoService.enviar al guardar un registro de venta. Lleva ya los textos del correo:
      * en segundo plano no hay transacción abierta para leer la venta. */
     public record RegistroDeVentaRecibido(
-            String cliente, String asesor, String desarrollo, String formulario, String numeroVenta, List<String> lotes) {}
+            String cliente, String asesor, String desarrollo, String formulario, String numeroVenta, List<String> lotes,
+            Long ventaId) {
+        public RegistroDeVentaRecibido(String cliente, String asesor, String desarrollo, String formulario,
+                String numeroVenta, List<String> lotes) {
+            this(cliente, asesor, desarrollo, formulario, numeroVenta, lotes, null);
+        }
+    }
 
     private final ObjectProvider<JavaMailSender> mailSender;
     private final String remitente;
     private final long[] esperasMs;
+    private final JdbcTemplate jdbc;
 
     @Autowired
     public AvisoRegistroVentaCorreo(
-            ObjectProvider<JavaMailSender> mailSender, @Value("${spring.mail.username:}") String remitente) {
-        this(mailSender, remitente, ESPERAS_MS);
+            ObjectProvider<JavaMailSender> mailSender, @Value("${spring.mail.username:}") String remitente, JdbcTemplate jdbc) {
+        this(mailSender, remitente, ESPERAS_MS, jdbc);
     }
 
     /** Para las pruebas: sin esperar entre intentos. */
     AvisoRegistroVentaCorreo(ObjectProvider<JavaMailSender> mailSender, String remitente, long[] esperasMs) {
+        this(mailSender, remitente, esperasMs, null);
+    }
+
+    AvisoRegistroVentaCorreo(ObjectProvider<JavaMailSender> mailSender, String remitente, long[] esperasMs, JdbcTemplate jdbc) {
         this.mailSender = mailSender;
         this.remitente = remitente == null ? "" : remitente.trim();
         this.esperasMs = esperasMs;
+        this.jdbc = jdbc;
     }
 
     @Async
@@ -65,6 +78,7 @@ public class AvisoRegistroVentaCorreo {
         if (sender == null || remitente.isEmpty()) {
             log.info("Correo sin configurar (MAIL_USERNAME / MAIL_PASSWORD): no se avisó a finanzas de la venta {}",
                     registro.numeroVenta());
+            registrar(registro, "NO_ENVIADO", "Correo de la aplicación sin configurar");
             return;
         }
         for (int intento = 1; intento <= esperasMs.length; intento++) {
@@ -72,10 +86,12 @@ public class AvisoRegistroVentaCorreo {
                 if (esperasMs[intento - 1] > 0) Thread.sleep(esperasMs[intento - 1]);
                 sender.send(mensaje(sender, registro));
                 log.info("Aviso de la venta {} enviado a {}", registro.numeroVenta(), DESTINATARIO);
+                registrar(registro, "ENVIADO", null);
                 return;
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 log.warn("Se interrumpió el aviso de la venta {}", registro.numeroVenta());
+                registrar(registro, "FALLIDO", "Envío interrumpido");
                 return;
             } catch (Exception e) {
                 log.warn("No se pudo enviar el aviso de la venta {} (intento {} de {}): {}",
@@ -83,6 +99,18 @@ public class AvisoRegistroVentaCorreo {
             }
         }
         log.error("No se envió el aviso de la venta {} a {}", registro.numeroVenta(), DESTINATARIO);
+        registrar(registro, "FALLIDO", "No se pudo enviar después de " + esperasMs.length + " intentos");
+    }
+
+    private void registrar(RegistroDeVentaRecibido registro, String estado, String detalle) {
+        if (jdbc == null || registro.ventaId() == null) return;
+        try {
+            jdbc.update("INSERT INTO historial_aviso_registro_venta (venta_id, fecha, estado, detalle) VALUES (?, ?, ?, ?)",
+                    registro.ventaId(), java.time.LocalDateTime.now(), estado, detalle);
+        } catch (RuntimeException e) {
+            // Registrar el resultado no debe hacer que un correo ya enviado se vuelva a enviar.
+            log.error("No se pudo guardar el historial del aviso de la venta {}", registro.numeroVenta(), e);
+        }
     }
 
     private MimeMessage mensaje(JavaMailSender sender, RegistroDeVentaRecibido registro)

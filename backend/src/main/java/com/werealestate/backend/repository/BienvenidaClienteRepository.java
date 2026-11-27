@@ -9,4 +9,6 @@ public interface BienvenidaClienteRepository extends JpaRepository<BienvenidaCli
     Optional<BienvenidaCliente> findFirstByVentaIdOrderByEnviadoEnDescIdDesc(Long ventaId);
 
     java.util.List<BienvenidaCliente> findByVentaId(Long ventaId);
+
+    java.util.List<BienvenidaCliente> findByEnviadoEnGreaterThanEqualAndEnviadoEnLessThan(java.time.LocalDateTime desde, java.time.LocalDateTime hasta);
 }

@@ -15,6 +15,18 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.23.1', fecha: '2026-11-27', cambios: [
+    "Envío de correos: el mes del subtítulo ya no sale como «Noviembre De 2026».",
+  ] },
+  { version: '12.23.0', fecha: '2026-11-27', cambios: [
+    "Ventas: nuevo apartado «Ver envío de correos» con los correos enviados, pendientes y no enviados del mes, y los próximos recordatorios previstos. Los avisos de registro a Finanzas se guardan a partir de esta versión.",
+  ] },
+  { version: '12.22.0', fecha: '2026-11-26', cambios: [
+    "Clientes: nuevo dato «Factura» (Sin factura de origen, también en los registros de venta de We Forms); administración lo cambia en la ficha. El detalle de la venta avisa cuando el titular requiere factura.",
+  ] },
+  { version: '12.21.1', fecha: '2026-11-26', cambios: [
+    "Datos del cliente y We Forms: «Lugar de nacimiento» ahora se llama «Originario de».",
+  ] },
   { version: '12.21.0', fecha: '2026-11-26', cambios: [
     "We Forms: la pregunta vinculada a «Lugar de nacimiento» ahora pide el país donde nació; con México se elige el estado de una lista y con otro país se escribe la ciudad. En la ficha del cliente queda como «Oaxaca, México».",
     "We Forms: la nacionalidad se llena sola con el país de nacimiento (México → Mexicana, Estados Unidos → Estadounidense…) y no se puede cambiar. Sin pregunta de lugar de nacimiento, la nacionalidad se sigue contestando libre.",

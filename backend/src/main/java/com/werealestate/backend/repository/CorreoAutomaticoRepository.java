@@ -5,6 +5,7 @@ import com.werealestate.backend.model.EstadoCorreoAutomatico;
 import com.werealestate.backend.model.TipoCorreoAutomatico;
 import com.werealestate.backend.model.Venta;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -14,6 +15,8 @@ public interface CorreoAutomaticoRepository extends JpaRepository<CorreoAutomati
     List<CorreoAutomatico> findByEstadoOrderById(EstadoCorreoAutomatico estado);
 
     List<CorreoAutomatico> findByVentaIdOrderByCreadoEnDescIdDesc(Long ventaId);
+
+    List<CorreoAutomatico> findByResueltoEnGreaterThanEqualAndResueltoEnLessThan(LocalDateTime desde, LocalDateTime hasta);
 
     boolean existsByVentaIdAndTipoAndFechaPago(Long ventaId, TipoCorreoAutomatico tipo, LocalDate fechaPago);
 

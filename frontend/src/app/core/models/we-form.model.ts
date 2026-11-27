@@ -88,7 +88,7 @@ export type CampoCliente =
 /** Cada dato con su nombre y los tipos de pregunta que le sirven (las mismas reglas que el servidor). */
 export const CAMPOS_CLIENTE: { campo: CampoCliente; etiqueta: string; tipos: TipoPreguntaForm[] }[] = [
   { campo: 'NACIONALIDAD', etiqueta: 'Nacionalidad', tipos: ['CORTA', 'DESPLEGABLE', 'OPCION_MULTIPLE', 'PAIS'] },
-  { campo: 'LUGAR_NACIMIENTO', etiqueta: 'Lugar de nacimiento', tipos: ['CORTA', 'PARRAFO', 'DESPLEGABLE', 'OPCION_MULTIPLE', 'PAIS'] },
+  { campo: 'LUGAR_NACIMIENTO', etiqueta: 'Originario de', tipos: ['CORTA', 'PARRAFO', 'DESPLEGABLE', 'OPCION_MULTIPLE', 'PAIS'] },
   { campo: 'ESTADO_CIVIL', etiqueta: 'Estado civil', tipos: ['DESPLEGABLE', 'OPCION_MULTIPLE'] },
   { campo: 'OCUPACION', etiqueta: 'Ocupación', tipos: ['CORTA', 'PARRAFO', 'DESPLEGABLE', 'OPCION_MULTIPLE'] },
   { campo: 'BENEFICIARIO_NOMBRE', etiqueta: 'Nombre del beneficiario', tipos: ['CORTA'] },

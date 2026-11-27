@@ -91,6 +91,7 @@ export class ClienteFormModalComponent implements OnInit {
     expedienteUbicacion: this.fb.control<UbicacionDocumento | ''>('', { nonNullable: true }),
     expedienteDriveUrl: this.fb.control('', { nonNullable: true }),
     activo: this.fb.control(true, { nonNullable: true }),
+    requiereFactura: this.fb.control(false, { nonNullable: true }),
   });
 
   // --- País y estado: con México, el estado se elige de la lista; con otro país es texto libre ---
@@ -177,7 +178,7 @@ export class ClienteFormModalComponent implements OnInit {
     }
     if (!this.form.controls.lugarNacimiento.value && datos.entidad) {
       this.form.controls.lugarNacimiento.setValue(datos.entidad);
-      llenados.push('lugar de nacimiento');
+      llenados.push('originario de');
     }
     this.autocompletado.set(llenados);
   }
@@ -218,6 +219,7 @@ export class ClienteFormModalComponent implements OnInit {
         expedienteUbicacion: c.expedienteUbicacion ?? '',
         expedienteDriveUrl: c.expedienteDriveUrl ?? '',
         activo: c.activo,
+        requiereFactura: c.requiereFactura,
       });
     } else {
       const partes = this.nombreInicial().trim().split(/\s+/).filter(Boolean);
@@ -267,6 +269,7 @@ export class ClienteFormModalComponent implements OnInit {
       expedienteUbicacion: v.expedienteUbicacion || null,
       expedienteDriveUrl: texto(v.expedienteDriveUrl),
       activo: this.esEdicion() ? v.activo : null,
+      requiereFactura: v.requiereFactura,
     };
 
     this.guardando.set(true);

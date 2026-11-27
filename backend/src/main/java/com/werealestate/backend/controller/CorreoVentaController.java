@@ -6,6 +6,7 @@ import com.werealestate.backend.model.NumeracionVisible;
 import com.werealestate.backend.model.TipoCorreoAutomatico;
 import com.werealestate.backend.service.CorreoAutomaticoService;
 import com.werealestate.backend.service.CorreoVentaConsultaService;
+import com.werealestate.backend.service.SeguimientoCorreosService;
 import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,10 +24,17 @@ public class CorreoVentaController {
     private final CorreoVentaConsultaService servicio;
 
     private final CorreoAutomaticoService envio;
+    private final SeguimientoCorreosService seguimiento;
 
-    public CorreoVentaController(CorreoVentaConsultaService servicio, CorreoAutomaticoService envio) {
+    public CorreoVentaController(CorreoVentaConsultaService servicio, CorreoAutomaticoService envio, SeguimientoCorreosService seguimiento) {
         this.servicio = servicio;
         this.envio = envio;
+        this.seguimiento = seguimiento;
+    }
+
+    @GetMapping("/seguimiento-correos")
+    public SeguimientoCorreosService.Resumen seguimiento() {
+        return seguimiento.mesActual();
     }
 
     /** Manda ahora un correo automático que no salió y devuelve el registro actualizado. */

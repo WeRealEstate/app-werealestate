@@ -61,6 +61,10 @@ public class Cliente {
     @Column(length = 80)
     private String nacionalidad;
 
+    /** Si pide factura (V99): sin factura de origen; se cambia desde la ficha. */
+    @Column(name = "requiere_factura", nullable = false)
+    private boolean requiereFactura;
+
     /** País de residencia, uno de los de Paises (null = sin dato). */
     @Column(name = "pais_residencia", length = 80)
     private String paisResidencia;
@@ -231,6 +235,8 @@ public class Cliente {
     public String getLugarNacimiento() { return lugarNacimiento; }
     public String getNacionalidad() { return nacionalidad; }
     public String getPaisResidencia() { return paisResidencia; }
+    public boolean isRequiereFactura() { return requiereFactura; }
+    public void setRequiereFactura(boolean requiereFactura) { this.requiereFactura = requiereFactura; }
     public void setPaisResidencia(String paisResidencia) { this.paisResidencia = paisResidencia; }
     public EstadoCivil getEstadoCivil() { return estadoCivil; }
     public String getOcupacion() { return ocupacion; }

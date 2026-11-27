@@ -51,7 +51,7 @@
             }
           </div>
           <div>
-            <label for="c-lugar" class="mb-1 block text-xs font-medium text-ink-muted">Lugar de nacimiento</label>
+            <label for="c-lugar" class="mb-1 block text-xs font-medium text-ink-muted">Originario de</label>
             <input id="c-lugar" type="text" formControlName="lugarNacimiento"  class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50" />
             @if (form.controls.lugarNacimiento.invalid && form.controls.lugarNacimiento.touched) {
               <p class="mt-1 text-xs text-red-600 dark:text-red-400">Valor no válido.</p>
@@ -102,6 +102,15 @@
               <p class="mt-1 text-xs text-red-600 dark:text-red-400" data-testid="rfc-invalido">El formato del RFC no es válido.</p>
             }
           </div>
+        </div>
+
+        <h3 class="pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Facturación</h3>
+        <div class="sm:w-1/2">
+          <label for="c-factura" class="mb-1 block text-xs font-medium text-ink-muted">Factura</label>
+          <select id="c-factura" formControlName="requiereFactura" class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-we-primary/50">
+            <option [ngValue]="false">Sin factura</option>
+            <option [ngValue]="true">Requiere factura</option>
+          </select>
         </div>
 
         <h3 class="pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Contacto</h3>

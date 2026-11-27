@@ -61,7 +61,8 @@ public record ClienteDto(
         int pagosAtrasados,
         int mensualidadesAtrasadas,
         LocalDate atrasadoDesde,
-        List<ClienteVentaDto> ventas) {
+        List<ClienteVentaDto> ventas,
+        boolean requiereFactura) {
 
     public record ClienteVentaDto(
             Long ventaId,
@@ -154,6 +155,7 @@ public record ClienteDto(
                 ventas.stream().mapToInt(ClienteVentaDto::pagosAtrasados).sum(),
                 ventas.stream().mapToInt(ClienteVentaDto::mensualidadesAtrasadas).sum(),
                 atrasadoDesde,
-                ventas);
+                ventas,
+                c.isRequiereFactura());
     }
 }

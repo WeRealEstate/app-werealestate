@@ -329,6 +329,7 @@ public class ClienteService {
                 r.fuente(), limpio(r.fuenteDetalle()), captadoUsuario, captadoAsesor, limpio(r.notas()),
                 ubicacion, url);
         c.setPaisResidencia(pais);
+        if (r.requiereFactura() != null) c.setRequiereFactura(r.requiereFactura());
     }
 
     private static void validarMayorDeEdad(LocalDate nacimiento) {

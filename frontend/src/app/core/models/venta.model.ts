@@ -86,6 +86,8 @@ export interface Venta {
   cliente: string;
   /** El cliente registrado al que está ligada (null solo en datos muy viejos). */
   clienteId: number | null;
+  /** El titular pide factura (se marca en su ficha). */
+  clienteRequiereFactura: boolean;
   /** Copropietarios además del cliente principal (máximo 4). */
   copropietarios: { id: number; numero: number; nombreCompleto: string }[];
   asesor: VentaAsesor;

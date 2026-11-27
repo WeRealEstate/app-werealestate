@@ -9,4 +9,6 @@ public interface LiquidacionAvisoRepository extends JpaRepository<LiquidacionAvi
     Optional<LiquidacionAviso> findFirstByVentaIdOrderByEnviadoEnDescIdDesc(Long ventaId);
 
     java.util.List<LiquidacionAviso> findByVentaId(Long ventaId);
+
+    java.util.List<LiquidacionAviso> findByEnviadoEnGreaterThanEqualAndEnviadoEnLessThan(java.time.LocalDateTime desde, java.time.LocalDateTime hasta);
 }

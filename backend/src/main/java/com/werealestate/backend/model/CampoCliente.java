@@ -12,7 +12,7 @@ import java.util.Set;
 public enum CampoCliente {
     NACIONALIDAD("Nacionalidad", 80,
             EnumSet.of(TipoPreguntaForm.CORTA, TipoPreguntaForm.DESPLEGABLE, TipoPreguntaForm.OPCION_MULTIPLE, TipoPreguntaForm.PAIS)),
-    LUGAR_NACIMIENTO("Lugar de nacimiento", 120,
+    LUGAR_NACIMIENTO("Originario de", 120,
             EnumSet.of(TipoPreguntaForm.CORTA, TipoPreguntaForm.PARRAFO, TipoPreguntaForm.DESPLEGABLE,
                     TipoPreguntaForm.OPCION_MULTIPLE, TipoPreguntaForm.PAIS)),
     ESTADO_CIVIL("Estado civil", 0, EnumSet.of(TipoPreguntaForm.DESPLEGABLE, TipoPreguntaForm.OPCION_MULTIPLE)),

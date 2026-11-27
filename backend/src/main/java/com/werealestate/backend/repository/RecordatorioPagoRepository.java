@@ -9,4 +9,6 @@ public interface RecordatorioPagoRepository extends JpaRepository<RecordatorioPa
     Optional<RecordatorioPago> findFirstByVentaIdOrderByEnviadoEnDescIdDesc(Long ventaId);
 
     java.util.List<RecordatorioPago> findByVentaId(Long ventaId);
+
+    java.util.List<RecordatorioPago> findByEnviadoEnGreaterThanEqualAndEnviadoEnLessThan(java.time.LocalDateTime desde, java.time.LocalDateTime hasta);
 }
