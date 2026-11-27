@@ -26,6 +26,8 @@ final class ComisionTotales {
     private final Map<Long, BigDecimal> devuelto = new HashMap<>();
     /** Comisiones con la regla nueva cuyo contrato aún no está firmado: se acumulan pero no se entregan. */
     private final Set<Long> bloqueadas = new HashSet<>();
+    /** Lotes de cada venta (ventaId → lotes), para mostrarlos junto al número de ventas. */
+    final Map<Long, Integer> lotesPorVenta = new HashMap<>();
     private final Map<Long, FinanzasService.CobroVenta> cobros;
 
     private ComisionTotales(List<VentaComision> comisiones, Map<Long, FinanzasService.CobroVenta> cobros) {
@@ -89,6 +91,10 @@ final class ComisionTotales {
 
     BigDecimal devengado(Long id) {
         return devengado.getOrDefault(id, BigDecimal.ZERO);
+    }
+
+    int lotes(Long ventaId) {
+        return ventaId == null ? 0 : lotesPorVenta.getOrDefault(ventaId, 0);
     }
 
     boolean bloqueada(Long id) {

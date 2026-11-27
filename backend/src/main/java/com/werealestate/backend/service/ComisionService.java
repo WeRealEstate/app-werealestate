@@ -981,7 +981,18 @@ public class ComisionService {
         return ComisionTotales.deUna(c, cobro, devengos, entregas, devoluciones);
     }
 
+    /** Cuenta, de una sola vez, los lotes de las ventas de estas comisiones. */
+    private void cargarLotes(ComisionTotales totales) {
+        List<Long> ids = totales.comisiones.stream()
+                .map(VentaComision::getVenta).filter(java.util.Objects::nonNull).map(Venta::getId).distinct().toList();
+        if (ids.isEmpty()) return;
+        for (Object[] fila : ventaLoteRepository.contarLotesPorVenta(ids)) {
+            totales.lotesPorVenta.put((Long) fila[0], ((Number) fila[1]).intValue());
+        }
+    }
+
     private ComisionDto aDto(VentaComision c, ComisionTotales totales) {
+        if (totales.lotesPorVenta.isEmpty()) cargarLotes(totales);
         BigDecimal devengado = totales.devengado(c.getId());
         BigDecimal entregado = totales.entregado(c.getId());
         // Cancelada o detenida (contrato sin firmar): no hay nada que se pueda entregar.
@@ -1032,7 +1043,8 @@ public class ComisionService {
                 c.getVenta() != null && c.getVenta().isContratoFirmado(),
                 c.getVenta() != null ? c.getVenta().getContratoFechaFirma() : null,
                 totales.bloqueada(c.getId()),
-                c.isSecundaria());
+                c.isSecundaria(),
+                totales.lotes(venta != null ? venta.getId() : null));
     }
 
     private static EstadoComision estadoDe(VentaComision c, BigDecimal devengado, BigDecimal entregado) {

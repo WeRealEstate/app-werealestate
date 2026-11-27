@@ -201,7 +201,7 @@
       <div class="rounded-xl border border-border bg-surface p-4">
         <p class="text-xs text-ink-muted">Comisión total</p>
         <p class="mt-1 text-xl font-semibold text-ink">${{ dinero(totales().total) }}</p>
-        <p class="text-xs text-ink-muted">{{ vigentes().length }} {{ vigentes().length === 1 ? 'venta' : 'ventas' }}</p>
+        <p class="text-xs text-ink-muted">{{ vigentes().length }} {{ vigentes().length === 1 ? 'venta' : 'ventas' }} · {{ totales().lotes }} {{ totales().lotes === 1 ? 'lote' : 'lotes' }}</p>
       </div>
       <div class="rounded-xl border border-border bg-surface p-4">
         <p class="text-xs text-ink-muted">Pagado a asesores</p>
@@ -242,7 +242,7 @@
             <span class="min-w-0 flex-1">
               <span class="block truncate font-medium text-ink">{{ g.nombre }}</span>
               <span class="text-xs text-ink-muted">
-                {{ g.comisiones.length }} {{ g.comisiones.length === 1 ? 'venta' : 'ventas' }}{{ g.externo ? ' · externo' : '' }}
+                {{ g.comisiones.length }} {{ g.comisiones.length === 1 ? 'venta' : 'ventas' }} · {{ g.lotes }} {{ g.lotes === 1 ? 'lote' : 'lotes' }}{{ g.externo ? ' · externo' : '' }}
               </span>
             </span>
             <span class="text-right">

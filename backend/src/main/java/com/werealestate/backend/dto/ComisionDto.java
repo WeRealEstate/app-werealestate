@@ -64,5 +64,7 @@ public record ComisionDto(
         LocalDate contratoFechaFirma,
         boolean bloqueadaPorContrato,
         // true en la comisión del copropietario de la venta (un segundo asesor).
-        boolean secundaria) {
+        boolean secundaria,
+        // Lotes de la venta (0 si ya no existe).
+        int lotes) {
 }

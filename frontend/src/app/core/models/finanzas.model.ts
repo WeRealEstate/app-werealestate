@@ -96,6 +96,8 @@ export interface Comision {
   bloqueadaPorContrato: boolean;
   /** Comisión del copropietario de la venta (un segundo asesor). */
   secundaria: boolean;
+  /** Lotes de la venta (0 si ya no existe). */
+  lotes: number;
 }
 
 export interface ComisionDevengo {
