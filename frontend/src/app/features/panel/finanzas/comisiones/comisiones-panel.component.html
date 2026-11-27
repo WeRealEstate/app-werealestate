@@ -92,11 +92,6 @@
           El cliente ya generó ${{ dinero(c.devengado) }} de comisión, pero se libera hasta que se firme el contrato y se paga el sábado siguiente a la firma.
         </p>
       }
-      @if (c.porDevolver > 0) {
-        <p class="mt-3 text-sm text-red-700 dark:text-red-300">
-          Se le pagó ${{ dinero(c.porDevolver) }} de más: con la regla de la mitad, los abonos del cliente aún no lo cubren.
-        </p>
-      }
     </div>
 
     @if (cargandoFicha()) {

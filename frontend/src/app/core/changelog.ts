@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.30.1', fecha: '2026-11-27', cambios: [
+    "Comisiones: los pagos a asesores hechos con la regla anterior se ajustaron a la regla de la mitad. Lo pagado ahora es la suma de la mitad de cada pago del cliente, y el egreso en Gastos cambió igual. Se quitó el aviso de «pagado de más».",
+  ] },
   { version: '12.30.0', fecha: '2026-11-27', cambios: [
     "Comisiones: pantalla nueva. Se ven los asesores con su comisión, lo pagado y lo que falta por pagar; al abrir una venta aparece su ficha con los pagos del cliente, si ya firmó el contrato y los pagos de comisión al asesor.",
     "Comisiones: nueva regla para todas las ventas. Cada pago del cliente (apartado, enganche, mensualidad o aportación) genera la mitad de su monto en comisión. Lo generado se paga hasta que se firme el contrato, el sábado siguiente a la firma o al pago.",

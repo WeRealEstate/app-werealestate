@@ -650,6 +650,14 @@ public class ComisionService {
                         + " ganados en esta comisión para esta entrega; el cliente no ha pagado más");
             }
         }
+        aplicarCorreccion(entrega, fecha, monto);
+    }
+
+    /** Cambia el monto (y la fecha) de una entrega y recalcula el acumulado y los abonos del ticket de ella y de las
+     * posteriores. No toca el gasto: quien llama decide. */
+    private void aplicarCorreccion(VentaComisionEntrega entrega, LocalDate fecha, BigDecimal monto) {
+        Long comisionId = entrega.getComision().getId();
+        BigDecimal diferencia = monto.subtract(entrega.getMonto());
         entrega.corregir(fecha, monto);
         entregaRepository.save(entrega);
         if (diferencia.signum() == 0) return;
@@ -666,6 +674,42 @@ public class ComisionService {
             entregaAbonoRepository.flush();
             guardarAbonosDelTicket(e, ganado, e.getEntregadoAcumulado().subtract(e.getMonto()));
         }
+    }
+
+    /**
+     * Ajuste de una sola vez (12.30.1, decisión del usuario): con la regla de la mitad, lo pagado a un asesor no
+     * puede pasar de lo que generaron los pagos del cliente. Recorta lo pagado de más empezando por el pago más
+     * reciente: lo reduce (y su egreso en Gastos) o, si todo sobra, lo borra con su egreso. Lo llama
+     * {@code AjustePagosComisionMitad} al arrancar, solo la primera vez. Devuelve cuántas comisiones cambió.
+     */
+    public int recortarPagosDeMas() {
+        int cambiadas = 0;
+        for (VentaComision c : comisionRepository.findAll()) {
+            if (c.isCancelada() || c.getVenta() == null) continue;
+            ComisionTotales totales = totalesDe(c);
+            BigDecimal antes = totales.entregado(c.getId());
+            BigDecimal sobra = antes.subtract(totales.devengado(c.getId()));
+            if (sobra.signum() <= 0) continue;
+            for (VentaComisionEntrega e : entregaRepository.findByComisionIdOrderByFechaDescIdDesc(c.getId())) {
+                if (sobra.signum() <= 0) break;
+                Gasto gasto = e.getGasto();
+                if (sobra.compareTo(e.getMonto()) >= 0) {
+                    sobra = sobra.subtract(e.getMonto());
+                    entregaRepository.delete(e);
+                    entregaRepository.flush();
+                    if (gasto != null) gastoRepository.delete(gasto);
+                } else {
+                    BigDecimal nuevo = e.getMonto().subtract(sobra);
+                    sobra = BigDecimal.ZERO;
+                    aplicarCorreccion(e, e.getFecha(), nuevo);
+                    if (gasto != null) gasto.actualizar(gasto.getConcepto(), gasto.getFecha(), nuevo);
+                }
+            }
+            log.info("Comisión {} (venta {}): lo pagado bajó de ${} a ${} (regla de la mitad)",
+                    c.getId(), c.getVenta().getEtiquetaReal(), antes, totalesDe(c).entregado(c.getId()));
+            cambiadas++;
+        }
+        return cambiadas;
     }
 
     /** Lo ganado por la comisión, porción por porción y en el orden en que se entrega. */

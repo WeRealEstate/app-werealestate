@@ -494,6 +494,42 @@ class ComisionCalculoTest {
         org.mockito.Mockito.verify(gastos).delete(e.getGasto());
     }
 
+    @Test
+    void recortarPagosDeMasBajaElUltimoPagoYSuGastoHastaLoGenerado() {
+        VentaComision c = comisionConGanado(); // genera 3000
+        service.entregar(c.getId(), entrega("1000"));
+        service.entregar(c.getId(), entrega("2000"));
+        when(comisiones.findAll()).thenReturn(List.of(c));
+        doAnswer(inv -> entregas.remove(inv.getArgument(0))).when(entregaRepo).delete(any(VentaComisionEntrega.class));
+        pagosVigentes.remove(1); // se anuló la mensualidad: ahora solo genera 2000
+        service.sincronizar(venta);
+
+        assertEquals(1, service.recortarPagosDeMas());
+
+        igual("1000", entregas.get(0).getMonto());
+        igual("1000", entregas.get(1).getMonto());
+        igual("2000", entregas.get(1).getEntregadoAcumulado());
+        igual("1000", gastosGuardados.get(1).getMonto());
+        assertEquals(0, service.recortarPagosDeMas()); // ya cuadra
+    }
+
+    @Test
+    void recortarPagosDeMasBorraElPagoQueSobraCompleto() {
+        VentaComision c = comisionConGanado();
+        service.entregar(c.getId(), entrega("2000"));
+        service.entregar(c.getId(), entrega("1000"));
+        when(comisiones.findAll()).thenReturn(List.of(c));
+        doAnswer(inv -> entregas.remove(inv.getArgument(0))).when(entregaRepo).delete(any(VentaComisionEntrega.class));
+        pagosVigentes.remove(1);
+        service.sincronizar(venta);
+
+        service.recortarPagosDeMas();
+
+        assertEquals(1, entregas.size());
+        igual("2000", entregas.get(0).getMonto());
+        org.mockito.Mockito.verify(gastos).delete(gastosGuardados.get(1));
+    }
+
     /** Pequeño ayudante para verificar el guardado de la comisión nueva. */
     private static final class ArgumentCaptorHolder {
         static void assertMontoManual(VentaComisionRepository repo, String monto) {
