@@ -24,7 +24,8 @@
     [class.translate-x-0]="sidebarOpen()"
     [class.-translate-x-full]="!sidebarOpen()"
   >
-    <div class="relative flex items-center justify-center px-6 pb-5 pt-[max(1.25rem,env(safe-area-inset-top))]">
+    <!-- La campana y su panel deben quedar por encima de las flechas animadas del menú. -->
+    <div class="relative z-10 flex items-center justify-center px-6 pb-5 pt-[max(1.25rem,env(safe-area-inset-top))]">
       <img src="/images/we-logo-color.png" alt="We Real Estate" class="h-10 w-auto dark:hidden" width="93" height="40" />
       <img src="/images/we-logo.png" alt="" aria-hidden="true" class="hidden h-10 w-auto drop-shadow-[0_1px_6px_rgba(133,180,240,0.35)] dark:block" width="93" height="40" />
       @if (esEscritorio()) {

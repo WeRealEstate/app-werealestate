@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.29.2', fecha: '2026-11-27', cambios: [
+    "Avisos: las flechas del menú ya no se superponen al panel de notificaciones.",
+  ] },
   { version: '12.29.1', fecha: '2026-11-27', cambios: [
     "Menú: Finanzas ahora está dentro de Administración como un desplegable con Comisiones, Ingresos, Valor vendido y Gastos. Aparece cerrado y se abre solo al estar en una de esas pantallas.",
   ] },
