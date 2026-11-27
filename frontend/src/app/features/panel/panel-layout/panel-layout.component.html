@@ -71,11 +71,13 @@
           >
             <!-- Márgenes negativos con relleno igual: el overflow-hidden de la animación no recorta el aro de foco. -->
             <div class="-mx-1 -my-0.5 min-h-0 space-y-1 overflow-hidden px-1 py-0.5">
-          @for (item of section.items; track item.route) {
+          @for (item of section.items; track item.label) {
             <a
               [routerLink]="item.route"
+              [queryParams]="item.queryParams ?? null"
               routerLinkActive="bg-[var(--sb-active)] text-[var(--sb-active-fg)]"
-              [routerLinkActiveOptions]="{ exact: item.route !== '/panel/leads' && item.route !== '/panel/registrar-venta' }"
+              [routerLinkActiveOptions]="item.queryParams ? { paths: 'exact', queryParams: 'exact', fragment: 'ignored', matrixParams: 'ignored' } : { exact: item.route !== '/panel/leads' && item.route !== '/panel/registrar-venta' }"
+              [class]="esComisionesPredeterminadas(item) ? 'bg-[var(--sb-active)] text-[var(--sb-active-fg)]' : ''"
               (click)="closeSidebar()"
               class="flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-medium text-[var(--sb-fg-dim)]
                      hover:bg-[var(--sb-hover)] hover:text-[var(--sb-fg)] transition-[color,background-color,transform] duration-150 active:scale-[0.98]
@@ -109,6 +111,10 @@
                 <svg lucideFolderOpen [size]="18" aria-hidden="true"></svg>
               } @else if (item.icon === 'finanzas') {
                 <svg lucideHandCoins [size]="18" aria-hidden="true"></svg>
+              } @else if (item.icon === 'ingresos') {
+                <svg lucideTrendingUp [size]="18" aria-hidden="true"></svg>
+              } @else if (item.icon === 'valor') {
+                <svg lucideLandmark [size]="18" aria-hidden="true"></svg>
               } @else if (item.icon === 'gastos') {
                 <svg lucideWallet [size]="18" aria-hidden="true"></svg>
               } @else if (item.icon === 'asesores') {

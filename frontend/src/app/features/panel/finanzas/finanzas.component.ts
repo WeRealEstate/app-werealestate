@@ -1,5 +1,6 @@
-import { LucideChevronDown, LucideCircleAlert, LucideHandCoins, LucideLandmark, LucideTrendingUp, LucideWallet } from '@lucide/angular';
+import { LucideChevronDown, LucideCircleAlert } from '@lucide/angular';
 import { Component, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
@@ -85,7 +86,7 @@ interface GrupoSabado {
 @Component({
   selector: 'app-finanzas',
   standalone: true,
-  imports: [LucideChevronDown, LucideCircleAlert, LucideHandCoins, LucideTrendingUp, LucideLandmark, LucideWallet, MonedaInputDirective, WeLoaderComponent, SkeletonKpisComponent, FormsModule, RouterLink, FinanzasIngresosComponent, FinanzasValorComponent, GastosListComponent],
+  imports: [LucideChevronDown, LucideCircleAlert, MonedaInputDirective, WeLoaderComponent, SkeletonKpisComponent, FormsModule, RouterLink, FinanzasIngresosComponent, FinanzasValorComponent, GastosListComponent],
   templateUrl: './finanzas.component.html',
 })
 export class FinanzasComponent {
@@ -111,6 +112,7 @@ export class FinanzasComponent {
       : []),
     ...(this.auth.tieneModulo('GASTOS') ? [{ id: 'gastos' as Pestana, label: 'Gastos' }] : []),
   ];
+  readonly titulo = computed(() => this.pestanas.find((t) => t.id === this.pestana())?.label ?? 'Finanzas');
 
   readonly estados = ESTADOS;
   readonly estadoLabels = ESTADO_COMISION_LABELS;
@@ -245,9 +247,11 @@ export class FinanzasComponent {
   readonly errorModal = signal<string | null>(null);
 
   constructor() {
-    const pedida = this.route.snapshot.queryParamMap.get('pestana');
-    const inicial = this.pestanas.find((t) => t.id === pedida) ?? this.pestanas[0];
-    if (inicial) this.abrirPestana(inicial.id);
+    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
+      const pedida = params.get('pestana');
+      const seleccion = this.pestanas.find((t) => t.id === pedida) ?? this.pestanas[0];
+      if (seleccion) this.abrirPestana(seleccion.id);
+    });
     if (!this.puedeFinanzas) this.isLoading.set(false);
   }
 

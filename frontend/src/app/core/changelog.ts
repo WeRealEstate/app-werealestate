@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.29.0', fecha: '2026-11-27', cambios: [
+    "Menú: Finanzas ahora es un grupo desplegable con accesos separados a Comisiones, Ingresos, Valor vendido y Gastos; se quitaron las pestañas dentro de la pantalla.",
+  ] },
   { version: '12.28.0', fecha: '2026-11-27', cambios: [
     "Menú: nuevos grupos desplegables «Usuarios» (Usuarios, Asesores externos, Equipos, Comunidades We y We Forms) y «Administración» (Finanzas, Material y Calendario).",
   ] },

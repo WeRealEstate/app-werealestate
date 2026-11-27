@@ -1,33 +1,6 @@
 <div class="page-enter">
   <div>
-    <h1 class="font-heading text-2xl font-semibold text-ink">Finanzas</h1>
-    <p class="mt-1 text-sm text-ink-muted">
-      Comisiones de venta, ingresos esperados contra recibidos, valor vendido y gastos.
-    </p>
-  </div>
-
-  <div class="mt-5 flex gap-1 overflow-x-auto border-b border-border [scrollbar-width:none]" role="tablist">
-    @for (t of pestanas; track t.id) {
-      <button
-        type="button"
-        role="tab"
-        [attr.aria-selected]="pestana() === t.id"
-        (click)="abrirPestana(t.id)"
-        class="-mb-px inline-flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 sm:px-4 text-sm font-medium transition-colors duration-150"
-        [class.border-we-primary]="pestana() === t.id"
-        [class.text-we-primary]="pestana() === t.id"
-        [class.border-transparent]="pestana() !== t.id"
-        [class.text-ink-muted]="pestana() !== t.id"
-      >
-        @switch (t.id) {
-          @case ('comisiones') { <svg lucideHandCoins [size]="16" aria-hidden="true"></svg> }
-          @case ('ingresos') { <svg lucideTrendingUp [size]="16" aria-hidden="true"></svg> }
-          @case ('valor') { <svg lucideLandmark [size]="16" aria-hidden="true"></svg> }
-          @case ('gastos') { <svg lucideWallet [size]="16" aria-hidden="true"></svg> }
-        }
-        {{ t.label }}
-      </button>
-    }
+    <h1 class="font-heading text-2xl font-semibold text-ink">{{ titulo() }}</h1>
   </div>
 
   @if (pestana() === 'ingresos') {

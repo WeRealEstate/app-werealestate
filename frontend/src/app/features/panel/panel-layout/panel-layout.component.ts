@@ -1,5 +1,5 @@
 import { Component, DestroyRef, HostListener, computed, inject, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import {
   LucideBuilding2,
   LucideCalendar,
@@ -21,6 +21,8 @@ import {
   LucideUsers,
   LucideUsersRound,
   LucideWallet,
+  LucideTrendingUp,
+  LucideLandmark,
 } from '@lucide/angular';
 import { VERSION_ACTUAL } from '../../../core/changelog';
 import { FECHA_COMPILACION } from '../../../build-info';
@@ -34,11 +36,12 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
 interface NavItem {
   label: string;
   route: string;
+  queryParams?: { pestana: 'comisiones' | 'ingresos' | 'valor' | 'gastos' };
   /** Si lo tiene, el item solo se muestra a quien tenga ese módulo activo (ver AuthService.tieneModulo). */
   modulo?: Modulo;
   /** Alternativa: el item también se muestra a quien tenga este otro módulo (Finanzas incluye la pestaña Gastos). */
   tambienConModulo?: Modulo;
-  icon: 'home' | 'leads' | 'usuarios' | 'asesores' | 'comunidades' | 'calendario' | 'pipeline' | 'cotizador' | 'lotes' | 'plano' | 'ventas' | 'clientes' | 'finanzas' | 'gastos' | 'forms' | 'material' | 'comercializadoras' | 'score';
+  icon: 'home' | 'leads' | 'usuarios' | 'asesores' | 'comunidades' | 'calendario' | 'pipeline' | 'cotizador' | 'lotes' | 'plano' | 'ventas' | 'clientes' | 'finanzas' | 'ingresos' | 'valor' | 'gastos' | 'forms' | 'material' | 'comercializadoras' | 'score';
 }
 
 const ASESORES_EXTERNOS_NAV_ITEM: NavItem = {
@@ -73,7 +76,12 @@ const VENTAS_ITEM: NavItem = { label: 'Ventas', route: '/panel/ventas', modulo: 
 const CLIENTES_ITEM: NavItem = { label: 'Clientes', route: '/panel/clientes', modulo: 'CLIENTES', icon: 'clientes' };
 const LOTES_ITEM: NavItem = { label: 'Lotes', route: '/panel/lotes', modulo: 'LOTES', icon: 'lotes' };
 const PLANO_ITEM: NavItem = { label: 'Plano', route: '/panel/plano', modulo: 'PLANO', icon: 'plano' };
-const FINANZAS_ITEM: NavItem = { label: 'Finanzas', route: '/panel/finanzas', modulo: 'FINANZAS', tambienConModulo: 'GASTOS', icon: 'finanzas' };
+const GRUPO_FINANZAS: NavSection = { label: 'Finanzas', items: [
+  { label: 'Comisiones', route: '/panel/finanzas', queryParams: { pestana: 'comisiones' }, modulo: 'FINANZAS', icon: 'finanzas' },
+  { label: 'Ingresos', route: '/panel/finanzas', queryParams: { pestana: 'ingresos' }, modulo: 'FINANZAS', icon: 'ingresos' },
+  { label: 'Valor vendido', route: '/panel/finanzas', queryParams: { pestana: 'valor' }, modulo: 'FINANZAS', icon: 'valor' },
+  { label: 'Gastos', route: '/panel/finanzas', queryParams: { pestana: 'gastos' }, modulo: 'GASTOS', icon: 'gastos' },
+] };
 const CALENDARIO_ITEM: NavItem = { label: 'Calendario', route: '/panel/calendario', modulo: 'CALENDARIO', icon: 'calendario' };
 
 /** Grupos desplegables: Ventas, Inventario, Usuarios y Administración; solo Inicio va suelto. */
@@ -85,7 +93,7 @@ const GRUPO_VENTAS_ADMIN: NavSection = {
 const GRUPO_INVENTARIO: NavSection = { label: 'Inventario', items: [LOTES_ITEM, PLANO_ITEM] };
 const USUARIOS_ITEM: NavItem = { label: 'Usuarios', route: '/panel/usuarios', icon: 'usuarios' };
 const ITEMS_DE_PERSONAS: NavItem[] = [ASESORES_EXTERNOS_NAV_ITEM, COMERCIALIZADORAS_NAV_ITEM, TEAMS_NAV_ITEM, WE_FORMS_NAV_ITEM];
-const GRUPO_ADMINISTRACION: NavSection = { label: 'Administración', items: [FINANZAS_ITEM, MATERIAL_NAV_ITEM, CALENDARIO_ITEM] };
+const GRUPO_ADMINISTRACION: NavSection = { label: 'Administración', items: [MATERIAL_NAV_ITEM, CALENDARIO_ITEM] };
 /** Asesores y equipo interno: del grupo solo les toca el Calendario. */
 const GRUPO_ADMINISTRACION_SOLO_CALENDARIO: NavSection = { label: 'Administración', items: [CALENDARIO_ITEM] };
 
@@ -98,6 +106,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
     GRUPO_INVENTARIO,
     // La pantalla de Usuarios es solo del administrador.
     { label: 'Usuarios', items: ITEMS_DE_PERSONAS },
+    GRUPO_FINANZAS,
     GRUPO_ADMINISTRACION,
   ],
   EQUIPO_INTERNO: [INICIO('/panel/equipo'), GRUPO_ADMINISTRACION_SOLO_CALENDARIO],
@@ -106,6 +115,7 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
     GRUPO_VENTAS_ADMIN,
     GRUPO_INVENTARIO,
     { label: 'Usuarios', items: [USUARIOS_ITEM, ...ITEMS_DE_PERSONAS] },
+    GRUPO_FINANZAS,
     GRUPO_ADMINISTRACION,
   ],
 };
@@ -151,12 +161,24 @@ function leerSeccionesPlegadas(): ReadonlySet<string> {
     LucideHandshake,
     LucideMenu,
     LucideWallet,
+    LucideTrendingUp,
+    LucideLandmark,
   ],
   templateUrl: './panel-layout.component.html',
 })
 export class PanelLayoutComponent {
   private readonly auth = inject(AuthService);
   private readonly push = inject(PushService);
+  private readonly router = inject(Router);
+
+  /** El enlace histórico sin parámetro abre la primera sección permitida. */
+  esComisionesPredeterminadas(item: NavItem): boolean {
+    const predeterminada = this.auth.tieneModulo('FINANZAS') ? 'comisiones' : 'gastos';
+    if (item.queryParams?.pestana !== predeterminada) return false;
+    const url = this.router.parseUrl(this.router.url);
+    return url.root.children['primary']?.segments.map((s) => s.path).join('/') === 'panel/finanzas'
+      && !url.queryParams['pestana'];
+  }
 
   readonly user = this.auth.currentUser;
   readonly roleLabel = computed(() => {
