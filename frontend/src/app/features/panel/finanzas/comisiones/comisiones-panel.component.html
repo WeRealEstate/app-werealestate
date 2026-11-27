@@ -1,0 +1,313 @@
+@if (ficha(); as c) {
+  <!-- Ficha de una venta: como la hoja del Excel -->
+  <div>
+    <button
+      type="button"
+      (click)="cerrarFicha()"
+      class="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-medium text-ink-muted hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-we-primary"
+    >
+      <svg lucideArrowLeft [size]="16" aria-hidden="true"></svg>
+      Volver a comisiones
+    </button>
+
+    <div class="mt-3 rounded-xl border border-border bg-surface p-5">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="min-w-0">
+          <p class="text-xs text-ink-muted">Cliente</p>
+          <h2 class="font-heading text-lg font-semibold text-ink">{{ c.cliente }}</h2>
+          <p class="mt-0.5 text-sm text-ink-muted">
+            Asesor: <span class="text-ink">{{ c.asesorNombre }}</span>{{ c.secundaria ? ' · copropietario' : '' }}
+          </p>
+        </div>
+        <span class="rounded-full px-2.5 py-1 text-xs font-medium {{ situaciones[situacion(c)].clase }}">
+          {{ situaciones[situacion(c)].texto }}
+        </span>
+      </div>
+
+      <dl class="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3 lg:grid-cols-6">
+        <div>
+          <dt class="text-xs text-ink-muted">Venta</dt>
+          <dd class="text-ink">
+            @if (c.ventaNumero && !c.ventaEliminada) {
+              <a [routerLink]="['/panel/ventas', c.ventaNumero]" class="font-medium text-we-primary hover:underline dark:text-we-blue-light">{{ c.ventaNumero }}</a>
+            } @else {
+              {{ c.ventaNumero ?? '—' }}{{ c.ventaEliminada ? ' (eliminada)' : '' }}
+            }
+          </dd>
+        </div>
+        <div>
+          <dt class="text-xs text-ink-muted">Lotes</dt>
+          <dd class="text-ink">{{ amortizacion()?.lotes?.join(', ') || '—' }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs text-ink-muted">Costo del terreno</dt>
+          <dd class="text-ink">${{ dinero(c.base) }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs text-ink-muted">Plazo</dt>
+          <dd class="text-ink">{{ amortizacion()?.plazoMeses ? amortizacion()!.plazoMeses + ' meses' : '—' }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs text-ink-muted">Comisión ({{ c.porcentaje }} %)</dt>
+          <dd class="font-semibold text-ink">${{ dinero(c.monto) }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs text-ink-muted">Contrato</dt>
+          @if (c.ventaId === null) {
+            <dd class="text-ink-muted">—</dd>
+          } @else {
+            <dd [class]="c.contratoFirmado ? 'text-green-700 dark:text-green-300' : 'text-violet-700 dark:text-violet-300'">
+              {{ c.contratoFirmado ? 'Firmado' + (c.contratoFechaFirma ? ' el ' + fecha(c.contratoFechaFirma) : '') : 'Sin firmar' }}
+            </dd>
+          }
+        </div>
+      </dl>
+
+      <!-- Cómo va la comisión: cuatro cifras que siempre suman la comisión -->
+      <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div class="rounded-lg bg-surface-2 px-3 py-2.5">
+          <p class="text-xs text-ink-muted">Pagada al asesor</p>
+          <p class="mt-0.5 font-semibold text-green-700 dark:text-green-300">${{ dinero(c.entregado) }}</p>
+        </div>
+        <div class="rounded-lg bg-surface-2 px-3 py-2.5">
+          <p class="text-xs text-ink-muted">Por pagar</p>
+          <p class="mt-0.5 font-semibold text-amber-700 dark:text-amber-300">${{ dinero(c.porEntregar) }}</p>
+          @if (c.porEntregar > 0 && c.proximaEntrega) {
+            <p class="text-xs text-ink-muted">{{ c.retrasada ? 'Vencida desde' : 'El sábado' }} {{ fecha(c.proximaEntrega) }}</p>
+          }
+        </div>
+        <div class="rounded-lg bg-surface-2 px-3 py-2.5">
+          <p class="text-xs text-ink-muted">Retenida (sin firma)</p>
+          <p class="mt-0.5 font-semibold text-violet-700 dark:text-violet-300">
+            ${{ dinero(c.bloqueadaPorContrato ? c.devengado - c.entregado : 0) }}
+          </p>
+        </div>
+        <div class="rounded-lg bg-surface-2 px-3 py-2.5">
+          <p class="text-xs text-ink-muted">Falta que pague el cliente</p>
+          <p class="mt-0.5 font-semibold text-ink">${{ dinero(c.monto - c.devengado) }}</p>
+        </div>
+      </div>
+      @if (c.bloqueadaPorContrato) {
+        <p class="mt-3 text-sm text-ink-muted">
+          El cliente ya generó ${{ dinero(c.devengado) }} de comisión, pero se libera hasta que se firme el contrato y se paga el sábado siguiente a la firma.
+        </p>
+      }
+      @if (c.porDevolver > 0) {
+        <p class="mt-3 text-sm text-red-700 dark:text-red-300">
+          Se le pagó ${{ dinero(c.porDevolver) }} de más: con la regla de la mitad, los abonos del cliente aún no lo cubren.
+        </p>
+      }
+    </div>
+
+    @if (cargandoFicha()) {
+      <div class="mt-6"><app-we-loader modo="compacto" texto="Cargando la ficha…" /></div>
+    } @else if (errorFicha()) {
+      <p class="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-300">{{ errorFicha() }}</p>
+    } @else {
+      <div class="mt-6 grid gap-6 2xl:grid-cols-2">
+        <!-- Pagos del cliente -->
+        <section class="rounded-xl border border-border bg-surface">
+          <header class="border-b border-border px-4 py-3">
+            <h3 class="font-heading text-sm font-semibold text-ink">Pagos del cliente</h3>
+            <p class="text-xs text-ink-muted">Cada pago aporta la mitad a la comisión, hasta completarla.</p>
+          </header>
+          @if (filasCliente().length === 0) {
+            <p class="px-4 py-6 text-sm text-ink-muted">
+              {{ c.ventaId === null ? 'La venta fue eliminada.' : 'El cliente aún no tiene pagos registrados.' }}
+            </p>
+          } @else {
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="text-left text-xs text-ink-muted">
+                    <th class="px-4 py-2 font-medium">Concepto</th>
+                    <th class="px-4 py-2 font-medium">Fecha</th>
+                    <th class="px-4 py-2 text-right font-medium">Pagó</th>
+                    <th class="px-4 py-2 text-right font-medium">Saldo del terreno</th>
+                    <th class="px-4 py-2 text-right font-medium">A comisión</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border">
+                  @for (f of filasCliente(); track $index) {
+                    <tr>
+                      <td class="px-4 py-2 text-ink">{{ f.concepto }}</td>
+                      <td class="px-4 py-2 text-ink-muted">{{ fecha(f.fecha) }}</td>
+                      <td class="px-4 py-2 text-right text-ink">${{ dinero(f.monto) }}</td>
+                      <td class="px-4 py-2 text-right text-ink-muted">${{ dinero(f.saldoTerreno) }}</td>
+                      <td class="px-4 py-2 text-right" [class]="f.aComision > 0 ? 'text-ink' : 'text-ink-muted'">
+                        {{ f.aComision > 0 ? '$' + dinero(f.aComision) : '—' }}
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </section>
+
+        <!-- Pagos al asesor -->
+        <section class="rounded-xl border border-border bg-surface">
+          <header class="border-b border-border px-4 py-3">
+            <h3 class="font-heading text-sm font-semibold text-ink">Pagos de comisión</h3>
+            <p class="text-xs text-ink-muted">Lo que ya se le pagó al asesor y lo que queda de su comisión.</p>
+          </header>
+          @if (pagosAsesor().length === 0) {
+            <p class="px-4 py-6 text-sm text-ink-muted">Aún no se le ha pagado nada de esta comisión.</p>
+          } @else {
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="text-left text-xs text-ink-muted">
+                    <th class="px-4 py-2 font-medium">#</th>
+                    <th class="px-4 py-2 font-medium">Fecha</th>
+                    <th class="px-4 py-2 text-right font-medium">Monto</th>
+                    <th class="px-4 py-2 text-right font-medium">Saldo</th>
+                    <th class="px-4 py-2 font-medium">Forma</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border">
+                  @for (p of pagosAsesor(); track p.entrega.id) {
+                    <tr>
+                      <td class="px-4 py-2 text-ink-muted">{{ p.numero }}</td>
+                      <td class="px-4 py-2 text-ink">{{ fecha(p.entrega.fecha) }}</td>
+                      <td class="px-4 py-2 text-right text-ink">${{ dinero(p.entrega.monto) }}</td>
+                      <td class="px-4 py-2 text-right text-ink-muted">${{ dinero(p.saldo) }}</td>
+                      <td class="px-4 py-2 text-ink-muted">
+                        {{ p.entrega.formaPago === 'TRANSFERENCIA' ? 'Transferencia' : p.entrega.formaPago === 'EFECTIVO' ? 'Efectivo' : '—' }}
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+          @if (detalle()?.devoluciones?.length) {
+            <p class="border-t border-border px-4 py-3 text-xs text-ink-muted">
+              El asesor devolvió {{ detalle()!.devoluciones.length }} {{ detalle()!.devoluciones.length === 1 ? 'vez' : 'veces' }}; el saldo ya lo descuenta.
+            </p>
+          }
+        </section>
+      </div>
+    }
+  </div>
+} @else {
+  <!-- Lista: totales, buscador y asesores con sus ventas -->
+  @if (cargando()) {
+    <div class="mt-2"><app-we-loader modo="compacto" texto="Cargando comisiones…" /></div>
+  } @else if (error()) {
+    <p class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-300">{{ error() }}</p>
+  } @else {
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div class="rounded-xl border border-border bg-surface p-4">
+        <p class="text-xs text-ink-muted">Comisión total</p>
+        <p class="mt-1 text-xl font-semibold text-ink">${{ dinero(totales().total) }}</p>
+        <p class="text-xs text-ink-muted">{{ vigentes().length }} {{ vigentes().length === 1 ? 'venta' : 'ventas' }}</p>
+      </div>
+      <div class="rounded-xl border border-border bg-surface p-4">
+        <p class="text-xs text-ink-muted">Pagado a asesores</p>
+        <p class="mt-1 text-xl font-semibold text-green-700 dark:text-green-300">${{ dinero(totales().pagado) }}</p>
+      </div>
+      <div class="rounded-xl border border-border bg-surface p-4">
+        <p class="text-xs text-ink-muted">Saldo por pagar</p>
+        <p class="mt-1 text-xl font-semibold text-ink">${{ dinero(totales().saldo) }}</p>
+      </div>
+    </div>
+
+    <label class="relative mt-6 block max-w-md">
+      <span class="sr-only">Buscar</span>
+      <svg lucideSearch [size]="16" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" aria-hidden="true"></svg>
+      <input
+        type="search"
+        [ngModel]="busqueda()"
+        (ngModelChange)="busqueda.set($event)"
+        placeholder="Buscar asesor, cliente o venta"
+        class="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm text-ink placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-we-primary"
+      />
+    </label>
+
+    @if (grupos().length === 0) {
+      <p class="mt-6 text-sm text-ink-muted">No hay comisiones que coincidan.</p>
+    }
+
+    <div class="mt-4 space-y-3">
+      @for (g of grupos(); track g.clave) {
+        @let abierto = abiertos().has(g.clave) || busqueda().trim() !== '';
+        <section class="overflow-hidden rounded-xl border border-border bg-surface">
+          <button
+            type="button"
+            (click)="alternar(g.clave)"
+            [attr.aria-expanded]="abierto"
+            class="flex w-full flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 text-left hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-we-primary"
+          >
+            <span class="min-w-0 flex-1">
+              <span class="block truncate font-medium text-ink">{{ g.nombre }}</span>
+              <span class="text-xs text-ink-muted">
+                {{ g.comisiones.length }} {{ g.comisiones.length === 1 ? 'venta' : 'ventas' }}{{ g.externo ? ' · externo' : '' }}
+              </span>
+            </span>
+            <span class="text-right">
+              <span class="block text-xs text-ink-muted">Comisión</span>
+              <span class="text-sm text-ink">${{ dinero(g.total) }}</span>
+            </span>
+            <span class="text-right">
+              <span class="block text-xs text-ink-muted">Pagado</span>
+              <span class="text-sm text-ink">${{ dinero(g.pagado) }}</span>
+            </span>
+            <span class="text-right">
+              <span class="block text-xs text-ink-muted">Por pagar</span>
+              <span class="text-sm font-semibold" [class]="g.porPagar > 0 ? 'text-amber-700 dark:text-amber-300' : 'text-ink-muted'">${{ dinero(g.porPagar) }}</span>
+            </span>
+            <svg lucideChevronDown [size]="18" class="shrink-0 text-ink-muted transition-transform" [class.rotate-180]="abierto" aria-hidden="true"></svg>
+          </button>
+
+          @if (abierto) {
+            <div class="overflow-x-auto border-t border-border">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="text-left text-xs text-ink-muted">
+                    <th class="px-4 py-2 font-medium">Venta</th>
+                    <th class="px-4 py-2 font-medium">Cliente</th>
+                    <th class="px-4 py-2 font-medium">Contrato</th>
+                    <th class="px-4 py-2 text-right font-medium">Comisión</th>
+                    <th class="px-4 py-2 text-right font-medium">Generada</th>
+                    <th class="px-4 py-2 text-right font-medium">Pagada</th>
+                    <th class="px-4 py-2 text-right font-medium">Saldo</th>
+                    <th class="px-4 py-2 font-medium">Estado</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border">
+                  @for (c of g.comisiones; track c.id) {
+                    <tr
+                      (click)="abrirFicha(c)"
+                      (keydown.enter)="abrirFicha(c)"
+                      tabindex="0"
+                      class="cursor-pointer hover:bg-surface-2 focus:outline-none focus-visible:bg-surface-2"
+                    >
+                      <td class="whitespace-nowrap px-4 py-2.5 font-medium text-ink">{{ c.ventaNumero ?? '—' }}</td>
+                      <td class="px-4 py-2.5 text-ink">
+                        {{ c.cliente }}
+                        @if (c.secundaria) {
+                          <span class="text-xs text-ink-muted">· copropietario</span>
+                        }
+                      </td>
+                      <td class="whitespace-nowrap px-4 py-2.5" [class]="c.ventaId === null || c.contratoFirmado ? 'text-ink-muted' : 'text-violet-700 dark:text-violet-300'">
+                        {{ c.ventaId === null ? 'Venta eliminada' : c.contratoFirmado ? 'Firmado' : 'Sin firmar' }}
+                      </td>
+                      <td class="whitespace-nowrap px-4 py-2.5 text-right text-ink">${{ dinero(c.monto) }}</td>
+                      <td class="whitespace-nowrap px-4 py-2.5 text-right text-ink-muted">${{ dinero(c.devengado) }}</td>
+                      <td class="whitespace-nowrap px-4 py-2.5 text-right text-ink-muted">${{ dinero(c.entregado) }}</td>
+                      <td class="whitespace-nowrap px-4 py-2.5 text-right text-ink">${{ dinero(c.monto - c.entregado) }}</td>
+                      <td class="whitespace-nowrap px-4 py-2.5">
+                        <span class="rounded-full px-2 py-0.5 text-xs font-medium {{ situaciones[situacion(c)].clase }}">{{ situaciones[situacion(c)].texto }}</span>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </section>
+      }
+    </div>
+  }
+}

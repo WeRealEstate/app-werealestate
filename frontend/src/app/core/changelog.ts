@@ -15,6 +15,10 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.30.0', fecha: '2026-11-27', cambios: [
+    "Comisiones: pantalla nueva. Se ven los asesores con su comisión, lo pagado y lo que falta por pagar; al abrir una venta aparece su ficha con los pagos del cliente, si ya firmó el contrato y los pagos de comisión al asesor.",
+    "Comisiones: nueva regla para todas las ventas. Cada pago del cliente (apartado, enganche, mensualidad o aportación) genera la mitad de su monto en comisión. Lo generado se paga hasta que se firme el contrato, el sábado siguiente a la firma o al pago.",
+  ] },
   { version: '12.29.2', fecha: '2026-11-27', cambios: [
     "Avisos: las flechas del menú ya no se superponen al panel de notificaciones.",
   ] },

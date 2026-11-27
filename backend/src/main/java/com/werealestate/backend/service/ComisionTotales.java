@@ -70,7 +70,7 @@ final class ComisionTotales {
     }
 
     private void marcarSiEstaBloqueada(VentaComision c) {
-        if (c.isReglaNueva() && c.getVenta() != null && !c.getVenta().isContratoFirmado()) bloqueadas.add(c.getId());
+        if (c.getVenta() != null && !c.getVenta().isContratoFirmado()) bloqueadas.add(c.getId());
     }
 
     /** Lo ganado de cada comisión se suma una sola vez (se pide varias veces por comisión al armar sus cifras). */

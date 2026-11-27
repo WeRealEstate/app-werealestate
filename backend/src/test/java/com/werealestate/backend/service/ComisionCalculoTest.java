@@ -55,7 +55,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
-/** Caracterización del cálculo de ComisionService: qué se gana de cada abono (regla nueva por tipo y regla anterior),
+/** Caracterización del cálculo de ComisionService: qué se gana de cada abono (la mitad de cada uno, 12.30.0),
  * quién puede cuánto (editar, entregar, devolver) y la sincronización entrega ↔ gasto. Fija el comportamiento tal
  * como estaba antes de limpiar el servicio. Los repositorios son en memoria (mocks con listas). */
 class ComisionCalculoTest {
@@ -200,7 +200,7 @@ class ComisionCalculoTest {
 
     @Test
     void ventaNuevaCreaLaComisionDel5PorCientoSobreElValorDeLosLotes() {
-        pago(TipoAbono.ENGANCHE, "6000", MIERCOLES);
+        pago(TipoAbono.ENGANCHE, "12000", MIERCOLES);
 
         service.sincronizarVentaNueva(venta, null, null, null, null);
 
@@ -208,9 +208,7 @@ class ComisionCalculoTest {
         VentaComision c = devengos.get(0).getComision();
         igual("5000", c.getMonto());
         igual("5", c.getPorcentaje());
-        assertTrue(c.isReglaNueva());
-        assertEquals(ModalidadComision.UNA_EXHIBICION, c.getModalidad()); // el enganche cubrió la comisión
-        igual("5000", devengos.get(0).getMonto()); // tope: lo que faltaba
+        igual("5000", devengos.get(0).getMonto()); // la mitad (6000) topada en lo que faltaba
         assertEquals(SABADO, devengos.get(0).getFechaEntrega());
         assertEquals(MIERCOLES, devengos.get(0).getFechaOrigen());
     }
@@ -222,11 +220,13 @@ class ComisionCalculoTest {
         ArgumentCaptorHolder.assertMontoManual(comisiones, "7500.00");
     }
 
+    // ------------------------------------------------------------ regla única (12.30.0): la mitad de cada abono
+
     @Test
-    void reglaNuevaEngancheCompletoMensualidadYAportacionLaMitadApartadoYSinTipoNada() {
+    void cadaAbonoAportaLaMitadSinImportarSuTipo() {
         existente(true, ModalidadComision.PARCIALIDADES);
+        pago(TipoAbono.APARTADO, "1000", MIERCOLES);
         pago(TipoAbono.ENGANCHE, "2000", MIERCOLES);
-        pago(TipoAbono.APARTADO, "500", MIERCOLES);
         pago(TipoAbono.MENSUALIDAD, "2000", MIERCOLES.plusDays(10));
         pago(null, "900", MIERCOLES.plusDays(11));
         pago(TipoAbono.APORTACION, "4000", MIERCOLES.plusDays(12));
@@ -234,33 +234,49 @@ class ComisionCalculoTest {
 
         service.sincronizar(venta);
 
-        // 2000 + 1000 + 2000 y la última (4000) solo aporta lo que faltaba: nada, ya se completó.
-        assertEquals(3, devengos.size());
-        igual("2000", devengos.get(0).getMonto());
+        // 500 + 1000 + 1000 + 450 + 2000 = 4950 y la última solo aporta los 50 que faltaban.
+        assertEquals(6, devengos.size());
+        igual("500", devengos.get(0).getMonto());
         igual("1000", devengos.get(1).getMonto());
-        igual("2000", devengos.get(2).getMonto());
-        assertEquals(ModalidadComision.PARCIALIDADES, devengos.get(0).getComision().getModalidad());
+        igual("1000", devengos.get(2).getMonto());
+        igual("450", devengos.get(3).getMonto());
+        igual("2000", devengos.get(4).getMonto());
+        igual("50", devengos.get(5).getMonto());
     }
 
     @Test
-    void reglaNuevaUnAporteParcialCompletaLaComisionYElSiguienteYaNoCuenta() {
-        existente(true, ModalidadComision.PARCIALIDADES);
-        pago(TipoAbono.ENGANCHE, "4500", MIERCOLES);
-        pago(TipoAbono.MENSUALIDAD, "2000", MIERCOLES.plusDays(7));
-        pago(TipoAbono.MENSUALIDAD, "2000", MIERCOLES.plusDays(14));
+    void lasComisionesDeAntesTambienUsanLaMitad() {
+        existente(false, ModalidadComision.UNA_EXHIBICION);
+        pago(TipoAbono.APARTADO, "4000", MIERCOLES);
+        pago(TipoAbono.MENSUALIDAD, "6001", MIERCOLES.plusDays(7)); // mitad 3000.50 → solo faltaban 3000
+        pago(TipoAbono.MENSUALIDAD, "9000", MIERCOLES.plusDays(14)); // ya no cuenta
 
         service.sincronizar(venta);
 
         assertEquals(2, devengos.size());
-        igual("4500", devengos.get(0).getMonto());
-        igual("500", devengos.get(1).getMonto());
+        igual("2000", devengos.get(0).getMonto());
+        igual("3000", devengos.get(1).getMonto());
     }
 
     @Test
-    void reglaNuevaConContratoFirmadoDespuesNoSeEntregaAntesDelSabadoDeLaFirma() {
+    void sinContratoFirmadoSeAcumulaPeroQuedaRetenida() {
+        VentaComision c = existente(false, ModalidadComision.PARCIALIDADES);
+        when(venta.isContratoFirmado()).thenReturn(false);
+        pago(TipoAbono.APARTADO, "1000", MIERCOLES);
+        pago(TipoAbono.MENSUALIDAD, "5000", MIERCOLES.plusDays(7));
+
+        service.sincronizar(venta);
+
+        assertEquals(2, devengos.size());
+        assertEquals("El contrato de esta venta no está firmado: la comisión queda retenida hasta registrar la firma en la venta",
+                assertThrows(ConflictException.class, () -> service.entregar(c.getId(), entrega("100"))).getMessage());
+    }
+
+    @Test
+    void conContratoFirmadoDespuesNoSeEntregaAntesDelSabadoDeLaFirma() {
         existente(true, ModalidadComision.PARCIALIDADES);
         when(venta.isContratoFirmado()).thenReturn(true);
-        when(venta.getContratoFechaFirma()).thenReturn(SABADO.plusDays(10)); // jueves 17 nov → sábado 21
+        when(venta.getContratoFechaFirma()).thenReturn(SABADO.plusDays(12)); // jueves 19 nov → sábado 21
         pago(TipoAbono.ENGANCHE, "1000", MIERCOLES);
 
         service.sincronizar(venta);
@@ -278,38 +294,6 @@ class ComisionCalculoTest {
 
         assertEquals(SABADO.plusDays(7), devengos.get(0).getFechaEntrega());
         assertEquals(DayOfWeek.SATURDAY, devengos.get(0).getFechaEntrega().getDayOfWeek());
-    }
-
-    // ------------------------------------------------------------ regla anterior
-
-    @Test
-    void reglaAnteriorUnaExhibicionGeneraLaComisionCompletaEnLaFechaDeLaVenta() {
-        existente(false, ModalidadComision.UNA_EXHIBICION);
-        // Sin entregas la modalidad se vuelve a calcular: el enganche de 5,000 o más cubre la comisión.
-        when(venta.getEnganche()).thenReturn(new BigDecimal("5000"));
-        when(venta.getEngancheLabel()).thenReturn("Pago inicial");
-
-        service.sincronizar(venta);
-
-        assertEquals(1, devengos.size());
-        assertNull(devengos.get(0).getPagoVenta());
-        igual("5000", devengos.get(0).getMonto());
-        assertEquals(MIERCOLES, devengos.get(0).getFechaOrigen());
-        assertEquals(SABADO, devengos.get(0).getFechaEntrega());
-    }
-
-    @Test
-    void reglaAnteriorParcialidadesTomaLaMitadDeCadaAbonoHastaCompletar() {
-        existente(false, ModalidadComision.PARCIALIDADES);
-        pago(TipoAbono.APARTADO, "4000", MIERCOLES); // la regla anterior no distingue tipos
-        pago(TipoAbono.MENSUALIDAD, "6001", MIERCOLES.plusDays(7)); // mitad 3000.50 (HALF_UP)
-        pago(TipoAbono.MENSUALIDAD, "9000", MIERCOLES.plusDays(14)); // solo falta 0 → ya no cuenta
-
-        service.sincronizar(venta);
-
-        assertEquals(2, devengos.size());
-        igual("2000", devengos.get(0).getMonto());
-        igual("3000", devengos.get(1).getMonto()); // completó los 5000
     }
 
     @Test
@@ -365,7 +349,7 @@ class ComisionCalculoTest {
     void editarNoPuedeDejarLaComisionPorDebajoDeLoYaPagado() {
         VentaComision c = existente(true, ModalidadComision.PARCIALIDADES);
         when(venta.isContratoFirmado()).thenReturn(true);
-        pago(TipoAbono.ENGANCHE, "5000", MIERCOLES);
+        pago(TipoAbono.ENGANCHE, "10000", MIERCOLES);
         service.sincronizar(venta);
         service.entregar(c.getId(), entrega("3000"));
 
@@ -382,7 +366,7 @@ class ComisionCalculoTest {
     private VentaComision comisionConGanado() {
         VentaComision c = existente(true, ModalidadComision.PARCIALIDADES);
         when(venta.isContratoFirmado()).thenReturn(true);
-        pago(TipoAbono.ENGANCHE, "2000", MIERCOLES);
+        pago(TipoAbono.ENGANCHE, "4000", MIERCOLES); // aporta 2000
         pago(TipoAbono.MENSUALIDAD, "2000", MIERCOLES.plusDays(7)); // aporta 1000
         service.sincronizar(venta);
         return c;

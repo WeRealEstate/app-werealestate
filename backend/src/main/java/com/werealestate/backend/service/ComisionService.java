@@ -63,6 +63,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -147,10 +148,8 @@ public class ComisionService {
         sincronizar(venta, false, null, null, null, null);
     }
 
-    /** Igual que {@link #sincronizar(Venta)} pero para una venta recién creada: su comisión usa la
-     * regla por tipo de abono (enganche completo, mensualidad y aportación a la mitad, apartado sin
-     * comisión, entrega frenada hasta que el contrato esté firmado). Las comisiones que ya existían
-     * (y las que se generan para ventas anteriores) conservan su cálculo de siempre. */
+    /** Igual que {@link #sincronizar(Venta)} pero para una venta recién creada: aplica el % elegido y el
+     * copropietario. El cálculo (la mitad de cada abono, entrega frenada hasta la firma) es el mismo para todas. */
     public void sincronizarVentaNueva(
             Venta venta,
             BigDecimal porcentaje,
@@ -250,6 +249,7 @@ public class ComisionService {
 
     /** Comisiones de las ventas que ya existían antes de este módulo (o que quedaron sin una). */
     @EventListener(ApplicationReadyEvent.class)
+    @Order(1)
     public void generarFaltantes() {
         try {
             for (Venta venta : ventaRepository.findAll()) {
@@ -260,6 +260,25 @@ public class ComisionService {
         } catch (RuntimeException e) {
             log.warn("No se pudieron generar las comisiones de las ventas existentes", e);
         }
+    }
+
+    /** La regla cambió para todas (12.30.0): al arrancar se vuelve a calcular lo ganado de cada comisión vigente
+     * desde los abonos. Es idempotente (lo ganado sale siempre de los abonos); lo ya pagado no se toca, y si queda
+     * por encima de lo ganado aparece como pagado de más. */
+    @EventListener(ApplicationReadyEvent.class)
+    @Order(2)
+    public void recalcularConReglaUnica() {
+        int n = 0;
+        for (VentaComision c : comisionRepository.findAll()) {
+            if (c.isCancelada() || c.getVenta() == null) continue;
+            try {
+                reconstruirDevengos(c, c.getVenta());
+                n++;
+            } catch (RuntimeException e) {
+                log.warn("No se pudo recalcular la comisión {}", c.getId(), e);
+            }
+        }
+        log.info("Comisiones recalculadas con la regla de la mitad: {}", n);
     }
 
     // ---------------------------------------------------------------- consultas
@@ -348,14 +367,11 @@ public class ComisionService {
             return new ComisionesPorEntregarDto.Abono(
                     devengo.getFechaOrigen(), "Venta", null, null, false, devengo.getMonto(), devengo.getFechaEntrega());
         }
-        boolean completo = comision.isReglaNueva() && pago.getTipo() == TipoAbono.ENGANCHE;
-        BigDecimal segunRegla = completo
-                ? pago.getMonto()
-                : mitad(pago.getMonto());
+        BigDecimal segunRegla = mitad(pago.getMonto());
         // El último abono puede aportar menos: solo lo que faltaba para completar la comisión.
         boolean parcial = devengo.getMonto().compareTo(segunRegla) < 0;
         return new ComisionesPorEntregarDto.Abono(
-                devengo.getFechaOrigen(), conceptoDe(devengo), pago.getMonto(), completo ? 100 : 50, parcial,
+                devengo.getFechaOrigen(), conceptoDe(devengo), pago.getMonto(), 50, parcial,
                 devengo.getMonto(), devengo.getFechaEntrega());
     }
 
@@ -821,32 +837,14 @@ public class ComisionService {
 
         if (comision.getMonto().signum() <= 0) return;
 
-        if (comision.isReglaNueva()) {
-            reconstruirDevengosPorTipo(comision, venta);
-            return;
-        }
-
-        if (comision.getModalidad() == ModalidadComision.UNA_EXHIBICION) {
-            devengoRepository.save(new VentaComisionDevengo(
-                    comision, null, venta.getFechaVenta(), sabadoSiguiente(venta.getFechaVenta()), comision.getMonto()));
-            return;
-        }
-
-        BigDecimal restante = comision.getMonto();
-        for (PagoVenta pago : pagoVentaRepository.findVigentesByVentaIdOrderByFechaAscIdAsc(venta.getId())) {
-            if (restante.signum() <= 0) break;
-            BigDecimal aporte = mitad(pago.getMonto()).min(restante);
-            if (aporte.signum() <= 0) continue;
-            devengoRepository.save(
-                    new VentaComisionDevengo(comision, pago, pago.getFecha(), sabadoSiguiente(pago.getFecha()), aporte));
-            restante = restante.subtract(aporte);
-        }
+        // Regla única para todas las comisiones (12.30.0, decisión del usuario): ver reconstruirDevengosPorTipo.
+        reconstruirDevengosPorTipo(comision, venta);
     }
 
     /**
-     * Regla por tipo de abono (ventas nuevas), sobre los abonos vigentes en orden: el ENGANCHE cuenta
-     * completo; la MENSUALIDAD y la APORTACION, la mitad; el APARTADO no cuenta (suelen ser $500 o
-     * $1,000); un abono sin tipo ("por completar") tampoco cuenta hasta que se clasifique. Se acumula
+     * Regla única (12.30.0, decisión del usuario; aplica a todas las comisiones, también a las de antes):
+     * sobre los abonos vigentes en orden, cada abono aporta la mitad de su monto, sea apartado, enganche,
+     * mensualidad o aportación. Se acumula
      * hasta completar la comisión. Cada aporte se entrega el sábado siguiente a su abono y, si el
      * contrato se firmó después, no antes del sábado siguiente a la firma. Mientras el contrato no
      * esté firmado, lo acumulado no se puede entregar (ver ComisionTotales.bloqueada).
@@ -874,12 +872,7 @@ public class ComisionService {
 
     /** Lo que aporta un abono a la comisión según su tipo (ver reconstruirDevengosPorTipo). */
     private static BigDecimal aporteDe(PagoVenta pago) {
-        if (pago.getTipo() == null) return BigDecimal.ZERO;
-        return switch (pago.getTipo()) {
-            case ENGANCHE -> pago.getMonto();
-            case MENSUALIDAD, A_CUENTA_COMISION, APORTACION -> mitad(pago.getMonto());
-            case APARTADO -> BigDecimal.ZERO;
-        };
+        return mitad(pago.getMonto());
     }
 
     /** Si el enganche/pago inicial cubre la comisión se entrega completa; si no, por parcialidades.
