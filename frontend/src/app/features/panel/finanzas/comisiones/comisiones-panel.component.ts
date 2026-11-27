@@ -69,7 +69,8 @@ export class ComisionesPanelComponent {
   readonly cargandoFicha = signal(false);
   readonly errorFicha = signal<string | null>(null);
 
-  readonly vigentes = computed(() => this.comisiones().filter((c) => !c.cancelada));
+  /** Sin canceladas ni las de ventas eliminadas (12.30.2, decisión del usuario: no aparecen ni cuentan en los totales). */
+  readonly vigentes = computed(() => this.comisiones().filter((c) => !c.cancelada && c.ventaId !== null && !c.ventaEliminada));
 
   readonly totales = computed(() => {
     let total = 0;

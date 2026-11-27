@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.30.2', fecha: '2026-11-27', cambios: [
+    "Comisiones: las ventas eliminadas ya no aparecen en la lista ni cuentan en los totales.",
+  ] },
   { version: '12.30.1', fecha: '2026-11-27', cambios: [
     "Comisiones: los pagos a asesores hechos con la regla anterior se ajustaron a la regla de la mitad. Lo pagado ahora es la suma de la mitad de cada pago del cliente, y el egreso en Gastos cambió igual. Se quitó el aviso de «pagado de más».",
   ] },
