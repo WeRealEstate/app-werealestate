@@ -17,8 +17,6 @@ import com.werealestate.backend.repository.VentaComisionRepository;
 import com.werealestate.backend.repository.VentaRepository;
 import com.werealestate.backend.repository.WeFormRespuestaRepository;
 import com.werealestate.backend.security.CurrentUserProvider;
-import java.security.SecureRandom;
-import java.util.Base64;
 import java.util.List;
 import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
@@ -34,7 +32,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class ComercializadoraService {
 
-    private static final SecureRandom ALEATORIO = new SecureRandom();
 
     private final ComercializadoraRepository repository;
     private final AsesorExternoRepository asesorRepository;
@@ -144,7 +141,8 @@ public class ComercializadoraService {
             throw new ConflictException("Ya existe un equipo con ese nombre");
         }
         AsesorExterno lider = elegirLider(request.liderId(), null);
-        Comercializadora c = new Comercializadora(nombre, lider, vacioANulo(request.notas()), nuevoToken());
+        Comercializadora c = new Comercializadora(nombre, lider, vacioANulo(request.notas()),
+                enlaceLibre(lider.getNombre(), null));
         if (request.tipo() == null) throw new ValidationException("Selecciona un tipo de equipo");
         c.setTipo(request.tipo());
         c = repository.save(c);
@@ -162,6 +160,9 @@ public class ComercializadoraService {
         long integrantes = asesorRepository.countByComercializadoraId(id);
         long activos = asesorRepository.countByComercializadoraIdAndActivoTrue(id);
         AsesorExterno lider = c.getLider();
+        // El enlace con nombre lleva el de la líder: si cambia, cambia con ella (los largos de antes se quedan).
+        boolean enlaceConNombre = esEnlaceDe(c.getToken(), slug(lider.getNombre()));
+        Long liderAnterior = lider.getId();
         if (!lider.getId().equals(request.liderId())) {
             if (integrantes > 0) {
                 throw new ConflictException(
@@ -170,6 +171,9 @@ public class ComercializadoraService {
             lider = elegirLider(request.liderId(), c.getId());
         }
         c.actualizar(nombre, lider, vacioANulo(request.notas()), request.activa());
+        if (enlaceConNombre && !liderAnterior.equals(lider.getId())) {
+            c.regenerarToken(enlaceLibre(lider.getNombre(), null));
+        }
         c.setTipo(request.tipo());
         return ComercializadoraDtos.Item.from(c, activos);
     }
@@ -178,7 +182,7 @@ public class ComercializadoraService {
     public ComercializadoraDtos.Item regenerarEnlace(Long id) {
         exigirAdminOLider();
         Comercializadora c = obtener(id);
-        c.regenerarToken(nuevoToken());
+        c.regenerarToken(enlaceLibre(c.getLider().getNombre(), c.getToken()));
         return ComercializadoraDtos.Item.from(c, asesorRepository.countByComercializadoraIdAndActivoTrue(id));
     }
 
@@ -232,11 +236,34 @@ public class ComercializadoraService {
         return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Equipo no encontrado"));
     }
 
-    /** 32 caracteres aleatorios (192 bits): imposible de adivinar. */
-    static String nuevoToken() {
-        byte[] bytes = new byte[24];
-        ALEATORIO.nextBytes(bytes);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    /** El final del enlace: el nombre de la líder ("denisse-velasco"). Es adivinable a propósito (decisión del usuario,
+     * 2026-11-27); los enlaces largos de antes se conservan hasta pedir uno nuevo. Si ya está en uso, o se pide uno
+     * nuevo para anular el actual, se le agrega o sube un número (-2, -3…). */
+    private String enlaceLibre(String nombreLider, String actual) {
+        String base = slug(nombreLider);
+        int numero = actual != null && esEnlaceDe(actual, base) ? numeroDe(actual, base) + 1 : 1;
+        String enlace = numero == 1 ? base : base + "-" + numero;
+        while (repository.findByToken(enlace).isPresent()) enlace = base + "-" + (++numero);
+        return enlace;
+    }
+
+    private static boolean esEnlaceDe(String enlace, String base) {
+        return enlace.equals(base) || enlace.matches(Pattern.quote(base) + "-\\d{1,6}");
+    }
+
+    private static int numeroDe(String enlace, String base) {
+        return enlace.equals(base) ? 1 : Integer.parseInt(enlace.substring(base.length() + 1));
+    }
+
+    /** Minúsculas sin acentos, palabras unidas con guion; cabe en la columna con su número. */
+    static String slug(String nombre) {
+        String limpio = java.text.Normalizer.normalize(nombre == null ? "" : nombre, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toLowerCase(java.util.Locale.ROOT)
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("^-|-$", "");
+        if (limpio.length() > 55) limpio = limpio.substring(0, 55).replaceAll("-$", "");
+        return limpio.isEmpty() ? "equipo" : limpio;
     }
 
     private Usuario exigirAdminOLider() {

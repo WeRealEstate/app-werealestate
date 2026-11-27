@@ -150,4 +150,24 @@ class ComercializadoraServiceIntegrantesTest {
         assertThrows(ConflictException.class, () -> service.quitarIntegrante(10L, 2L));
         verify(asesores, never()).delete(any(AsesorExterno.class));
     }
+
+    @Test
+    void elEnlaceNuevoLlevaElNombreDeLaLiderYCadaVezSubeUnNumero() {
+        assertEquals("laura-lider", service.regenerarEnlace(10L).token());
+        assertEquals("laura-lider-2", service.regenerarEnlace(10L).token());
+        assertEquals("laura-lider-3", service.regenerarEnlace(10L).token());
+    }
+
+    @Test
+    void siOtroEquipoYaUsaEseNombreSeAgregaNumero() {
+        when(repo.findByToken("laura-lider")).thenReturn(Optional.of(new Comercializadora("Luna", lider, null, "laura-lider")));
+
+        assertEquals("laura-lider-2", service.regenerarEnlace(10L).token());
+    }
+
+    @Test
+    void elNombreDelEnlaceVaSinAcentosNiSimbolos() {
+        assertEquals("denisse-velasco-nunez", ComercializadoraService.slug("  Denisse  Velasco Núñez. "));
+        assertEquals("equipo", ComercializadoraService.slug("¡¡"));
+    }
 }

@@ -2,7 +2,6 @@ package com.werealestate.backend.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -159,11 +158,4 @@ class ComercializadoraPublicoServiceTest {
         assertEquals(429, e.getStatusCode().value());
     }
 
-    @Test
-    void elTokenEsLargoYDistintoCadaVez() {
-        String a = ComercializadoraService.nuevoToken();
-        String b = ComercializadoraService.nuevoToken();
-        assertNotEquals(a, b);
-        assertTrue(a.length() >= 32 && a.matches("[A-Za-z0-9_-]+"), a);
-    }
 }

@@ -15,6 +15,9 @@ export interface EntradaVersion {
 }
 
 export const CHANGELOG: EntradaVersion[] = [
+  { version: '12.27.0', fecha: '2026-11-27', cambios: [
+    "Equipos: el enlace para unirse ahora es el nombre de la líder (/unirse/denisse-velasco) en los equipos nuevos y al usar «Generar enlace nuevo». Los enlaces largos que ya se compartieron siguen sirviendo mientras no se genere otro.",
+  ] },
   { version: '12.26.0', fecha: '2026-11-27', cambios: [
     "Equipos: el apartado antes llamado Comercializadoras ahora muestra por separado Comercializadoras y Equipos. Al crear o editar se elige el tipo; los grupos existentes quedan como Comercializadoras y conservan sus integrantes y enlaces.",
   ] },

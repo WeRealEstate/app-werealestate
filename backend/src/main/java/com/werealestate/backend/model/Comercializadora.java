@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 
 /**
  * Una comercializadora: empresa que vende con su propio equipo. Su líder es un asesor de tipo LIDER, externo o interno
- * (la ficha de comunidad de un usuario con rol ASESOR; así su equipo aparece en Comunidades We) y su {@code token} es el secreto del enlace que la líder comparte para que
+ * (la ficha de comunidad de un usuario con rol ASESOR; así su equipo aparece en Comunidades We) y su {@code token} es el final del enlace que la líder comparte para que
  * cada integrante se dé de alta solo (ver ComercializadoraPublicoService).
  */
 @Entity
